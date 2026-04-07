@@ -43,7 +43,7 @@ const Index = () => {
   }, [selectedSurah, selectedAyah, voiceMode]);
 
   const handlePlay = () => {
-    const url = getAudioUrlSimple();
+    const url = getAudioUrl();
     if (!url) return;
 
     if (audioRef.current && !audioRef.current.paused && !audioRef.current.ended) {
