@@ -1,5 +1,6 @@
 import { surahs } from "@/data/surahs";
-import { BookOpen } from "lucide-react";
+import { BookOpen, CheckCircle } from "lucide-react";
+import SurahProgressBar from "@/components/SurahProgressBar";
 
 interface Props {
   selectedSurah: number | null;
@@ -10,6 +11,8 @@ interface Props {
   fullSurahMode: boolean;
   onPlayFullSurah: () => void;
   canPlayFull: boolean;
+  getListenedCount: (surahNumber: number) => number;
+  isSurahComplete: (surahNumber: number, totalAyahs: number) => boolean;
 }
 
 const SurahSelector = ({
@@ -21,6 +24,8 @@ const SurahSelector = ({
   fullSurahMode,
   onPlayFullSurah,
   canPlayFull,
+  getListenedCount,
+  isSurahComplete,
 }: Props) => {
   return (
     <div className="bg-card rounded-lg shadow-md p-6 space-y-4 border border-border">
@@ -41,13 +46,14 @@ const SurahSelector = ({
             <option value="">-- اختر السورة --</option>
             {surahs.map((s) => (
               <option key={s.number} value={s.number}>
+                {isSurahComplete(s.number, s.ayahCount) ? "✅ " : ""}
                 {s.number}. {s.name}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Ayah selector - hidden in full surah mode */}
+        {/* Ayah selector */}
         {!fullSurahMode && (
           <div className="space-y-2">
             <label className="block text-lg font-bold text-foreground">
@@ -71,6 +77,18 @@ const SurahSelector = ({
           </div>
         )}
       </div>
+
+      {/* Surah progress bar */}
+      {selectedSurah && (
+        <div className="flex items-center gap-2">
+          {isSurahComplete(selectedSurah, ayahCount) && (
+            <CheckCircle className="w-5 h-5 text-accent shrink-0" />
+          )}
+          <div className="flex-1">
+            <SurahProgressBar listened={getListenedCount(selectedSurah)} total={ayahCount} />
+          </div>
+        </div>
+      )}
 
       {/* Full Surah button */}
       {selectedSurah && !fullSurahMode && (

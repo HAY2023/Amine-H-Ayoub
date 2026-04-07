@@ -6,6 +6,9 @@ import VoiceToggle from "@/components/VoiceToggle";
 import RepetitionController from "@/components/RepetitionController";
 import AudioPlayer from "@/components/AudioPlayer";
 import AyahDisplay from "@/components/AyahDisplay";
+import PointsDisplay from "@/components/PointsDisplay";
+import CongratsDialog from "@/components/CongratsDialog";
+import { useProgress } from "@/hooks/useProgress";
 
 const Index = () => {
   const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
@@ -16,10 +19,13 @@ const Index = () => {
   const [progress, setProgress] = useState(0);
   const [currentRepetition, setCurrentRepetition] = useState(0);
   const [fullSurahMode, setFullSurahMode] = useState(false);
+  const [congratsSurah, setCongratsSurah] = useState<number | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const repetitionRef = useRef(0);
   const fullSurahRef = useRef(false);
+
+  const { points, level, recordAyah, getListenedCount, isSurahComplete } = useProgress();
 
   const surah = surahs.find((s) => s.number === selectedSurah);
   const ayahCount = surah?.ayahCount ?? 0;
@@ -50,6 +56,17 @@ const Index = () => {
     if (!selectedSurah || !selectedAyah) return null;
     return buildFallbackUrl(selectedSurah, selectedAyah, voiceMode);
   }, [selectedSurah, selectedAyah, voiceMode, buildFallbackUrl]);
+
+  const onAyahCompleted = useCallback((surahNum: number, ayahNum: number) => {
+    recordAyah(surahNum, ayahNum);
+    const totalAyahs = surahs.find(s => s.number === surahNum)?.ayahCount ?? 0;
+    // Check completion after recording
+    setTimeout(() => {
+      if (isSurahComplete(surahNum, totalAyahs)) {
+        setCongratsSurah(surahNum);
+      }
+    }, 100);
+  }, [recordAyah, isSurahComplete]);
 
   const playAudio = useCallback((url: string, isFallback = false, onEnded?: () => void, fallbackUrl?: string | null) => {
     if (audioRef.current) {
@@ -107,13 +124,14 @@ const Index = () => {
 
       setTimeout(() => {
         playAudio(url, false, () => {
+          onAyahCompleted(selectedSurah, ayahNum);
           playAyahSequence(ayahNum + 1);
         }, fallback);
       }, 300);
     };
 
     playAyahSequence(1);
-  }, [selectedSurah, voiceMode, buildAudioUrl, buildFallbackUrl, playAudio]);
+  }, [selectedSurah, voiceMode, buildAudioUrl, buildFallbackUrl, playAudio, onAyahCompleted]);
 
   const handlePlay = () => {
     const url = getAudioUrl();
@@ -132,6 +150,9 @@ const Index = () => {
 
     const handleRepeatEnd = () => {
       repetitionRef.current += 1;
+      if (selectedSurah && selectedAyah) {
+        onAyahCompleted(selectedSurah, selectedAyah);
+      }
       if (repetitionRef.current < repetitionCount) {
         setCurrentRepetition(repetitionRef.current + 1);
         setTimeout(() => playAudio(url, false, handleRepeatEnd, fallback), 500);
@@ -185,7 +206,12 @@ const Index = () => {
       <div className="relative z-10 min-h-screen">
         <AppHeader />
 
-        <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        {/* Points & Level Display */}
+        <div className="flex justify-center mb-4">
+          <PointsDisplay points={points} level={level} />
+        </div>
+
+        <main className="max-w-2xl mx-auto px-4 py-4 space-y-6">
           <SurahSelector
             selectedSurah={selectedSurah}
             selectedAyah={selectedAyah}
@@ -195,6 +221,8 @@ const Index = () => {
             fullSurahMode={fullSurahMode}
             onPlayFullSurah={playFullSurah}
             canPlayFull={!!selectedSurah && !isPlaying}
+            getListenedCount={getListenedCount}
+            isSurahComplete={isSurahComplete}
           />
 
           <AyahDisplay
@@ -225,6 +253,12 @@ const Index = () => {
           />
         </main>
       </div>
+
+      <CongratsDialog
+        surahNumber={congratsSurah}
+        open={congratsSurah !== null}
+        onClose={() => setCongratsSurah(null)}
+      />
     </div>
   );
 };
