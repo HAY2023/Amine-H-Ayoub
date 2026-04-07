@@ -24,17 +24,13 @@ const Index = () => {
 
   const getAudioUrl = useCallback(() => {
     if (!selectedSurah || !selectedAyah) return null;
-    const surahStr = String(selectedSurah).padStart(3, "0");
-    const ayahStr = String(selectedAyah).padStart(3, "0");
-    // Using Alafasy (teacher) or Husary with kids based on voice mode
-    const reciter = voiceMode === "teacher" ? "ar.alafasy" : "ar.husary";
-    return `https://cdn.islamic.network/quran/audio/128/${reciter}/${surahStr}${ayahStr}.mp3`;
+    const folder = voiceMode === "teacher" ? "teacher" : "kids";
+    const localPath = `/audio/${folder}/${selectedSurah}_${selectedAyah}.mp3`;
+    return localPath;
   }, [selectedSurah, selectedAyah, voiceMode]);
 
-  // Alternative simpler audio URL using verse key
-  const getAudioUrlSimple = useCallback(() => {
+  const getFallbackAudioUrl = useCallback(() => {
     if (!selectedSurah || !selectedAyah) return null;
-    // Calculate absolute ayah number
     let absoluteAyah = 0;
     for (const s of surahs) {
       if (s.number < selectedSurah) {
