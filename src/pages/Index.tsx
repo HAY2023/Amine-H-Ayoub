@@ -117,46 +117,56 @@ const Index = () => {
     };
   }, []);
 
-  // Reset ayah when surah changes
   useEffect(() => {
     setSelectedAyah(null);
   }, [selectedSurah]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader />
+    <div className="min-h-screen relative">
+      {/* Background image */}
+      <div
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/background-kids.jpg')" }}
+      />
+      {/* Brown overlay */}
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
 
-      <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        <SurahSelector
-          selectedSurah={selectedSurah}
-          selectedAyah={selectedAyah}
-          ayahCount={ayahCount}
-          onSurahChange={setSelectedSurah}
-          onAyahChange={setSelectedAyah}
-        />
+      {/* Content */}
+      <div className="relative z-10 min-h-screen">
+        <AppHeader />
 
-        <AyahDisplay
-          selectedSurah={selectedSurah}
-          selectedAyah={selectedAyah}
-        />
+        <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+          <SurahSelector
+            selectedSurah={selectedSurah}
+            selectedAyah={selectedAyah}
+            ayahCount={ayahCount}
+            onSurahChange={setSelectedSurah}
+            onAyahChange={setSelectedAyah}
+          />
 
-        <VoiceToggle voiceMode={voiceMode} onChange={setVoiceMode} />
+          <AyahDisplay
+            selectedSurah={selectedSurah}
+            selectedAyah={selectedAyah}
+          />
 
-        <RepetitionController
-          count={repetitionCount}
-          onChange={setRepetitionCount}
-        />
+          <VoiceToggle voiceMode={voiceMode} onChange={setVoiceMode} />
 
-        <AudioPlayer
-          isPlaying={isPlaying}
-          progress={progress}
-          currentRepetition={currentRepetition}
-          totalRepetitions={repetitionCount}
-          canPlay={!!selectedSurah && !!selectedAyah}
-          onPlayPause={handlePlay}
-          onStop={handleStop}
-        />
-      </main>
+          <RepetitionController
+            count={repetitionCount}
+            onChange={setRepetitionCount}
+          />
+
+          <AudioPlayer
+            isPlaying={isPlaying}
+            progress={progress}
+            currentRepetition={currentRepetition}
+            totalRepetitions={repetitionCount}
+            canPlay={!!selectedSurah && !!selectedAyah}
+            onPlayPause={handlePlay}
+            onStop={handleStop}
+          />
+        </main>
+      </div>
     </div>
   );
 };
