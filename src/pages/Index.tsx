@@ -57,12 +57,24 @@ const Index = () => {
     playAudio(url);
   };
 
-  const playAudio = (url: string) => {
+  const playAudio = (url: string, isFallback = false) => {
     if (audioRef.current) {
       audioRef.current.pause();
     }
     const audio = new Audio(url);
     audioRef.current = audio;
+
+    audio.addEventListener("error", () => {
+      if (!isFallback) {
+        const fallback = getFallbackAudioUrl();
+        if (fallback) {
+          playAudio(fallback, true);
+          return;
+        }
+      }
+      setIsPlaying(false);
+      setCurrentRepetition(0);
+    });
 
     audio.addEventListener("timeupdate", () => {
       if (audio.duration) {
