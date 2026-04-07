@@ -1,13 +1,18 @@
 const AppHeader = () => {
   return (
-    <header className="bg-primary py-6 shadow-lg">
-      <div className="max-w-2xl mx-auto px-4 flex items-center justify-center gap-4">
-        {/* Logo placeholder */}
-        <div className="w-14 h-14 rounded-full bg-secondary/30 border-2 border-gold flex items-center justify-center shrink-0">
-          <span className="text-primary-foreground text-2xl">☪</span>
+    <header className="py-6">
+      <div className="max-w-2xl mx-auto px-4 flex flex-col items-center gap-4">
+        <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-gold shadow-lg">
+          <img
+            src="/my-photo.png"
+            alt="القارئ أمين حاج أيوب"
+            className="w-full h-full object-cover"
+          />
         </div>
-        <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground tracking-wide">
-          مصحف الترداد التعليمي
+        <h1 className="text-xl md:text-2xl font-bold text-gold text-center leading-relaxed">
+          المصحف المعلم برواية ورش
+          <br />
+          القارئ أمين حاج أيوب
         </h1>
       </div>
     </header>
