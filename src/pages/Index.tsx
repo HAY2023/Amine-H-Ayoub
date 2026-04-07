@@ -5,6 +5,7 @@ import SurahSelector from "@/components/SurahSelector";
 import VoiceToggle from "@/components/VoiceToggle";
 import RepetitionController from "@/components/RepetitionController";
 import AudioPlayer from "@/components/AudioPlayer";
+import AyahDisplay from "@/components/AyahDisplay";
 
 const Index = () => {
   const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
@@ -124,6 +125,11 @@ const Index = () => {
           ayahCount={ayahCount}
           onSurahChange={setSelectedSurah}
           onAyahChange={setSelectedAyah}
+        />
+
+        <AyahDisplay
+          selectedSurah={selectedSurah}
+          selectedAyah={selectedAyah}
         />
 
         <VoiceToggle voiceMode={voiceMode} onChange={setVoiceMode} />
