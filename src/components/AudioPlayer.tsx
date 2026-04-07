@@ -8,6 +8,9 @@ interface Props {
   canPlay: boolean;
   onPlayPause: () => void;
   onStop: () => void;
+  fullSurahMode?: boolean;
+  currentAyah?: number | null;
+  totalAyahs?: number;
 }
 
 const AudioPlayer = ({
@@ -18,6 +21,9 @@ const AudioPlayer = ({
   canPlay,
   onPlayPause,
   onStop,
+  fullSurahMode,
+  currentAyah,
+  totalAyahs,
 }: Props) => {
   return (
     <div className="bg-card rounded-lg shadow-md p-6 border border-border space-y-5">
@@ -29,12 +35,16 @@ const AudioPlayer = ({
         />
       </div>
 
-      {/* Repetition counter */}
-      {currentRepetition > 0 && (
+      {/* Status text */}
+      {fullSurahMode && currentAyah && totalAyahs ? (
+        <p className="text-center text-muted-foreground text-lg">
+          الآية {currentAyah} من {totalAyahs}
+        </p>
+      ) : currentRepetition > 0 ? (
         <p className="text-center text-muted-foreground text-lg">
           التكرار {currentRepetition} من {totalRepetitions}
         </p>
-      )}
+      ) : null}
 
       {/* Controls */}
       <div className="flex items-center justify-center gap-6">
@@ -46,24 +56,25 @@ const AudioPlayer = ({
           <Square className="w-6 h-6" />
         </button>
 
-        <button
-          onClick={onPlayPause}
-          disabled={!canPlay}
-          className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed ${
-            isPlaying
-              ? "bg-accent text-accent-foreground"
-              : "bg-primary text-primary-foreground"
-          } ${canPlay && !isPlaying ? "animate-pulse-glow" : ""}`}
-        >
-          {isPlaying ? (
-            <Pause className="w-10 h-10" />
-          ) : (
-            <Play className="w-10 h-10 mr-[-4px]" />
-          )}
-        </button>
+        {!fullSurahMode && (
+          <button
+            onClick={onPlayPause}
+            disabled={!canPlay}
+            className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed ${
+              isPlaying
+                ? "bg-accent text-accent-foreground"
+                : "bg-primary text-primary-foreground"
+            } ${canPlay && !isPlaying ? "animate-pulse-glow" : ""}`}
+          >
+            {isPlaying ? (
+              <Pause className="w-10 h-10" />
+            ) : (
+              <Play className="w-10 h-10 mr-[-4px]" />
+            )}
+          </button>
+        )}
 
-        {/* Spacer for symmetry */}
-        <div className="w-14 h-14" />
+        {!fullSurahMode && <div className="w-14 h-14" />}
       </div>
     </div>
   );
