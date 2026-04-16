@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export interface SurahItem {
   number: number;
@@ -24,7 +24,9 @@ export function useSurahData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
+    setLoading(true);
+    setError(null);
     fetch(API_URL)
       .then((res) => res.json())
       .then((json) => {
@@ -50,5 +52,9 @@ export function useSurahData() {
       });
   }, []);
 
-  return { surahs, loading, error };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { surahs, loading, error, retry: fetchData };
 }

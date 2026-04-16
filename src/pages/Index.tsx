@@ -6,11 +6,12 @@ import SearchBar from "@/components/SearchBar";
 import CustomPlayer from "@/components/CustomPlayer";
 import MushafPage from "@/components/MushafPage";
 import BottomNav, { TabType } from "@/components/BottomNav";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
 
 const Index = () => {
-  const { surahs, loading, error } = useSurahData();
+  const { surahs, loading, error, retry } = useSurahData();
   const { points, level, recordAyah } = useProgress();
   const [currentSurah, setCurrentSurah] = useState<SurahItem | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("audio");
@@ -28,6 +29,13 @@ const Index = () => {
 
   const handleClose = () => setCurrentSurah(null);
 
+  // Immersive mushaf mode - renders fullscreen, hides everything
+  if (activeTab === "mushaf") {
+    return (
+      <MushafPage onBack={() => setActiveTab("audio")} />
+    );
+  }
+
   return (
     <div className="min-h-screen relative">
       <div
@@ -44,38 +52,55 @@ const Index = () => {
         </div>
 
         <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-          {activeTab === "audio" && (
-            <>
-              <SearchBar value={search} onChange={setSearch} />
+          <SearchBar value={search} onChange={setSearch} />
 
-              {loading && (
-                <div className="text-center py-12">
-                  <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                  <p className="text-muted-foreground text-lg">جاري تحميل السور...</p>
+          {loading && (
+            <div className="space-y-3">
+              <div className="text-center py-6">
+                <div className="w-14 h-14 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-muted-foreground text-lg font-amiri">
+                  جاري جلب التلاوات العطرة...
+                </p>
+                <p className="text-muted-foreground/70 text-sm mt-1">
+                  قد يستغرق الأمر بضع ثوانٍ
+                </p>
+              </div>
+              {/* Skeleton placeholders */}
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border">
+                  <Skeleton className="w-12 h-12 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
                 </div>
-              )}
-
-              {error && (
-                <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-6 text-center">
-                  <p className="text-destructive">خطأ في تحميل البيانات: {error}</p>
-                </div>
-              )}
-
-              {!loading && !error && (
-                <SurahList
-                  surahs={filteredSurahs}
-                  currentPlaying={currentSurah?.number ?? null}
-                  onSelect={handleSelect}
-                />
-              )}
-            </>
+              ))}
+            </div>
           )}
 
-          {activeTab === "mushaf" && <MushafPage />}
+          {error && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-8 text-center space-y-4">
+              <p className="text-destructive text-lg font-bold">خطأ في تحميل البيانات</p>
+              <p className="text-muted-foreground text-sm">{error}</p>
+              <button
+                onClick={retry}
+                className="px-6 py-3 bg-accent text-accent-foreground font-bold rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
+              >
+                🔄 إعادة المحاولة
+              </button>
+            </div>
+          )}
+
+          {!loading && !error && (
+            <SurahList
+              surahs={filteredSurahs}
+              currentPlaying={currentSurah?.number ?? null}
+              onSelect={handleSelect}
+            />
+          )}
         </main>
       </div>
 
-      {/* Custom player floats above bottom nav */}
       {currentSurah && (
         <CustomPlayer
           surahName={currentSurah.name}
