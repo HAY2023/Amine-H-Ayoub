@@ -1,199 +1,26 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import { surahs } from "@/data/surahs";
+import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import SurahSelector from "@/components/SurahSelector";
-import VoiceToggle from "@/components/VoiceToggle";
-import RepetitionController from "@/components/RepetitionController";
-import AudioPlayer from "@/components/AudioPlayer";
-import AyahDisplay from "@/components/AyahDisplay";
 import PointsDisplay from "@/components/PointsDisplay";
-import CongratsDialog from "@/components/CongratsDialog";
+import SurahList from "@/components/SurahList";
+import QuranPageViewer from "@/components/QuranPageViewer";
+import StickyPlayer from "@/components/StickyPlayer";
+import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
 
 const Index = () => {
-  const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
-  const [selectedAyah, setSelectedAyah] = useState<number | null>(null);
-  const [voiceMode, setVoiceMode] = useState<"teacher" | "kids">("teacher");
-  const [repetitionCount, setRepetitionCount] = useState(3);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [currentRepetition, setCurrentRepetition] = useState(0);
-  const [fullSurahMode, setFullSurahMode] = useState(false);
-  const [congratsSurah, setCongratsSurah] = useState<number | null>(null);
+  const { surahs, loading, error } = useSurahData();
+  const { points, level, recordAyah } = useProgress();
+  const [currentSurah, setCurrentSurah] = useState<SurahItem | null>(null);
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const repetitionRef = useRef(0);
-  const fullSurahRef = useRef(false);
-
-  const { points, level, recordAyah, getListenedCount, isSurahComplete } = useProgress();
-
-  const surah = surahs.find((s) => s.number === selectedSurah);
-  const ayahCount = surah?.ayahCount ?? 0;
-
-  const buildAudioUrl = useCallback((surahNum: number, ayahNum: number, mode: "teacher" | "kids") => {
-    const folder = mode === "teacher" ? "teacher" : "kids";
-    return `/audio/${folder}/${surahNum}_${ayahNum}.mp3`;
-  }, []);
-
-  const buildFallbackUrl = useCallback((surahNum: number, ayahNum: number, mode: "teacher" | "kids") => {
-    let absoluteAyah = 0;
-    for (const s of surahs) {
-      if (s.number < surahNum) {
-        absoluteAyah += s.ayahCount;
-      } else break;
-    }
-    absoluteAyah += ayahNum;
-    const reciter = mode === "teacher" ? "ar.alafasy" : "ar.husary";
-    return `https://cdn.islamic.network/quran/audio/128/${reciter}/${absoluteAyah}.mp3`;
-  }, []);
-
-  const getAudioUrl = useCallback(() => {
-    if (!selectedSurah || !selectedAyah) return null;
-    return buildAudioUrl(selectedSurah, selectedAyah, voiceMode);
-  }, [selectedSurah, selectedAyah, voiceMode, buildAudioUrl]);
-
-  const getFallbackAudioUrl = useCallback(() => {
-    if (!selectedSurah || !selectedAyah) return null;
-    return buildFallbackUrl(selectedSurah, selectedAyah, voiceMode);
-  }, [selectedSurah, selectedAyah, voiceMode, buildFallbackUrl]);
-
-  const onAyahCompleted = useCallback((surahNum: number, ayahNum: number) => {
-    recordAyah(surahNum, ayahNum);
-    const totalAyahs = surahs.find(s => s.number === surahNum)?.ayahCount ?? 0;
-    // Check completion after recording
-    setTimeout(() => {
-      if (isSurahComplete(surahNum, totalAyahs)) {
-        setCongratsSurah(surahNum);
-      }
-    }, 100);
-  }, [recordAyah, isSurahComplete]);
-
-  const playAudio = useCallback((url: string, isFallback = false, onEnded?: () => void, fallbackUrl?: string | null) => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    const audio = new Audio(url);
-    audioRef.current = audio;
-
-    audio.addEventListener("error", () => {
-      if (!isFallback && fallbackUrl) {
-        playAudio(fallbackUrl, true, onEnded, null);
-        return;
-      }
-      setIsPlaying(false);
-      setCurrentRepetition(0);
-    });
-
-    audio.addEventListener("timeupdate", () => {
-      if (audio.duration) {
-        setProgress((audio.currentTime / audio.duration) * 100);
-      }
-    });
-
-    audio.addEventListener("ended", () => {
-      if (onEnded) {
-        onEnded();
-      }
-    });
-
-    audio.play();
-    setIsPlaying(true);
-  }, []);
-
-  const playFullSurah = useCallback(() => {
-    if (!selectedSurah) return;
-    const totalAyahs = surahs.find(s => s.number === selectedSurah)?.ayahCount ?? 0;
-    if (totalAyahs === 0) return;
-
-    setFullSurahMode(true);
-    fullSurahRef.current = true;
-    setCurrentRepetition(0);
-
-    const playAyahSequence = (ayahNum: number) => {
-      if (!fullSurahRef.current || ayahNum > totalAyahs) {
-        setIsPlaying(false);
-        setProgress(0);
-        setFullSurahMode(false);
-        fullSurahRef.current = false;
-        return;
-      }
-
-      setSelectedAyah(ayahNum);
-      const url = buildAudioUrl(selectedSurah, ayahNum, voiceMode);
-      const fallback = buildFallbackUrl(selectedSurah, ayahNum, voiceMode);
-
-      setTimeout(() => {
-        playAudio(url, false, () => {
-          onAyahCompleted(selectedSurah, ayahNum);
-          playAyahSequence(ayahNum + 1);
-        }, fallback);
-      }, 300);
-    };
-
-    playAyahSequence(1);
-  }, [selectedSurah, voiceMode, buildAudioUrl, buildFallbackUrl, playAudio, onAyahCompleted]);
-
-  const handlePlay = () => {
-    const url = getAudioUrl();
-    if (!url) return;
-
-    if (audioRef.current && !audioRef.current.paused && !audioRef.current.ended) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-      return;
-    }
-
-    repetitionRef.current = 0;
-    setCurrentRepetition(1);
-
-    const fallback = getFallbackAudioUrl();
-
-    const handleRepeatEnd = () => {
-      repetitionRef.current += 1;
-      if (selectedSurah && selectedAyah) {
-        onAyahCompleted(selectedSurah, selectedAyah);
-      }
-      if (repetitionRef.current < repetitionCount) {
-        setCurrentRepetition(repetitionRef.current + 1);
-        setTimeout(() => playAudio(url, false, handleRepeatEnd, fallback), 500);
-      } else {
-        setIsPlaying(false);
-        setProgress(0);
-        setCurrentRepetition(0);
-      }
-    };
-
-    playAudio(url, false, handleRepeatEnd, fallback);
+  const handleSelect = (surah: SurahItem) => {
+    setCurrentSurah(surah);
+    // Award points for listening
+    recordAyah(surah.number, 1);
   };
 
-  const handleStop = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    setIsPlaying(false);
-    setProgress(0);
-    setCurrentRepetition(0);
-    repetitionRef.current = 0;
-    if (fullSurahMode) {
-      setFullSurahMode(false);
-      fullSurahRef.current = false;
-    }
+  const handleClose = () => {
+    setCurrentSurah(null);
   };
-
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    setSelectedAyah(null);
-    setFullSurahMode(false);
-    fullSurahRef.current = false;
-  }, [selectedSurah]);
 
   return (
     <div className="min-h-screen relative">
@@ -203,62 +30,54 @@ const Index = () => {
       />
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
 
-      <div className="relative z-10 min-h-screen">
+      <div className="relative z-10 min-h-screen pb-32">
         <AppHeader />
 
-        {/* Points & Level Display */}
         <div className="flex justify-center mb-4">
           <PointsDisplay points={points} level={level} />
         </div>
 
         <main className="max-w-2xl mx-auto px-4 py-4 space-y-6">
-          <SurahSelector
-            selectedSurah={selectedSurah}
-            selectedAyah={selectedAyah}
-            ayahCount={ayahCount}
-            onSurahChange={setSelectedSurah}
-            onAyahChange={setSelectedAyah}
-            fullSurahMode={fullSurahMode}
-            onPlayFullSurah={playFullSurah}
-            canPlayFull={!!selectedSurah && !isPlaying}
-            getListenedCount={getListenedCount}
-            isSurahComplete={isSurahComplete}
-          />
-
-          <AyahDisplay
-            selectedSurah={selectedSurah}
-            selectedAyah={selectedAyah}
-          />
-
-          <VoiceToggle voiceMode={voiceMode} onChange={setVoiceMode} />
-
-          {!fullSurahMode && (
-            <RepetitionController
-              count={repetitionCount}
-              onChange={setRepetitionCount}
-            />
+          {/* Quran page viewer */}
+          {currentSurah && (
+            <QuranPageViewer surahName={currentSurah.name} />
           )}
 
-          <AudioPlayer
-            isPlaying={isPlaying}
-            progress={progress}
-            currentRepetition={fullSurahMode ? 0 : currentRepetition}
-            totalRepetitions={fullSurahMode ? 0 : repetitionCount}
-            canPlay={fullSurahMode ? false : (!!selectedSurah && !!selectedAyah)}
-            onPlayPause={handlePlay}
-            onStop={handleStop}
-            fullSurahMode={fullSurahMode}
-            currentAyah={selectedAyah}
-            totalAyahs={ayahCount}
-          />
+          {/* Loading state */}
+          {loading && (
+            <div className="text-center py-12">
+              <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground text-lg">جاري تحميل السور...</p>
+            </div>
+          )}
+
+          {/* Error state */}
+          {error && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-6 text-center">
+              <p className="text-destructive">خطأ في تحميل البيانات: {error}</p>
+            </div>
+          )}
+
+          {/* Surah list */}
+          {!loading && !error && (
+            <SurahList
+              surahs={surahs}
+              currentPlaying={currentSurah?.number ?? null}
+              onSelect={handleSelect}
+            />
+          )}
         </main>
       </div>
 
-      <CongratsDialog
-        surahNumber={congratsSurah}
-        open={congratsSurah !== null}
-        onClose={() => setCongratsSurah(null)}
-      />
+      {/* Sticky bottom player */}
+      {currentSurah && (
+        <StickyPlayer
+          surahName={currentSurah.name}
+          surahNumber={currentSurah.number}
+          driveId={currentSurah.driveId}
+          onClose={handleClose}
+        />
+      )}
     </div>
   );
 };

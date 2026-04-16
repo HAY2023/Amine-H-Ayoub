@@ -63,3 +63,13 @@
     direction: rtl;
   }
 }
+
+@keyframes wave {
+  0%, 100% { height: 4px; }
+  50% { height: 20px; }
+}
+
+.animate-wave {
+  animation: wave 0.8s ease-in-out infinite;
+  height: 4px;
+}
