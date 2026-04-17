@@ -1,21 +1,40 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
 import PointsDisplay from "@/components/PointsDisplay";
 import SurahList from "@/components/SurahList";
 import SearchBar from "@/components/SearchBar";
-import CustomPlayer from "@/components/CustomPlayer";
+import CustomPlayer, { CustomPlayerHandle } from "@/components/CustomPlayer";
 import MushafPage from "@/components/MushafPage";
 import BottomNav, { TabType } from "@/components/BottomNav";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
 
+const LAST_SURAH_KEY = "audio:lastSurah";
+const LAST_TIME_KEY = "audio:lastTime";
+
 const Index = () => {
   const { surahs, loading, error, retry } = useSurahData();
   const { points, level, recordAyah } = useProgress();
   const [currentSurah, setCurrentSurah] = useState<SurahItem | null>(null);
+  const [resumeTime, setResumeTime] = useState(0);
   const [activeTab, setActiveTab] = useState<TabType>("audio");
   const [search, setSearch] = useState("");
+  const playerRef = useRef<CustomPlayerHandle>(null);
+  const lastSavedRef = useRef(0);
+
+  // Restore last played surah once data arrives
+  useEffect(() => {
+    if (currentSurah || surahs.length === 0) return;
+    const savedNum = parseInt(localStorage.getItem(LAST_SURAH_KEY) || "0", 10);
+    if (!savedNum) return;
+    const found = surahs.find((s) => s.number === savedNum);
+    if (found) {
+      const t = parseFloat(localStorage.getItem(LAST_TIME_KEY) || "0");
+      setResumeTime(isNaN(t) ? 0 : t);
+      setCurrentSurah(found);
+    }
+  }, [surahs, currentSurah]);
 
   const filteredSurahs = useMemo(() => {
     if (!search.trim()) return surahs;
@@ -23,17 +42,29 @@ const Index = () => {
   }, [surahs, search]);
 
   const handleSelect = (surah: SurahItem) => {
+    setResumeTime(0);
     setCurrentSurah(surah);
+    localStorage.setItem(LAST_SURAH_KEY, String(surah.number));
+    localStorage.setItem(LAST_TIME_KEY, "0");
     recordAyah(surah.number, 1);
   };
 
-  const handleClose = () => setCurrentSurah(null);
+  const handleClose = () => {
+    setCurrentSurah(null);
+    localStorage.removeItem(LAST_SURAH_KEY);
+    localStorage.removeItem(LAST_TIME_KEY);
+  };
 
-  // Immersive mushaf mode - renders fullscreen, hides everything
+  // Throttled save of currentTime
+  const handleTimeUpdate = (t: number) => {
+    if (Math.abs(t - lastSavedRef.current) >= 2) {
+      lastSavedRef.current = t;
+      localStorage.setItem(LAST_TIME_KEY, String(t));
+    }
+  };
+
   if (activeTab === "mushaf") {
-    return (
-      <MushafPage onBack={() => setActiveTab("audio")} />
-    );
+    return <MushafPage onBack={() => setActiveTab("audio")} />;
   }
 
   return (
@@ -65,7 +96,6 @@ const Index = () => {
                   قد يستغرق الأمر بضع ثوانٍ
                 </p>
               </div>
-              {/* Skeleton placeholders */}
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border">
                   <Skeleton className="w-12 h-12 rounded-full" />
@@ -103,10 +133,13 @@ const Index = () => {
 
       {currentSurah && (
         <CustomPlayer
+          ref={playerRef}
           surahName={currentSurah.name}
           surahNumber={currentSurah.number}
           driveId={currentSurah.driveId}
+          initialTime={resumeTime}
           onClose={handleClose}
+          onTimeUpdate={handleTimeUpdate}
         />
       )}
 
