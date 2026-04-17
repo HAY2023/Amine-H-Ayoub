@@ -9,7 +9,7 @@ export interface SurahItem {
 }
 
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbyeuiFEnURqDlo0rLfisG3p_QBHuRUU_1sYAqV5OURUzJTLkSghTaOKDEi1pgFuMrEm/exec";
+  "https://script.google.com/macros/s/AKfycbwTphBJ6zTGk3pzZ9FAAToLggsshO3rVVfJwfh6RfVxOtsNlGI3FRGIJYipHtrDu7Vi/exec";
 
 function parseName(n: string): { number: number; name: string } {
   const match = n.match(/^(\d+)\s+(.+?)\.mp3$/);
