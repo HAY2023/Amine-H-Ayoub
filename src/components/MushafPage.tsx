@@ -23,7 +23,7 @@ const STORAGE_KEY = "mushaf:lastPage";
 interface PageInfo {
   name: string;
   src: string;
-  ayahCount: number; // approximate ayah count for the demo dropdown
+  ayahCount: number;
 }
 
 const pages: PageInfo[] = [
@@ -54,41 +54,41 @@ const MushafPage = ({ onBack }: Props) => {
     return isNaN(saved) || saved < 0 || saved >= pages.length ? 0 : saved;
   });
   const [fabVisible, setFabVisible] = useState(true);
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth >= 1024 : false
+  );
 
-  // Reciter range + repeat
   const [fromAyah, setFromAyah] = useState(1);
   const [toAyah, setToAyah] = useState(1);
   const [repeat, setRepeat] = useState<RepeatMode>(1);
-  const [repeatTick, setRepeatTick] = useState(0); // used to alternate teacher/child overlay on repeats
+  const [repeatTick, setRepeatTick] = useState(0);
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const fadeTimer = useRef<ReturnType<typeof setTimeout>>();
-  const isProgrammaticScroll = useRef(false);
-
   const totalAyahs = pages[currentPage]?.ayahCount ?? 1;
 
-  // Persist current page
+  // Track desktop breakpoint
+  useEffect(() => {
+    const onResize = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // On desktop, ensure currentPage is even (left page of the spread)
+  useEffect(() => {
+    if (isDesktop && currentPage % 2 !== 0 && currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    }
+  }, [isDesktop, currentPage]);
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, String(currentPage));
   }, [currentPage]);
 
-  // Reset ayah range when page changes
   useEffect(() => {
     setFromAyah(1);
     setToAyah(Math.min(5, totalAyahs));
   }, [currentPage, totalAyahs]);
 
-  // Restore scroll to saved page on mount
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    isProgrammaticScroll.current = true;
-    el.scrollTo({ left: currentPage * el.clientWidth, behavior: "auto" });
-    setTimeout(() => (isProgrammaticScroll.current = false), 100);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Auto-hide FAB
   const resetFabTimer = useCallback(() => {
     setFabVisible(true);
     clearTimeout(fadeTimer.current);
@@ -100,24 +100,42 @@ const MushafPage = ({ onBack }: Props) => {
     return () => clearTimeout(fadeTimer.current);
   }, [resetFabTimer]);
 
-  // Track current page on horizontal scroll
-  const handleScroll = () => {
-    resetFabTimer();
-    if (!containerRef.current || isProgrammaticScroll.current) return;
-    const el = containerRef.current;
-    const idx = Math.round(el.scrollLeft / el.clientWidth);
-    if (idx !== currentPage) setCurrentPage(idx);
-  };
-
+  const step = isDesktop ? 2 : 1;
   const goToPage = (idx: number) => {
-    if (idx < 0 || idx >= pages.length || !containerRef.current) return;
-    isProgrammaticScroll.current = true;
-    containerRef.current.scrollTo({ left: idx * containerRef.current.clientWidth, behavior: "smooth" });
+    if (idx < 0 || idx >= pages.length) return;
     setCurrentPage(idx);
-    setTimeout(() => (isProgrammaticScroll.current = false), 600);
+    resetFabTimer();
+  };
+  const goPrev = () => goToPage(Math.max(0, currentPage - step));
+  const goNext = () => goToPage(Math.min(pages.length - 1, currentPage + step));
+
+  // Keyboard navigation
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") goPrev(); // RTL: right = previous
+      if (e.key === "ArrowLeft") goNext();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, isDesktop]);
+
+  // Touch swipe (mobile)
+  const touchStartX = useRef<number | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    resetFabTimer();
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(dx) < 50) return;
+    if (dx > 0) goPrev(); // swipe right = previous (RTL feel)
+    else goNext();
   };
 
-  // Simulate repeat tick for teacher/child alternation when "both" mode active
+  // Alternating overlay for "both" mode
   useEffect(() => {
     if (mode !== "both") return;
     const interval = setInterval(() => setRepeatTick((t) => t + 1), 3500);
@@ -146,59 +164,77 @@ const MushafPage = ({ onBack }: Props) => {
     { value: 99, label: "مستمر ∞" },
   ];
 
+  // Pages to render: [right, left] in RTL order on desktop
+  const visiblePages = useMemo(() => {
+    if (isDesktop) {
+      const right = pages[currentPage];
+      const left = pages[currentPage + 1];
+      return [right, left].filter(Boolean) as PageInfo[];
+    }
+    return [pages[currentPage]];
+  }, [currentPage, isDesktop]);
+
+  // Preload neighbors
+  useEffect(() => {
+    const indices = [currentPage - 1, currentPage + 1, currentPage + 2].filter(
+      (i) => i >= 0 && i < pages.length
+    );
+    indices.forEach((i) => {
+      const img = new Image();
+      img.src = pages[i].src;
+    });
+  }, [currentPage]);
+
+  const renderPage = (page: PageInfo, idx: number) => (
+    <div
+      key={`${page.src}-${idx}`}
+      className="relative h-full flex-1 min-w-0 flex items-center justify-center bg-black"
+    >
+      <img
+        src={page.src}
+        alt={`صفحة ${page.name}`}
+        className="max-w-full max-h-full object-contain select-none animate-fade-in"
+        loading="eager"
+        decoding="async"
+        draggable={false}
+        onError={(e) => {
+          const img = e.target as HTMLImageElement;
+          img.style.display = "none";
+          const parent = img.parentElement;
+          if (parent && !parent.querySelector(".fallback")) {
+            const div = document.createElement("div");
+            div.className = "fallback text-white/70 text-center p-6 font-amiri text-xl";
+            div.textContent = `تعذّر تحميل صفحة ${page.name}`;
+            parent.appendChild(div);
+          }
+        }}
+      />
+      {effectiveOverlay !== "none" && (
+        <div
+          className={`absolute inset-0 ${overlayClass[effectiveOverlay]} pointer-events-none transition-all duration-1000`}
+          style={overlayBlend}
+        />
+      )}
+    </div>
+  );
+
   return (
     <div
       className="fixed inset-0 z-50 bg-black"
-      onTouchStart={resetFabTimer}
       onMouseMove={resetFabTimer}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
     >
-      {/* Horizontal carousel */}
-      <div
-        ref={containerRef}
-        onScroll={handleScroll}
-        className="flex h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide"
-        style={{ scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
-        dir="ltr"
-      >
-        {pages.map((page, idx) => (
-          <div
-            key={idx}
-            className="relative flex-shrink-0 w-full h-full snap-center flex items-center justify-center bg-black"
-          >
-            <img
-              src={page.src}
-              alt={`صفحة ${page.name}`}
-              className="max-w-full max-h-full object-contain select-none"
-              loading={Math.abs(idx - currentPage) <= 1 ? "eager" : "lazy"}
-              draggable={false}
-              onError={(e) => {
-                const img = e.target as HTMLImageElement;
-                img.style.display = "none";
-                const parent = img.parentElement;
-                if (parent && !parent.querySelector(".fallback")) {
-                  const div = document.createElement("div");
-                  div.className = "fallback text-white/70 text-center p-6 font-amiri text-xl";
-                  div.textContent = `تعذّر تحميل صفحة ${page.name}`;
-                  parent.appendChild(div);
-                }
-              }}
-            />
-            {/* Overlay */}
-            {idx === currentPage && effectiveOverlay !== "none" && (
-              <div
-                className={`absolute inset-0 ${overlayClass[effectiveOverlay]} pointer-events-none transition-all duration-1000`}
-                style={overlayBlend}
-              />
-            )}
-          </div>
-        ))}
+      {/* Page spread - fills entire screen, no side gaps */}
+      <div className="flex h-full w-full" dir="rtl">
+        {visiblePages.map((p, i) => renderPage(p, i))}
       </div>
 
       {/* Side navigation arrows */}
       <button
-        onClick={() => goToPage(currentPage - 1)}
+        onClick={goPrev}
         disabled={currentPage === 0}
-        className={`absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center transition-all duration-500 disabled:opacity-0 ${
+        className={`absolute right-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center transition-all duration-500 disabled:opacity-0 z-20 ${
           fabVisible ? "opacity-50 hover:opacity-90" : "opacity-10"
         }`}
         style={{
@@ -208,12 +244,12 @@ const MushafPage = ({ onBack }: Props) => {
         }}
         aria-label="الصفحة السابقة"
       >
-        <ChevronLeft className="w-6 h-6 text-white" />
+        <ChevronRight className="w-6 h-6 text-white" />
       </button>
       <button
-        onClick={() => goToPage(currentPage + 1)}
-        disabled={currentPage === pages.length - 1}
-        className={`absolute right-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center transition-all duration-500 disabled:opacity-0 ${
+        onClick={goNext}
+        disabled={currentPage + step - 1 >= pages.length - 1 && currentPage + step >= pages.length}
+        className={`absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center transition-all duration-500 disabled:opacity-0 z-20 ${
           fabVisible ? "opacity-50 hover:opacity-90" : "opacity-10"
         }`}
         style={{
@@ -223,26 +259,29 @@ const MushafPage = ({ onBack }: Props) => {
         }}
         aria-label="الصفحة التالية"
       >
-        <ChevronRight className="w-6 h-6 text-white" />
+        <ChevronLeft className="w-6 h-6 text-white" />
       </button>
 
       {/* Page indicator */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-        {pages.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => goToPage(i)}
-            className={`h-2 rounded-full transition-all duration-500 ${
-              i === currentPage ? "bg-white w-6" : "bg-white/40 w-2 hover:bg-white/70"
-            }`}
-            aria-label={`صفحة ${i + 1}`}
-          />
-        ))}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+        {pages.map((_, i) => {
+          const active = isDesktop ? i === currentPage || i === currentPage + 1 : i === currentPage;
+          return (
+            <button
+              key={i}
+              onClick={() => goToPage(isDesktop ? i - (i % 2) : i)}
+              className={`h-2 rounded-full transition-all duration-500 ${
+                active ? "bg-white w-6" : "bg-white/40 w-2 hover:bg-white/70"
+              }`}
+              aria-label={`صفحة ${i + 1}`}
+            />
+          );
+        })}
       </div>
 
       {/* Page name pill */}
       <div
-        className={`absolute top-4 right-4 px-3 py-1.5 rounded-full transition-opacity duration-500 ${
+        className={`absolute top-4 right-4 px-3 py-1.5 rounded-full transition-opacity duration-500 z-20 ${
           fabVisible ? "opacity-70" : "opacity-20"
         }`}
         style={{
@@ -254,10 +293,10 @@ const MushafPage = ({ onBack }: Props) => {
         <span className="text-white text-xs font-amiri">{pages[currentPage]?.name}</span>
       </div>
 
-      {/* Floating Action Button */}
+      {/* FAB */}
       <button
         onClick={() => setSheetOpen(true)}
-        className={`absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-700 ${
+        className={`absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-700 z-20 ${
           fabVisible ? "opacity-50 hover:opacity-90" : "opacity-10 hover:opacity-90"
         }`}
         style={{
@@ -270,7 +309,6 @@ const MushafPage = ({ onBack }: Props) => {
         <Settings className="w-5 h-5 text-white" />
       </button>
 
-      {/* Bottom Sheet - control panel */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent
           side="bottom"
@@ -290,7 +328,6 @@ const MushafPage = ({ onBack }: Props) => {
             </SheetDescription>
           </SheetHeader>
 
-          {/* Ayah range + repeat */}
           <div className="space-y-3 py-3">
             <div className="rounded-xl bg-background/60 p-3 space-y-3 border border-border/40">
               <div className="flex items-center gap-2 text-foreground font-bold text-sm">
@@ -331,11 +368,10 @@ const MushafPage = ({ onBack }: Props) => {
                 </div>
               </div>
               <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
-                💡 سيتم ربط التوقيتات (Timestamps) بالمقاطع الصوتية لاحقاً
+                💡 افتح سورة من تبويب التلاوات وسيقفز الصوت تلقائياً للآية المختارة (تقدير زمني — يمكن إضافة توقيتات دقيقة لاحقاً في <code>src/data/ayahTimings.ts</code>)
               </p>
             </div>
 
-            {/* Repeat */}
             <div className="rounded-xl bg-background/60 p-3 space-y-2 border border-border/40">
               <div className="flex items-center gap-2 text-foreground font-bold text-sm">
                 <Repeat className="w-4 h-4 text-accent" />
@@ -358,7 +394,6 @@ const MushafPage = ({ onBack }: Props) => {
               </div>
             </div>
 
-            {/* Overlay modes */}
             <div className="space-y-2">
               {options.map((opt) => (
                 <button
@@ -382,7 +417,6 @@ const MushafPage = ({ onBack }: Props) => {
               ))}
             </div>
 
-            {/* Back */}
             <button
               onClick={() => {
                 setSheetOpen(false);
