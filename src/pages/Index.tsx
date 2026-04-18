@@ -18,7 +18,7 @@ const Index = () => {
   const { points, level, recordAyah } = useProgress();
   const [currentSurah, setCurrentSurah] = useState<SurahItem | null>(null);
   const [resumeTime, setResumeTime] = useState(0);
-  const [activeTab, setActiveTab] = useState<TabType>("audio");
+  const [activeTab, setActiveTab] = useState<TabType>("mushaf");
   const [search, setSearch] = useState("");
   const playerRef = useRef<CustomPlayerHandle>(null);
   const lastSavedRef = useRef(0);
@@ -136,7 +136,7 @@ const Index = () => {
           ref={playerRef}
           surahName={currentSurah.name}
           surahNumber={currentSurah.number}
-          driveId={currentSurah.driveId}
+          audioSrc={currentSurah.audioSrc}
           initialTime={resumeTime}
           onClose={handleClose}
           onTimeUpdate={handleTimeUpdate}

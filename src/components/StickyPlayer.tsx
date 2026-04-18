@@ -3,11 +3,11 @@ import { X } from "lucide-react";
 interface Props {
   surahName: string;
   surahNumber: number;
-  driveId: string;
+  audioSrc: string;
   onClose: () => void;
 }
 
-const StickyPlayer = ({ surahName, surahNumber, driveId, onClose }: Props) => {
+const StickyPlayer = ({ surahName, surahNumber, audioSrc, onClose }: Props) => {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t-2 border-accent shadow-2xl">
       {/* Info bar */}
@@ -37,15 +37,13 @@ const StickyPlayer = ({ surahName, surahNumber, driveId, onClose }: Props) => {
         </button>
       </div>
 
-      {/* iframe player */}
+      {/* Audio player */}
       <div className="px-4 pb-3">
-        <iframe
-          src={`https://drive.google.com/file/d/${driveId}/preview?autoplay=1`}
-          width="100%"
-          height="60"
-          allow="autoplay"
-          className="rounded-lg border border-border"
-          style={{ border: "none" }}
+        <audio
+          src={audioSrc}
+          controls
+          autoPlay
+          className="w-full rounded-lg"
         />
       </div>
     </div>

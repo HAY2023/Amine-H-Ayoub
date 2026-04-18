@@ -4,7 +4,7 @@ import { X, Play, Pause, Music, Gauge } from "lucide-react";
 interface Props {
   surahName: string;
   surahNumber: number;
-  driveId: string;
+  audioSrc: string;
   initialTime?: number;
   onClose: () => void;
   onTimeUpdate?: (time: number) => void;
@@ -25,7 +25,7 @@ const formatTime = (s: number) => {
 };
 
 const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
-  ({ surahName, surahNumber, driveId, initialTime = 0, onClose, onTimeUpdate }, ref) => {
+  ({ surahName, surahNumber, audioSrc, initialTime = 0, onClose, onTimeUpdate }, ref) => {
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [duration, setDuration] = useState(0);
@@ -35,7 +35,7 @@ const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
     const [error, setError] = useState(false);
     const initialTimeApplied = useRef(false);
 
-    const audioSrc = `https://drive.google.com/uc?export=download&id=${driveId}`;
+    // audioSrc is now passed as a prop (local file)
 
     useImperativeHandle(ref, () => ({
       seekTo: (seconds: number) => {
@@ -56,7 +56,7 @@ const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
       setIsPlaying(false);
       initialTimeApplied.current = false;
       audioRef.current?.load();
-    }, [driveId]);
+    }, [audioSrc]);
 
     useEffect(() => {
       if (audioRef.current) audioRef.current.playbackRate = speed;
@@ -202,7 +202,6 @@ const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
               setError(true);
               setLoading(false);
             }}
-            crossOrigin="anonymous"
           />
         </div>
       </div>

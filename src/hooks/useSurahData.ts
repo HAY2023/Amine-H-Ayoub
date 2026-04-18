@@ -1,60 +1,33 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 export interface SurahItem {
   number: number;
   name: string;
-  driveId: string;
-  size: string;
-  type: string;
+  audioSrc: string;
 }
 
-const API_URL =
-  "https://script.google.com/macros/s/AKfycbwTphBJ6zTGk3pzZ9FAAToLggsshO3rVVfJwfh6RfVxOtsNlGI3FRGIJYipHtrDu7Vi/exec";
-
-function parseName(n: string): { number: number; name: string } {
-  const match = n.match(/^(\d+)\s+(.+?)\.mp3$/);
-  if (match) {
-    return { number: parseInt(match[1], 10), name: match[2] };
-  }
-  return { number: 0, name: n };
-}
+// Local surah data — matches the files in public/audio/surahs/
+const LOCAL_SURAHS: SurahItem[] = [
+  { number: 1,  name: "الفاتحة",   audioSrc: "/audio/surahs/1.mp3" },
+  { number: 2,  name: "الناس",     audioSrc: "/audio/surahs/2.mp3" },
+  { number: 3,  name: "الفلق",     audioSrc: "/audio/surahs/3.mp3" },
+  { number: 4,  name: "الإخلاص",   audioSrc: "/audio/surahs/4.mp3" },
+  { number: 5,  name: "المسد",     audioSrc: "/audio/surahs/5.mp3" },
+  { number: 6,  name: "النصر",     audioSrc: "/audio/surahs/6.mp3" },
+  { number: 7,  name: "الكافرون",  audioSrc: "/audio/surahs/7.mp3" },
+  { number: 8,  name: "الكوثر",    audioSrc: "/audio/surahs/8.mp3" },
+  { number: 9,  name: "الماعون",   audioSrc: "/audio/surahs/9.mp3" },
+  { number: 10, name: "قريش",      audioSrc: "/audio/surahs/10.mp3" },
+  { number: 11, name: "الفيل",     audioSrc: "/audio/surahs/11.mp3" },
+  { number: 12, name: "الهمزة",    audioSrc: "/audio/surahs/12.mp3" },
+  { number: 13, name: "العصر",     audioSrc: "/audio/surahs/13.mp3" },
+  { number: 14, name: "التكاثر",   audioSrc: "/audio/surahs/14.mp3" },
+];
 
 export function useSurahData() {
-  const [surahs, setSurahs] = useState<SurahItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [surahs] = useState<SurahItem[]>(LOCAL_SURAHS);
+  const [loading] = useState(false);
+  const [error] = useState<string | null>(null);
 
-  const fetchData = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    fetch(API_URL)
-      .then((res) => res.json())
-      .then((json) => {
-        const items: SurahItem[] = (json.data || [])
-          .filter((d: any) => d.t === "a")
-          .map((d: any) => {
-            const parsed = parseName(d.n);
-            return {
-              number: parsed.number,
-              name: parsed.name,
-              driveId: d.i,
-              size: d.s,
-              type: d.t,
-            };
-          })
-          .sort((a: SurahItem, b: SurahItem) => a.number - b.number);
-        setSurahs(items);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  return { surahs, loading, error, retry: fetchData };
+  return { surahs, loading, error, retry: () => {} };
 }

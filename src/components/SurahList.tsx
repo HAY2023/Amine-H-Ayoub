@@ -37,7 +37,6 @@ const SurahList = ({ surahs, currentPlaying, onSelect }: Props) => {
               <h3 className="text-xl font-bold text-foreground font-amiri">
                 سورة {surah.name}
               </h3>
-              <p className="text-sm text-muted-foreground">{surah.size}</p>
             </div>
 
             {/* Wave animation for active */}
