@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Settings, ArrowRight, ChevronLeft, ChevronRight, Repeat, BookMarked } from "lucide-react";
+import { Settings, ArrowRight, ChevronLeft, ChevronRight, Repeat, BookMarked, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -24,15 +24,66 @@ interface PageInfo {
   name: string;
   src: string;
   ayahCount: number;
+  audioFiles: { name: string; src: string }[];
 }
 
 const pages: PageInfo[] = [
-  { name: "الفاتحة", src: "/pages/fatiha.jpg", ayahCount: 7 },
-  { name: "القارعة - التكاثر", src: "/pages/600.jpg", ayahCount: 19 },
-  { name: "العصر - الهمزة - الفيل", src: "/pages/601.jpg", ayahCount: 17 },
-  { name: "قريش - الماعون - الكوثر", src: "/pages/602.jpg", ayahCount: 14 },
-  { name: "الكافرون - النصر - المسد", src: "/pages/603.jpg", ayahCount: 14 },
-  { name: "الإخلاص - الفلق - الناس", src: "/pages/604.jpg", ayahCount: 15 },
+  {
+    name: "الفاتحة",
+    src: "/pages/fatiha.jpg",
+    ayahCount: 7,
+    audioFiles: [
+      { name: "الفاتحة", src: "/audio/surahs/1.mp3" },
+    ],
+  },
+  {
+    name: "القارعة - التكاثر",
+    src: "/pages/600.jpg",
+    ayahCount: 19,
+    audioFiles: [
+      { name: "التكاثر", src: "/audio/surahs/14.mp3" },
+    ],
+  },
+  {
+    name: "العصر - الهمزة - الفيل",
+    src: "/pages/601.jpg",
+    ayahCount: 17,
+    audioFiles: [
+      { name: "العصر", src: "/audio/surahs/13.mp3" },
+      { name: "الهمزة", src: "/audio/surahs/12.mp3" },
+      { name: "الفيل", src: "/audio/surahs/11.mp3" },
+    ],
+  },
+  {
+    name: "قريش - الماعون - الكوثر",
+    src: "/pages/602.jpg",
+    ayahCount: 14,
+    audioFiles: [
+      { name: "قريش", src: "/audio/surahs/10.mp3" },
+      { name: "الماعون", src: "/audio/surahs/9.mp3" },
+      { name: "الكوثر", src: "/audio/surahs/8.mp3" },
+    ],
+  },
+  {
+    name: "الكافرون - النصر - المسد",
+    src: "/pages/603.jpg",
+    ayahCount: 14,
+    audioFiles: [
+      { name: "الكافرون", src: "/audio/surahs/7.mp3" },
+      { name: "النصر", src: "/audio/surahs/6.mp3" },
+      { name: "المسد", src: "/audio/surahs/5.mp3" },
+    ],
+  },
+  {
+    name: "الإخلاص - الفلق - الناس",
+    src: "/pages/604.jpg",
+    ayahCount: 15,
+    audioFiles: [
+      { name: "الإخلاص", src: "/audio/surahs/4.mp3" },
+      { name: "الفلق", src: "/audio/surahs/3.mp3" },
+      { name: "الناس", src: "/audio/surahs/2.mp3" },
+    ],
+  },
 ];
 
 const overlayClass: Record<OverlayMode, string> = {
@@ -63,6 +114,11 @@ const MushafPage = ({ onBack }: Props) => {
   const [repeat, setRepeat] = useState<RepeatMode>(1);
   const [repeatTick, setRepeatTick] = useState(0);
 
+  // Audio state
+  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
   const fadeTimer = useRef<ReturnType<typeof setTimeout>>();
   const totalAyahs = pages[currentPage]?.ayahCount ?? 1;
 
@@ -88,6 +144,16 @@ const MushafPage = ({ onBack }: Props) => {
     setFromAyah(1);
     setToAyah(Math.min(5, totalAyahs));
   }, [currentPage, totalAyahs]);
+
+  // Stop audio when changing page
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setPlayingAudio(null);
+    setIsAudioPlaying(false);
+  }, [currentPage]);
 
   const resetFabTimer = useCallback(() => {
     setFabVisible(true);
@@ -133,6 +199,26 @@ const MushafPage = ({ onBack }: Props) => {
     if (Math.abs(dx) < 50) return;
     if (dx > 0) goPrev(); // swipe right = previous (RTL feel)
     else goNext();
+  };
+
+  // Play/pause audio for a surah
+  const toggleAudio = (audioSrc: string) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (playingAudio === audioSrc && isAudioPlaying) {
+      audio.pause();
+      setIsAudioPlaying(false);
+    } else if (playingAudio === audioSrc && !isAudioPlaying) {
+      audio.play().catch(() => {});
+      setIsAudioPlaying(true);
+    } else {
+      audio.src = audioSrc;
+      audio.load();
+      audio.play().catch(() => {});
+      setPlayingAudio(audioSrc);
+      setIsAudioPlaying(true);
+    }
   };
 
   // Alternating overlay for "both" mode
@@ -188,7 +274,8 @@ const MushafPage = ({ onBack }: Props) => {
   const renderPage = (page: PageInfo, idx: number) => (
     <div
       key={`${page.src}-${idx}`}
-      className="relative h-full flex-1 min-w-0 flex items-center justify-center bg-black"
+      className="relative h-full flex-1 min-w-0 flex items-center justify-center"
+      style={{ background: "#f5f0e6" }}
     >
       <img
         src={page.src}
@@ -203,7 +290,7 @@ const MushafPage = ({ onBack }: Props) => {
           const parent = img.parentElement;
           if (parent && !parent.querySelector(".fallback")) {
             const div = document.createElement("div");
-            div.className = "fallback text-white/70 text-center p-6 font-amiri text-xl";
+            div.className = "fallback text-foreground/70 text-center p-6 font-amiri text-xl";
             div.textContent = `تعذّر تحميل صفحة ${page.name}`;
             parent.appendChild(div);
           }
@@ -220,14 +307,73 @@ const MushafPage = ({ onBack }: Props) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black"
+      className="fixed inset-0 z-50"
+      style={{ background: "#f5f0e6" }}
       onMouseMove={resetFabTimer}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* Page spread - fills entire screen, no side gaps */}
+      {/* Hidden audio element */}
+      <audio
+        ref={audioRef}
+        onEnded={() => {
+          setIsAudioPlaying(false);
+          setPlayingAudio(null);
+        }}
+        onPause={() => setIsAudioPlaying(false)}
+        onPlay={() => setIsAudioPlaying(true)}
+      />
+
+      {/* Page spread - fills entire screen */}
       <div className="flex h-full w-full" dir="rtl">
         {visiblePages.map((p, i) => renderPage(p, i))}
+      </div>
+
+      {/* Audio buttons for current page surahs */}
+      <div
+        className={`absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-2 z-20 transition-opacity duration-500 ${
+          fabVisible ? "opacity-100" : "opacity-30"
+        }`}
+      >
+        {pages[currentPage]?.audioFiles.map((af) => {
+          const isThisPlaying = playingAudio === af.src && isAudioPlaying;
+          return (
+            <button
+              key={af.src}
+              onClick={() => toggleAudio(af.src)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold transition-all duration-300 shadow-lg ${
+                isThisPlaying
+                  ? "bg-accent text-accent-foreground scale-105"
+                  : "bg-white/90 text-foreground hover:bg-white hover:scale-105"
+              }`}
+              style={{
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+              }}
+            >
+              {isThisPlaying ? (
+                <>
+                  <Pause className="w-4 h-4" />
+                  <span className="font-amiri">{af.name}</span>
+                  <div className="flex items-center gap-[2px] h-3">
+                    {[0, 1, 2].map((i) => (
+                      <span
+                        key={i}
+                        className="w-[2px] bg-accent-foreground rounded-full animate-wave"
+                        style={{ animationDelay: `${i * 0.12}s` }}
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4" />
+                  <span className="font-amiri">{af.name}</span>
+                </>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Side navigation arrows */}
@@ -238,13 +384,13 @@ const MushafPage = ({ onBack }: Props) => {
           fabVisible ? "opacity-50 hover:opacity-90" : "opacity-10"
         }`}
         style={{
-          background: "rgba(255,255,255,0.18)",
+          background: "rgba(255,255,255,0.5)",
           backdropFilter: "blur(8px)",
           WebkitBackdropFilter: "blur(8px)",
         }}
         aria-label="الصفحة السابقة"
       >
-        <ChevronRight className="w-6 h-6 text-white" />
+        <ChevronRight className="w-6 h-6 text-foreground" />
       </button>
       <button
         onClick={goNext}
@@ -253,13 +399,13 @@ const MushafPage = ({ onBack }: Props) => {
           fabVisible ? "opacity-50 hover:opacity-90" : "opacity-10"
         }`}
         style={{
-          background: "rgba(255,255,255,0.18)",
+          background: "rgba(255,255,255,0.5)",
           backdropFilter: "blur(8px)",
           WebkitBackdropFilter: "blur(8px)",
         }}
         aria-label="الصفحة التالية"
       >
-        <ChevronLeft className="w-6 h-6 text-white" />
+        <ChevronLeft className="w-6 h-6 text-foreground" />
       </button>
 
       {/* Page indicator */}
@@ -271,7 +417,7 @@ const MushafPage = ({ onBack }: Props) => {
               key={i}
               onClick={() => goToPage(isDesktop ? i - (i % 2) : i)}
               className={`h-2 rounded-full transition-all duration-500 ${
-                active ? "bg-white w-6" : "bg-white/40 w-2 hover:bg-white/70"
+                active ? "bg-accent w-6" : "bg-foreground/30 w-2 hover:bg-foreground/50"
               }`}
               aria-label={`صفحة ${i + 1}`}
             />
@@ -285,12 +431,12 @@ const MushafPage = ({ onBack }: Props) => {
           fabVisible ? "opacity-70" : "opacity-20"
         }`}
         style={{
-          background: "rgba(255,255,255,0.15)",
+          background: "rgba(255,255,255,0.6)",
           backdropFilter: "blur(8px)",
           WebkitBackdropFilter: "blur(8px)",
         }}
       >
-        <span className="text-white text-xs font-amiri">{pages[currentPage]?.name}</span>
+        <span className="text-foreground text-xs font-amiri">{pages[currentPage]?.name}</span>
       </div>
 
       {/* FAB */}
@@ -300,13 +446,13 @@ const MushafPage = ({ onBack }: Props) => {
           fabVisible ? "opacity-50 hover:opacity-90" : "opacity-10 hover:opacity-90"
         }`}
         style={{
-          background: "rgba(255,255,255,0.18)",
+          background: "rgba(255,255,255,0.5)",
           backdropFilter: "blur(8px)",
           WebkitBackdropFilter: "blur(8px)",
         }}
         aria-label="خيارات التلقين"
       >
-        <Settings className="w-5 h-5 text-white" />
+        <Settings className="w-5 h-5 text-foreground" />
       </button>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -367,9 +513,6 @@ const MushafPage = ({ onBack }: Props) => {
                   </Select>
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
-                💡 افتح سورة من تبويب التلاوات وسيقفز الصوت تلقائياً للآية المختارة (تقدير زمني — يمكن إضافة توقيتات دقيقة لاحقاً في <code>src/data/ayahTimings.ts</code>)
-              </p>
             </div>
 
             <div className="rounded-xl bg-background/60 p-3 space-y-2 border border-border/40">
