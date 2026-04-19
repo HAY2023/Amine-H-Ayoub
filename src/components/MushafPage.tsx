@@ -8,9 +8,19 @@ type RepeatMode = 1 | 2 | 3 | 99;
 const STORAGE_KEY = "mushaf:lastPage";
 const VOICE_KEY = "mushaf:voiceMode";
 
-interface SurahAudio { name: string; number: number; src: string; ayahCount: number; }
+interface SurahAudio {
+  name: string;
+  number: number;
+  src: string; // fallback (الملف الموحد الحالي)
+  teacherSrc?: string; // ملف صوت المعلم (اختياري - عند توفره)
+  kidsSrc?: string; // ملف صوت الطفل (اختياري - عند توفره)
+  ayahCount: number;
+}
 interface PageInfo { name: string; src: string; surahs: SurahAudio[]; }
 
+// ملاحظة: عند توفر ملفات منفصلة، أضف teacherSrc و kidsSrc بهذا الشكل:
+//   { name: "...", number: 1, src: "/audio/surahs/1.mp3",
+//     teacherSrc: "/audio/teacher/1.mp3", kidsSrc: "/audio/kids/1.mp3", ayahCount: 7 }
 const pages: PageInfo[] = [
   { name: "الفاتحة", src: "/pages/fatiha.jpg", surahs: [
     { name: "الفاتحة", number: 1, src: "/audio/surahs/1.mp3", ayahCount: 7 },
@@ -40,6 +50,13 @@ const pages: PageInfo[] = [
   ]},
 ];
 
+// تحدد أي ملف يجب تشغيله بناءً على نوع الصوت المختار
+type Speaker = "teacher" | "kids";
+const resolveAudioSrc = (surah: SurahAudio, speaker: Speaker): string => {
+  if (speaker === "teacher") return surah.teacherSrc || surah.src;
+  return surah.kidsSrc || surah.src;
+};
+
 const voiceColors: Record<VoiceMode, { bg: string; glow: string; text: string }> = {
   teacher: { bg: "rgba(250,204,21,0.25)", glow: "rgba(250,204,21,0.5)", text: "#b45309" },
   kids: { bg: "rgba(56,189,248,0.25)", glow: "rgba(56,189,248,0.5)", text: "#0369a1" },
@@ -65,6 +82,8 @@ const MushafPage = ({ onBack }: Props) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentAyah, setCurrentAyah] = useState(0); // 1-based
   const [duration, setDuration] = useState(0);
+  // المتحدث الحالي عند الوضع "معاً" (يبدأ بالمعلم ثم ينتقل للطفل)
+  const [currentSpeaker, setCurrentSpeaker] = useState<Speaker>("teacher");
   const audioRef = useRef<HTMLAudioElement>(null);
   const fadeTimer = useRef<ReturnType<typeof setTimeout>>();
   const imgRef = useRef<HTMLImageElement>(null);
@@ -106,14 +125,26 @@ const MushafPage = ({ onBack }: Props) => {
     if (Math.abs(dx) < 50) return; dx > 0 ? goPrev() : goNext();
   };
 
-  // Play a surah
+  // تشغيل سورة بصوت محدد (معلم/طفل)
+  const playSurahWithSpeaker = (surah: SurahAudio, speaker: Speaker) => {
+    const a = audioRef.current; if (!a) return;
+    const src = resolveAudioSrc(surah, speaker);
+    a.src = src; a.load();
+    setActiveSurah(surah);
+    setCurrentSpeaker(speaker);
+    setCurrentAyah(1);
+    a.play().catch(() => {});
+  };
+
+  // Play a surah (entry point)
   const playSurah = (surah: SurahAudio) => {
     const a = audioRef.current; if (!a) return;
     if (activeSurah?.src === surah.src && isPlaying) { a.pause(); return; }
     if (activeSurah?.src === surah.src && !isPlaying) { a.play().catch(() => {}); return; }
-    a.src = surah.src; a.load();
-    setActiveSurah(surah); setCurrentRepeat(1); setCurrentAyah(1);
-    a.play().catch(() => {});
+    // عند بدء سورة جديدة: ابدأ بالمعلم دائماً (سواء كان الوضع teacher أو both، أما kids فيبدأ بالطفل)
+    const startSpeaker: Speaker = voiceMode === "kids" ? "kids" : "teacher";
+    setCurrentRepeat(1);
+    playSurahWithSpeaker(surah, startSpeaker);
   };
 
   // Estimate current ayah from time
@@ -127,10 +158,20 @@ const MushafPage = ({ onBack }: Props) => {
   };
 
   const handleEnded = () => {
+    if (!activeSurah) return;
+    // وضع "معاً": بعد المعلم شغّل الطفل
+    if (voiceMode === "both" && currentSpeaker === "teacher") {
+      playSurahWithSpeaker(activeSurah, "kids");
+      return;
+    }
+    // انتهت دورة كاملة (معلم+طفل أو صوت واحد) — تحقق من التكرار
     if (repeat === 99 || currentRepeat < repeat) {
-      setCurrentRepeat(c => c + 1); setCurrentAyah(1);
-      const a = audioRef.current; if (a) { a.currentTime = 0; a.play().catch(() => {}); }
-    } else { setIsPlaying(false); setActiveSurah(null); setCurrentAyah(0); setCurrentRepeat(0); }
+      setCurrentRepeat(c => c + 1);
+      const startSpeaker: Speaker = voiceMode === "kids" ? "kids" : "teacher";
+      playSurahWithSpeaker(activeSurah, startSpeaker);
+    } else {
+      setIsPlaying(false); setActiveSurah(null); setCurrentAyah(0); setCurrentRepeat(0);
+    }
   };
 
   // Jump to specific ayah
@@ -168,7 +209,9 @@ const MushafPage = ({ onBack }: Props) => {
     const topOffset = 8;
     const usableHeight = 100 - topOffset - 4;
     const top = topOffset + ((globalAyah - 1) / totalPageAyahs) * usableHeight;
-    const vc = voiceColors[voiceMode];
+    // اللون يتبع المتحدث الفعلي (مهم في وضع "معاً": أصفر للمعلم ثم سماوي للطفل)
+    const activeColorKey: VoiceMode = voiceMode === "both" ? currentSpeaker : voiceMode;
+    const vc = voiceColors[activeColorKey];
 
     return {
       position: "absolute" as const,
@@ -178,12 +221,15 @@ const MushafPage = ({ onBack }: Props) => {
       background: vc.bg,
       borderRadius: "8px",
       boxShadow: `0 0 15px ${vc.glow}`,
-      transition: "top 0.4s ease, background 0.3s",
+      mixBlendMode: "multiply" as const,
+      transition: "top 0.4s ease, background 0.4s ease, box-shadow 0.4s ease",
       pointerEvents: "none" as const,
     };
   };
 
-  const vc = voiceColors[voiceMode];
+  // لون الواجهة العامة يتبع المتحدث الحالي عند "معاً"، وإلا يتبع الوضع
+  const activeVoiceKey: VoiceMode = voiceMode === "both" && isPlaying ? currentSpeaker : voiceMode;
+  const vc = voiceColors[activeVoiceKey];
   const voiceOpts = [
     { key: "teacher" as VoiceMode, label: "المعلم", emoji: "👨‍🏫", cls: "bg-amber-100 border-amber-400" },
     { key: "kids" as VoiceMode, label: "الأطفال", emoji: "👦", cls: "bg-sky-100 border-sky-400" },
@@ -216,7 +262,9 @@ const MushafPage = ({ onBack }: Props) => {
       {isPlaying && activeSurah && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg animate-fade-in"
           style={{ background: vc.bg, border: `2px solid ${vc.glow}` }}>
+          <span className="text-lg">{(voiceMode === "both" ? currentSpeaker : voiceMode) === "teacher" ? "👨‍🏫" : "👦"}</span>
           <span className="font-amiri font-bold text-sm" style={{ color: vc.text }}>
+            {voiceMode === "both" ? (currentSpeaker === "teacher" ? "المعلم · " : "الطفل · ") : ""}
             سورة {activeSurah.name} — الآية {currentAyah} من {activeSurah.ayahCount}
           </span>
           <span className="text-xs opacity-60">({currentRepeat}/{repeat === 99 ? "∞" : repeat})</span>
