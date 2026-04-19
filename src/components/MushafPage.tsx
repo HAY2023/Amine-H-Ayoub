@@ -262,7 +262,9 @@ const MushafPage = ({ onBack }: Props) => {
       {isPlaying && activeSurah && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg animate-fade-in"
           style={{ background: vc.bg, border: `2px solid ${vc.glow}` }}>
+          <span className="text-lg">{(voiceMode === "both" ? currentSpeaker : voiceMode) === "teacher" ? "👨‍🏫" : "👦"}</span>
           <span className="font-amiri font-bold text-sm" style={{ color: vc.text }}>
+            {voiceMode === "both" ? (currentSpeaker === "teacher" ? "المعلم · " : "الطفل · ") : ""}
             سورة {activeSurah.name} — الآية {currentAyah} من {activeSurah.ayahCount}
           </span>
           <span className="text-xs opacity-60">({currentRepeat}/{repeat === 99 ? "∞" : repeat})</span>
