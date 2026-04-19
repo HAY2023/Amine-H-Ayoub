@@ -82,6 +82,8 @@ const MushafPage = ({ onBack }: Props) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentAyah, setCurrentAyah] = useState(0); // 1-based
   const [duration, setDuration] = useState(0);
+  // المتحدث الحالي عند الوضع "معاً" (يبدأ بالمعلم ثم ينتقل للطفل)
+  const [currentSpeaker, setCurrentSpeaker] = useState<Speaker>("teacher");
   const audioRef = useRef<HTMLAudioElement>(null);
   const fadeTimer = useRef<ReturnType<typeof setTimeout>>();
   const imgRef = useRef<HTMLImageElement>(null);
@@ -123,14 +125,26 @@ const MushafPage = ({ onBack }: Props) => {
     if (Math.abs(dx) < 50) return; dx > 0 ? goPrev() : goNext();
   };
 
-  // Play a surah
+  // تشغيل سورة بصوت محدد (معلم/طفل)
+  const playSurahWithSpeaker = (surah: SurahAudio, speaker: Speaker) => {
+    const a = audioRef.current; if (!a) return;
+    const src = resolveAudioSrc(surah, speaker);
+    a.src = src; a.load();
+    setActiveSurah(surah);
+    setCurrentSpeaker(speaker);
+    setCurrentAyah(1);
+    a.play().catch(() => {});
+  };
+
+  // Play a surah (entry point)
   const playSurah = (surah: SurahAudio) => {
     const a = audioRef.current; if (!a) return;
     if (activeSurah?.src === surah.src && isPlaying) { a.pause(); return; }
     if (activeSurah?.src === surah.src && !isPlaying) { a.play().catch(() => {}); return; }
-    a.src = surah.src; a.load();
-    setActiveSurah(surah); setCurrentRepeat(1); setCurrentAyah(1);
-    a.play().catch(() => {});
+    // عند بدء سورة جديدة: ابدأ بالمعلم دائماً (سواء كان الوضع teacher أو both، أما kids فيبدأ بالطفل)
+    const startSpeaker: Speaker = voiceMode === "kids" ? "kids" : "teacher";
+    setCurrentRepeat(1);
+    playSurahWithSpeaker(surah, startSpeaker);
   };
 
   // Estimate current ayah from time
@@ -144,10 +158,20 @@ const MushafPage = ({ onBack }: Props) => {
   };
 
   const handleEnded = () => {
+    if (!activeSurah) return;
+    // وضع "معاً": بعد المعلم شغّل الطفل
+    if (voiceMode === "both" && currentSpeaker === "teacher") {
+      playSurahWithSpeaker(activeSurah, "kids");
+      return;
+    }
+    // انتهت دورة كاملة (معلم+طفل أو صوت واحد) — تحقق من التكرار
     if (repeat === 99 || currentRepeat < repeat) {
-      setCurrentRepeat(c => c + 1); setCurrentAyah(1);
-      const a = audioRef.current; if (a) { a.currentTime = 0; a.play().catch(() => {}); }
-    } else { setIsPlaying(false); setActiveSurah(null); setCurrentAyah(0); setCurrentRepeat(0); }
+      setCurrentRepeat(c => c + 1);
+      const startSpeaker: Speaker = voiceMode === "kids" ? "kids" : "teacher";
+      playSurahWithSpeaker(activeSurah, startSpeaker);
+    } else {
+      setIsPlaying(false); setActiveSurah(null); setCurrentAyah(0); setCurrentRepeat(0);
+    }
   };
 
   // Jump to specific ayah
