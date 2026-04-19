@@ -8,9 +8,19 @@ type RepeatMode = 1 | 2 | 3 | 99;
 const STORAGE_KEY = "mushaf:lastPage";
 const VOICE_KEY = "mushaf:voiceMode";
 
-interface SurahAudio { name: string; number: number; src: string; ayahCount: number; }
+interface SurahAudio {
+  name: string;
+  number: number;
+  src: string; // fallback (الملف الموحد الحالي)
+  teacherSrc?: string; // ملف صوت المعلم (اختياري - عند توفره)
+  kidsSrc?: string; // ملف صوت الطفل (اختياري - عند توفره)
+  ayahCount: number;
+}
 interface PageInfo { name: string; src: string; surahs: SurahAudio[]; }
 
+// ملاحظة: عند توفر ملفات منفصلة، أضف teacherSrc و kidsSrc بهذا الشكل:
+//   { name: "...", number: 1, src: "/audio/surahs/1.mp3",
+//     teacherSrc: "/audio/teacher/1.mp3", kidsSrc: "/audio/kids/1.mp3", ayahCount: 7 }
 const pages: PageInfo[] = [
   { name: "الفاتحة", src: "/pages/fatiha.jpg", surahs: [
     { name: "الفاتحة", number: 1, src: "/audio/surahs/1.mp3", ayahCount: 7 },
@@ -39,6 +49,13 @@ const pages: PageInfo[] = [
     { name: "الناس", number: 2, src: "/audio/surahs/2.mp3", ayahCount: 6 },
   ]},
 ];
+
+// تحدد أي ملف يجب تشغيله بناءً على نوع الصوت المختار
+type Speaker = "teacher" | "kids";
+const resolveAudioSrc = (surah: SurahAudio, speaker: Speaker): string => {
+  if (speaker === "teacher") return surah.teacherSrc || surah.src;
+  return surah.kidsSrc || surah.src;
+};
 
 const voiceColors: Record<VoiceMode, { bg: string; glow: string; text: string }> = {
   teacher: { bg: "rgba(250,204,21,0.25)", glow: "rgba(250,204,21,0.5)", text: "#b45309" },
