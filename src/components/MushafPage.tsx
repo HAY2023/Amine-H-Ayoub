@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Settings, ArrowRight, ChevronLeft, ChevronRight, Repeat, Play, Pause } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { AYAH_COUNTS } from "@/data/ayahTimings";
+import { AYAH_COUNTS, getCurrentAyahAtTime, getAyahStartTime, hasKidsSection, getSpeakerAtTime } from "@/data/ayahTimings";
 
 type VoiceMode = "teacher" | "kids" | "both";
 type RepeatMode = 1 | 2 | 3 | 99;
@@ -125,14 +125,29 @@ const MushafPage = ({ onBack }: Props) => {
     if (Math.abs(dx) < 50) return; dx > 0 ? goPrev() : goNext();
   };
 
-  // تشغيل سورة بصوت محدد (معلم/طفل)
+  // تشغيل سورة بصوت محدد (معلم/طفل) — يتعامل مع الملف المدمج بالقفز إلى الموضع
   const playSurahWithSpeaker = (surah: SurahAudio, speaker: Speaker) => {
     const a = audioRef.current; if (!a) return;
     const src = resolveAudioSrc(surah, speaker);
-    a.src = src; a.load();
+    const isCombined = !surah.kidsSrc && !surah.teacherSrc; // لا يوجد ملفات منفصلة → ملف مدمج
+    const sameSrc = a.src && a.src.endsWith(src);
+
+    if (!sameSrc) { a.src = src; a.load(); }
+
     setActiveSurah(surah);
     setCurrentSpeaker(speaker);
     setCurrentAyah(1);
+
+    // ابدأ التشغيل من الموضع الصحيح
+    const startCombinedKids = isCombined && speaker === "kids" && hasKidsSection(surah.number);
+    if (startCombinedKids) {
+      const t = getAyahStartTime(surah.number, 1, a.duration || 0, "kids");
+      // إذا لم تُحمَّل المدة بعد، انتظر loadedmetadata
+      if (a.duration > 0) a.currentTime = t;
+      else a.addEventListener("loadedmetadata", () => { a.currentTime = t; }, { once: true });
+    } else if (isCombined && speaker === "teacher") {
+      a.currentTime = 0;
+    }
     a.play().catch(() => {});
   };
 
@@ -141,30 +156,47 @@ const MushafPage = ({ onBack }: Props) => {
     const a = audioRef.current; if (!a) return;
     if (activeSurah?.src === surah.src && isPlaying) { a.pause(); return; }
     if (activeSurah?.src === surah.src && !isPlaying) { a.play().catch(() => {}); return; }
-    // عند بدء سورة جديدة: ابدأ بالمعلم دائماً (سواء كان الوضع teacher أو both، أما kids فيبدأ بالطفل)
     const startSpeaker: Speaker = voiceMode === "kids" ? "kids" : "teacher";
     setCurrentRepeat(1);
     playSurahWithSpeaker(surah, startSpeaker);
   };
 
-  // Estimate current ayah from time
+  // تتبع الآية والمتحدث الحاليين باستخدام التوقيتات الحقيقية إن وُجدت
   const handleTimeUpdate = () => {
     const a = audioRef.current;
     if (!a || !activeSurah || a.duration <= 0) return;
-    const totalAyahs = activeSurah.ayahCount;
-    const ayahDur = a.duration / totalAyahs;
-    const est = Math.floor(a.currentTime / ayahDur) + 1;
-    setCurrentAyah(Math.min(est, totalAyahs));
+    const isCombined = !activeSurah.kidsSrc && !activeSurah.teacherSrc;
+
+    const { ayah, speaker } = getCurrentAyahAtTime(activeSurah.number, a.currentTime, a.duration);
+    if (ayah > 0) setCurrentAyah(ayah);
+
+    // في الملف المدمج: حدّث المتحدث تلقائياً عند تجاوز نقطة الانتقال
+    if (isCombined && speaker && speaker !== currentSpeaker && voiceMode === "both") {
+      setCurrentSpeaker(speaker);
+    }
+
+    // في وضع "المعلم" فقط على ملف مدمج: أوقف عند بداية قسم الطفل
+    if (isCombined && voiceMode === "teacher" && hasKidsSection(activeSurah.number)) {
+      const sp = getSpeakerAtTime(activeSurah.number, a.currentTime);
+      if (sp === "kids") {
+        a.pause();
+        // عامله كنهاية مقطع
+        handleEnded();
+      }
+    }
   };
 
   const handleEnded = () => {
     if (!activeSurah) return;
-    // وضع "معاً": بعد المعلم شغّل الطفل
-    if (voiceMode === "both" && currentSpeaker === "teacher") {
+    const isCombined = !activeSurah.kidsSrc && !activeSurah.teacherSrc;
+
+    // ملفات منفصلة + وضع "معاً": بعد المعلم شغّل الطفل
+    if (!isCombined && voiceMode === "both" && currentSpeaker === "teacher") {
       playSurahWithSpeaker(activeSurah, "kids");
       return;
     }
-    // انتهت دورة كاملة (معلم+طفل أو صوت واحد) — تحقق من التكرار
+
+    // التكرار
     if (repeat === 99 || currentRepeat < repeat) {
       setCurrentRepeat(c => c + 1);
       const startSpeaker: Speaker = voiceMode === "kids" ? "kids" : "teacher";
@@ -174,12 +206,12 @@ const MushafPage = ({ onBack }: Props) => {
     }
   };
 
-  // Jump to specific ayah
+  // Jump to specific ayah (using real timings when available)
   const jumpToAyah = (ayahNum: number) => {
     const a = audioRef.current;
     if (!a || !activeSurah || a.duration <= 0) return;
-    const ayahDur = a.duration / activeSurah.ayahCount;
-    a.currentTime = (ayahNum - 1) * ayahDur;
+    const speaker = voiceMode === "both" ? currentSpeaker : (voiceMode === "kids" ? "kids" : "teacher");
+    a.currentTime = getAyahStartTime(activeSurah.number, ayahNum, a.duration, speaker);
     setCurrentAyah(ayahNum);
     if (!isPlaying) a.play().catch(() => {});
   };
