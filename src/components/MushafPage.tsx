@@ -209,7 +209,9 @@ const MushafPage = ({ onBack }: Props) => {
     const topOffset = 8;
     const usableHeight = 100 - topOffset - 4;
     const top = topOffset + ((globalAyah - 1) / totalPageAyahs) * usableHeight;
-    const vc = voiceColors[voiceMode];
+    // اللون يتبع المتحدث الفعلي (مهم في وضع "معاً": أصفر للمعلم ثم سماوي للطفل)
+    const activeColorKey: VoiceMode = voiceMode === "both" ? currentSpeaker : voiceMode;
+    const vc = voiceColors[activeColorKey];
 
     return {
       position: "absolute" as const,
@@ -219,12 +221,15 @@ const MushafPage = ({ onBack }: Props) => {
       background: vc.bg,
       borderRadius: "8px",
       boxShadow: `0 0 15px ${vc.glow}`,
-      transition: "top 0.4s ease, background 0.3s",
+      mixBlendMode: "multiply" as const,
+      transition: "top 0.4s ease, background 0.4s ease, box-shadow 0.4s ease",
       pointerEvents: "none" as const,
     };
   };
 
-  const vc = voiceColors[voiceMode];
+  // لون الواجهة العامة يتبع المتحدث الحالي عند "معاً"، وإلا يتبع الوضع
+  const activeVoiceKey: VoiceMode = voiceMode === "both" && isPlaying ? currentSpeaker : voiceMode;
+  const vc = voiceColors[activeVoiceKey];
   const voiceOpts = [
     { key: "teacher" as VoiceMode, label: "المعلم", emoji: "👨‍🏫", cls: "bg-amber-100 border-amber-400" },
     { key: "kids" as VoiceMode, label: "الأطفال", emoji: "👦", cls: "bg-sky-100 border-sky-400" },
