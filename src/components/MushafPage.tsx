@@ -164,6 +164,7 @@ const MushafPage = ({ onBack }: Props) => {
   };
 
   // تتبع الآية والمتحدث الحاليين باستخدام التوقيتات الحقيقية إن وُجدت
+  const lastSavedTimeRef = useRef(0);
   const handleTimeUpdate = () => {
     const a = audioRef.current;
     if (!a || !activeSurah || a.duration <= 0) return;
@@ -185,6 +186,13 @@ const MushafPage = ({ onBack }: Props) => {
         // عامله كنهاية مقطع
         handleEnded();
       }
+    }
+
+    // حفظ مُخفّف لموضع التشغيل (كل ثانيتين)
+    if (Math.abs(a.currentTime - lastSavedTimeRef.current) >= 2) {
+      lastSavedTimeRef.current = a.currentTime;
+      localStorage.setItem(MUSHAF_LAST_SURAH, String(activeSurah.number));
+      localStorage.setItem(MUSHAF_LAST_TIME, String(a.currentTime));
     }
   };
 
