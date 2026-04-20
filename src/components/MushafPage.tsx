@@ -1,31 +1,20 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Settings, ArrowRight, ChevronLeft, ChevronRight, Repeat, Play, Pause } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X } from "lucide-react";
 import { AYAH_COUNTS, getCurrentAyahAtTime, getAyahStartTime, hasKidsSection, getSpeakerAtTime } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 
-type VoiceMode = "teacher" | "kids" | "both";
-type RepeatMode = 1 | 2 | 3 | 99;
+type Speaker = "teacher" | "kids";
+type PlayMode = "teacher" | "kids" | "both"; // both = teacher then kids for the same ayah
+
 const STORAGE_KEY = "mushaf:lastPage";
-const VOICE_KEY = "mushaf:voiceMode";
 const MUSHAF_LAST_SURAH = "mushaf:lastSurah";
 const MUSHAF_LAST_TIME = "mushaf:lastTime";
 
-interface SurahAudio {
-  name: string;
-  number: number;
-  src: string; // fallback (الملف الموحد الحالي)
-  teacherSrc?: string; // ملف صوت المعلم (اختياري - عند توفره)
-  kidsSrc?: string; // ملف صوت الطفل (اختياري - عند توفره)
-  ayahCount: number;
-}
+interface SurahAudio { name: string; number: number; src: string; ayahCount: number; }
 interface PageInfo { name: string; src: string; surahs: SurahAudio[]; }
 
-// ملاحظة: عند توفر ملفات منفصلة، أضف teacherSrc و kidsSrc بهذا الشكل:
-//   { name: "...", number: 1, src: "/audio/surahs/1.mp3",
-//     teacherSrc: "/audio/teacher/1.mp3", kidsSrc: "/audio/kids/1.mp3", ayahCount: 7 }
 const pages: PageInfo[] = [
   { name: "الفاتحة", src: "/pages/fatiha.jpg", surahs: [
     { name: "الفاتحة", number: 1, src: audioPath(1), ayahCount: 7 },
@@ -55,166 +44,206 @@ const pages: PageInfo[] = [
   ]},
 ];
 
-// تحدد أي ملف يجب تشغيله بناءً على نوع الصوت المختار
-type Speaker = "teacher" | "kids";
-const resolveAudioSrc = (surah: SurahAudio, speaker: Speaker): string => {
-  if (speaker === "teacher") return surah.teacherSrc || surah.src;
-  return surah.kidsSrc || surah.src;
-};
-
-const voiceColors: Record<VoiceMode, { bg: string; glow: string; text: string }> = {
-  teacher: { bg: "rgba(250,204,21,0.25)", glow: "rgba(250,204,21,0.5)", text: "#b45309" },
-  kids: { bg: "rgba(56,189,248,0.25)", glow: "rgba(56,189,248,0.5)", text: "#0369a1" },
-  both: { bg: "rgba(52,211,153,0.25)", glow: "rgba(52,211,153,0.5)", text: "#047857" },
+const speakerColors: Record<Speaker, { bg: string; glow: string; text: string }> = {
+  teacher: { bg: "rgba(250,204,21,0.30)", glow: "rgba(250,204,21,0.55)", text: "#b45309" },
+  kids:    { bg: "rgba(56,189,248,0.30)", glow: "rgba(56,189,248,0.55)", text: "#0369a1" },
 };
 
 interface Props { onBack: () => void; }
 
 const MushafPage = ({ onBack }: Props) => {
-  const [sheetOpen, setSheetOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(() => {
     const s = parseInt(localStorage.getItem(STORAGE_KEY) || "0", 10);
     return isNaN(s) || s < 0 || s >= pages.length ? 0 : s;
   });
-  const [fabVisible, setFabVisible] = useState(true);
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" ? window.innerWidth >= 1024 : false);
-  const [voiceMode, setVoiceMode] = useState<VoiceMode>(() => (localStorage.getItem(VOICE_KEY) as VoiceMode) || "both");
-  const [repeat, setRepeat] = useState<RepeatMode>(2);
-  const [currentRepeat, setCurrentRepeat] = useState(0);
+  const [controlsOpen, setControlsOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Audio state
   const [activeSurah, setActiveSurah] = useState<SurahAudio | null>(null);
+  const [selectedSurahIdx, setSelectedSurahIdx] = useState(0); // index within current page
+  const [selectedAyah, setSelectedAyah] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentAyah, setCurrentAyah] = useState(0); // 1-based
-  const [duration, setDuration] = useState(0);
-  // المتحدث الحالي عند الوضع "معاً" (يبدأ بالمعلم ثم ينتقل للطفل)
+  const [currentAyah, setCurrentAyah] = useState(0);
   const [currentSpeaker, setCurrentSpeaker] = useState<Speaker>("teacher");
+  const [playMode, setPlayMode] = useState<PlayMode>("teacher"); // last requested mode
   const audioRef = useRef<HTMLAudioElement>(null);
-  const fadeTimer = useRef<ReturnType<typeof setTimeout>>();
-  const imgRef = useRef<HTMLImageElement>(null);
   const lastSavedTimeRef = useRef(0);
+  const stopAtRef = useRef<number | null>(null); // stop playback when reaching this time
+  const pendingSecondPassRef = useRef<{ surah: SurahAudio; ayah: number } | null>(null); // for "both" mode
 
-  useEffect(() => { localStorage.setItem(VOICE_KEY, voiceMode); }, [voiceMode]);
   useEffect(() => {
     const r = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener("resize", r); return () => window.removeEventListener("resize", r);
   }, []);
   useEffect(() => { localStorage.setItem(STORAGE_KEY, String(currentPage)); }, [currentPage]);
 
-  // Stop on page change (لكن لا نحذف موضع التشغيل المحفوظ)
+  // Stop on page change
   useEffect(() => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
-    setActiveSurah(null); setIsPlaying(false); setCurrentAyah(0); setDuration(0);
+    setActiveSurah(null); setIsPlaying(false); setCurrentAyah(0);
+    setSelectedSurahIdx(0); setSelectedAyah(1);
+    stopAtRef.current = null; pendingSecondPassRef.current = null;
   }, [currentPage]);
 
-  // استئناف آخر سورة مُشغَّلة عند فتح المصحف (مرة واحدة)
+  // Resume last surah (once)
   const resumedRef = useRef(false);
   useEffect(() => {
     if (resumedRef.current) return;
+    resumedRef.current = true;
     const savedNum = parseInt(localStorage.getItem(MUSHAF_LAST_SURAH) || "0", 10);
     const savedTime = parseFloat(localStorage.getItem(MUSHAF_LAST_TIME) || "0");
-    if (!savedNum) { resumedRef.current = true; return; }
-    const surah = pages[currentPage]?.surahs.find(s => s.number === savedNum);
-    if (!surah) { resumedRef.current = true; return; }
-    resumedRef.current = true;
+    if (!savedNum) return;
+    const surahIdx = pages[currentPage]?.surahs.findIndex(s => s.number === savedNum) ?? -1;
+    if (surahIdx === -1) return;
+    const surah = pages[currentPage].surahs[surahIdx];
     const a = audioRef.current; if (!a) return;
-    a.src = resolveAudioSrc(surah, voiceMode === "kids" ? "kids" : "teacher");
-    a.load();
+    a.src = surah.src; a.load();
     setActiveSurah(surah);
-    setCurrentSpeaker(voiceMode === "kids" ? "kids" : "teacher");
+    setSelectedSurahIdx(surahIdx);
     a.addEventListener("loadedmetadata", () => {
       if (savedTime > 0 && savedTime < a.duration) {
         a.currentTime = savedTime;
         lastSavedTimeRef.current = savedTime;
       }
     }, { once: true });
-  }, [currentPage, voiceMode]);
+  }, [currentPage]);
 
-  const resetFabTimer = useCallback(() => {
-    setFabVisible(true); clearTimeout(fadeTimer.current);
-    fadeTimer.current = setTimeout(() => setFabVisible(false), 5000);
+  // Fullscreen API
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch {}
   }, []);
-  useEffect(() => { resetFabTimer(); return () => clearTimeout(fadeTimer.current); }, [resetFabTimer]);
+  useEffect(() => {
+    const h = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", h);
+    return () => document.removeEventListener("fullscreenchange", h);
+  }, []);
 
+  // Navigation
   const step = isDesktop ? 2 : 1;
-  const goToPage = (i: number) => { if (i >= 0 && i < pages.length) { setCurrentPage(i); resetFabTimer(); } };
+  const goToPage = (i: number) => { if (i >= 0 && i < pages.length) setCurrentPage(i); };
   const goPrev = () => goToPage(Math.max(0, currentPage - step));
   const goNext = () => goToPage(Math.min(pages.length - 1, currentPage + step));
 
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "ArrowRight") goPrev(); if (e.key === "ArrowLeft") goNext(); };
+    const h = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") goPrev();
+      if (e.key === "ArrowLeft") goNext();
+      if (e.key === "Escape") { if (controlsOpen) setControlsOpen(false); else onBack(); }
+    };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
-  }, [currentPage, isDesktop]);
+  }, [currentPage, isDesktop, controlsOpen]);
 
+  // Swipe nav
   const touchX = useRef<number | null>(null);
-  const onTS = (e: React.TouchEvent) => { touchX.current = e.touches[0].clientX; resetFabTimer(); };
+  const touchY = useRef<number | null>(null);
+  const lastTapRef = useRef<number>(0);
+  const onTS = (e: React.TouchEvent) => {
+    touchX.current = e.touches[0].clientX;
+    touchY.current = e.touches[0].clientY;
+  };
   const onTE = (e: React.TouchEvent) => {
-    if (touchX.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchX.current; touchX.current = null;
-    if (Math.abs(dx) < 50) return; dx > 0 ? goPrev() : goNext();
+    if (touchX.current === null || touchY.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchX.current;
+    const dy = e.changedTouches[0].clientY - touchY.current;
+    touchX.current = null; touchY.current = null;
+    // swipe horizontally
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+      dx > 0 ? goPrev() : goNext();
+      return;
+    }
+    // double tap detection (for fullscreen)
+    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+      const now = Date.now();
+      if (now - lastTapRef.current < 300) {
+        toggleFullscreen();
+        lastTapRef.current = 0;
+      } else {
+        lastTapRef.current = now;
+      }
+    }
   };
 
-  // تشغيل سورة بصوت محدد (معلم/طفل) — يتعامل مع الملف المدمج بالقفز إلى الموضع
-  const playSurahWithSpeaker = (surah: SurahAudio, speaker: Speaker) => {
+  // ---- Ayah-by-ayah playback ----
+  const playAyah = useCallback((surah: SurahAudio, ayahNum: number, mode: PlayMode) => {
     const a = audioRef.current; if (!a) return;
-    const src = resolveAudioSrc(surah, speaker);
-    const isCombined = !surah.kidsSrc && !surah.teacherSrc; // لا يوجد ملفات منفصلة → ملف مدمج
-    const sameSrc = a.src && a.src.endsWith(src);
-
-    if (!sameSrc) { a.src = src; a.load(); }
+    const isCombined = true; // we only have combined files for now
+    const sameSrc = a.src && a.src.endsWith(surah.src.split("/").pop() || surah.src);
 
     setActiveSurah(surah);
-    setCurrentSpeaker(speaker);
-    setCurrentAyah(1);
+    setPlayMode(mode);
+    setCurrentAyah(ayahNum);
+    pendingSecondPassRef.current = null;
+    stopAtRef.current = null;
 
-    // ابدأ التشغيل من الموضع الصحيح
-    const startCombinedKids = isCombined && speaker === "kids" && hasKidsSection(surah.number);
-    if (startCombinedKids) {
-      const t = getAyahStartTime(surah.number, 1, a.duration || 0, "kids");
-      // إذا لم تُحمَّل المدة بعد، انتظر loadedmetadata
-      if (a.duration > 0) a.currentTime = t;
-      else a.addEventListener("loadedmetadata", () => { a.currentTime = t; }, { once: true });
-    } else if (isCombined && speaker === "teacher") {
-      a.currentTime = 0;
+    const start = (firstSpeaker: Speaker) => {
+      setCurrentSpeaker(firstSpeaker);
+      const dur = a.duration || 0;
+      const startT = getAyahStartTime(surah.number, ayahNum, dur, firstSpeaker);
+      // compute stop time = start of NEXT ayah (or kidsStart if this is last teacher ayah, or end)
+      const nextT = computeAyahEnd(surah, ayahNum, firstSpeaker, dur);
+      stopAtRef.current = nextT;
+      // for "both" mode: schedule second pass (kids) after teacher finishes
+      if (mode === "both" && firstSpeaker === "teacher" && hasKidsSection(surah.number)) {
+        pendingSecondPassRef.current = { surah, ayah: ayahNum };
+      }
+      a.currentTime = startT;
+      a.play().catch(() => {});
+    };
+
+    const firstSpeaker: Speaker = mode === "kids" ? "kids" : "teacher";
+
+    if (!sameSrc) {
+      a.src = surah.src;
+      a.load();
+      a.addEventListener("loadedmetadata", () => start(firstSpeaker), { once: true });
+    } else {
+      if (a.duration > 0) start(firstSpeaker);
+      else a.addEventListener("loadedmetadata", () => start(firstSpeaker), { once: true });
     }
-    a.play().catch(() => {});
+  }, []);
+
+  // compute end time of an ayah for a given speaker (start of next ayah, or boundary)
+  const computeAyahEnd = (surah: SurahAudio, ayahNum: number, speaker: Speaker, dur: number): number => {
+    const total = surah.ayahCount;
+    if (ayahNum < total) {
+      return getAyahStartTime(surah.number, ayahNum + 1, dur, speaker);
+    }
+    // last ayah: end at kidsStart (if teacher on combined file) or audio end
+    if (speaker === "teacher" && hasKidsSection(surah.number)) {
+      // import inline: we don't have direct access to kidsStart constant; compute via getAyahStartTime kids[1]
+      const kidsFirst = getAyahStartTime(surah.number, 1, dur, "kids");
+      if (kidsFirst > 0) return kidsFirst;
+    }
+    return dur || 1e9;
   };
 
-  // Play a surah (entry point)
-  const playSurah = (surah: SurahAudio) => {
-    const a = audioRef.current; if (!a) return;
-    if (activeSurah?.src === surah.src && isPlaying) { a.pause(); return; }
-    if (activeSurah?.src === surah.src && !isPlaying) { a.play().catch(() => {}); return; }
-    const startSpeaker: Speaker = voiceMode === "kids" ? "kids" : "teacher";
-    setCurrentRepeat(1);
-    playSurahWithSpeaker(surah, startSpeaker);
-  };
-
-  // تتبع الآية والمتحدث الحاليين باستخدام التوقيتات الحقيقية إن وُجدت
+  // Time update
   const handleTimeUpdate = () => {
     const a = audioRef.current;
     if (!a || !activeSurah || a.duration <= 0) return;
-    const isCombined = !activeSurah.kidsSrc && !activeSurah.teacherSrc;
 
+    // ayah display follow
     const { ayah, speaker } = getCurrentAyahAtTime(activeSurah.number, a.currentTime, a.duration);
     if (ayah > 0) setCurrentAyah(ayah);
+    if (speaker && speaker !== currentSpeaker) setCurrentSpeaker(speaker);
 
-    // في الملف المدمج: حدّث المتحدث تلقائياً عند تجاوز نقطة الانتقال
-    if (isCombined && speaker && speaker !== currentSpeaker && voiceMode === "both") {
-      setCurrentSpeaker(speaker);
+    // stop when reaching scheduled end
+    if (stopAtRef.current !== null && a.currentTime >= stopAtRef.current - 0.05) {
+      a.pause();
+      handleAyahSegmentEnd();
     }
 
-    // في وضع "المعلم" فقط على ملف مدمج: أوقف عند بداية قسم الطفل
-    if (isCombined && voiceMode === "teacher" && hasKidsSection(activeSurah.number)) {
-      const sp = getSpeakerAtTime(activeSurah.number, a.currentTime);
-      if (sp === "kids") {
-        a.pause();
-        // عامله كنهاية مقطع
-        handleEnded();
-      }
-    }
-
-    // حفظ مُخفّف لموضع التشغيل (كل ثانيتين)
+    // throttled save
     if (Math.abs(a.currentTime - lastSavedTimeRef.current) >= 2) {
       lastSavedTimeRef.current = a.currentTime;
       localStorage.setItem(MUSHAF_LAST_SURAH, String(activeSurah.number));
@@ -222,64 +251,42 @@ const MushafPage = ({ onBack }: Props) => {
     }
   };
 
-  const handleEnded = () => {
-    if (!activeSurah) return;
-    const isCombined = !activeSurah.kidsSrc && !activeSurah.teacherSrc;
-
-    // ملفات منفصلة + وضع "معاً": بعد المعلم شغّل الطفل
-    if (!isCombined && voiceMode === "both" && currentSpeaker === "teacher") {
-      playSurahWithSpeaker(activeSurah, "kids");
-      return;
-    }
-
-    // التكرار
-    if (repeat === 99 || currentRepeat < repeat) {
-      setCurrentRepeat(c => c + 1);
-      const startSpeaker: Speaker = voiceMode === "kids" ? "kids" : "teacher";
-      playSurahWithSpeaker(activeSurah, startSpeaker);
+  const handleAyahSegmentEnd = () => {
+    const pending = pendingSecondPassRef.current;
+    pendingSecondPassRef.current = null;
+    stopAtRef.current = null;
+    if (pending) {
+      // play kids version of the same ayah
+      playAyah(pending.surah, pending.ayah, "kids");
     } else {
-      setIsPlaying(false); setActiveSurah(null); setCurrentAyah(0); setCurrentRepeat(0);
+      setIsPlaying(false);
     }
   };
 
-  // Jump to specific ayah (using real timings when available)
-  const jumpToAyah = (ayahNum: number) => {
-    const a = audioRef.current;
-    if (!a || !activeSurah || a.duration <= 0) return;
-    const speaker = voiceMode === "both" ? currentSpeaker : (voiceMode === "kids" ? "kids" : "teacher");
-    a.currentTime = getAyahStartTime(activeSurah.number, ayahNum, a.duration, speaker);
-    setCurrentAyah(ayahNum);
-    if (!isPlaying) a.play().catch(() => {});
+  const handleEnded = () => {
+    handleAyahSegmentEnd();
   };
 
-  // Preload
-  useEffect(() => {
-    [currentPage - 1, currentPage + 1, currentPage + 2].filter(i => i >= 0 && i < pages.length).forEach(i => { const img = new Image(); img.src = pages[i].src; });
-  }, [currentPage]);
+  // Pause/resume
+  const togglePlayPause = () => {
+    const a = audioRef.current; if (!a || !activeSurah) return;
+    if (isPlaying) a.pause();
+    else a.play().catch(() => {});
+  };
 
-  const visiblePages = useMemo(() => {
-    if (isDesktop) return [pages[currentPage], pages[currentPage + 1]].filter(Boolean) as PageInfo[];
-    return [pages[currentPage]];
-  }, [currentPage, isDesktop]);
-
-  // Calculate ayah highlight position on page
+  // Highlight overlay
   const getHighlightStyle = (page: PageInfo): React.CSSProperties | null => {
     if (!isPlaying || !activeSurah || currentAyah <= 0) return null;
-    // Check if active surah is on this page
-    const surahIdx = page.surahs.findIndex(s => s.src === activeSurah.src);
+    const surahIdx = page.surahs.findIndex(s => s.number === activeSurah.number);
     if (surahIdx === -1) return null;
 
     const totalPageAyahs = page.surahs.reduce((sum, s) => sum + s.ayahCount, 0);
     const ayahsBefore = page.surahs.slice(0, surahIdx).reduce((sum, s) => sum + s.ayahCount, 0);
     const globalAyah = ayahsBefore + currentAyah;
-    const ayahHeight = 100 / totalPageAyahs;
-    // top 10% is usually header/title area
     const topOffset = 8;
     const usableHeight = 100 - topOffset - 4;
     const top = topOffset + ((globalAyah - 1) / totalPageAyahs) * usableHeight;
-    // اللون يتبع المتحدث الفعلي (مهم في وضع "معاً": أصفر للمعلم ثم سماوي للطفل)
-    const activeColorKey: VoiceMode = voiceMode === "both" ? currentSpeaker : voiceMode;
-    const vc = voiceColors[activeColorKey];
+    const vc = speakerColors[currentSpeaker];
 
     return {
       position: "absolute" as const,
@@ -288,42 +295,58 @@ const MushafPage = ({ onBack }: Props) => {
       height: `${(usableHeight / totalPageAyahs)}%`,
       background: vc.bg,
       borderRadius: "8px",
-      boxShadow: `0 0 15px ${vc.glow}`,
+      boxShadow: `0 0 18px ${vc.glow}`,
       mixBlendMode: "multiply" as const,
-      transition: "top 0.4s ease, background 0.4s ease, box-shadow 0.4s ease",
+      transition: "top 0.4s ease, background 0.3s ease, box-shadow 0.3s ease",
       pointerEvents: "none" as const,
     };
   };
 
-  // لون الواجهة العامة يتبع المتحدث الحالي عند "معاً"، وإلا يتبع الوضع
-  const activeVoiceKey: VoiceMode = voiceMode === "both" && isPlaying ? currentSpeaker : voiceMode;
-  const vc = voiceColors[activeVoiceKey];
-  const voiceOpts = [
-    { key: "teacher" as VoiceMode, label: "المعلم", emoji: "👨‍🏫", cls: "bg-amber-100 border-amber-400" },
-    { key: "kids" as VoiceMode, label: "الأطفال", emoji: "👦", cls: "bg-sky-100 border-sky-400" },
-    { key: "both" as VoiceMode, label: "معاً", emoji: "👨‍👦", cls: "bg-emerald-100 border-emerald-400" },
-  ];
-  const repeatOpts: { value: RepeatMode; label: string }[] = [
-    { value: 1, label: "مرة" }, { value: 2, label: "مرتين" }, { value: 3, label: "3×" }, { value: 99, label: "∞" },
-  ];
+  const visiblePages = useMemo(() => {
+    if (isDesktop) return [pages[currentPage], pages[currentPage + 1]].filter(Boolean) as PageInfo[];
+    return [pages[currentPage]];
+  }, [currentPage, isDesktop]);
+
+  // Preload neighbors
+  useEffect(() => {
+    [currentPage - 1, currentPage + 1, currentPage + 2]
+      .filter(i => i >= 0 && i < pages.length)
+      .forEach(i => { const img = new Image(); img.src = pages[i].src; });
+  }, [currentPage]);
+
+  const currentPageSurahs = pages[currentPage]?.surahs || [];
+  const selectedSurah = currentPageSurahs[selectedSurahIdx] || currentPageSurahs[0];
+  const ayahCount = selectedSurah?.ayahCount || 0;
+
+  // tap on image background → open controls
+  const onImageClick = () => {
+    setControlsOpen(true);
+  };
 
   return (
-    <div className="fixed inset-0 z-50" style={{ background: "#f5f0e6" }} onMouseMove={resetFabTimer} onTouchStart={onTS} onTouchEnd={onTE}>
-      <audio ref={audioRef} onEnded={handleEnded} onPause={() => setIsPlaying(false)} onPlay={() => setIsPlaying(true)}
-        onTimeUpdate={handleTimeUpdate} onLoadedMetadata={(e) => setDuration((e.target as HTMLAudioElement).duration)} />
+    <div
+      className="fixed inset-0 w-screen h-screen z-50 bg-[#f5f0e6] overflow-hidden select-none"
+      onTouchStart={onTS}
+      onTouchEnd={onTE}
+    >
+      <audio
+        ref={audioRef}
+        onEnded={handleEnded}
+        onPause={() => setIsPlaying(false)}
+        onPlay={() => setIsPlaying(true)}
+        onTimeUpdate={handleTimeUpdate}
+      />
 
-      {/* Page */}
-      <div className="flex h-full w-full" dir="rtl">
+      {/* Edge-to-edge image(s) */}
+      <div className="flex h-full w-full" dir="rtl" onClick={onImageClick}>
         {visiblePages.map((page, idx) => {
           const hl = getHighlightStyle(page);
           return (
             <div
               key={`${page.src}-${idx}`}
-              className="relative h-full flex-1 min-w-0 flex items-center justify-center overflow-hidden"
-              style={{ background: "#f5f0e6" }}
+              className="relative h-full flex-1 min-w-0 flex items-center justify-center bg-[#f5f0e6]"
             >
               <img
-                ref={idx === 0 ? imgRef : undefined}
                 src={page.src}
                 alt={page.name}
                 className={`select-none animate-fade-in ${
@@ -335,122 +358,187 @@ const MushafPage = ({ onBack }: Props) => {
                 decoding="async"
                 draggable={false}
               />
-              {/* Ayah highlight band */}
               {hl && <div style={hl} />}
             </div>
           );
         })}
       </div>
 
-      {/* Current ayah indicator */}
-      {isPlaying && activeSurah && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg animate-fade-in"
-          style={{ background: vc.bg, border: `2px solid ${vc.glow}` }}>
-          <span className="text-lg">{(voiceMode === "both" ? currentSpeaker : voiceMode) === "teacher" ? "👨‍🏫" : "👦"}</span>
-          <span className="font-amiri font-bold text-sm" style={{ color: vc.text }}>
-            {voiceMode === "both" ? (currentSpeaker === "teacher" ? "المعلم · " : "الطفل · ") : ""}
-            سورة {activeSurah.name} — الآية {currentAyah} من {activeSurah.ayahCount}
-          </span>
-          <span className="text-xs opacity-60">({currentRepeat}/{repeat === 99 ? "∞" : repeat})</span>
-        </div>
-      )}
+      {/* Tiny transparent back button (top-right corner) */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onBack(); }}
+        className="absolute top-2 right-2 w-9 h-9 rounded-full flex items-center justify-center z-30 transition-opacity"
+        style={{ background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", opacity: 0.35 }}
+        aria-label="رجوع"
+      >
+        <ArrowRight className="w-4 h-4 text-foreground" />
+      </button>
 
-      {/* Ayah number buttons when playing */}
-      {isPlaying && activeSurah && (
-        <div className={`absolute left-2 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-20 transition-opacity ${fabVisible ? "opacity-90" : "opacity-20"}`}>
-          {Array.from({ length: activeSurah.ayahCount }, (_, i) => i + 1).map(n => (
-            <button key={n} onClick={() => jumpToAyah(n)}
-              className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${currentAyah === n ? "scale-110 shadow-md" : "opacity-60 hover:opacity-100"}`}
-              style={currentAyah === n ? { background: vc.glow, color: "#fff" } : { background: "rgba(255,255,255,0.7)" }}>
-              {n}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Tiny fullscreen toggle (top-left corner) */}
+      <button
+        onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+        className="absolute top-2 left-2 w-9 h-9 rounded-full flex items-center justify-center z-30 transition-opacity"
+        style={{ background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", opacity: 0.35 }}
+        aria-label="ملء الشاشة"
+      >
+        {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+      </button>
 
-      {/* Surah play buttons */}
-      <div className={`absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-2 z-20 transition-opacity max-w-[90vw] ${fabVisible ? "opacity-100" : "opacity-30"}`}>
-        {pages[currentPage]?.surahs.map((s) => {
-          const active = activeSurah?.src === s.src && isPlaying;
-          return (
-            <button key={s.src} onClick={() => playSurah(s)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold transition-all shadow-lg ${active ? "scale-105" : "bg-white/90 text-foreground hover:scale-105"}`}
-              style={active ? { background: vc.bg, border: `2px solid ${vc.glow}` } : { backdropFilter: "blur(12px)" }}>
-              {active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              <span className="font-amiri">{s.name}</span>
-              {active && <div className="flex items-center gap-[2px] h-3">{[0,1,2].map(i => <span key={i} className="w-[2px] rounded-full animate-wave" style={{ background: vc.glow, animationDelay: `${i*0.12}s` }} />)}</div>}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Nav */}
-      <button onClick={goPrev} disabled={currentPage === 0} className={`absolute right-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center transition-all disabled:opacity-0 z-20 ${fabVisible ? "opacity-50 hover:opacity-90" : "opacity-10"}`} style={{ background: "rgba(255,255,255,0.5)", backdropFilter: "blur(8px)" }}><ChevronRight className="w-6 h-6" /></button>
-      <button onClick={goNext} disabled={currentPage + step >= pages.length} className={`absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center transition-all disabled:opacity-0 z-20 ${fabVisible ? "opacity-50 hover:opacity-90" : "opacity-10"}`} style={{ background: "rgba(255,255,255,0.5)", backdropFilter: "blur(8px)" }}><ChevronLeft className="w-6 h-6" /></button>
-
-      {/* Dots */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+      {/* Page swipe hint dots (very subtle, bottom) */}
+      <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1 z-20 opacity-25">
         {pages.map((_, i) => {
           const a = isDesktop ? i === currentPage || i === currentPage + 1 : i === currentPage;
-          return <button key={i} onClick={() => goToPage(isDesktop ? i - (i % 2) : i)} className={`h-2 rounded-full transition-all ${a ? "bg-accent w-6" : "bg-foreground/30 w-2"}`} />;
+          return <span key={i} className={`h-1 rounded-full ${a ? "bg-foreground w-4" : "bg-foreground/50 w-1"}`} />;
         })}
       </div>
 
-      {/* Page name */}
-      <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-full z-20 transition-opacity ${fabVisible ? "opacity-70" : "opacity-20"}`} style={{ background: "rgba(255,255,255,0.6)", backdropFilter: "blur(8px)" }}>
-        <span className="text-foreground text-xs font-amiri">{pages[currentPage]?.name}</span>
-      </div>
+      {/* Side nav arrows — only visible while controls open */}
+      {controlsOpen && (
+        <>
+          <button onClick={(e) => { e.stopPropagation(); goPrev(); }} disabled={currentPage === 0}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center disabled:opacity-0 z-30"
+            style={{ background: "rgba(255,255,255,0.6)", backdropFilter: "blur(8px)" }}>
+            <ChevronRight className="w-6 h-6" />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); goNext(); }} disabled={currentPage + step >= pages.length}
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center disabled:opacity-0 z-30"
+            style={{ background: "rgba(255,255,255,0.6)", backdropFilter: "blur(8px)" }}>
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+        </>
+      )}
 
-      {/* Settings */}
-      <button onClick={() => setSheetOpen(true)} className={`absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center transition-all z-20 ${fabVisible ? "opacity-60 hover:opacity-90" : "opacity-10 hover:opacity-90"}`} style={{ background: "rgba(255,255,255,0.5)", backdropFilter: "blur(8px)" }}><Settings className="w-5 h-5" /></button>
+      {/* Floating glass control panel */}
+      {controlsOpen && (
+        <div
+          className="absolute inset-x-0 bottom-0 z-40 animate-fade-in"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* backdrop scrim */}
+          <div
+            className="absolute inset-0 -top-32 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"
+          />
+          <div
+            className="relative mx-auto max-w-2xl m-3 rounded-3xl p-4 shadow-2xl border border-white/30"
+            style={{
+              background: "rgba(255,255,255,0.55)",
+              backdropFilter: "blur(24px) saturate(140%)",
+              WebkitBackdropFilter: "blur(24px) saturate(140%)",
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-amiri font-bold text-base">
+                {pages[currentPage]?.name}
+              </p>
+              <button
+                onClick={() => setControlsOpen(false)}
+                className="w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center"
+                aria-label="إغلاق"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl border-t-0 max-h-[85vh] overflow-y-auto" style={{ background: "rgba(245,240,230,0.95)", backdropFilter: "blur(20px)" }}>
-          <SheetHeader className="pb-2">
-            <SheetTitle className="text-center font-amiri text-xl">⚙️ إعدادات الصوت</SheetTitle>
-            <SheetDescription className="text-center text-sm">{pages[currentPage]?.name}</SheetDescription>
-          </SheetHeader>
-          <div className="space-y-4 py-3">
-            {/* Voice */}
-            <div className="rounded-xl bg-background/60 p-4 space-y-3 border border-border/40">
-              <p className="font-bold text-sm">🎙️ نوع الصوت</p>
-              <div className="grid grid-cols-3 gap-2">
-                {voiceOpts.map(v => (
-                  <button key={v.key} onClick={() => setVoiceMode(v.key)} className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all border-2 ${voiceMode === v.key ? v.cls + " scale-105 shadow-md" : "bg-background/70 border-transparent"}`}>
-                    <span className="text-2xl">{v.emoji}</span>
-                    <span className="text-xs font-bold">{v.label}</span>
+            {/* Surah selector (if more than one on page) */}
+            {currentPageSurahs.length > 1 && (
+              <div className="mb-3">
+                <p className="text-xs font-bold mb-1.5 text-muted-foreground">السورة</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {currentPageSurahs.map((s, i) => (
+                    <button
+                      key={s.number}
+                      onClick={() => { setSelectedSurahIdx(i); setSelectedAyah(1); }}
+                      className={`px-3 py-1.5 rounded-full text-sm font-amiri border transition-all ${
+                        selectedSurahIdx === i
+                          ? "bg-accent text-accent-foreground border-accent shadow"
+                          : "bg-white/70 border-border/60"
+                      }`}
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Ayah grid */}
+            <div className="mb-3">
+              <p className="text-xs font-bold mb-1.5 text-muted-foreground">
+                اختر الآية ({selectedAyah} / {ayahCount})
+              </p>
+              <div className="grid grid-cols-7 gap-1.5">
+                {Array.from({ length: ayahCount }, (_, i) => i + 1).map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setSelectedAyah(n)}
+                    className={`aspect-square rounded-lg text-sm font-bold transition-all ${
+                      selectedAyah === n
+                        ? "bg-accent text-accent-foreground shadow scale-105"
+                        : "bg-white/70 hover:bg-white"
+                    } ${currentAyah === n && isPlaying ? "ring-2 ring-offset-1" : ""}`}
+                    style={currentAyah === n && isPlaying ? { boxShadow: `0 0 0 2px ${speakerColors[currentSpeaker].glow}` } : undefined}
+                  >
+                    {n}
                   </button>
                 ))}
               </div>
             </div>
-            {/* Repeat */}
-            <div className="rounded-xl bg-background/60 p-4 space-y-3 border border-border/40">
-              <p className="font-bold text-sm">🔁 عدد التكرار</p>
-              <div className="grid grid-cols-4 gap-2">
-                {repeatOpts.map(r => (
-                  <button key={r.value} onClick={() => setRepeat(r.value)} className={`py-2.5 rounded-xl text-sm font-bold transition-all ${repeat === r.value ? "bg-accent text-accent-foreground shadow-md scale-105" : "bg-background/70"}`}>{r.label}</button>
-                ))}
-              </div>
+
+            {/* 3 speaker buttons */}
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={() => playAyah(selectedSurah, selectedAyah, "teacher")}
+                className="flex flex-col items-center gap-1 p-3 rounded-2xl border-2 border-amber-300 bg-amber-50/80 hover:bg-amber-100 active:scale-95 transition-all shadow-sm"
+              >
+                <span className="text-2xl">👨‍🏫</span>
+                <span className="text-xs font-bold text-amber-800">المعلم</span>
+              </button>
+              <button
+                onClick={() => playAyah(selectedSurah, selectedAyah, "kids")}
+                className="flex flex-col items-center gap-1 p-3 rounded-2xl border-2 border-sky-300 bg-sky-50/80 hover:bg-sky-100 active:scale-95 transition-all shadow-sm"
+              >
+                <span className="text-2xl">👦</span>
+                <span className="text-xs font-bold text-sky-800">الطفل</span>
+              </button>
+              <button
+                onClick={() => playAyah(selectedSurah, selectedAyah, "both")}
+                className="flex flex-col items-center gap-1 p-3 rounded-2xl border-2 border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100 active:scale-95 transition-all shadow-sm"
+              >
+                <span className="text-2xl">👨‍👦</span>
+                <span className="text-xs font-bold text-emerald-800">معاً</span>
+              </button>
             </div>
-            {/* Quick play */}
-            <div className="rounded-xl bg-background/60 p-4 space-y-3 border border-border/40">
-              <p className="font-bold text-sm">▶️ تشغيل</p>
-              <div className="grid grid-cols-2 gap-2">
-                {pages[currentPage]?.surahs.map(s => {
-                  const act = activeSurah?.src === s.src && isPlaying;
-                  return (
-                    <button key={s.src} onClick={() => { playSurah(s); setSheetOpen(false); }} className={`flex items-center justify-center gap-2 p-3 rounded-xl font-bold transition-all border-2 ${act ? "border-accent bg-accent/20" : "bg-background/70 border-transparent"}`}>
-                      {act ? <Pause className="w-5 h-5 text-accent" /> : <Play className="w-5 h-5 text-accent" />}
-                      <span className="font-amiri">{s.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <button onClick={() => { setSheetOpen(false); onBack(); }} className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-primary/10 text-primary font-bold hover:bg-primary/20"><ArrowRight className="w-5 h-5" /><span>العودة للتلاوات</span></button>
+
+            {/* Pause/Play current */}
+            {activeSurah && (
+              <button
+                onClick={togglePlayPause}
+                className="mt-3 w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-foreground/10 hover:bg-foreground/15 font-bold text-sm"
+              >
+                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                <span>{isPlaying ? "إيقاف مؤقت" : "متابعة"}</span>
+              </button>
+            )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+      )}
+
+      {/* Tiny "now playing" pill (when controls closed) */}
+      {isPlaying && activeSurah && !controlsOpen && (
+        <div
+          className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold animate-fade-in"
+          style={{
+            background: speakerColors[currentSpeaker].bg,
+            border: `1px solid ${speakerColors[currentSpeaker].glow}`,
+            color: speakerColors[currentSpeaker].text,
+            backdropFilter: "blur(8px)",
+            opacity: 0.85,
+          }}
+        >
+          <span>{currentSpeaker === "teacher" ? "👨‍🏫" : "👦"}</span>
+          <span className="font-amiri">{activeSurah.name} · آية {currentAyah}</span>
+        </div>
+      )}
     </div>
   );
 };
