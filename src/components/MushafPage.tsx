@@ -2,6 +2,9 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Settings, ArrowRight, ChevronLeft, ChevronRight, Repeat, Play, Pause } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { AYAH_COUNTS, getCurrentAyahAtTime, getAyahStartTime, hasKidsSection, getSpeakerAtTime } from "@/data/ayahTimings";
+import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
+
+const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 
 type VoiceMode = "teacher" | "kids" | "both";
 type RepeatMode = 1 | 2 | 3 | 99;
@@ -25,30 +28,30 @@ interface PageInfo { name: string; src: string; surahs: SurahAudio[]; }
 //     teacherSrc: "/audio/teacher/1.mp3", kidsSrc: "/audio/kids/1.mp3", ayahCount: 7 }
 const pages: PageInfo[] = [
   { name: "الفاتحة", src: "/pages/fatiha.jpg", surahs: [
-    { name: "الفاتحة", number: 1, src: "/audio/surahs/1.mp3", ayahCount: 7 },
+    { name: "الفاتحة", number: 1, src: audioPath(1), ayahCount: 7 },
   ]},
   { name: "القارعة - التكاثر", src: "/pages/600.jpg", surahs: [
-    { name: "التكاثر", number: 14, src: "/audio/surahs/14.mp3", ayahCount: 8 },
+    { name: "التكاثر", number: 14, src: audioPath(14), ayahCount: 8 },
   ]},
   { name: "العصر - الهمزة - الفيل", src: "/pages/601.jpg", surahs: [
-    { name: "العصر", number: 13, src: "/audio/surahs/13.mp3", ayahCount: 3 },
-    { name: "الهمزة", number: 12, src: "/audio/surahs/12.mp3", ayahCount: 9 },
-    { name: "الفيل", number: 11, src: "/audio/surahs/11.mp3", ayahCount: 5 },
+    { name: "العصر", number: 13, src: audioPath(13), ayahCount: 3 },
+    { name: "الهمزة", number: 12, src: audioPath(12), ayahCount: 9 },
+    { name: "الفيل", number: 11, src: audioPath(11), ayahCount: 5 },
   ]},
   { name: "قريش - الماعون - الكوثر", src: "/pages/602.jpg", surahs: [
-    { name: "قريش", number: 10, src: "/audio/surahs/10.mp3", ayahCount: 4 },
-    { name: "الماعون", number: 9, src: "/audio/surahs/9.mp3", ayahCount: 7 },
-    { name: "الكوثر", number: 8, src: "/audio/surahs/8.mp3", ayahCount: 3 },
+    { name: "قريش", number: 10, src: audioPath(10), ayahCount: 4 },
+    { name: "الماعون", number: 9, src: audioPath(9), ayahCount: 7 },
+    { name: "الكوثر", number: 8, src: audioPath(8), ayahCount: 3 },
   ]},
   { name: "الكافرون - النصر - المسد", src: "/pages/603.jpg", surahs: [
-    { name: "الكافرون", number: 7, src: "/audio/surahs/7.mp3", ayahCount: 6 },
-    { name: "النصر", number: 6, src: "/audio/surahs/6.mp3", ayahCount: 3 },
-    { name: "المسد", number: 5, src: "/audio/surahs/5.mp3", ayahCount: 5 },
+    { name: "الكافرون", number: 7, src: audioPath(7), ayahCount: 6 },
+    { name: "النصر", number: 6, src: audioPath(6), ayahCount: 3 },
+    { name: "المسد", number: 5, src: audioPath(5), ayahCount: 5 },
   ]},
   { name: "الإخلاص - الفلق - الناس", src: "/pages/604.jpg", surahs: [
-    { name: "الإخلاص", number: 4, src: "/audio/surahs/4.mp3", ayahCount: 4 },
-    { name: "الفلق", number: 3, src: "/audio/surahs/3.mp3", ayahCount: 5 },
-    { name: "الناس", number: 2, src: "/audio/surahs/2.mp3", ayahCount: 6 },
+    { name: "الإخلاص", number: 4, src: audioPath(4), ayahCount: 4 },
+    { name: "الفلق", number: 3, src: audioPath(3), ayahCount: 5 },
+    { name: "الناس", number: 2, src: audioPath(2), ayahCount: 6 },
   ]},
 ];
 
