@@ -89,6 +89,7 @@ const MushafPage = ({ onBack }: Props) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const fadeTimer = useRef<ReturnType<typeof setTimeout>>();
   const imgRef = useRef<HTMLImageElement>(null);
+  const lastSavedTimeRef = useRef(0);
 
   useEffect(() => { localStorage.setItem(VOICE_KEY, voiceMode); }, [voiceMode]);
   useEffect(() => {
@@ -187,7 +188,6 @@ const MushafPage = ({ onBack }: Props) => {
   };
 
   // تتبع الآية والمتحدث الحاليين باستخدام التوقيتات الحقيقية إن وُجدت
-  const lastSavedTimeRef = useRef(0);
   const handleTimeUpdate = () => {
     const a = audioRef.current;
     if (!a || !activeSurah || a.duration <= 0) return;
