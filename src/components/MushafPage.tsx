@@ -97,11 +97,34 @@ const MushafPage = ({ onBack }: Props) => {
   }, []);
   useEffect(() => { localStorage.setItem(STORAGE_KEY, String(currentPage)); }, [currentPage]);
 
-  // Stop on page change
+  // Stop on page change (لكن لا نحذف موضع التشغيل المحفوظ)
   useEffect(() => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     setActiveSurah(null); setIsPlaying(false); setCurrentAyah(0); setDuration(0);
   }, [currentPage]);
+
+  // استئناف آخر سورة مُشغَّلة عند فتح المصحف (مرة واحدة)
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (resumedRef.current) return;
+    const savedNum = parseInt(localStorage.getItem(MUSHAF_LAST_SURAH) || "0", 10);
+    const savedTime = parseFloat(localStorage.getItem(MUSHAF_LAST_TIME) || "0");
+    if (!savedNum) { resumedRef.current = true; return; }
+    const surah = pages[currentPage]?.surahs.find(s => s.number === savedNum);
+    if (!surah) { resumedRef.current = true; return; }
+    resumedRef.current = true;
+    const a = audioRef.current; if (!a) return;
+    a.src = resolveAudioSrc(surah, voiceMode === "kids" ? "kids" : "teacher");
+    a.load();
+    setActiveSurah(surah);
+    setCurrentSpeaker(voiceMode === "kids" ? "kids" : "teacher");
+    a.addEventListener("loadedmetadata", () => {
+      if (savedTime > 0 && savedTime < a.duration) {
+        a.currentTime = savedTime;
+        lastSavedTimeRef.current = savedTime;
+      }
+    }, { once: true });
+  }, [currentPage, voiceMode]);
 
   const resetFabTimer = useCallback(() => {
     setFabVisible(true); clearTimeout(fadeTimer.current);
