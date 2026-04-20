@@ -7,6 +7,8 @@ type VoiceMode = "teacher" | "kids" | "both";
 type RepeatMode = 1 | 2 | 3 | 99;
 const STORAGE_KEY = "mushaf:lastPage";
 const VOICE_KEY = "mushaf:voiceMode";
+const MUSHAF_LAST_SURAH = "mushaf:lastSurah";
+const MUSHAF_LAST_TIME = "mushaf:lastTime";
 
 interface SurahAudio {
   name: string;
@@ -281,8 +283,24 @@ const MushafPage = ({ onBack }: Props) => {
         {visiblePages.map((page, idx) => {
           const hl = getHighlightStyle(page);
           return (
-            <div key={`${page.src}-${idx}`} className="relative h-full flex-1 min-w-0 flex items-center justify-center overflow-hidden" style={{ background: "#f5f0e6" }}>
-              <img ref={idx === 0 ? imgRef : undefined} src={page.src} alt={page.name} className="max-w-full max-h-full object-contain select-none animate-fade-in" loading="eager" decoding="async" draggable={false} />
+            <div
+              key={`${page.src}-${idx}`}
+              className="relative h-full flex-1 min-w-0 flex items-center justify-center overflow-hidden"
+              style={{ background: "#f5f0e6" }}
+            >
+              <img
+                ref={idx === 0 ? imgRef : undefined}
+                src={page.src}
+                alt={page.name}
+                className={`select-none animate-fade-in ${
+                  isDesktop
+                    ? "max-w-full max-h-full object-contain"
+                    : "w-full h-full object-cover object-center"
+                }`}
+                loading="eager"
+                decoding="async"
+                draggable={false}
+              />
               {/* Ayah highlight band */}
               {hl && <div style={hl} />}
             </div>
