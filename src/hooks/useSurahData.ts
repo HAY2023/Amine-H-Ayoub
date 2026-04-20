@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 
 export interface SurahItem {
   number: number;
@@ -6,22 +7,24 @@ export interface SurahItem {
   audioSrc: string;
 }
 
-// Local surah data — matches the files in public/audio/surahs/
+// تستخدم الروابط السحابية إن توفّرت، وتقع على الملفات المحلية كاحتياط
+const url = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
+
 const LOCAL_SURAHS: SurahItem[] = [
-  { number: 1,  name: "الفاتحة",   audioSrc: "/audio/surahs/1.mp3" },
-  { number: 2,  name: "الناس",     audioSrc: "/audio/surahs/2.mp3" },
-  { number: 3,  name: "الفلق",     audioSrc: "/audio/surahs/3.mp3" },
-  { number: 4,  name: "الإخلاص",   audioSrc: "/audio/surahs/4.mp3" },
-  { number: 5,  name: "المسد",     audioSrc: "/audio/surahs/5.mp3" },
-  { number: 6,  name: "النصر",     audioSrc: "/audio/surahs/6.mp3" },
-  { number: 7,  name: "الكافرون",  audioSrc: "/audio/surahs/7.mp3" },
-  { number: 8,  name: "الكوثر",    audioSrc: "/audio/surahs/8.mp3" },
-  { number: 9,  name: "الماعون",   audioSrc: "/audio/surahs/9.mp3" },
-  { number: 10, name: "قريش",      audioSrc: "/audio/surahs/10.mp3" },
-  { number: 11, name: "الفيل",     audioSrc: "/audio/surahs/11.mp3" },
-  { number: 12, name: "الهمزة",    audioSrc: "/audio/surahs/12.mp3" },
-  { number: 13, name: "العصر",     audioSrc: "/audio/surahs/13.mp3" },
-  { number: 14, name: "التكاثر",   audioSrc: "/audio/surahs/14.mp3" },
+  { number: 1,  name: "الفاتحة",   audioSrc: url(1)  },
+  { number: 2,  name: "الناس",     audioSrc: url(2)  },
+  { number: 3,  name: "الفلق",     audioSrc: url(3)  },
+  { number: 4,  name: "الإخلاص",   audioSrc: url(4)  },
+  { number: 5,  name: "المسد",     audioSrc: url(5)  },
+  { number: 6,  name: "النصر",     audioSrc: url(6)  },
+  { number: 7,  name: "الكافرون",  audioSrc: url(7)  },
+  { number: 8,  name: "الكوثر",    audioSrc: url(8)  },
+  { number: 9,  name: "الماعون",   audioSrc: url(9)  },
+  { number: 10, name: "قريش",      audioSrc: url(10) },
+  { number: 11, name: "الفيل",     audioSrc: url(11) },
+  { number: 12, name: "الهمزة",    audioSrc: url(12) },
+  { number: 13, name: "العصر",     audioSrc: url(13) },
+  { number: 14, name: "التكاثر",   audioSrc: url(14) },
 ];
 
 export function useSurahData() {
