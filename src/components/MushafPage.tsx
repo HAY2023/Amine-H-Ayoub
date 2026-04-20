@@ -2,6 +2,9 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Settings, ArrowRight, ChevronLeft, ChevronRight, Repeat, Play, Pause } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { AYAH_COUNTS, getCurrentAyahAtTime, getAyahStartTime, hasKidsSection, getSpeakerAtTime } from "@/data/ayahTimings";
+import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
+
+const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 
 type VoiceMode = "teacher" | "kids" | "both";
 type RepeatMode = 1 | 2 | 3 | 99;
