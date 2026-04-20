@@ -7,6 +7,8 @@ type VoiceMode = "teacher" | "kids" | "both";
 type RepeatMode = 1 | 2 | 3 | 99;
 const STORAGE_KEY = "mushaf:lastPage";
 const VOICE_KEY = "mushaf:voiceMode";
+const MUSHAF_LAST_SURAH = "mushaf:lastSurah";
+const MUSHAF_LAST_TIME = "mushaf:lastTime";
 
 interface SurahAudio {
   name: string;
@@ -87,6 +89,7 @@ const MushafPage = ({ onBack }: Props) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const fadeTimer = useRef<ReturnType<typeof setTimeout>>();
   const imgRef = useRef<HTMLImageElement>(null);
+  const lastSavedTimeRef = useRef(0);
 
   useEffect(() => { localStorage.setItem(VOICE_KEY, voiceMode); }, [voiceMode]);
   useEffect(() => {
@@ -95,11 +98,34 @@ const MushafPage = ({ onBack }: Props) => {
   }, []);
   useEffect(() => { localStorage.setItem(STORAGE_KEY, String(currentPage)); }, [currentPage]);
 
-  // Stop on page change
+  // Stop on page change (لكن لا نحذف موضع التشغيل المحفوظ)
   useEffect(() => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     setActiveSurah(null); setIsPlaying(false); setCurrentAyah(0); setDuration(0);
   }, [currentPage]);
+
+  // استئناف آخر سورة مُشغَّلة عند فتح المصحف (مرة واحدة)
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (resumedRef.current) return;
+    const savedNum = parseInt(localStorage.getItem(MUSHAF_LAST_SURAH) || "0", 10);
+    const savedTime = parseFloat(localStorage.getItem(MUSHAF_LAST_TIME) || "0");
+    if (!savedNum) { resumedRef.current = true; return; }
+    const surah = pages[currentPage]?.surahs.find(s => s.number === savedNum);
+    if (!surah) { resumedRef.current = true; return; }
+    resumedRef.current = true;
+    const a = audioRef.current; if (!a) return;
+    a.src = resolveAudioSrc(surah, voiceMode === "kids" ? "kids" : "teacher");
+    a.load();
+    setActiveSurah(surah);
+    setCurrentSpeaker(voiceMode === "kids" ? "kids" : "teacher");
+    a.addEventListener("loadedmetadata", () => {
+      if (savedTime > 0 && savedTime < a.duration) {
+        a.currentTime = savedTime;
+        lastSavedTimeRef.current = savedTime;
+      }
+    }, { once: true });
+  }, [currentPage, voiceMode]);
 
   const resetFabTimer = useCallback(() => {
     setFabVisible(true); clearTimeout(fadeTimer.current);
@@ -183,6 +209,13 @@ const MushafPage = ({ onBack }: Props) => {
         // عامله كنهاية مقطع
         handleEnded();
       }
+    }
+
+    // حفظ مُخفّف لموضع التشغيل (كل ثانيتين)
+    if (Math.abs(a.currentTime - lastSavedTimeRef.current) >= 2) {
+      lastSavedTimeRef.current = a.currentTime;
+      localStorage.setItem(MUSHAF_LAST_SURAH, String(activeSurah.number));
+      localStorage.setItem(MUSHAF_LAST_TIME, String(a.currentTime));
     }
   };
 
@@ -281,8 +314,24 @@ const MushafPage = ({ onBack }: Props) => {
         {visiblePages.map((page, idx) => {
           const hl = getHighlightStyle(page);
           return (
-            <div key={`${page.src}-${idx}`} className="relative h-full flex-1 min-w-0 flex items-center justify-center overflow-hidden" style={{ background: "#f5f0e6" }}>
-              <img ref={idx === 0 ? imgRef : undefined} src={page.src} alt={page.name} className="max-w-full max-h-full object-contain select-none animate-fade-in" loading="eager" decoding="async" draggable={false} />
+            <div
+              key={`${page.src}-${idx}`}
+              className="relative h-full flex-1 min-w-0 flex items-center justify-center overflow-hidden"
+              style={{ background: "#f5f0e6" }}
+            >
+              <img
+                ref={idx === 0 ? imgRef : undefined}
+                src={page.src}
+                alt={page.name}
+                className={`select-none animate-fade-in ${
+                  isDesktop
+                    ? "max-w-full max-h-full object-contain"
+                    : "w-full h-full object-cover object-center"
+                }`}
+                loading="eager"
+                decoding="async"
+                draggable={false}
+              />
               {/* Ayah highlight band */}
               {hl && <div style={hl} />}
             </div>
