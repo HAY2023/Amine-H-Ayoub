@@ -144,7 +144,7 @@ const MushafPage = ({ onBack }: Props) => {
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, [currentPage, isDesktop, controlsOpen]);
 
-  // Swipe nav
+  // Swipe nav + swipe-up to open controls
   const touchX = useRef<number | null>(null);
   const touchY = useRef<number | null>(null);
   const lastTapRef = useRef<number>(0);
@@ -157,12 +157,22 @@ const MushafPage = ({ onBack }: Props) => {
     const dx = e.changedTouches[0].clientX - touchX.current;
     const dy = e.changedTouches[0].clientY - touchY.current;
     touchX.current = null; touchY.current = null;
-    // swipe horizontally
+    // swipe up → open control panel
+    if (dy < -60 && Math.abs(dy) > Math.abs(dx)) {
+      setControlsOpen(true);
+      return;
+    }
+    // swipe down → close control panel
+    if (dy > 60 && Math.abs(dy) > Math.abs(dx)) {
+      setControlsOpen(false);
+      return;
+    }
+    // swipe horizontally → page nav
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
       dx > 0 ? goPrev() : goNext();
       return;
     }
-    // double tap detection (for fullscreen)
+    // double tap detection (for fullscreen) — only when not tapping an ayah hotspot
     if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
       const now = Date.now();
       if (now - lastTapRef.current < 300) {
@@ -302,10 +312,9 @@ const MushafPage = ({ onBack }: Props) => {
   const selectedSurah = currentPageSurahs[selectedSurahIdx] || currentPageSurahs[0];
   const ayahCount = selectedSurah?.ayahCount || 0;
 
-  // tap on image background → open controls
-  const onImageClick = () => {
-    setControlsOpen(true);
-  };
+  // tap on image background → no longer opens controls (use swipe up). 
+  // We keep a noop so users learn the swipe gesture via the hint.
+  const onImageClick = () => { /* swipe up to open controls */ };
 
   return (
     <div
@@ -321,7 +330,7 @@ const MushafPage = ({ onBack }: Props) => {
         onTimeUpdate={handleTimeUpdate}
       />
 
-      {/* Edge-to-edge image(s) */}
+      {/* Edge-to-edge image(s) with per-ayah tappable hotspots */}
       <div className="flex h-full w-full" dir="rtl" onClick={onImageClick}>
         {visiblePages.map((page, idx) => (
           <div
@@ -340,9 +349,86 @@ const MushafPage = ({ onBack }: Props) => {
               decoding="async"
               draggable={false}
             />
+
+            {/* Per-surah ayah hotspots + highlight overlays */}
+            <div className="absolute inset-0 flex flex-col" dir="rtl">
+              {page.surahs.map((surah) => {
+                const isActive = activeSurah?.number === surah.number;
+                const surahHeightPct = 100 / page.surahs.length;
+                return (
+                  <div
+                    key={surah.number}
+                    className="relative w-full"
+                    style={{ height: `${surahHeightPct}%` }}
+                  >
+                    {/* Ayah hotspots — RTL: ayah 1 is on the right */}
+                    <div className="absolute inset-0 flex" dir="rtl">
+                      {Array.from({ length: surah.ayahCount }).map((_, i) => {
+                        const ayahNum = i + 1;
+                        const isCurrent = isActive && currentAyah === ayahNum && isPlaying;
+                        return (
+                          <button
+                            key={ayahNum}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedSurahIdx(page.surahs.indexOf(surah));
+                              setSelectedAyah(ayahNum);
+                              currentRepeatRef.current = 0;
+                              playAyah(surah, ayahNum);
+                            }}
+                            className="flex-1 h-full relative group"
+                            aria-label={`${surah.name} - آية ${ayahNum}`}
+                          >
+                            {/* subtle hover hint */}
+                            <span className="absolute inset-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity pointer-events-none"
+                              style={{
+                                background: "rgba(250,204,21,0.12)",
+                                mixBlendMode: "multiply",
+                              }}
+                            />
+                            {/* active highlight overlay */}
+                            {isCurrent && (
+                              <span
+                                className="absolute inset-0 pointer-events-none animate-pulse"
+                                style={{
+                                  background: speakerColors[currentSpeaker].bg,
+                                  mixBlendMode: "multiply",
+                                  boxShadow: `inset 0 0 0 3px ${speakerColors[currentSpeaker].glow}`,
+                                  borderRadius: 8,
+                                }}
+                              />
+                            )}
+                            {/* tiny ayah number badge — only when controls are open */}
+                            {controlsOpen && (
+                              <span
+                                className="absolute top-1 right-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full pointer-events-none"
+                                style={{
+                                  background: "rgba(255,255,255,0.85)",
+                                  color: "#b45309",
+                                }}
+                              >
+                                {ayahNum}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ))}
       </div>
+
+      {/* Swipe-up hint (subtle, bottom center) */}
+      {!controlsOpen && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-0.5 opacity-50 animate-pulse pointer-events-none">
+          <div className="w-10 h-1 rounded-full bg-foreground/60" />
+          <span className="text-[10px] font-bold text-foreground/70">اسحب للأعلى</span>
+        </div>
+      )}
 
       {/* Tiny transparent back button (top-right corner) */}
       <button
