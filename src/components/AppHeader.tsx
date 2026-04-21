@@ -10,7 +10,7 @@ const AppHeader = () => {
           />
         </div>
         <h1 className="text-xl md:text-2xl font-bold text-gold text-center leading-relaxed">
-          المصحف المعلم برواية ورش
+          المصحف المرتل برواية ورش
           <br />
           القارئ أمين حاج أيوب
         </h1>

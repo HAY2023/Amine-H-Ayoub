@@ -67,11 +67,12 @@ const MushafPage = ({ onBack }: Props) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentAyah, setCurrentAyah] = useState(0);
   const [currentSpeaker, setCurrentSpeaker] = useState<Speaker>("teacher");
-  const [playMode, setPlayMode] = useState<PlayMode>("teacher"); // last requested mode
+  const [continuousPlay, setContinuousPlay] = useState(true);
+  const [repeatCount, setRepeatCount] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
   const lastSavedTimeRef = useRef(0);
   const stopAtRef = useRef<number | null>(null); // stop playback when reaching this time
-  const pendingSecondPassRef = useRef<{ surah: SurahAudio; ayah: number } | null>(null); // for "both" mode
+  const currentRepeatRef = useRef(0);
 
   useEffect(() => {
     const r = () => setIsDesktop(window.innerWidth >= 1024);
@@ -84,7 +85,7 @@ const MushafPage = ({ onBack }: Props) => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     setActiveSurah(null); setIsPlaying(false); setCurrentAyah(0);
     setSelectedSurahIdx(0); setSelectedAyah(1);
-    stopAtRef.current = null; pendingSecondPassRef.current = null;
+    stopAtRef.current = null; currentRepeatRef.current = 0;
   }, [currentPage]);
 
   // Resume last surah (once)
@@ -174,41 +175,33 @@ const MushafPage = ({ onBack }: Props) => {
   };
 
   // ---- Ayah-by-ayah playback ----
-  const playAyah = useCallback((surah: SurahAudio, ayahNum: number, mode: PlayMode) => {
+  const playAyah = useCallback((surah: SurahAudio, ayahNum: number) => {
     const a = audioRef.current; if (!a) return;
-    const isCombined = true; // we only have combined files for now
     const sameSrc = a.src && a.src.endsWith(surah.src.split("/").pop() || surah.src);
 
     setActiveSurah(surah);
-    setPlayMode(mode);
     setCurrentAyah(ayahNum);
-    pendingSecondPassRef.current = null;
     stopAtRef.current = null;
 
-    const start = (firstSpeaker: Speaker) => {
-      setCurrentSpeaker(firstSpeaker);
+    const start = () => {
+      setCurrentSpeaker("teacher");
       const dur = a.duration || 0;
-      const startT = getAyahStartTime(surah.number, ayahNum, dur, firstSpeaker);
-      // compute stop time = start of NEXT ayah (or kidsStart if this is last teacher ayah, or end)
-      const nextT = computeAyahEnd(surah, ayahNum, firstSpeaker, dur);
+      const startT = getAyahStartTime(surah.number, ayahNum, dur, "teacher");
+      const nextT = computeAyahEnd(surah, ayahNum, "teacher", dur);
       stopAtRef.current = nextT;
-      // for "both" mode: schedule second pass (kids) after teacher finishes
-      if (mode === "both" && firstSpeaker === "teacher" && hasKidsSection(surah.number)) {
-        pendingSecondPassRef.current = { surah, ayah: ayahNum };
-      }
       a.currentTime = startT;
       a.play().catch(() => {});
     };
 
-    const firstSpeaker: Speaker = mode === "kids" ? "kids" : "teacher";
+    setControlsOpen(false); // Hide settings during reading!
 
     if (!sameSrc) {
       a.src = surah.src;
       a.load();
-      a.addEventListener("loadedmetadata", () => start(firstSpeaker), { once: true });
+      a.addEventListener("loadedmetadata", start, { once: true });
     } else {
-      if (a.duration > 0) start(firstSpeaker);
-      else a.addEventListener("loadedmetadata", () => start(firstSpeaker), { once: true });
+      if (a.duration > 0) start();
+      else a.addEventListener("loadedmetadata", start, { once: true });
     }
   }, []);
 
@@ -252,14 +245,31 @@ const MushafPage = ({ onBack }: Props) => {
   };
 
   const handleAyahSegmentEnd = () => {
-    const pending = pendingSecondPassRef.current;
-    pendingSecondPassRef.current = null;
     stopAtRef.current = null;
-    if (pending) {
-      // play kids version of the same ayah
-      playAyah(pending.surah, pending.ayah, "kids");
+    if (currentRepeatRef.current < repeatCount) {
+      currentRepeatRef.current++;
+      if (activeSurah) playAyah(activeSurah, currentAyah);
     } else {
-      setIsPlaying(false);
+      currentRepeatRef.current = 0;
+      if (continuousPlay && activeSurah) {
+        if (currentAyah < activeSurah.ayahCount) {
+          setSelectedAyah(currentAyah + 1);
+          playAyah(activeSurah, currentAyah + 1);
+        } else {
+          const page = pages[currentPage];
+          const surahIdx = page.surahs.findIndex(s => s.number === activeSurah.number);
+          if (surahIdx >= 0 && surahIdx < page.surahs.length - 1) {
+             const nextSurah = page.surahs[surahIdx + 1];
+             setSelectedSurahIdx(surahIdx + 1);
+             setSelectedAyah(1);
+             playAyah(nextSurah, 1);
+          } else {
+             setIsPlaying(false);
+          }
+        }
+      } else {
+        setIsPlaying(false);
+      }
     }
   };
 
@@ -274,33 +284,7 @@ const MushafPage = ({ onBack }: Props) => {
     else a.play().catch(() => {});
   };
 
-  // Highlight overlay
-  const getHighlightStyle = (page: PageInfo): React.CSSProperties | null => {
-    if (!isPlaying || !activeSurah || currentAyah <= 0) return null;
-    const surahIdx = page.surahs.findIndex(s => s.number === activeSurah.number);
-    if (surahIdx === -1) return null;
 
-    const totalPageAyahs = page.surahs.reduce((sum, s) => sum + s.ayahCount, 0);
-    const ayahsBefore = page.surahs.slice(0, surahIdx).reduce((sum, s) => sum + s.ayahCount, 0);
-    const globalAyah = ayahsBefore + currentAyah;
-    const topOffset = 8;
-    const usableHeight = 100 - topOffset - 4;
-    const top = topOffset + ((globalAyah - 1) / totalPageAyahs) * usableHeight;
-    const vc = speakerColors[currentSpeaker];
-
-    return {
-      position: "absolute" as const,
-      left: "5%", right: "5%",
-      top: `${top}%`,
-      height: `${(usableHeight / totalPageAyahs)}%`,
-      background: vc.bg,
-      borderRadius: "8px",
-      boxShadow: `0 0 18px ${vc.glow}`,
-      mixBlendMode: "multiply" as const,
-      transition: "top 0.4s ease, background 0.3s ease, box-shadow 0.3s ease",
-      pointerEvents: "none" as const,
-    };
-  };
 
   const visiblePages = useMemo(() => {
     if (isDesktop) return [pages[currentPage], pages[currentPage + 1]].filter(Boolean) as PageInfo[];
@@ -339,29 +323,25 @@ const MushafPage = ({ onBack }: Props) => {
 
       {/* Edge-to-edge image(s) */}
       <div className="flex h-full w-full" dir="rtl" onClick={onImageClick}>
-        {visiblePages.map((page, idx) => {
-          const hl = getHighlightStyle(page);
-          return (
-            <div
-              key={`${page.src}-${idx}`}
-              className="relative h-full flex-1 min-w-0 flex items-center justify-center bg-[#f5f0e6]"
-            >
-              <img
-                src={page.src}
-                alt={page.name}
-                className={`select-none animate-fade-in ${
-                  isDesktop
-                    ? "max-w-full max-h-full object-contain"
-                    : "w-full h-full object-cover object-center"
-                }`}
-                loading="eager"
-                decoding="async"
-                draggable={false}
-              />
-              {hl && <div style={hl} />}
-            </div>
-          );
-        })}
+        {visiblePages.map((page, idx) => (
+          <div
+            key={`${page.src}-${idx}`}
+            className="relative h-full flex-1 min-w-0 flex items-center justify-center bg-[#f5f0e6]"
+          >
+            <img
+              src={page.src}
+              alt={page.name}
+              className={`select-none animate-fade-in ${
+                isDesktop
+                  ? "max-w-full max-h-full object-contain"
+                  : "w-full h-full object-cover object-center"
+              }`}
+              loading="eager"
+              decoding="async"
+              draggable={false}
+            />
+          </div>
+        ))}
       </div>
 
       {/* Tiny transparent back button (top-right corner) */}
@@ -439,6 +419,29 @@ const MushafPage = ({ onBack }: Props) => {
               </button>
             </div>
 
+            {/* Playback Settings */}
+            <div className="flex flex-col gap-3 mb-4 bg-white/40 p-3 rounded-xl border border-white/60">
+              <label className="flex items-center gap-2 text-sm font-bold cursor-pointer text-foreground/80">
+                <input type="checkbox" checked={continuousPlay} onChange={(e) => setContinuousPlay(e.target.checked)} className="accent-accent w-4 h-4" />
+                تشغيل متواصل للسورة التالية
+              </label>
+              <div className="flex items-center gap-2 text-sm font-bold text-foreground/80">
+                <span>تكرار الآية:</span>
+                <select 
+                  value={repeatCount} 
+                  onChange={(e) => setRepeatCount(Number(e.target.value))}
+                  className="bg-white border border-border rounded-md px-2 py-1 text-sm outline-none cursor-pointer"
+                >
+                  <option value={0}>بدون تكرار</option>
+                  <option value={1}>مرة واحدة</option>
+                  <option value={2}>مرتين</option>
+                  <option value={3}>3 مرات</option>
+                  <option value={5}>5 مرات</option>
+                  <option value={999}>مستمر</option>
+                </select>
+              </div>
+            </div>
+
             {/* Surah selector (if more than one on page) */}
             {currentPageSurahs.length > 1 && (
               <div className="mb-3">
@@ -470,7 +473,11 @@ const MushafPage = ({ onBack }: Props) => {
                 {Array.from({ length: ayahCount }, (_, i) => i + 1).map(n => (
                   <button
                     key={n}
-                    onClick={() => setSelectedAyah(n)}
+                    onClick={() => {
+                      setSelectedAyah(n);
+                      currentRepeatRef.current = 0;
+                      playAyah(selectedSurah, n);
+                    }}
                     className={`aspect-square rounded-lg text-sm font-bold transition-all ${
                       selectedAyah === n
                         ? "bg-accent text-accent-foreground shadow scale-105"
@@ -482,31 +489,6 @@ const MushafPage = ({ onBack }: Props) => {
                   </button>
                 ))}
               </div>
-            </div>
-
-            {/* 3 speaker buttons */}
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => playAyah(selectedSurah, selectedAyah, "teacher")}
-                className="flex flex-col items-center gap-1 p-3 rounded-2xl border-2 border-amber-300 bg-amber-50/80 hover:bg-amber-100 active:scale-95 transition-all shadow-sm"
-              >
-                <span className="text-2xl">👨‍🏫</span>
-                <span className="text-xs font-bold text-amber-800">المعلم</span>
-              </button>
-              <button
-                onClick={() => playAyah(selectedSurah, selectedAyah, "kids")}
-                className="flex flex-col items-center gap-1 p-3 rounded-2xl border-2 border-sky-300 bg-sky-50/80 hover:bg-sky-100 active:scale-95 transition-all shadow-sm"
-              >
-                <span className="text-2xl">👦</span>
-                <span className="text-xs font-bold text-sky-800">الطفل</span>
-              </button>
-              <button
-                onClick={() => playAyah(selectedSurah, selectedAyah, "both")}
-                className="flex flex-col items-center gap-1 p-3 rounded-2xl border-2 border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100 active:scale-95 transition-all shadow-sm"
-              >
-                <span className="text-2xl">👨‍👦</span>
-                <span className="text-xs font-bold text-emerald-800">معاً</span>
-              </button>
             </div>
 
             {/* Pause/Play current */}
@@ -526,7 +508,8 @@ const MushafPage = ({ onBack }: Props) => {
       {/* Tiny "now playing" pill (when controls closed) */}
       {isPlaying && activeSurah && !controlsOpen && (
         <div
-          className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold animate-fade-in"
+          onClick={togglePlayPause}
+          className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold animate-fade-in cursor-pointer hover:scale-105 active:scale-95 transition-transform shadow-md"
           style={{
             background: speakerColors[currentSpeaker].bg,
             border: `1px solid ${speakerColors[currentSpeaker].glow}`,
@@ -535,7 +518,7 @@ const MushafPage = ({ onBack }: Props) => {
             opacity: 0.85,
           }}
         >
-          <span>{currentSpeaker === "teacher" ? "👨‍🏫" : "👦"}</span>
+          <span>🎧</span>
           <span className="font-amiri">{activeSurah.name} · آية {currentAyah}</span>
         </div>
       )}
