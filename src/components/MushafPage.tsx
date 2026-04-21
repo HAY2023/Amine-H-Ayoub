@@ -144,7 +144,7 @@ const MushafPage = ({ onBack }: Props) => {
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, [currentPage, isDesktop, controlsOpen]);
 
-  // Swipe nav
+  // Swipe nav + swipe-up to open controls
   const touchX = useRef<number | null>(null);
   const touchY = useRef<number | null>(null);
   const lastTapRef = useRef<number>(0);
@@ -157,12 +157,22 @@ const MushafPage = ({ onBack }: Props) => {
     const dx = e.changedTouches[0].clientX - touchX.current;
     const dy = e.changedTouches[0].clientY - touchY.current;
     touchX.current = null; touchY.current = null;
-    // swipe horizontally
+    // swipe up → open control panel
+    if (dy < -60 && Math.abs(dy) > Math.abs(dx)) {
+      setControlsOpen(true);
+      return;
+    }
+    // swipe down → close control panel
+    if (dy > 60 && Math.abs(dy) > Math.abs(dx)) {
+      setControlsOpen(false);
+      return;
+    }
+    // swipe horizontally → page nav
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
       dx > 0 ? goPrev() : goNext();
       return;
     }
-    // double tap detection (for fullscreen)
+    // double tap detection (for fullscreen) — only when not tapping an ayah hotspot
     if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
       const now = Date.now();
       if (now - lastTapRef.current < 300) {
