@@ -51,6 +51,7 @@ const speakerColors: Record<Speaker, { bg: string; glow: string; text: string }>
 };
 
 const previewHighlight = "rgba(250,204,21,0.14)";
+const previewStroke = "hsl(var(--accent) / 0.28)";
 
 interface Props { onBack: () => void; }
 
@@ -321,7 +322,7 @@ const MushafPage = ({ onBack }: Props) => {
 
   return (
     <div
-      className="fixed inset-0 w-screen h-screen z-50 bg-[#f5f0e6] overflow-hidden select-none"
+      className="fixed inset-0 w-screen h-screen z-50 bg-background overflow-hidden select-none"
       onTouchStart={onTS}
       onTouchEnd={onTE}
     >
@@ -340,7 +341,7 @@ const MushafPage = ({ onBack }: Props) => {
             key={`${page.src}-${idx}`}
             className="relative h-full flex-1 min-w-0 flex items-center justify-center bg-background overflow-hidden"
           >
-            <div className={`${isDesktop ? "h-full max-w-full" : "w-full h-full"} relative`} style={{ aspectRatio: `${PAGE_IMAGE_SIZE.width} / ${PAGE_IMAGE_SIZE.height}` }}>
+            <div className="relative h-full w-full">
               <img
                 src={page.src}
                 alt={page.name}
@@ -367,7 +368,7 @@ const MushafPage = ({ onBack }: Props) => {
                       height={box.height}
                       rx="10"
                       fill={isCurrent ? speakerColors[currentSpeaker].bg : controlsOpen ? previewHighlight : "transparent"}
-                      stroke={isCurrent ? speakerColors[currentSpeaker].glow : controlsOpen ? "rgba(250,204,21,0.28)" : "transparent"}
+                      stroke={isCurrent ? speakerColors[currentSpeaker].glow : controlsOpen ? previewStroke : "transparent"}
                       strokeWidth={isCurrent ? 5 : 2}
                       style={{ mixBlendMode: "multiply" }}
                       className={isCurrent ? "animate-pulse" : ""}
