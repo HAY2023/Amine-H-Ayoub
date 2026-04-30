@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X } from "lucide-react";
 import { AYAH_COUNTS, getCurrentAyahAtTime, getAyahStartTime, hasKidsSection, getSpeakerAtTime } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
@@ -482,13 +483,18 @@ const MushafPage = ({ onBack }: Props) => {
               <p className="font-amiri font-bold text-base">
                 {pages[currentPage]?.name}
               </p>
-              <button
-                onClick={() => setControlsOpen(false)}
-                className="w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center"
-                aria-label="إغلاق"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <Link to="/calibrate" className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground">
+                  معايرة
+                </Link>
+                <button
+                  onClick={() => setControlsOpen(false)}
+                  className="w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center"
+                  aria-label="إغلاق"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Playback Settings */}
