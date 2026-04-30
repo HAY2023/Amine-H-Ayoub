@@ -10,7 +10,7 @@ const AyahCalibration = () => {
   const [pageSrc, setPageSrc] = useState(pageSources[0]);
   const [boxes, setBoxes] = useState<AyahBox[]>(() => getPageAyahBoxes(pageSources[0]));
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(() => typeof window === "undefined" ? 1 : clamp((window.innerWidth - 24) / PAGE_IMAGE_SIZE.width, 0.25, 1));
   const canvasRef = useRef<HTMLDivElement>(null);
   const selected = boxes[selectedIndex];
 
@@ -78,14 +78,14 @@ const AyahCalibration = () => {
         </header>
 
         <section className="grid gap-3 lg:grid-cols-[1fr_280px]">
-          <div className="overflow-auto rounded-xl bg-card p-2 shadow-sm">
+          <div className="max-h-[78vh] overflow-auto rounded-xl bg-card p-2 shadow-sm touch-none">
             <div ref={canvasRef} className="relative mx-auto origin-top" style={{ width: PAGE_IMAGE_SIZE.width * scale, height: PAGE_IMAGE_SIZE.height * scale }}>
               <img src={pageSrc} alt="صفحة المصحف للمعايرة" className="absolute inset-0 h-full w-full select-none object-fill" draggable={false} />
               {boxes.map((box, index) => (
                 <button
                   key={`${box.surah}-${box.ayah}`}
                   onPointerDown={(e) => dragStart(index, e)}
-                  className={`absolute rounded-md border-2 transition-colors ${index === selectedIndex ? "border-accent bg-accent/30" : "border-primary/40 bg-accent/15"}`}
+                  className={`absolute rounded-md border-2 transition-colors touch-none ${index === selectedIndex ? "border-accent bg-accent/30" : "border-primary/40 bg-accent/15"}`}
                   style={{ left: box.x * scale, top: box.y * scale, width: box.width * scale, height: box.height * scale, mixBlendMode: "multiply" }}
                   aria-label={`سورة ${box.surah} آية ${box.ayah}`}
                 >
