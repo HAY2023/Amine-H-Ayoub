@@ -7,6 +7,8 @@ export interface AyahBox {
   height: number;
 }
 
+const CALIBRATION_STORAGE_KEY = "mushaf:ayahCoordinates:v1";
+
 const makeBoxes = (
   surah: number,
   count: number,
@@ -71,4 +73,35 @@ export const AYAH_COORDINATES: Record<string, AyahBox[]> = {
   ],
 };
 
-export const getPageAyahBoxes = (pageSrc: string) => AYAH_COORDINATES[pageSrc] ?? [];
+const cloneBoxes = (boxes: AyahBox[]) => boxes.map((box) => ({ ...box }));
+
+export const getSavedAyahCoordinates = (): Record<string, AyahBox[]> => {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(CALIBRATION_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+export const getPageAyahBoxes = (pageSrc: string) => {
+  const saved = getSavedAyahCoordinates()[pageSrc];
+  return cloneBoxes(saved && saved.length > 0 ? saved : AYAH_COORDINATES[pageSrc] ?? []);
+};
+
+export const savePageAyahBoxes = (pageSrc: string, boxes: AyahBox[]) => {
+  if (typeof window === "undefined") return;
+  const saved = getSavedAyahCoordinates();
+  saved[pageSrc] = cloneBoxes(boxes);
+  localStorage.setItem(CALIBRATION_STORAGE_KEY, JSON.stringify(saved));
+};
+
+export const resetPageAyahBoxes = (pageSrc: string) => {
+  if (typeof window === "undefined") return;
+  const saved = getSavedAyahCoordinates();
+  delete saved[pageSrc];
+  localStorage.setItem(CALIBRATION_STORAGE_KEY, JSON.stringify(saved));
+};
+
+export const getAllPageSources = () => Object.keys(AYAH_COORDINATES);
