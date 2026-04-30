@@ -37,7 +37,15 @@ const makeBoxes = (
 export const PAGE_IMAGE_SIZE = { width: 1260, height: 1929 };
 
 export const AYAH_COORDINATES: Record<string, AyahBox[]> = {
-  "/pages/fatiha.jpg": makeBoxes(1, 7, 180, 365, 900, 1015, 1),
+  "/pages/fatiha.jpg": [
+    { surah: 1, ayah: 1, x: 255, y: 630, width: 760, height: 150 },
+    { surah: 1, ayah: 2, x: 255, y: 790, width: 760, height: 135 },
+    { surah: 1, ayah: 3, x: 255, y: 930, width: 760, height: 140 },
+    { surah: 1, ayah: 4, x: 255, y: 1075, width: 760, height: 145 },
+    { surah: 1, ayah: 5, x: 255, y: 1225, width: 760, height: 145 },
+    { surah: 1, ayah: 6, x: 255, y: 1375, width: 760, height: 145 },
+    { surah: 1, ayah: 7, x: 255, y: 1525, width: 760, height: 140 },
+  ],
   "/pages/600.jpg": [
     ...makeBoxes(14, 8, 140, 720, 980, 620, 2),
   ],
