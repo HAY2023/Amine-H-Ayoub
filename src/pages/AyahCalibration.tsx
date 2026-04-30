@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { ArrowRight, RotateCcw, Save, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowRight, Copy, RotateCcw, Save, Trash2, ZoomIn, ZoomOut } from "lucide-react";
 import { AyahBox, AYAH_COORDINATES, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -38,6 +38,25 @@ const AyahCalibration = () => {
       width: clamp(selected.width + dw, 30, PAGE_IMAGE_SIZE.width - selected.x),
       height: clamp(selected.height + dh, 25, PAGE_IMAGE_SIZE.height - selected.y),
     });
+  };
+
+  const duplicateSelected = () => {
+    if (!selected) return;
+    const copy = {
+      ...selected,
+      y: clamp(selected.y + selected.height + 8, 0, PAGE_IMAGE_SIZE.height - selected.height),
+    };
+    setBoxes((current) => {
+      const next = [...current.slice(0, selectedIndex + 1), copy, ...current.slice(selectedIndex + 1)];
+      setSelectedIndex(selectedIndex + 1);
+      return next;
+    });
+  };
+
+  const deleteSelected = () => {
+    if (boxes.length <= 1) return;
+    setBoxes((current) => current.filter((_, index) => index !== selectedIndex));
+    setSelectedIndex((index) => Math.max(0, index - 1));
   };
 
   const dragStart = (index: number, e: React.PointerEvent<HTMLButtonElement>) => {
@@ -83,13 +102,13 @@ const AyahCalibration = () => {
               <img src={pageSrc} alt="صفحة المصحف للمعايرة" className="absolute inset-0 h-full w-full select-none object-fill" draggable={false} />
               {boxes.map((box, index) => (
                 <button
-                  key={`${box.surah}-${box.ayah}`}
+                  key={`${box.surah}-${box.ayah}-${index}`}
                   onPointerDown={(e) => dragStart(index, e)}
                   className={`absolute rounded-md border-2 transition-colors touch-none ${index === selectedIndex ? "border-accent bg-accent/30" : "border-primary/40 bg-accent/15"}`}
                   style={{ left: box.x * scale, top: box.y * scale, width: box.width * scale, height: box.height * scale, mixBlendMode: "multiply" }}
                   aria-label={`سورة ${box.surah} آية ${box.ayah}`}
                 >
-                  <span className="absolute right-1 top-1 rounded-full bg-card/90 px-1 text-xs font-bold">{box.ayah}</span>
+                  <span className="absolute right-1 top-1 rounded-full bg-card/90 px-1 text-xs font-bold">{box.surah}:{box.ayah}</span>
                 </button>
               ))}
             </div>
@@ -103,8 +122,12 @@ const AyahCalibration = () => {
 
             <label className="block text-sm font-bold">الآية</label>
             <select value={selectedIndex} onChange={(e) => setSelectedIndex(Number(e.target.value))} className="w-full rounded-lg border border-border bg-background p-2">
-              {boxes.map((box, index) => <option key={`${box.surah}-${box.ayah}`} value={index}>سورة {box.surah} - آية {box.ayah}</option>)}
+              {boxes.map((box, index) => <option key={`${box.surah}-${box.ayah}-${index}`} value={index}>سورة {box.surah} - آية {box.ayah} · جزء {index + 1}</option>)}
             </select>
+
+            <div className="rounded-lg bg-secondary/70 p-2 text-xs text-muted-foreground">
+              إذا كانت الآية في سطرين أو أكثر، اضغط "جزء آخر" ثم اسحب المستطيل الجديد فوق السطر الثاني.
+            </div>
 
             <div className="grid grid-cols-3 gap-2 text-sm font-bold">
               <span />
@@ -120,6 +143,11 @@ const AyahCalibration = () => {
               <button onClick={() => resize(-step, 0)} className="rounded-lg bg-secondary p-2">عرض -</button>
               <button onClick={() => resize(0, step)} className="rounded-lg bg-secondary p-2">ارتفاع +</button>
               <button onClick={() => resize(0, -step)} className="rounded-lg bg-secondary p-2">ارتفاع -</button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={duplicateSelected} className="flex items-center justify-center gap-1 rounded-lg bg-accent p-2 font-bold text-accent-foreground"><Copy className="h-4 w-4" /> جزء آخر</button>
+              <button onClick={deleteSelected} className="flex items-center justify-center gap-1 rounded-lg bg-destructive p-2 font-bold text-destructive-foreground"><Trash2 className="h-4 w-4" /> حذف جزء</button>
             </div>
 
             <div className="flex gap-2">
