@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X } from "lucide-react";
 import { AYAH_COUNTS, getCurrentAyahAtTime, getAyahStartTime, hasKidsSection, getSpeakerAtTime } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
+import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 
@@ -48,6 +49,9 @@ const speakerColors: Record<Speaker, { bg: string; glow: string; text: string }>
   teacher: { bg: "rgba(250,204,21,0.30)", glow: "rgba(250,204,21,0.55)", text: "#b45309" },
   kids:    { bg: "rgba(56,189,248,0.30)", glow: "rgba(56,189,248,0.55)", text: "#0369a1" },
 };
+
+const previewHighlight = "rgba(250,204,21,0.14)";
+const previewStroke = "hsl(var(--accent) / 0.28)";
 
 interface Props { onBack: () => void; }
 
@@ -318,7 +322,7 @@ const MushafPage = ({ onBack }: Props) => {
 
   return (
     <div
-      className="fixed inset-0 w-screen h-screen z-50 bg-[#f5f0e6] overflow-hidden select-none"
+      className="fixed inset-0 w-screen h-screen z-50 bg-background overflow-hidden select-none"
       onTouchStart={onTS}
       onTouchEnd={onTE}
     >
@@ -335,88 +339,70 @@ const MushafPage = ({ onBack }: Props) => {
         {visiblePages.map((page, idx) => (
           <div
             key={`${page.src}-${idx}`}
-            className="relative h-full flex-1 min-w-0 flex items-center justify-center bg-[#f5f0e6]"
+            className="relative h-full flex-1 min-w-0 flex items-center justify-center bg-background overflow-hidden"
           >
-            <img
-              src={page.src}
-              alt={page.name}
-              className={`select-none animate-fade-in ${
-                isDesktop
-                  ? "max-w-full max-h-full object-contain"
-                  : "w-full h-full object-cover object-center"
-              }`}
-              loading="eager"
-              decoding="async"
-              draggable={false}
-            />
+            <div className="relative h-full w-full">
+              <img
+                src={page.src}
+                alt={page.name}
+                className="absolute inset-0 h-full w-full select-none animate-fade-in object-fill"
+                loading="eager"
+                decoding="async"
+                draggable={false}
+              />
 
-            {/* Per-surah ayah hotspots + highlight overlays */}
-            <div className="absolute inset-0 flex flex-col" dir="rtl">
-              {page.surahs.map((surah) => {
-                const isActive = activeSurah?.number === surah.number;
-                const surahHeightPct = 100 / page.surahs.length;
-                return (
-                  <div
-                    key={surah.number}
-                    className="relative w-full"
-                    style={{ height: `${surahHeightPct}%` }}
-                  >
-                    {/* Ayah hotspots — RTL: ayah 1 is on the right */}
-                    <div className="absolute inset-0 flex" dir="rtl">
-                      {Array.from({ length: surah.ayahCount }).map((_, i) => {
-                        const ayahNum = i + 1;
-                        const isCurrent = isActive && currentAyah === ayahNum && isPlaying;
-                        return (
-                          <button
-                            key={ayahNum}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedSurahIdx(page.surahs.indexOf(surah));
-                              setSelectedAyah(ayahNum);
-                              currentRepeatRef.current = 0;
-                              playAyah(surah, ayahNum);
-                            }}
-                            className="flex-1 h-full relative group"
-                            aria-label={`${surah.name} - آية ${ayahNum}`}
-                          >
-                            {/* subtle hover hint */}
-                            <span className="absolute inset-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity pointer-events-none"
-                              style={{
-                                background: "rgba(250,204,21,0.12)",
-                                mixBlendMode: "multiply",
-                              }}
-                            />
-                            {/* active highlight overlay */}
-                            {isCurrent && (
-                              <span
-                                className="absolute inset-0 pointer-events-none animate-pulse"
-                                style={{
-                                  background: speakerColors[currentSpeaker].bg,
-                                  mixBlendMode: "multiply",
-                                  boxShadow: `inset 0 0 0 3px ${speakerColors[currentSpeaker].glow}`,
-                                  borderRadius: 8,
-                                }}
-                              />
-                            )}
-                            {/* tiny ayah number badge — only when controls are open */}
-                            {controlsOpen && (
-                              <span
-                                className="absolute top-1 right-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full pointer-events-none"
-                                style={{
-                                  background: "rgba(255,255,255,0.85)",
-                                  color: "#b45309",
-                                }}
-                              >
-                                {ayahNum}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
+              <svg
+                className="absolute inset-0 h-full w-full"
+                viewBox={`0 0 ${PAGE_IMAGE_SIZE.width} ${PAGE_IMAGE_SIZE.height}`}
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                {getPageAyahBoxes(page.src).map((box) => {
+                  const isCurrent = activeSurah?.number === box.surah && currentAyah === box.ayah && isPlaying;
+                  return (
+                    <rect
+                      key={`${box.surah}-${box.ayah}`}
+                      x={box.x}
+                      y={box.y}
+                      width={box.width}
+                      height={box.height}
+                      rx="10"
+                      fill={isCurrent ? speakerColors[currentSpeaker].bg : controlsOpen ? previewHighlight : "transparent"}
+                      stroke={isCurrent ? speakerColors[currentSpeaker].glow : controlsOpen ? previewStroke : "transparent"}
+                      strokeWidth={isCurrent ? 5 : 2}
+                      style={{ mixBlendMode: "multiply" }}
+                      className={isCurrent ? "animate-pulse" : ""}
+                    />
+                  );
+                })}
+              </svg>
+
+              <div className="absolute inset-0">
+                {getPageAyahBoxes(page.src).map((box) => {
+                  const surah = page.surahs.find((s) => s.number === box.surah);
+                  if (!surah) return null;
+                  return (
+                    <button
+                      key={`${box.surah}-${box.ayah}-tap`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedSurahIdx(page.surahs.indexOf(surah));
+                        setSelectedAyah(box.ayah);
+                        currentRepeatRef.current = 0;
+                        playAyah(surah, box.ayah);
+                      }}
+                      className="absolute rounded-md outline-none transition-colors hover:bg-accent/10 active:bg-accent/20"
+                      style={{
+                        left: `${(box.x / PAGE_IMAGE_SIZE.width) * 100}%`,
+                        top: `${(box.y / PAGE_IMAGE_SIZE.height) * 100}%`,
+                        width: `${(box.width / PAGE_IMAGE_SIZE.width) * 100}%`,
+                        height: `${(box.height / PAGE_IMAGE_SIZE.height) * 100}%`,
+                      }}
+                      aria-label={`${surah.name} - آية ${box.ayah}`}
+                    />
+                  );
+                })}
+              </div>
             </div>
           </div>
         ))}
