@@ -367,9 +367,9 @@ const MushafPage = ({ onBack }: Props) => {
                       width={box.width}
                       height={box.height}
                       rx="10"
-                      fill={isCurrent ? speakerColors[currentSpeaker].bg : controlsOpen ? previewHighlight : "transparent"}
-                      stroke={isCurrent ? speakerColors[currentSpeaker].glow : controlsOpen ? previewStroke : "transparent"}
-                      strokeWidth={isCurrent ? 5 : 2}
+                      fill={isCurrent ? speakerColors[currentSpeaker].bg : previewHighlight}
+                      stroke={isCurrent ? speakerColors[currentSpeaker].glow : previewStroke}
+                      strokeWidth={isCurrent ? 5 : 1.5}
                       style={{ mixBlendMode: "multiply" }}
                       className={isCurrent ? "animate-pulse" : ""}
                     />
