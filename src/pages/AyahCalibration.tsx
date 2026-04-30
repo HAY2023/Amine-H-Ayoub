@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ArrowRight, RotateCcw, Save, ZoomIn, ZoomOut } from "lucide-react";
 import { AyahBox, AYAH_COORDINATES, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
 
@@ -11,6 +11,7 @@ const AyahCalibration = () => {
   const [boxes, setBoxes] = useState<AyahBox[]>(() => getPageAyahBoxes(pageSources[0]));
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scale, setScale] = useState(1);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const selected = boxes[selectedIndex];
 
   const loadPage = (src: string) => {
@@ -42,12 +43,14 @@ const AyahCalibration = () => {
   const dragStart = (index: number, e: React.PointerEvent<HTMLButtonElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     setSelectedIndex(index);
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
+    if (!canvasRect) return;
     const startX = e.clientX;
     const startY = e.clientY;
     const startBox = boxes[index];
     const onMove = (event: PointerEvent) => {
-      const ratioX = PAGE_IMAGE_SIZE.width / e.currentTarget.getBoundingClientRect().width;
-      const ratioY = PAGE_IMAGE_SIZE.height / e.currentTarget.getBoundingClientRect().height;
+      const ratioX = PAGE_IMAGE_SIZE.width / canvasRect.width;
+      const ratioY = PAGE_IMAGE_SIZE.height / canvasRect.height;
       setBoxes((current) => current.map((box, i) => i === index ? {
         ...box,
         x: clamp(startBox.x + (event.clientX - startX) * ratioX, 0, PAGE_IMAGE_SIZE.width - startBox.width),
@@ -76,7 +79,7 @@ const AyahCalibration = () => {
 
         <section className="grid gap-3 lg:grid-cols-[1fr_280px]">
           <div className="overflow-auto rounded-xl bg-card p-2 shadow-sm">
-            <div className="relative mx-auto origin-top" style={{ width: PAGE_IMAGE_SIZE.width * scale, height: PAGE_IMAGE_SIZE.height * scale }}>
+            <div ref={canvasRef} className="relative mx-auto origin-top" style={{ width: PAGE_IMAGE_SIZE.width * scale, height: PAGE_IMAGE_SIZE.height * scale }}>
               <img src={pageSrc} alt="صفحة المصحف للمعايرة" className="absolute inset-0 h-full w-full select-none object-fill" draggable={false} />
               {boxes.map((box, index) => (
                 <button
