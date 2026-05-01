@@ -31,21 +31,32 @@ export interface SurahTimings {
   kids?: number[];            // start time of each ayah during kids recitation
 }
 
-export const AYAH_TIMINGS: Record<number, SurahTimings | number[]> = {
-  // املأ هنا توقيتات السور التي تعرف بداية آياتها بدقة. أمثلة:
-  //
-  // 1: {
-  //   teacher: [0, 5.5, 12.0, 18.0, 24.5, 31.0, 37.0],
-  //   kidsStart: 43.0,
-  //   kids: [43.0, 48.5, 55.0, 61.0, 67.5, 74.0, 80.0],
-  // },
-  //
-  // 8: { // الكوثر
-  //   teacher: [0, 4.0, 8.5],
-  //   kidsStart: 13.0,
-  //   kids: [13.0, 17.0, 21.0],
-  // },
-};
+export const AYAH_TIMINGS: Record<number, SurahTimings | number[]> = {};
+
+// === LocalStorage overrides (saved from /timings tool) ===
+const TIMINGS_STORAGE_KEY = "mushaf:ayahTimings:v1";
+
+export function getSavedTimings(): Record<number, SurahTimings> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(TIMINGS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+export function saveSurahTimings(surahNumber: number, timings: SurahTimings): void {
+  if (typeof window === "undefined") return;
+  const all = getSavedTimings();
+  all[surahNumber] = timings;
+  localStorage.setItem(TIMINGS_STORAGE_KEY, JSON.stringify(all));
+}
+
+export function clearSavedSurahTimings(surahNumber: number): void {
+  if (typeof window === "undefined") return;
+  const all = getSavedTimings();
+  delete all[surahNumber];
+  localStorage.setItem(TIMINGS_STORAGE_KEY, JSON.stringify(all));
+}
 
 /** Approximate ayah counts for surahs in this app. */
 export const AYAH_COUNTS: Record<number, number> = {
