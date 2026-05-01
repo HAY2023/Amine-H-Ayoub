@@ -31,21 +31,32 @@ export interface SurahTimings {
   kids?: number[];            // start time of each ayah during kids recitation
 }
 
-export const AYAH_TIMINGS: Record<number, SurahTimings | number[]> = {
-  // املأ هنا توقيتات السور التي تعرف بداية آياتها بدقة. أمثلة:
-  //
-  // 1: {
-  //   teacher: [0, 5.5, 12.0, 18.0, 24.5, 31.0, 37.0],
-  //   kidsStart: 43.0,
-  //   kids: [43.0, 48.5, 55.0, 61.0, 67.5, 74.0, 80.0],
-  // },
-  //
-  // 8: { // الكوثر
-  //   teacher: [0, 4.0, 8.5],
-  //   kidsStart: 13.0,
-  //   kids: [13.0, 17.0, 21.0],
-  // },
-};
+export const AYAH_TIMINGS: Record<number, SurahTimings | number[]> = {};
+
+// === LocalStorage overrides (saved from /timings tool) ===
+const TIMINGS_STORAGE_KEY = "mushaf:ayahTimings:v1";
+
+export function getSavedTimings(): Record<number, SurahTimings> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(TIMINGS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+export function saveSurahTimings(surahNumber: number, timings: SurahTimings): void {
+  if (typeof window === "undefined") return;
+  const all = getSavedTimings();
+  all[surahNumber] = timings;
+  localStorage.setItem(TIMINGS_STORAGE_KEY, JSON.stringify(all));
+}
+
+export function clearSavedSurahTimings(surahNumber: number): void {
+  if (typeof window === "undefined") return;
+  const all = getSavedTimings();
+  delete all[surahNumber];
+  localStorage.setItem(TIMINGS_STORAGE_KEY, JSON.stringify(all));
+}
 
 /** Approximate ayah counts for surahs in this app. */
 export const AYAH_COUNTS: Record<number, number> = {
@@ -72,19 +83,26 @@ function normalize(entry: SurahTimings | number[] | undefined): SurahTimings | n
   return entry;
 }
 
+/** Resolve timings: prefer saved (LocalStorage) over hardcoded. */
+function resolveTimings(surahNumber: number): SurahTimings | null {
+  const saved = getSavedTimings()[surahNumber];
+  if (saved && saved.teacher && saved.teacher.length > 0) return saved;
+  return resolveTimings(surahNumber);
+}
+
 export function getSurahTimings(surahNumber: number): SurahTimings | null {
-  return normalize(AYAH_TIMINGS[surahNumber]);
+  return resolveTimings(surahNumber);
 }
 
 /** True if surah has any precise teacher timings. */
 export function hasManualTimings(surahNumber: number): boolean {
-  const t = normalize(AYAH_TIMINGS[surahNumber]);
+  const t = resolveTimings(surahNumber);
   return !!t && t.teacher.length > 0;
 }
 
 /** True if surah has a combined teacher+kids file with split point defined. */
 export function hasKidsSection(surahNumber: number): boolean {
-  const t = normalize(AYAH_TIMINGS[surahNumber]);
+  const t = resolveTimings(surahNumber);
   return !!t && typeof t.kidsStart === "number";
 }
 
@@ -93,7 +111,7 @@ export function hasKidsSection(surahNumber: number): boolean {
  * Used when a single file contains teacher then kids.
  */
 export function getSpeakerAtTime(surahNumber: number, currentTime: number): "teacher" | "kids" | null {
-  const t = normalize(AYAH_TIMINGS[surahNumber]);
+  const t = resolveTimings(surahNumber);
   if (!t || typeof t.kidsStart !== "number") return null;
   return currentTime >= t.kidsStart ? "kids" : "teacher";
 }
@@ -108,7 +126,7 @@ export function getCurrentAyahAtTime(
   audioDuration: number,
 ): { ayah: number; speaker: "teacher" | "kids" | null } {
   const total = AYAH_COUNTS[surahNumber] ?? 1;
-  const t = normalize(AYAH_TIMINGS[surahNumber]);
+  const t = resolveTimings(surahNumber);
 
   // Manual timings path
   if (t && t.teacher.length > 0) {
@@ -139,7 +157,7 @@ export function getAyahStartTime(
   audioDuration: number,
   speaker: "teacher" | "kids" = "teacher",
 ): number {
-  const t = normalize(AYAH_TIMINGS[surahNumber]);
+  const t = resolveTimings(surahNumber);
   if (t) {
     const list = speaker === "kids" && t.kids ? t.kids : t.teacher;
     if (list[ayahIndex - 1] !== undefined) return list[ayahIndex - 1];

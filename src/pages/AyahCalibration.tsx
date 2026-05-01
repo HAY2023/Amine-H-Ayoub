@@ -1,9 +1,21 @@
-import { useMemo, useRef, useState } from "react";
-import { ArrowRight, Copy, RotateCcw, Save, Trash2, ZoomIn, ZoomOut } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, Copy, Pause, Play, RotateCcw, Save, Trash2, ZoomIn, ZoomOut } from "lucide-react";
 import { AyahBox, AYAH_COORDINATES, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
+import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
+import { getAyahStartTime, hasKidsSection } from "@/data/ayahTimings";
+
+const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const step = 10;
+
+type Speaker = "teacher" | "kids";
+
+// Ayah colors (must match MushafPage)
+const speakerColors: Record<Speaker, { fill: string; stroke: string; label: string }> = {
+  teacher: { fill: "rgba(250,204,21,0.45)", stroke: "rgba(250,204,21,0.85)", label: "👨‍🏫 معلم" },
+  kids:    { fill: "rgba(56,189,248,0.45)", stroke: "rgba(56,189,248,0.85)", label: "👦 طفل" },
+};
 
 const AyahCalibration = () => {
   const pageSources = useMemo(() => getAllPageSources(), []);
@@ -11,13 +23,23 @@ const AyahCalibration = () => {
   const [boxes, setBoxes] = useState<AyahBox[]>(() => getPageAyahBoxes(pageSources[0]));
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scale, setScale] = useState(() => typeof window === "undefined" ? 1 : clamp((window.innerWidth - 24) / PAGE_IMAGE_SIZE.width, 0.25, 1));
+  const [speaker, setSpeaker] = useState<Speaker>("teacher");
+  const [isPlaying, setIsPlaying] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const stopAtRef = useRef<number | null>(null);
   const selected = boxes[selectedIndex];
 
   const loadPage = (src: string) => {
     setPageSrc(src);
     setBoxes(getPageAyahBoxes(src));
     setSelectedIndex(0);
+    stopAudio();
+  };
+
+  const stopAudio = () => {
+    const a = audioRef.current; if (!a) return;
+    a.pause(); stopAtRef.current = null; setIsPlaying(false);
   };
 
   const updateSelected = (patch: Partial<AyahBox>) => {
@@ -59,6 +81,15 @@ const AyahCalibration = () => {
     setSelectedIndex((index) => Math.max(0, index - 1));
   };
 
+  // === Unify all boxes to same X & width (full-line width) ===
+  // Keeps each box's own height, but aligns x and width to a common value (e.g. selected box, or page width margins).
+  const unifyWidth = () => {
+    if (!selected) return;
+    const x = selected.x;
+    const width = selected.width;
+    setBoxes((current) => current.map((box) => ({ ...box, x, width })));
+  };
+
   const dragStart = (index: number, e: React.PointerEvent<HTMLButtonElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     setSelectedIndex(index);
@@ -84,33 +115,96 @@ const AyahCalibration = () => {
     window.addEventListener("pointerup", onUp, { once: true });
   };
 
+  // === Audio: play selected ayah segment with chosen speaker ===
+  const playSelected = () => {
+    if (!selected) return;
+    const a = audioRef.current; if (!a) return;
+    const targetSrc = audioPath(selected.surah);
+
+    const start = () => {
+      const dur = a.duration || 0;
+      const startT = getAyahStartTime(selected.surah, selected.ayah, dur, speaker);
+      // end = start of next ayah of same speaker, or kidsStart for last teacher ayah
+      const sameSpeakerSurah = selected.surah;
+      // Approximate next-ayah end
+      const nextStart = getAyahStartTime(sameSpeakerSurah, selected.ayah + 1, dur, speaker);
+      let endT = nextStart > startT ? nextStart : dur;
+      if (speaker === "teacher" && hasKidsSection(sameSpeakerSurah)) {
+        const kidsFirst = getAyahStartTime(sameSpeakerSurah, 1, dur, "kids");
+        if (nextStart <= startT && kidsFirst > startT) endT = kidsFirst;
+      }
+      stopAtRef.current = endT;
+      a.currentTime = startT;
+      a.play().catch(() => {});
+    };
+
+    if (!a.src.endsWith(targetSrc.split("/").pop() || targetSrc)) {
+      a.src = targetSrc;
+      a.load();
+      a.addEventListener("loadedmetadata", start, { once: true });
+    } else {
+      if (a.duration > 0) start();
+      else a.addEventListener("loadedmetadata", start, { once: true });
+    }
+  };
+
+  const onTimeUpdate = () => {
+    const a = audioRef.current; if (!a) return;
+    if (stopAtRef.current !== null && a.currentTime >= stopAtRef.current - 0.05) {
+      a.pause(); stopAtRef.current = null;
+    }
+  };
+
+  // Auto-stop on box change
+  useEffect(() => { stopAudio(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [pageSrc]);
+
+  const colors = speakerColors[speaker];
+
   return (
     <main className="min-h-screen bg-background text-foreground p-3" dir="rtl">
+      <audio
+        ref={audioRef}
+        crossOrigin="anonymous"
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onTimeUpdate={onTimeUpdate}
+      />
       <div className="mx-auto max-w-5xl space-y-3">
         <header className="flex items-center justify-between gap-2 rounded-xl bg-card p-3 shadow-sm">
           <a href="/" className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary" aria-label="رجوع"><ArrowRight className="h-5 w-5" /></a>
           <div className="flex-1 text-center">
             <h1 className="font-amiri text-xl font-bold">معايرة تظليل الآيات</h1>
-            <p className="text-xs text-muted-foreground">اسحب المربع فوق الآية، ثم كبّر أو صغّر من الأزرار.</p>
+            <p className="text-xs text-muted-foreground">اسحب المربع، اختر المتحدث، شغّل الصوت لتطابق الآية تماماً.</p>
           </div>
-          <button onClick={() => { savePageAyahBoxes(pageSrc, boxes); }} className="flex h-10 items-center gap-1 rounded-full bg-accent px-3 font-bold text-accent-foreground"><Save className="h-4 w-4" /> حفظ</button>
+          <button onClick={() => savePageAyahBoxes(pageSrc, boxes)} className="flex h-10 items-center gap-1 rounded-full bg-accent px-3 font-bold text-accent-foreground"><Save className="h-4 w-4" /> حفظ</button>
         </header>
 
-        <section className="grid gap-3 lg:grid-cols-[1fr_280px]">
+        <section className="grid gap-3 lg:grid-cols-[1fr_300px]">
           <div className="max-h-[78vh] overflow-auto rounded-xl bg-card p-2 shadow-sm touch-none">
             <div ref={canvasRef} className="relative mx-auto origin-top" style={{ width: PAGE_IMAGE_SIZE.width * scale, height: PAGE_IMAGE_SIZE.height * scale }}>
               <img src={pageSrc} alt="صفحة المصحف للمعايرة" className="absolute inset-0 h-full w-full select-none object-fill" draggable={false} />
-              {boxes.map((box, index) => (
-                <button
-                  key={`${box.surah}-${box.ayah}-${index}`}
-                  onPointerDown={(e) => dragStart(index, e)}
-                  className={`absolute rounded-md border-2 transition-colors touch-none ${index === selectedIndex ? "border-accent bg-accent/30" : "border-primary/40 bg-accent/15"}`}
-                  style={{ left: box.x * scale, top: box.y * scale, width: box.width * scale, height: box.height * scale, mixBlendMode: "multiply" }}
-                  aria-label={`سورة ${box.surah} آية ${box.ayah}`}
-                >
-                  <span className="absolute right-1 top-1 rounded-full bg-card/90 px-1 text-xs font-bold">{box.surah}:{box.ayah}</span>
-                </button>
-              ))}
+              {boxes.map((box, index) => {
+                const isSelected = index === selectedIndex;
+                return (
+                  <button
+                    key={`${box.surah}-${box.ayah}-${index}`}
+                    onPointerDown={(e) => dragStart(index, e)}
+                    className="absolute rounded-md border-2 transition-colors touch-none"
+                    style={{
+                      left: box.x * scale,
+                      top: box.y * scale,
+                      width: box.width * scale,
+                      height: box.height * scale,
+                      mixBlendMode: "multiply",
+                      background: isSelected ? colors.fill : "rgba(250,204,21,0.18)",
+                      borderColor: isSelected ? colors.stroke : "rgba(217,119,6,0.4)",
+                    }}
+                    aria-label={`سورة ${box.surah} آية ${box.ayah}`}
+                  >
+                    <span className="absolute right-1 top-1 rounded-full bg-card/90 px-1 text-xs font-bold">{box.surah}:{box.ayah}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -121,12 +215,32 @@ const AyahCalibration = () => {
             </select>
 
             <label className="block text-sm font-bold">الآية</label>
-            <select value={selectedIndex} onChange={(e) => setSelectedIndex(Number(e.target.value))} className="w-full rounded-lg border border-border bg-background p-2">
+            <select value={selectedIndex} onChange={(e) => { setSelectedIndex(Number(e.target.value)); stopAudio(); }} className="w-full rounded-lg border border-border bg-background p-2">
               {boxes.map((box, index) => <option key={`${box.surah}-${box.ayah}-${index}`} value={index}>سورة {box.surah} - آية {box.ayah} · جزء {index + 1}</option>)}
             </select>
 
-            <div className="rounded-lg bg-secondary/70 p-2 text-xs text-muted-foreground">
-              إذا كانت الآية في سطرين أو أكثر، اضغط "جزء آخر" ثم اسحب المستطيل الجديد فوق السطر الثاني.
+            {/* Speaker toggle */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => { setSpeaker("teacher"); stopAudio(); }}
+                className={`p-2 rounded-lg font-bold text-sm transition-colors ${speaker === "teacher" ? "bg-amber-400 text-amber-950" : "bg-secondary text-foreground"}`}
+              >👨‍🏫 معلم</button>
+              <button
+                onClick={() => { setSpeaker("kids"); stopAudio(); }}
+                className={`p-2 rounded-lg font-bold text-sm transition-colors ${speaker === "kids" ? "bg-sky-400 text-sky-950" : "bg-secondary text-foreground"}`}
+              >👦 طفل</button>
+            </div>
+
+            {/* Play */}
+            <button
+              onClick={isPlaying ? stopAudio : playSelected}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary p-3 font-bold text-primary-foreground"
+            >
+              {isPlaying ? <><Pause className="h-4 w-4" /> إيقاف</> : <><Play className="h-4 w-4" /> تشغيل الآية ({colors.label})</>}
+            </button>
+
+            <div className="rounded-lg bg-secondary/70 p-2 text-xs text-muted-foreground leading-relaxed">
+              💡 إذا كانت الآية في سطرين، اضغط "جزء آخر". لتوحيد عرض كل المربعات، اضبط مربعاً واحداً ثم اضغط "نفس العرض للكل".
             </div>
 
             <div className="grid grid-cols-3 gap-2 text-sm font-bold">
@@ -144,6 +258,10 @@ const AyahCalibration = () => {
               <button onClick={() => resize(0, step)} className="rounded-lg bg-secondary p-2">ارتفاع +</button>
               <button onClick={() => resize(0, -step)} className="rounded-lg bg-secondary p-2">ارتفاع -</button>
             </div>
+
+            <button onClick={unifyWidth} className="w-full rounded-lg bg-emerald-500 p-2 font-bold text-white">
+              📐 تطبيق نفس العرض على كل الآيات
+            </button>
 
             <div className="grid grid-cols-2 gap-2">
               <button onClick={duplicateSelected} className="flex items-center justify-center gap-1 rounded-lg bg-accent p-2 font-bold text-accent-foreground"><Copy className="h-4 w-4" /> جزء آخر</button>
