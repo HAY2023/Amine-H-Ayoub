@@ -87,22 +87,22 @@ function normalize(entry: SurahTimings | number[] | undefined): SurahTimings | n
 function resolveTimings(surahNumber: number): SurahTimings | null {
   const saved = getSavedTimings()[surahNumber];
   if (saved && saved.teacher && saved.teacher.length > 0) return saved;
-  return normalize(AYAH_TIMINGS[surahNumber]);
+  return resolveTimings(surahNumber);
 }
 
 export function getSurahTimings(surahNumber: number): SurahTimings | null {
-  return normalize(AYAH_TIMINGS[surahNumber]);
+  return resolveTimings(surahNumber);
 }
 
 /** True if surah has any precise teacher timings. */
 export function hasManualTimings(surahNumber: number): boolean {
-  const t = normalize(AYAH_TIMINGS[surahNumber]);
+  const t = resolveTimings(surahNumber);
   return !!t && t.teacher.length > 0;
 }
 
 /** True if surah has a combined teacher+kids file with split point defined. */
 export function hasKidsSection(surahNumber: number): boolean {
-  const t = normalize(AYAH_TIMINGS[surahNumber]);
+  const t = resolveTimings(surahNumber);
   return !!t && typeof t.kidsStart === "number";
 }
 
@@ -111,7 +111,7 @@ export function hasKidsSection(surahNumber: number): boolean {
  * Used when a single file contains teacher then kids.
  */
 export function getSpeakerAtTime(surahNumber: number, currentTime: number): "teacher" | "kids" | null {
-  const t = normalize(AYAH_TIMINGS[surahNumber]);
+  const t = resolveTimings(surahNumber);
   if (!t || typeof t.kidsStart !== "number") return null;
   return currentTime >= t.kidsStart ? "kids" : "teacher";
 }
@@ -126,7 +126,7 @@ export function getCurrentAyahAtTime(
   audioDuration: number,
 ): { ayah: number; speaker: "teacher" | "kids" | null } {
   const total = AYAH_COUNTS[surahNumber] ?? 1;
-  const t = normalize(AYAH_TIMINGS[surahNumber]);
+  const t = resolveTimings(surahNumber);
 
   // Manual timings path
   if (t && t.teacher.length > 0) {
@@ -157,7 +157,7 @@ export function getAyahStartTime(
   audioDuration: number,
   speaker: "teacher" | "kids" = "teacher",
 ): number {
-  const t = normalize(AYAH_TIMINGS[surahNumber]);
+  const t = resolveTimings(surahNumber);
   if (t) {
     const list = speaker === "kids" && t.kids ? t.kids : t.teacher;
     if (list[ayahIndex - 1] !== undefined) return list[ayahIndex - 1];
