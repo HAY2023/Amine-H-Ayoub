@@ -404,7 +404,7 @@ const MushafPage = ({ onBack }: Props) => {
                         setSelectedSurahIdx(page.surahs.indexOf(surah));
                         setSelectedAyah(box.ayah);
                         currentRepeatRef.current = 0;
-                        playAyah(surah, box.ayah);
+                        playAyah(surah, box.ayah, { audioStart: box.audioStart, audioEnd: box.audioEnd, speaker: box.speaker });
                       }}
                       className="absolute rounded-md outline-none transition-colors hover:bg-accent/10 active:bg-accent/20"
                       style={{
