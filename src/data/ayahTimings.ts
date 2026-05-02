@@ -29,6 +29,7 @@ export interface SurahTimings {
   teacher: number[];          // start time of each ayah during teacher recitation
   kidsStart?: number;         // start of kids section in the SAME file (if combined)
   kids?: number[];            // start time of each ayah during kids recitation
+  segments?: { name: string; timings: number[] }[]; // custom named segments
 }
 
 export const AYAH_TIMINGS: Record<number, SurahTimings | number[]> = {};

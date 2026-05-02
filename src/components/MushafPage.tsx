@@ -372,11 +372,11 @@ const MushafPage = ({ onBack }: Props) => {
                 preserveAspectRatio="none"
                 aria-hidden="true"
               >
-                {getPageAyahBoxes(page.src).map((box) => {
+                {getPageAyahBoxes(page.src).map((box, i) => {
                   const isCurrent = activeSurah?.number === box.surah && currentAyah === box.ayah && isPlaying;
                   return (
                     <rect
-                      key={`${box.surah}-${box.ayah}`}
+                      key={`${box.surah}-${box.ayah}-${i}`}
                       x={box.x}
                       y={box.y}
                       width={box.width}

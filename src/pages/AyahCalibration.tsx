@@ -99,6 +99,37 @@ const AyahCalibration = () => {
     setBoxes((current) => current.map((box) => ({ ...box, x, width })));
   };
 
+  const splitHorizontal = () => {
+    if (!selected) return;
+    const h1 = selected.height / 2;
+    const box1 = { ...selected, height: h1 };
+    const box2 = { ...selected, height: h1, y: selected.y + h1, audioStart: undefined, audioEnd: undefined };
+    setBoxes((current) => {
+      const next = [...current];
+      next.splice(selectedIndex, 1, box1, box2);
+      return next;
+    });
+  };
+
+  const splitVertical = () => {
+    if (!selected) return;
+    const w1 = selected.width / 2;
+    const box1 = { ...selected, width: w1 };
+    const box2 = { ...selected, width: w1, x: selected.x + w1, audioStart: undefined, audioEnd: undefined };
+    setBoxes((current) => {
+      const next = [...current];
+      next.splice(selectedIndex, 1, box1, box2);
+      return next;
+    });
+  };
+
+  const linkWithPrevious = () => {
+    if (selectedIndex === 0 || !selected) return;
+    const prev = boxes[selectedIndex - 1];
+    updateSelected({ surah: prev.surah, ayah: prev.ayah });
+    toast({ title: "تم الربط", description: `تم ربط الجزء بالآية ${prev.surah}:${prev.ayah}` });
+  };
+
   const dragStart = (index: number, e: React.PointerEvent<HTMLButtonElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     setSelectedIndex(index);
@@ -230,8 +261,8 @@ const AyahCalibration = () => {
         <header className="flex items-center justify-between gap-2 rounded-xl bg-card p-3 shadow-sm">
           <a href="/" className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary" aria-label="رجوع"><ArrowRight className="h-5 w-5" /></a>
           <div className="flex-1 text-center">
-            <h1 className="font-amiri text-xl font-bold">معايرة وربط الآيات</h1>
-            <p className="text-xs text-muted-foreground">حدّد المربع، اضغط ⏺ بداية ثم ⏹ نهاية أثناء التشغيل لربط الصوت بالآية.</p>
+            <h1 className="font-amiri text-xl font-bold">ضبط تظلال ومعايرة الآيات</h1>
+            <p className="text-xs text-muted-foreground">حدّد المربع، استخدم "تقسيم" للآيات الطويلة، واربط الصوت بالآية.</p>
           </div>
           <button onClick={saveAll} className="flex h-10 items-center gap-1 rounded-full bg-accent px-3 font-bold text-accent-foreground"><Save className="h-4 w-4" /> حفظ الكل</button>
         </header>
@@ -359,8 +390,15 @@ const AyahCalibration = () => {
 
             <div className="grid grid-cols-2 gap-2">
               <button onClick={duplicateSelected} className="flex items-center justify-center gap-1 rounded-lg bg-accent p-2 font-bold text-accent-foreground text-sm"><Copy className="h-4 w-4" /> جزء آخر</button>
-              <button onClick={deleteSelected} className="flex items-center justify-center gap-1 rounded-lg bg-destructive p-2 font-bold text-destructive-foreground text-sm"><Trash2 className="h-4 w-4" /> حذف</button>
+              <button onClick={linkWithPrevious} disabled={selectedIndex === 0} className="flex items-center justify-center gap-1 rounded-lg bg-sky-500 p-2 font-bold text-white text-sm disabled:opacity-50"><Link2 className="h-4 w-4" /> ربط بالسابق</button>
             </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={splitHorizontal} className="flex items-center justify-center gap-1 rounded-lg bg-secondary p-2 font-bold text-sm">↔ انقسام أفقي</button>
+              <button onClick={splitVertical} className="flex items-center justify-center gap-1 rounded-lg bg-secondary p-2 font-bold text-sm">↕ انقسام رأسي</button>
+            </div>
+
+            <button onClick={deleteSelected} className="w-full flex items-center justify-center gap-1 rounded-lg bg-destructive p-2 font-bold text-destructive-foreground text-sm"><Trash2 className="h-4 w-4" /> حذف الجزء المحدد</button>
 
             <div className="flex gap-2">
               <button onClick={() => setScale((s) => clamp(s + 0.1, 0.25, 1.4))} className="flex-1 rounded-lg bg-primary p-2 text-primary-foreground"><ZoomIn className="mx-auto h-4 w-4" /></button>
