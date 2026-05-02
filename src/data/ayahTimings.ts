@@ -87,7 +87,7 @@ function normalize(entry: SurahTimings | number[] | undefined): SurahTimings | n
 function resolveTimings(surahNumber: number): SurahTimings | null {
   const saved = getSavedTimings()[surahNumber];
   if (saved && saved.teacher && saved.teacher.length > 0) return saved;
-  return resolveTimings(surahNumber);
+  return normalize(AYAH_TIMINGS[surahNumber]);
 }
 
 export function getSurahTimings(surahNumber: number): SurahTimings | null {
