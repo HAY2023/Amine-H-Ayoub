@@ -5,6 +5,11 @@ export interface AyahBox {
   y: number;
   width: number;
   height: number;
+  /** Optional: precise audio segment bound to this highlight (in seconds). */
+  audioStart?: number;
+  audioEnd?: number;
+  /** Optional: which speaker section this segment belongs to. */
+  speaker?: "teacher" | "kids";
 }
 
 const CALIBRATION_STORAGE_KEY = "mushaf:ayahCoordinates:v1";
