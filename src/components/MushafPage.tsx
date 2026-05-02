@@ -190,7 +190,8 @@ const MushafPage = ({ onBack }: Props) => {
   };
 
   // ---- Ayah-by-ayah playback ----
-  const playAyah = useCallback((surah: SurahAudio, ayahNum: number) => {
+  // If a calibrated box with audioStart/audioEnd is supplied, use it directly (most accurate).
+  const playAyah = useCallback((surah: SurahAudio, ayahNum: number, boundSegment?: { audioStart?: number; audioEnd?: number; speaker?: Speaker }) => {
     const a = audioRef.current; if (!a) return;
     const sameSrc = a.src && a.src.endsWith(surah.src.split("/").pop() || surah.src);
 
@@ -199,8 +200,21 @@ const MushafPage = ({ onBack }: Props) => {
     stopAtRef.current = null;
 
     const start = () => {
-      setCurrentSpeaker("teacher");
       const dur = a.duration || 0;
+      // Bound segment from /calibrate takes priority
+      if (boundSegment && typeof boundSegment.audioStart === "number") {
+        const sp: Speaker = boundSegment.speaker ?? "teacher";
+        setCurrentSpeaker(sp);
+        const startT = boundSegment.audioStart;
+        const endT = typeof boundSegment.audioEnd === "number" && boundSegment.audioEnd > startT
+          ? boundSegment.audioEnd
+          : computeAyahEnd(surah, ayahNum, sp, dur);
+        stopAtRef.current = endT;
+        a.currentTime = startT;
+        a.play().catch(() => {});
+        return;
+      }
+      setCurrentSpeaker("teacher");
       const startT = getAyahStartTime(surah.number, ayahNum, dur, "teacher");
       const nextT = computeAyahEnd(surah, ayahNum, "teacher", dur);
       stopAtRef.current = nextT;
@@ -208,7 +222,7 @@ const MushafPage = ({ onBack }: Props) => {
       a.play().catch(() => {});
     };
 
-    setControlsOpen(false); // Hide settings during reading!
+    setControlsOpen(false);
 
     if (!sameSrc) {
       a.src = surah.src;
