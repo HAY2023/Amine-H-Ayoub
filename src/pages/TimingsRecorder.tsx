@@ -179,21 +179,32 @@ const TimingsRecorder = () => {
   };
 
   const json = useMemo(() => {
-    const obj: Record<string, unknown> = { teacher };
+    const obj: Record<string, unknown> = { teacher, segments };
     if (kidsStart !== null) { obj.kidsStart = kidsStart; obj.kids = kids; }
     const inner = JSON.stringify(obj, null, 2)
       .split("\n").map((l, i) => i === 0 ? l : "    " + l).join("\n");
     return `  ${surahNum}: ${inner},`;
-  }, [surahNum, teacher, kids, kidsStart]);
+  }, [surahNum, teacher, kids, kidsStart, segments]);
 
   const copy = () => navigator.clipboard.writeText(json);
 
   const seekToAyah = (i: number) => {
-    const list = i < teacher.length ? teacher : kids;
-    const idx = i < teacher.length ? i : i - teacher.length;
-    const t = list[idx];
+    const t = segments[i]?.start ?? (i < teacher.length ? teacher[i] : kids[i - teacher.length]);
     const a = audioRef.current; if (!a || t === undefined) return;
     a.currentTime = t;
+  };
+
+  const playSegment = (seg: AudioSegment) => {
+    const a = audioRef.current; if (!a) return;
+    a.currentTime = seg.start;
+    a.play().catch(() => {});
+    const stop = () => {
+      if (a.currentTime >= seg.end - 0.02) {
+        a.pause();
+        a.removeEventListener("timeupdate", stop);
+      }
+    };
+    a.addEventListener("timeupdate", stop);
   };
 
   const fmt = (s: number) => {
