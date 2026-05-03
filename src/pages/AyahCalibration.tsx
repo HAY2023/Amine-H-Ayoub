@@ -99,11 +99,14 @@ const AyahCalibration = () => {
     setSelectedIndex((index) => Math.max(0, index - 1));
   };
 
-  const unifyWidth = () => {
+  const unifyHeight = () => {
     if (!selected) return;
-    const x = selected.x;
-    const width = selected.width;
-    setBoxes((current) => current.map((box) => ({ ...box, x, width })));
+    const height = selected.height;
+    setBoxes((current) => current.map((box) => ({
+      ...box,
+      height,
+      y: clamp(box.y, 0, PAGE_IMAGE_SIZE.height - height),
+    })));
   };
 
   const dragStart = (index: number, e: React.PointerEvent<HTMLButtonElement>) => {
@@ -401,7 +404,7 @@ const AyahCalibration = () => {
               <button onClick={() => resize(0, -step)} className="rounded-lg bg-secondary p-2 text-sm">ارتفاع -</button>
             </div>
 
-            <button onClick={unifyWidth} className="w-full rounded-lg bg-emerald-500 p-2 font-bold text-white text-sm">📐 نفس العرض للكل</button>
+            <button onClick={unifyHeight} className="w-full rounded-lg bg-emerald-500 p-2 font-bold text-white text-sm">📐 نفس الارتفاع للكل</button>
 
             <div className="grid grid-cols-2 gap-2">
               <button onClick={duplicateSelected} className="flex items-center justify-center gap-1 rounded-lg bg-accent p-2 font-bold text-accent-foreground text-sm"><Copy className="h-4 w-4" /> جزء آخر</button>
