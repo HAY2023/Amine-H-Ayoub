@@ -85,6 +85,7 @@ const TimingsRecorder = () => {
   const [surahNum, setSurahNum] = useState(1);
   const [teacher, setTeacher] = useState<number[]>([]);
   const [kids, setKids] = useState<number[]>([]);
+  const [segments, setSegments] = useState<AudioSegment[]>([]);
   const [kidsStart, setKidsStart] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
@@ -104,9 +105,10 @@ const TimingsRecorder = () => {
     if (saved) {
       setTeacher(saved.teacher || []);
       setKids(saved.kids || []);
+      setSegments(saved.segments || []);
       setKidsStart(saved.kidsStart ?? null);
     } else {
-      setTeacher([]); setKids([]); setKidsStart(null);
+      setTeacher([]); setKids([]); setSegments([]); setKidsStart(null);
     }
   }, [surahNum]);
 
@@ -116,7 +118,7 @@ const TimingsRecorder = () => {
   };
 
   const resetAll = () => {
-    setTeacher([]); setKids([]); setKidsStart(null);
+    setTeacher([]); setKids([]); setSegments([]); setKidsStart(null);
     const a = audioRef.current; if (a) { a.pause(); a.currentTime = 0; }
   };
 
@@ -129,7 +131,8 @@ const TimingsRecorder = () => {
   const markKidsStart = () => setKidsStart(parseFloat(current.toFixed(2)));
 
   const popLast = () => {
-    if (inKidsSection && kids.length > 0) setKids(k => k.slice(0, -1));
+    if (segments.length > 0) setSegments((items) => items.slice(0, -1));
+    else if (inKidsSection && kids.length > 0) setKids(k => k.slice(0, -1));
     else if (teacher.length > 0) setTeacher(arr => arr.slice(0, -1));
   };
 
