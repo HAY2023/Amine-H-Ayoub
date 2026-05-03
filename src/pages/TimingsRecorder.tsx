@@ -141,39 +141,33 @@ const TimingsRecorder = () => {
     const a = audioRef.current; if (!a) return;
     setDetecting(true);
     try {
-      const { starts } = await detectAyahStarts(a.src, 99, silenceThreshold, minSilenceMs);
-      const next = starts.find((s) => s > current + 0.15);
-      if (next !== undefined) a.currentTime = next;
+      const { segments: detected } = await detectAudioSegments(a.src, silenceThreshold, minSilenceMs);
+      const next = detected.find((seg) => seg.start > current + 0.15);
+      if (next) a.currentTime = next.start;
     } finally { setDetecting(false); }
   };
 
-  // Auto-detect ALL ayahs
-  const autoDetectTeacher = async () => {
+  // Auto-detect free audio chunks without forcing ayah count
+  const autoDetectSegments = async () => {
     const a = audioRef.current; if (!a) return;
-    const expected = kidsStart !== null ? ayahCount : ayahCount;
     setDetecting(true);
     try {
-      const { starts } = await detectAyahStarts(a.src, expected, silenceThreshold, minSilenceMs);
-      // If there's a kids section, restrict to teacher portion
-      const teacherStarts = kidsStart !== null ? starts.filter((s) => s < kidsStart) : starts;
-      setTeacher(teacherStarts.slice(0, ayahCount));
+      const { segments: detected } = await detectAudioSegments(a.src, silenceThreshold, minSilenceMs);
+      setSegments(detected);
+      setTeacher(detected.filter((seg) => seg.speaker === "teacher").map((seg) => seg.start));
+      setKids(detected.filter((seg) => seg.speaker === "kids").map((seg) => seg.start));
     } finally { setDetecting(false); }
   };
 
-  const autoDetectKids = async () => {
-    const a = audioRef.current; if (!a || kidsStart === null) return;
-    setDetecting(true);
-    try {
-      const { starts } = await detectAyahStarts(a.src, ayahCount + 5, silenceThreshold, minSilenceMs);
-      // keep starts within kids section, ensure first is at/near kidsStart
-      const kidsStarts = starts.filter((s) => s >= kidsStart - 0.1);
-      setKids(kidsStarts.slice(0, ayahCount));
-    } finally { setDetecting(false); }
+  const deleteSegment = (id: string) => {
+    setSegments((items) => items.filter((seg) => seg.id !== id));
   };
 
   const applyAndSave = () => {
-    const payload: SurahTimings = { teacher };
-    if (kidsStart !== null) { payload.kidsStart = kidsStart; payload.kids = kids; }
+    const normalizedTeacher = segments.length > 0 ? segments.filter((seg) => seg.speaker === "teacher").map((seg) => seg.start) : teacher;
+    const normalizedKids = segments.length > 0 ? segments.filter((seg) => seg.speaker === "kids").map((seg) => seg.start) : kids;
+    const payload: SurahTimings = { teacher: normalizedTeacher, segments };
+    if (kidsStart !== null || normalizedKids.length > 0) { payload.kidsStart = kidsStart ?? normalizedKids[0]; payload.kids = normalizedKids; }
     saveSurahTimings(surahNum, payload);
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);
