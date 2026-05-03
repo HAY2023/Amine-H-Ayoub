@@ -22,6 +22,7 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const playerRef = useRef<CustomPlayerHandle>(null);
   const lastSavedRef = useRef(0);
+  const [autoNext, setAutoNext] = useState(true);
 
   // Restore last played surah once data arrives
   useEffect(() => {
@@ -60,6 +61,30 @@ const Index = () => {
     if (Math.abs(t - lastSavedRef.current) >= 2) {
       lastSavedRef.current = t;
       localStorage.setItem(LAST_TIME_KEY, String(t));
+    }
+  };
+
+  const handlePlayNext = () => {
+    if (!currentSurah || surahs.length === 0) return;
+    const idx = surahs.findIndex(s => s.number === currentSurah.number);
+    const next = surahs[idx + 1];
+    if (next) {
+      setResumeTime(0);
+      setCurrentSurah(next);
+      localStorage.setItem(LAST_SURAH_KEY, String(next.number));
+      localStorage.setItem(LAST_TIME_KEY, "0");
+    }
+  };
+
+  const handlePlayPrev = () => {
+    if (!currentSurah || surahs.length === 0) return;
+    const idx = surahs.findIndex(s => s.number === currentSurah.number);
+    const prev = surahs[idx - 1];
+    if (prev) {
+      setResumeTime(0);
+      setCurrentSurah(prev);
+      localStorage.setItem(LAST_SURAH_KEY, String(prev.number));
+      localStorage.setItem(LAST_TIME_KEY, "0");
     }
   };
 
@@ -140,6 +165,10 @@ const Index = () => {
           initialTime={resumeTime}
           onClose={handleClose}
           onTimeUpdate={handleTimeUpdate}
+          onPlayNext={handlePlayNext}
+          onPlayPrev={handlePlayPrev}
+          autoNext={autoNext}
+          onToggleAutoNext={() => setAutoNext(v => !v)}
         />
       )}
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Pause, Play, Plus, RotateCcw, Save, Trash2, ZoomIn, ZoomOut, Link2, Copy } from "lucide-react";
 import { AyahBox, AYAH_COORDINATES, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
-import { AudioSegment, getSavedTimings, getSurahTimings, saveSurahTimings } from "@/data/ayahTimings";
+import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { toast } from "@/hooks/use-toast";
 
@@ -212,34 +212,8 @@ const AyahCalibration = () => {
   };
 
   const saveAll = useCallback((silent = false) => {
+    // Save only calibration box data — never touch /timings data
     savePageAyahBoxes(pageSrc, boxes);
-
-    // Sync to SurahTimings
-    const surahMap: Record<number, number[]> = {};
-    boxes.forEach(b => {
-      if (b.audioStart !== undefined) {
-        if (!surahMap[b.surah]) surahMap[b.surah] = [];
-        surahMap[b.surah].push(b.audioStart);
-      }
-    });
-
-    Object.entries(surahMap).forEach(([sNum, times]) => {
-      const n = parseInt(sNum);
-      const existing = getSurahTimings(n);
-      if (existing) {
-        const segPrefix = `📍 معايرة: ${pageSrc.split("/").pop()}`;
-        const otherSegments = existing.segments?.filter(s => !s.label?.startsWith(segPrefix)) || [];
-        const sortedTimes = times.sort((a, b) => a - b);
-        const newSegments: AudioSegment[] = sortedTimes.map((t, i) => ({
-          id: `calib-${n}-${pageSrc}-${i}`,
-          start: t,
-          end: sortedTimes[i + 1] ?? (t + 3),
-          speaker: "teacher",
-          label: `${segPrefix} - جزء ${i + 1}`
-        }));
-        saveSurahTimings(n, { ...existing, segments: [...otherSegments, ...newSegments] });
-      }
-    });
 
     if (!silent) {
       setIsSaving(true);
