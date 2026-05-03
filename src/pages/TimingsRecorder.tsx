@@ -370,33 +370,29 @@ const TimingsRecorder = () => {
           </button>
         </div>
 
-        {/* Marked list */}
-        {(teacher.length > 0 || kids.length > 0) && (
+        {/* Detected segments */}
+        {segments.length > 0 && (
           <div className="bg-card border border-border rounded-xl p-4">
-            <p className="font-bold mb-2 text-sm">العلامات المسجلة (انقر للقفز):</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-xs text-amber-700 font-bold mb-1">👨‍🏫 المعلم</p>
-                <div className="flex flex-wrap gap-1">
-                  {teacher.map((t, i) => (
-                    <button key={i} onClick={() => seekToAyah(i)}
-                      className="px-2 py-1 rounded text-xs bg-amber-100 text-amber-900 font-mono">
-                      {i + 1}: {t}s
-                    </button>
-                  ))}
+            <p className="font-bold mb-2 text-sm">المقاطع المحفوظة إلى /calibrate:</p>
+            <div className="space-y-2">
+              {segments.map((seg, i) => (
+                <div key={seg.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded-lg bg-secondary/70 p-2">
+                  <button onClick={() => playSegment(seg)} className="text-right text-xs font-bold">
+                    ▶️ {seg.label || `مقطع ${i + 1}`} · {fmt(seg.start)} → {fmt(seg.end)}
+                  </button>
+                  <select
+                    value={seg.speaker}
+                    onChange={(e) => setSegments((items) => items.map((item) => item.id === seg.id ? { ...item, speaker: e.target.value as AudioSegment["speaker"] } : item))}
+                    className="rounded-md border border-border bg-background px-1 py-1 text-xs"
+                  >
+                    <option value="teacher">معلم</option>
+                    <option value="kids">طفل</option>
+                  </select>
+                  <button onClick={() => deleteSegment(seg.id)} className="rounded-md bg-destructive/10 p-2 text-destructive" aria-label="حذف المقطع">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
-              </div>
-              <div>
-                <p className="text-xs text-sky-700 font-bold mb-1">👦 الطفل</p>
-                <div className="flex flex-wrap gap-1">
-                  {kids.map((t, i) => (
-                    <button key={i} onClick={() => seekToAyah(teacher.length + i)}
-                      className="px-2 py-1 rounded text-xs bg-sky-100 text-sky-900 font-mono">
-                      {i + 1}: {t}s
-                    </button>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         )}
