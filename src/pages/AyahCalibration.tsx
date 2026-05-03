@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Copy, Link2, Pause, Play, RotateCcw, Save, Trash2, ZoomIn, ZoomOut } from "lucide-react";
 import { AyahBox, AYAH_COORDINATES, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
 import { AudioSegment, getSavedTimings } from "@/data/ayahTimings";
@@ -587,20 +587,13 @@ const AyahCalibration = () => {
                     </div>
                     {/* Custom segments */}
                     {surahTimings.segments?.map((seg, sIdx) => (
-                      <div key={sIdx} className="space-y-1">
-                        <div className="text-[9px] text-muted-foreground font-bold">{seg.name}:</div>
-                        <div className="flex flex-wrap gap-1">
-                          {seg.timings.map((t, i) => (
-                            <button 
-                              key={i} 
-                              onClick={() => applyTimingFromSegment(t, seg.timings[i+1])}
-                              className="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-800 px-1 rounded"
-                            >
-                              {i+1}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      <button 
+                        key={sIdx} 
+                        onClick={() => applyTimingFromSegment(seg.start, seg.end)}
+                        className="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-800 px-1 rounded"
+                      >
+                        {seg.label || `مقطع ${sIdx + 1}`} ({fmtTime(seg.start)})
+                      </button>
                     ))}
                   </div>
                 </div>
