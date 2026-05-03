@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Copy, Link2, Pause, Play, RotateCcw, Save, Trash2, ZoomIn, ZoomOut } from "lucide-react";
 import { AyahBox, AYAH_COORDINATES, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
+import { AudioSegment, getSavedTimings } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { toast } from "@/hooks/use-toast";
 
@@ -10,6 +11,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 const step = 10;
 
 type Speaker = "teacher" | "kids";
+type PageSegment = AudioSegment & { surah: number };
 
 const speakerColors: Record<Speaker, { fill: string; stroke: string; label: string }> = {
   teacher: { fill: "rgba(250,204,21,0.45)", stroke: "rgba(250,204,21,0.85)", label: "👨‍🏫 معلم" },
@@ -38,6 +40,11 @@ const AyahCalibration = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<number | null>(null);
   const selected = boxes[selectedIndex];
+  const pageSegments = useMemo<PageSegment[]>(() => {
+    const saved = getSavedTimings();
+    const surahs = Array.from(new Set(boxes.map((box) => box.surah)));
+    return surahs.flatMap((surah) => (saved[surah]?.segments || []).map((segment) => ({ ...segment, surah })));
+  }, [boxes, pageSrc]);
 
   const loadPage = (src: string) => {
     setPageSrc(src);
@@ -172,6 +179,20 @@ const AyahCalibration = () => {
     if (!selected) return;
     updateSelected({ audioStart: undefined, audioEnd: undefined });
     toast({ title: "أُلغي الربط الصوتي" });
+  };
+
+  const bindSegmentToSelected = (segment: PageSegment) => {
+    if (!selected) return;
+    updateSelected({ audioStart: segment.start, audioEnd: segment.end, speaker: segment.speaker });
+    setSpeaker(segment.speaker);
+    ensureAudioLoaded(segment.surah, () => {
+      const a = audioRef.current;
+      if (!a) return;
+      a.currentTime = segment.start;
+      stopAtRef.current = segment.end;
+      a.play().catch(() => {});
+    });
+    toast({ title: "تم ربط المقطع", description: `المقطع أصبح مربوطاً بالآية ${selected.surah}:${selected.ayah}` });
   };
 
   // === Seek by tapping the timeline ===
