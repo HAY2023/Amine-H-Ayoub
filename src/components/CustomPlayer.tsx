@@ -124,13 +124,23 @@ const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
               </div>
             </div>
 
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-destructive/10 text-destructive flex items-center justify-center hover:bg-destructive/20 transition-colors shrink-0"
-              aria-label="إغلاق"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <a
+                href={`/calibrate`}
+                className="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center hover:bg-accent/20 transition-colors"
+                aria-label="معايرة"
+                title="فتح صفحة المعايرة"
+              >
+                <Gauge className="w-4 h-4" />
+              </a>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-full bg-destructive/10 text-destructive flex items-center justify-center hover:bg-destructive/20 transition-colors"
+                aria-label="إغلاق"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <div className="px-4 pb-3 flex items-center gap-3">

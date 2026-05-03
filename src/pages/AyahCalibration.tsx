@@ -41,6 +41,9 @@ const AyahCalibration = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<number | null>(null);
   const selected = boxes[selectedIndex];
+  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [detecting, setDetecting] = useState(false);
+
   const pageSegments = useMemo<PageSegment[]>(() => {
     const saved = getSavedTimings();
     const surahs = Array.from(new Set(boxes.map((box) => box.surah)));
@@ -262,6 +265,75 @@ const AyahCalibration = () => {
     setDuration(a.duration || 0);
   };
 
+  const markLive = useCallback(() => {
+    if (!selected || !audioRef.current) return;
+    const t = Number(audioRef.current.currentTime.toFixed(3));
+    
+    // Set end of previous box if appropriate
+    if (selectedIndex > 0) {
+      const prev = boxes[selectedIndex - 1];
+      if (prev.surah === selected.surah) {
+        setBoxes(curr => curr.map((b, i) => i === selectedIndex - 1 ? { ...b, audioEnd: t } : b));
+      }
+    }
+
+    updateSelected({ audioStart: t, speaker });
+    toast({ title: "تم التحديد", description: `بداية ${selected.surah}:${selected.ayah} عند ${fmtTime(t)}` });
+
+    if (selectedIndex < boxes.length - 1) {
+      setSelectedIndex(selectedIndex + 1);
+    }
+  }, [selected, selectedIndex, boxes, speaker]);
+
+  // Keyboard shortcut for live mode
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (isLiveMode && e.code === "Space") {
+        e.preventDefault();
+        markLive();
+      }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [isLiveMode, markLive]);
+
+  // AI/Auto link logic
+  const autoLinkFromTimings = () => {
+    const surahTimes: Record<number, number[]> = {};
+    const boxesBySurah: Record<number, number[]> = {};
+
+    // Collect all unique surahs on this page
+    const surahs = Array.from(new Set(boxes.map(b => b.surah)));
+    surahs.forEach(s => {
+      const t = getSurahTimings(s);
+      if (t && t.teacher.length > 0) surahTimes[s] = t.teacher;
+    });
+
+    setBoxes(current => {
+      const next = [...current];
+      const usedCounts: Record<number, number> = {};
+      
+      return next.map(box => {
+        const times = surahTimes[box.surah];
+        if (!times) return box;
+        
+        const count = usedCounts[box.surah] || 0;
+        usedCounts[box.surah] = count + 1;
+        
+        if (times[count] !== undefined) {
+          return {
+            ...box,
+            audioStart: times[count],
+            audioEnd: times[count + 1] ?? (times[count] + 3),
+            speaker: "teacher"
+          };
+        }
+        return box;
+      });
+    });
+    toast({ title: "تم الربط التلقائي", description: "تم ربط المربعات بالتوقيتات المسجلة في أداة /timings" });
+  };
+
   // Pre-load audio on selection change
   useEffect(() => {
     if (selected) ensureAudioLoaded(selected.surah);
@@ -473,6 +545,28 @@ const AyahCalibration = () => {
                   <Link2 className="h-3 w-3" /> إلغاء الربط
                 </button>
               )}
+
+              <div className="pt-2 space-y-2">
+                <button 
+                  onClick={() => setIsLiveMode(!isLiveMode)}
+                  className={`w-full p-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 border-2 transition-all ${isLiveMode ? "bg-rose-500 text-white border-rose-600 animate-pulse" : "bg-secondary border-transparent"}`}
+                >
+                  {isLiveMode ? "⏹ إيقاف وضع التسجيل المباشر" : "⏺ وضع التسجيل المباشر (Space)"}
+                </button>
+                
+                {isLiveMode && (
+                  <button onClick={markLive} className="w-full p-4 rounded-xl bg-rose-600 text-white font-black text-lg shadow-lg active:scale-95">
+                    تحديد الآية الآن!
+                  </button>
+                )}
+
+                <button 
+                  onClick={autoLinkFromTimings}
+                  className="w-full p-2 rounded-lg bg-indigo-500/10 border border-indigo-500 text-indigo-700 font-bold text-xs flex items-center justify-center gap-1"
+                >
+                  🪄 ربط تلقائي من /timings
+                </button>
+              </div>
               
               {/* Link from saved segments */}
               {surahTimings && (surahTimings.teacher.length > 0 || (surahTimings.segments && surahTimings.segments.length > 0)) && (
