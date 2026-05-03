@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { Play, Pause, RotateCcw, Copy, Bookmark, Baby, Wand2, Save, Check, SkipForward, Trash2 } from "lucide-react";
-import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings } from "@/data/ayahTimings";
+import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings, AudioSegment } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
@@ -11,13 +11,17 @@ const SURAH_NAMES: Record<number, string> = {
   11: "الفيل", 12: "الهمزة", 13: "العصر", 14: "التكاثر",
 };
 
-// ====== Auto-detection via silence analysis (Web Audio API) ======
-async function detectAyahStarts(
+const percentile = (values: number[], p: number) => {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.floor(sorted.length * p)))];
+};
+
+async function detectAudioSegments(
   audioUrl: string,
-  expectedCount: number,
   silenceThreshold = 0.015,
   minSilenceMs = 350,
-): Promise<{ starts: number[]; duration: number }> {
+): Promise<{ segments: AudioSegment[]; duration: number }> {
   const res = await fetch(audioUrl);
   const buf = await res.arrayBuffer();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,7 +33,6 @@ async function detectAyahStarts(
   const win = Math.floor(sr * 0.02); // 20ms window RMS
   const minSilenceWindows = Math.max(1, Math.floor((minSilenceMs / 1000) * (sr / win)));
 
-  // RMS per window
   const rms: number[] = [];
   for (let i = 0; i + win <= data.length; i += win) {
     let sum = 0;
@@ -40,51 +43,49 @@ async function detectAyahStarts(
     rms.push(Math.sqrt(sum / win));
   }
 
-  // find silence runs
-  const silenceRuns: { start: number; end: number; mid: number }[] = [];
-  let silentStart = -1;
-  for (let i = 0; i < rms.length; i++) {
-    if (rms[i] < silenceThreshold) {
-      if (silentStart === -1) silentStart = i;
-    } else {
-      if (silentStart !== -1) {
-        const len = i - silentStart;
-        if (len >= minSilenceWindows) {
-          silenceRuns.push({
-            start: (silentStart * win) / sr,
-            end: (i * win) / sr,
-            mid: ((silentStart + i) * win) / 2 / sr,
-          });
-        }
-        silentStart = -1;
+  const noiseFloor = percentile(rms, 0.18);
+  const speechPeak = percentile(rms, 0.92);
+  const adaptiveThreshold = Math.max(silenceThreshold, noiseFloor + (speechPeak - noiseFloor) * 0.18);
+  const active = rms.map((v) => v >= adaptiveThreshold);
+  
+  const rawSegments: { start: number; end: number }[] = [];
+  let startWindow = -1;
+  let silentRun = 0;
+  for (let i = 0; i < active.length; i++) {
+    if (active[i]) {
+      if (startWindow === -1) startWindow = i;
+      silentRun = 0;
+    } else if (startWindow !== -1) {
+      silentRun++;
+      if (silentRun >= minSilenceWindows) {
+        rawSegments.push({ start: (startWindow * win) / sr, end: ((i - silentRun + 1) * win) / sr });
+        startWindow = -1;
+        silentRun = 0;
       }
     }
   }
+  if (startWindow !== -1) rawSegments.push({ start: (startWindow * win) / sr, end: audio.duration });
 
-  // Ayah starts = end of each silence run (= speech onset). First start = 0.
-  const onsets = silenceRuns.map((r) => r.end);
-  const allStarts = [0, ...onsets].sort((a, b) => a - b);
-
-  // If too many onsets, keep the strongest gaps (longest silences)
-  let starts = allStarts;
-  if (expectedCount > 0 && allStarts.length > expectedCount) {
-    // rank silences by length (descending) and keep first N-1; always keep 0
-    const ranked = [...silenceRuns].sort((a, b) => (b.end - b.start) - (a.end - a.start));
-    const keep = ranked.slice(0, expectedCount - 1).map((r) => r.end);
-    starts = [0, ...keep].sort((a, b) => a - b);
-  }
+  const segments = rawSegments
+    .map((seg) => ({ start: Math.max(0, seg.start - 0.04), end: Math.min(audio.duration, seg.end + 0.08) }))
+    .filter((seg) => seg.end - seg.start >= 0.45)
+    .map((seg, index) => ({
+      id: `${Date.now()}-${index}`,
+      start: Number(seg.start.toFixed(3)),
+      end: Number(seg.end.toFixed(3)),
+      speaker: "teacher" as const,
+      label: `مقطع ${index + 1}`,
+    }));
 
   ctx.close();
-  return { starts: starts.map((s) => parseFloat(s.toFixed(2))), duration: audio.duration };
+  return { segments, duration: audio.duration };
 }
 
 const TimingsRecorder = () => {
   const [surahNum, setSurahNum] = useState(1);
-  const [segments, setSegments] = useState<{ name: string; timings: number[] }[]>([
-    { name: "👨‍🏫 المعلم", timings: [] },
-    { name: "👦 الطفل", timings: [] },
-  ]);
-  const [activeSegIdx, setActiveSegIdx] = useState(0);
+  const [teacher, setTeacher] = useState<number[]>([]);
+  const [kids, setKids] = useState<number[]>([]);
+  const [segments, setSegments] = useState<AudioSegment[]>([]);
   const [kidsStart, setKidsStart] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
@@ -95,41 +96,18 @@ const TimingsRecorder = () => {
   const [minSilenceMs, setMinSilenceMs] = useState(350);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const ayahCount = AYAH_COUNTS[surahNum] || 0;
   const inKidsSection = kidsStart !== null && current >= kidsStart;
 
-  // Load saved timings when surah changes
   useEffect(() => {
     const saved = getSavedTimings()[surahNum];
     if (saved) {
-      const loadedSegments = [];
-      if (saved.teacher) loadedSegments.push({ name: "👨‍🏫 المعلم", timings: saved.teacher });
-      if (saved.kids) loadedSegments.push({ name: "👦 الطفل", timings: saved.kids });
-      
-      if (saved.segments && saved.segments.length > 0) {
-        saved.segments.forEach(seg => {
-          // avoid duplicates if we already added teacher/kids from legacy fields
-          if (!loadedSegments.find(ls => ls.name === seg.name)) {
-            loadedSegments.push(seg);
-          }
-        });
-      }
-      
-      if (loadedSegments.length === 0) {
-        loadedSegments.push({ name: "👨‍🏫 المعلم", timings: [] });
-        loadedSegments.push({ name: "👦 الطفل", timings: [] });
-      }
-      
-      setSegments(loadedSegments);
+      setTeacher(saved.teacher || []);
+      setKids(saved.kids || []);
+      setSegments(saved.segments || []);
       setKidsStart(saved.kidsStart ?? null);
     } else {
-      setSegments([
-        { name: "👨‍🏫 المعلم", timings: [] },
-        { name: "👦 الطفل", timings: [] },
-      ]);
-      setKidsStart(null);
+      setTeacher([]); setKids([]); setSegments([]); setKidsStart(null);
     }
-    setActiveSegIdx(0);
   }, [surahNum]);
 
   const togglePlay = () => {
@@ -138,108 +116,87 @@ const TimingsRecorder = () => {
   };
 
   const resetAll = () => {
-    setSegments(prev => prev.map(s => ({ ...s, timings: [] })));
-    setKidsStart(null);
+    setTeacher([]); setKids([]); setSegments([]); setKidsStart(null);
     const a = audioRef.current; if (a) { a.pause(); a.currentTime = 0; }
   };
 
   const markAyah = () => {
     const t = parseFloat(current.toFixed(2));
-    setSegments(prev => {
-      const next = [...prev];
-      next[activeSegIdx] = { ...next[activeSegIdx], timings: [...next[activeSegIdx].timings, t] };
-      return next;
+    if (inKidsSection) setKids(k => [...k, t].sort((a,b) => a-b));
+    else setTeacher(arr => [...arr, t].sort((a,b) => a-b));
+    
+    setSegments((items) => {
+      // update end of last segment if it overlaps
+      const next = items.map((seg, index) => (index === items.length - 1 && seg.end <= t) ? { ...seg, end: t } : seg);
+      return [...next, { 
+        id: `${Date.now()}`, 
+        start: t, 
+        end: Math.min(duration || t + 3, t + 3), 
+        speaker: inKidsSection ? "kids" : "teacher", 
+        label: `مقطع ${next.length + 1}` 
+      }];
     });
   };
 
   const markKidsStart = () => setKidsStart(parseFloat(current.toFixed(2)));
 
   const popLast = () => {
-    setSegments(prev => {
-      const next = [...prev];
-      if (next[activeSegIdx].timings.length > 0) {
-        next[activeSegIdx] = { ...next[activeSegIdx], timings: next[activeSegIdx].timings.slice(0, -1) };
-      }
-      return next;
-    });
+    if (segments.length > 0) setSegments((items) => items.slice(0, -1));
+    else if (inKidsSection && kids.length > 0) setKids(k => k.slice(0, -1));
+    else if (teacher.length > 0) setTeacher(arr => arr.slice(0, -1));
   };
 
-  const removeTiming = (segIdx: number, timeIdx: number) => {
-    setSegments(prev => {
-      const next = [...prev];
-      next[segIdx] = {
-        ...next[segIdx],
-        timings: next[segIdx].timings.filter((_, i) => i !== timeIdx)
-      };
-      return next;
-    });
+  const skipToNextSound = async () => {
+    const a = audioRef.current; if (!a) return;
+    setDetecting(true);
+    try {
+      const { segments: detected } = await detectAudioSegments(a.src, silenceThreshold, minSilenceMs);
+      const next = detected.find((seg) => seg.start > current + 0.15);
+      if (next) a.currentTime = next.start;
+    } finally { setDetecting(false); }
+  };
+
+  const autoDetectSegments = async () => {
+    const a = audioRef.current; if (!a) return;
+    setDetecting(true);
+    try {
+      const { segments: detected } = await detectAudioSegments(a.src, silenceThreshold, minSilenceMs);
+      const surahName = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
+      const labeled = detected.map((seg, index) => ({ ...seg, label: `${surahName} - آية ${index + 1}` }));
+      setSegments(labeled);
+      setTeacher(labeled.filter((seg) => seg.speaker === "teacher").map((seg) => seg.start));
+      setKids(labeled.filter((seg) => seg.speaker === "kids").map((seg) => seg.start));
+    } finally { setDetecting(false); }
   };
 
   const splitByMinute = () => {
     if (!duration) return;
     const count = Math.floor(duration / 60);
-    const newTimings = [];
+    const newSegments: AudioSegment[] = [];
     for (let i = 0; i <= count; i++) {
-      newTimings.push(parseFloat((i * 60).toFixed(2)));
-    }
-    setSegments(prev => {
-      const next = [...prev];
-      next[activeSegIdx] = { ...next[activeSegIdx], timings: newTimings };
-      return next;
-    });
-  };
-
-  // Auto-detect ALL ayahs
-  const autoDetectActive = async (forceAll = false) => {
-    const a = audioRef.current; if (!a) return;
-    setDetecting(true);
-    try {
-      const countToDetect = forceAll ? 0 : ayahCount;
-      const { starts } = await detectAyahStarts(a.src, countToDetect, silenceThreshold, minSilenceMs);
-      setSegments(prev => {
-        const next = [...prev];
-        next[activeSegIdx] = { ...next[activeSegIdx], timings: starts };
-        return next;
+      const start = i * 60;
+      newSegments.push({
+        id: `min-${i}`,
+        start,
+        end: Math.min(start + 60, duration),
+        speaker: "teacher",
+        label: `دقيقة ${i + 1}`
       });
-    } finally { setDetecting(false); }
-  };
-
-  const addSegment = () => {
-    const sName = SURAH_NAMES[surahNum] || "";
-    const name = prompt("اسم المقطع الجديد (مثال: سورة الفاتحة 1-3):", sName);
-    if (name) {
-      setSegments(prev => [...prev, { name, timings: [] }]);
-      setActiveSegIdx(segments.length);
     }
+    setSegments(newSegments);
+    setTeacher(newSegments.map(s => s.start));
   };
 
-  const deleteSegment = (idx: number) => {
-    if (segments.length <= 1) return;
-    if (!confirm(`هل أنت متأكد من حذف مقطع "${segments[idx].name}"؟`)) return;
-    setSegments(prev => prev.filter((_, i) => i !== idx));
-    setActiveSegIdx(0);
-  };
-
-  const renameSegment = (idx: number) => {
-    const name = prompt("الاسم الجديد:", segments[idx].name);
-    if (name) {
-      setSegments(prev => prev.map((s, i) => i === idx ? { ...s, name } : s));
-    }
+  const deleteSegment = (id: string) => {
+    setSegments((items) => items.filter((seg) => seg.id !== id));
   };
 
   const applyAndSave = () => {
-    const teacherSeg = segments.find(s => s.name.includes("معلم") || s.name === "teacher");
-    const kidsSeg = segments.find(s => s.name.includes("طفل") || s.name === "kids");
-    
-    const payload: SurahTimings = { 
-      teacher: teacherSeg?.timings || (segments[0]?.timings || []),
-      segments: segments 
-    };
-    if (kidsStart !== null) { 
-      payload.kidsStart = kidsStart; 
-      payload.kids = kidsSeg?.timings || segments[1]?.timings; 
+    const payload: SurahTimings = { teacher, segments };
+    if (kidsStart !== null || kids.length > 0) { 
+      payload.kidsStart = kidsStart ?? (kids.length > 0 ? kids[0] : undefined); 
+      payload.kids = kids; 
     }
-    
     saveSurahTimings(surahNum, payload);
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);
@@ -251,41 +208,26 @@ const TimingsRecorder = () => {
   };
 
   const json = useMemo(() => {
-    const teacherSeg = segments.find(s => s.name.includes("معلم"));
-    const kidsSeg = segments.find(s => s.name.includes("طفل"));
-    const obj: Record<string, unknown> = { 
-      teacher: teacherSeg?.timings || segments[0]?.timings,
-      segments: segments 
-    };
-    if (kidsStart !== null) { 
-      obj.kidsStart = kidsStart; 
-      obj.kids = kidsSeg?.timings || segments[1]?.timings; 
-    }
+    const obj: Record<string, unknown> = { teacher, segments };
+    if (kidsStart !== null) { obj.kidsStart = kidsStart; obj.kids = kids; }
     const inner = JSON.stringify(obj, null, 2)
       .split("\n").map((l, i) => i === 0 ? l : "    " + l).join("\n");
     return `  ${surahNum}: ${inner},`;
-  }, [surahNum, segments, kidsStart]);
+  }, [surahNum, teacher, kids, kidsStart, segments]);
 
   const copy = () => navigator.clipboard.writeText(json);
 
-  const seekToTime = (t: number) => {
+  const playSegment = (seg: AudioSegment) => {
     const a = audioRef.current; if (!a) return;
-    a.currentTime = t;
-  };
-
-  const playInterval = (start: number, end?: number) => {
-    const a = audioRef.current; if (!a) return;
-    a.currentTime = start;
+    a.currentTime = seg.start;
     a.play().catch(() => {});
-    if (end) {
-      const checkStop = () => {
-        if (a.currentTime >= end - 0.05) {
-          a.pause();
-          a.removeEventListener("timeupdate", checkStop);
-        }
-      };
-      a.addEventListener("timeupdate", checkStop);
-    }
+    const stop = () => {
+      if (a.currentTime >= seg.end - 0.02) {
+        a.pause();
+        a.removeEventListener("timeupdate", stop);
+      }
+    };
+    a.addEventListener("timeupdate", stop);
   };
 
   const fmt = (s: number) => {
@@ -305,7 +247,6 @@ const TimingsRecorder = () => {
           </p>
         </header>
 
-        {/* Surah picker */}
         <div className="bg-card border border-border rounded-xl p-4">
           <label className="text-sm font-bold block mb-2">السورة:</label>
           <select
@@ -321,33 +262,6 @@ const TimingsRecorder = () => {
           </select>
         </div>
 
-        {/* Segment Manager */}
-        <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-bold">المقاطع المسجلة:</label>
-            <button onClick={addSegment} className="text-xs bg-accent px-2 py-1 rounded-md font-bold">
-              + إضافة مقطع
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {segments.map((seg, i) => (
-              <div key={i} className={`flex items-center gap-1 p-1 rounded-lg border ${activeSegIdx === i ? "bg-accent/20 border-accent" : "bg-muted/30 border-transparent"}`}>
-                <button
-                  onClick={() => setActiveSegIdx(i)}
-                  className="px-2 py-1 text-sm font-bold"
-                >
-                  {seg.name} ({seg.timings.length})
-                </button>
-                <div className="flex gap-0.5 opacity-50 hover:opacity-100">
-                  <button onClick={() => renameSegment(i)} className="p-1 hover:text-accent"><Wand2 className="w-3 h-3" /></button>
-                  <button onClick={() => deleteSegment(i)} className="p-1 hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Player */}
         <div className="bg-card border border-border rounded-xl p-4 space-y-3">
           <audio
             ref={audioRef}
@@ -367,15 +281,7 @@ const TimingsRecorder = () => {
               {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
             </button>
             <button
-              onClick={async () => {
-                const a = audioRef.current; if (!a) return;
-                setDetecting(true);
-                try {
-                  const { starts } = await detectAyahStarts(a.src, 99, silenceThreshold, minSilenceMs);
-                  const next = starts.find((s) => s > current + 0.15);
-                  if (next !== undefined) a.currentTime = next;
-                } finally { setDetecting(false); }
-              }}
+              onClick={skipToNextSound}
               disabled={detecting}
               className="w-10 h-10 rounded-full bg-violet-500/10 text-violet-600 flex items-center justify-center disabled:opacity-40"
               title="تخطّ إلى الصوت التالي"
@@ -397,42 +303,48 @@ const TimingsRecorder = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={splitByMinute}
-              className="p-2 rounded-lg bg-violet-100 text-violet-900 text-xs font-bold flex items-center justify-center gap-1"
-            >
-              ⏱️ تقسيم بالدقائق (كل 60ث)
-            </button>
-            <div className="flex gap-1">
+          <div className="rounded-lg bg-violet-50 border border-violet-200 p-3 space-y-2">
+            <p className="text-xs font-bold text-violet-900 flex items-center gap-1">
+              <Wand2 className="w-3.5 h-3.5" /> تقسيم ذكي AI للمقاطع الصوتية
+            </p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <label className="block">
+                <span className="text-violet-800">حد الصمت: {silenceThreshold.toFixed(3)}</span>
+                <input type="range" min={0.005} max={0.05} step={0.001}
+                  value={silenceThreshold} onChange={(e) => setSilenceThreshold(parseFloat(e.target.value))}
+                  className="w-full" dir="ltr" />
+              </label>
+              <label className="block">
+                <span className="text-violet-800">أقل صمت (مل): {minSilenceMs}</span>
+                <input type="range" min={150} max={1500} step={50}
+                  value={minSilenceMs} onChange={(e) => setMinSilenceMs(parseInt(e.target.value, 10))}
+                  className="w-full" dir="ltr" />
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => autoDetectActive(false)}
+                onClick={autoDetectSegments}
                 disabled={detecting || !duration}
-                className="flex-1 p-2 rounded-lg bg-violet-600 text-white text-xs font-bold disabled:opacity-40 flex items-center justify-center gap-1"
+                className="p-2 rounded-lg bg-violet-600 text-white text-xs font-bold disabled:opacity-40 flex items-center justify-center gap-1"
               >
-                {detecting ? "..." : `🔍 كشف (${ayahCount})`}
+                {detecting ? "جارٍ التحليل..." : "🤖 تقسيم بالذكاء الاصطناعي"}
               </button>
               <button
-                onClick={() => autoDetectActive(true)}
-                disabled={detecting || !duration}
-                className="flex-1 p-2 rounded-lg bg-indigo-600 text-white text-xs font-bold disabled:opacity-40 flex items-center justify-center gap-1"
-                title="كشف جميع الوقفات (AI)"
+                onClick={splitByMinute}
+                className="p-2 rounded-lg bg-violet-100 text-violet-900 text-xs font-bold flex items-center justify-center gap-1"
               >
-                {detecting ? "..." : "🤖 كشف ذكي"}
+                ⏱️ تقسيم بالدقائق (كل 60ث)
               </button>
             </div>
           </div>
 
-          {/* Manual mark buttons */}
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={markAyah}
               className="flex flex-col items-center gap-1 p-3 rounded-xl bg-emerald-500 text-white font-bold shadow active:scale-95"
             >
               <Bookmark className="w-5 h-5" />
-              <span className="text-sm">
-                علامة {segments[activeSegIdx].timings.length + 1} في "{segments[activeSegIdx].name}"
-              </span>
+              <span className="text-sm">تحديد آية (معلم)</span>
             </button>
             <button
               onClick={markKidsStart}
@@ -440,7 +352,7 @@ const TimingsRecorder = () => {
             >
               <Baby className="w-5 h-5" />
               <span className="text-sm">
-                {kidsStart !== null ? `بداية الطفل: ${fmt(kidsStart)}` : "تحديد بداية صوت الطفل"}
+                {kidsStart !== null ? `بداية الطفل: ${fmt(kidsStart)}` : "تحديد بداية الطفل"}
               </span>
             </button>
           </div>
@@ -455,13 +367,12 @@ const TimingsRecorder = () => {
           </div>
         </div>
 
-        {/* Save & Apply */}
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={applyAndSave}
             className={`p-3 rounded-xl font-bold text-white shadow active:scale-95 flex items-center justify-center gap-2 transition-colors ${savedFlash ? "bg-emerald-600" : "bg-primary"}`}
           >
-            {savedFlash ? <><Check className="w-5 h-5" /> تم الحفظ والتطبيق</> : <><Save className="w-5 h-5" /> حفظ وتطبيق فوراً</>}
+            {savedFlash ? <><Check className="w-5 h-5" /> تم الحفظ</> : <><Save className="w-5 h-5" /> حفظ التطبيق</>}
           </button>
           <button
             onClick={clearSaved}
@@ -471,44 +382,35 @@ const TimingsRecorder = () => {
           </button>
         </div>
 
-        {/* Marked lists */}
-        <div className="space-y-3">
-          {segments.map((seg, sIdx) => seg.timings.length > 0 && (
-            <div key={sIdx} className="bg-card border border-border rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-bold text-sm">{seg.name}:</p>
-                <button 
-                  onClick={() => playInterval(seg.timings[0], seg.timings[seg.timings.length - 1])}
-                  className="text-[10px] flex items-center gap-1 bg-accent/20 text-accent-foreground px-2 py-1 rounded"
-                >
-                  <Play className="w-3 h-3" /> تشغيل المقطع كاملاً
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {seg.timings.map((t, i) => (
-                  <div key={i} className={`flex items-center gap-0.5 rounded border border-border group ${activeSegIdx === sIdx ? "bg-accent/10" : "bg-muted/30"}`}>
-                    <button onClick={() => playInterval(t, seg.timings[i+1])}
-                      className={`px-2 py-1 text-xs font-mono flex items-center gap-1 ${activeSegIdx === sIdx ? "text-accent-foreground font-bold" : "text-muted-foreground"}`}>
-                      <Play className="w-2.5 h-2.5 opacity-40 group-hover:opacity-100" />
-                      {i + 1}: {t}s
-                    </button>
-                    <button 
-                      onClick={() => removeTiming(sIdx, i)}
-                      className="p-1 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+        {segments.length > 0 && (
+          <div className="bg-card border border-border rounded-xl p-4">
+            <p className="font-bold mb-2 text-sm">المقاطع المسجلة ({segments.length}):</p>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {segments.map((seg, i) => (
+                <div key={seg.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded-lg bg-secondary/70 p-2">
+                  <button onClick={() => playSegment(seg)} className="text-right text-xs font-bold">
+                    ▶️ {seg.label || `مقطع ${i + 1}`} · {fmt(seg.start)} → {fmt(seg.end)}
+                  </button>
+                  <select
+                    value={seg.speaker}
+                    onChange={(e) => setSegments((items) => items.map((item) => item.id === seg.id ? { ...item, speaker: e.target.value as AudioSegment["speaker"] } : item))}
+                    className="rounded-md border border-border bg-background px-1 py-1 text-xs"
+                  >
+                    <option value="teacher">معلم</option>
+                    <option value="kids">طفل</option>
+                  </select>
+                  <button onClick={() => deleteSegment(seg.id)} className="rounded-md bg-destructive/10 p-2 text-destructive" aria-label="حذف المقطع">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
 
-        {/* JSON output */}
         <div className="bg-card border border-border rounded-xl p-4">
           <div className="flex items-center justify-between mb-2">
-            <p className="font-bold text-sm">JSON (نسخة احتياطية):</p>
+            <p className="font-bold text-sm">JSON Preview:</p>
             <button onClick={copy} className="flex items-center gap-1 px-3 py-1 rounded-lg bg-accent text-accent-foreground text-xs font-bold">
               <Copy className="w-3.5 h-3.5" /> نسخ
             </button>
@@ -521,10 +423,5 @@ const TimingsRecorder = () => {
     </div>
   );
 };
-
-// small inline trash icon to avoid extra import
-const Trash2Icon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
-);
 
 export default TimingsRecorder;

@@ -25,11 +25,19 @@
  *   }
  */
 
+export interface AudioSegment {
+  id: string;
+  start: number;
+  end: number;
+  speaker: "teacher" | "kids";
+  label?: string;
+}
+
 export interface SurahTimings {
   teacher: number[];          // start time of each ayah during teacher recitation
   kidsStart?: number;         // start of kids section in the SAME file (if combined)
   kids?: number[];            // start time of each ayah during kids recitation
-  segments?: { name: string; timings: number[] }[]; // custom named segments
+  segments?: AudioSegment[];  // (optional) custom audio segments with start/end bounds
 }
 
 export const AYAH_TIMINGS: Record<number, SurahTimings | number[]> = {};
