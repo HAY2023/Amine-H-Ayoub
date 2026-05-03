@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { Play, Pause, RotateCcw, Copy, Bookmark, Baby, Wand2, Save, Check, SkipForward, Trash2 } from "lucide-react";
-import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings } from "@/data/ayahTimings";
+import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings, AudioSegment } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
@@ -11,13 +11,18 @@ const SURAH_NAMES: Record<number, string> = {
   11: "الفيل", 12: "الهمزة", 13: "العصر", 14: "التكاثر",
 };
 
-// ====== Auto-detection via silence analysis (Web Audio API) ======
-async function detectAyahStarts(
+// ====== Smart segmentation via adaptive audio energy analysis ======
+const percentile = (values: number[], p: number) => {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.floor(sorted.length * p)))];
+};
+
+async function detectAudioSegments(
   audioUrl: string,
-  expectedCount: number,
   silenceThreshold = 0.015,
   minSilenceMs = 350,
-): Promise<{ starts: number[]; duration: number }> {
+): Promise<{ segments: AudioSegment[]; duration: number }> {
   const res = await fetch(audioUrl);
   const buf = await res.arrayBuffer();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,42 +45,40 @@ async function detectAyahStarts(
     rms.push(Math.sqrt(sum / win));
   }
 
-  // find silence runs
-  const silenceRuns: { start: number; end: number; mid: number }[] = [];
-  let silentStart = -1;
-  for (let i = 0; i < rms.length; i++) {
-    if (rms[i] < silenceThreshold) {
-      if (silentStart === -1) silentStart = i;
-    } else {
-      if (silentStart !== -1) {
-        const len = i - silentStart;
-        if (len >= minSilenceWindows) {
-          silenceRuns.push({
-            start: (silentStart * win) / sr,
-            end: (i * win) / sr,
-            mid: ((silentStart + i) * win) / 2 / sr,
-          });
-        }
-        silentStart = -1;
+  const noiseFloor = percentile(rms, 0.18);
+  const speechPeak = percentile(rms, 0.92);
+  const adaptiveThreshold = Math.max(silenceThreshold, noiseFloor + (speechPeak - noiseFloor) * 0.18);
+  const active = rms.map((v) => v >= adaptiveThreshold);
+  const rawSegments: { start: number; end: number }[] = [];
+  let startWindow = -1;
+  let silentRun = 0;
+  for (let i = 0; i < active.length; i++) {
+    if (active[i]) {
+      if (startWindow === -1) startWindow = i;
+      silentRun = 0;
+    } else if (startWindow !== -1) {
+      silentRun++;
+      if (silentRun >= minSilenceWindows) {
+        rawSegments.push({ start: (startWindow * win) / sr, end: ((i - silentRun + 1) * win) / sr });
+        startWindow = -1;
+        silentRun = 0;
       }
     }
   }
+  if (startWindow !== -1) rawSegments.push({ start: (startWindow * win) / sr, end: audio.duration });
 
-  // Ayah starts = end of each silence run (= speech onset). First start = 0.
-  const onsets = silenceRuns.map((r) => r.end);
-  const allStarts = [0, ...onsets].sort((a, b) => a - b);
-
-  // If too many onsets, keep the strongest gaps (longest silences)
-  let starts = allStarts;
-  if (allStarts.length > expectedCount) {
-    // rank silences by length (descending) and keep first N-1; always keep 0
-    const ranked = [...silenceRuns].sort((a, b) => (b.end - b.start) - (a.end - a.start));
-    const keep = ranked.slice(0, expectedCount - 1).map((r) => r.end);
-    starts = [0, ...keep].sort((a, b) => a - b);
-  }
-
+  const segments = rawSegments
+    .map((seg) => ({ start: Math.max(0, seg.start - 0.04), end: Math.min(audio.duration, seg.end + 0.08) }))
+    .filter((seg) => seg.end - seg.start >= 0.45)
+    .map((seg, index) => ({
+      id: `${Date.now()}-${index}`,
+      start: Number(seg.start.toFixed(3)),
+      end: Number(seg.end.toFixed(3)),
+      speaker: "teacher" as const,
+      label: `مقطع ${index + 1}`,
+    }));
   ctx.close();
-  return { starts: starts.map((s) => parseFloat(s.toFixed(2))), duration: audio.duration };
+  return { segments, duration: audio.duration };
 }
 
 const TimingsRecorder = () => {
