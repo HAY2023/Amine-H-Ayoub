@@ -338,6 +338,24 @@ const AyahCalibration = () => {
               </div>
             </div>
 
+            {pageSegments.length > 0 && (
+              <div className="rounded-lg border border-border bg-secondary/50 p-2 space-y-2">
+                <div className="text-xs font-bold">🎧 مقاطع /timings المحفوظة</div>
+                <div className="max-h-40 space-y-1 overflow-y-auto">
+                  {pageSegments.map((segment, index) => (
+                    <button
+                      key={`${segment.surah}-${segment.id}`}
+                      onClick={() => bindSegmentToSelected(segment)}
+                      className="flex w-full items-center justify-between gap-2 rounded-md bg-card p-2 text-xs font-bold"
+                    >
+                      <span>{segment.speaker === "teacher" ? "👨‍🏫" : "👦"} سورة {segment.surah} · {segment.label || `مقطع ${index + 1}`}</span>
+                      <span className="font-mono text-muted-foreground">{fmtTime(segment.start)} → {fmtTime(segment.end)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Binding controls */}
             <div className="rounded-lg border-2 border-emerald-500/40 bg-emerald-500/5 p-2 space-y-2">
               <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400">🎯 ربط الصوت بهذه الآية</div>
