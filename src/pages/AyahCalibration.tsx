@@ -1,22 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Copy, Link2, Pause, Play, RotateCcw, Save, Trash2, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowRight, Pause, Play, RotateCcw, Save, Trash2, ZoomIn, ZoomOut, Link2, Copy } from "lucide-react";
 import { AyahBox, AYAH_COORDINATES, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
-import { AudioSegment, getSavedTimings } from "@/data/ayahTimings";
+import { AudioSegment, getSavedTimings, getSurahTimings, saveSurahTimings } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
-import { getSurahTimings, saveSurahTimings } from "@/data/ayahTimings";
 import { toast } from "@/hooks/use-toast";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
-
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const step = 10;
 
 type Speaker = "teacher" | "kids";
-type PageSegment = AudioSegment & { surah: number };
 
-const speakerColors: Record<Speaker, { fill: string; stroke: string; label: string }> = {
-  teacher: { fill: "rgba(250,204,21,0.45)", stroke: "rgba(250,204,21,0.85)", label: "👨‍🏫 معلم" },
-  kids:    { fill: "rgba(56,189,248,0.45)", stroke: "rgba(56,189,248,0.85)", label: "👦 طفل" },
+const speakerColors: Record<Speaker, { fill: string; stroke: string }> = {
+  teacher: { fill: "rgba(250,204,21,0.45)", stroke: "rgba(250,204,21,0.85)" },
+  kids:    { fill: "rgba(56,189,248,0.45)", stroke: "rgba(56,189,248,0.85)" },
 };
 
 const fmtTime = (s: number) => {
@@ -36,19 +33,11 @@ const AyahCalibration = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [previewBound, setPreviewBound] = useState(true); // play within saved bounds vs full
+  const [isSaving, setIsSaving] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<number | null>(null);
   const selected = boxes[selectedIndex];
-  const [isLiveMode, setIsLiveMode] = useState(false);
-  const [detecting, setDetecting] = useState(false);
-
-  const pageSegments = useMemo<PageSegment[]>(() => {
-    const saved = getSavedTimings();
-    const surahs = Array.from(new Set(boxes.map((box) => box.surah)));
-    return surahs.flatMap((surah) => (saved[surah]?.segments || []).map((segment) => ({ ...segment, surah })));
-  }, [boxes, pageSrc]);
 
   const loadPage = (src: string) => {
     setPageSrc(src);
@@ -63,7 +52,7 @@ const AyahCalibration = () => {
   };
 
   const updateSelected = (patch: Partial<AyahBox>) => {
-    setBoxes((current) => current.map((box, index) => index === selectedIndex ? { ...box, ...patch } : box));
+    setBoxes(current => current.map((box, i) => i === selectedIndex ? { ...box, ...patch } : box));
   };
 
   const move = (dx: number, dy: number) => {
@@ -87,10 +76,9 @@ const AyahCalibration = () => {
     const copy: AyahBox = {
       ...selected,
       y: clamp(selected.y + selected.height + 8, 0, PAGE_IMAGE_SIZE.height - selected.height),
-      audioStart: undefined,
-      audioEnd: undefined,
+      audioStart: undefined, audioEnd: undefined,
     };
-    setBoxes((current) => {
+    setBoxes(current => {
       const next = [...current.slice(0, selectedIndex + 1), copy, ...current.slice(selectedIndex + 1)];
       setSelectedIndex(selectedIndex + 1);
       return next;
@@ -99,58 +87,8 @@ const AyahCalibration = () => {
 
   const deleteSelected = () => {
     if (boxes.length <= 1) return;
-    setBoxes((current) => current.filter((_, index) => index !== selectedIndex));
-    setSelectedIndex((index) => Math.max(0, index - 1));
-  };
-
-  const unifyWidth = () => {
-    if (!selected) return;
-    const x = selected.x;
-    const width = selected.width;
-    setBoxes((current) => current.map((box) => ({ ...box, x, width })));
-    toast({ title: "تم توحيد العرض", description: "أصبح لكل المربعات نفس العرض والموضع الأفقي" });
-  };
-
-  const unifyHeight = () => {
-    if (!selected) return;
-    const height = selected.height;
-    setBoxes((current) => current.map((box) => ({
-      ...box,
-      height,
-      y: clamp(box.y, 0, PAGE_IMAGE_SIZE.height - height),
-    })));
-    toast({ title: "تم توحيد الارتفاع", description: "أصبح لكل المربعات نفس الارتفاع" });
-  };
-
-  const splitHorizontal = () => {
-    if (!selected) return;
-    const h1 = selected.height / 2;
-    const box1 = { ...selected, height: h1 };
-    const box2 = { ...selected, height: h1, y: selected.y + h1, audioStart: undefined, audioEnd: undefined };
-    setBoxes((current) => {
-      const next = [...current];
-      next.splice(selectedIndex, 1, box1, box2);
-      return next;
-    });
-  };
-
-  const splitVertical = () => {
-    if (!selected) return;
-    const w1 = selected.width / 2;
-    const box1 = { ...selected, width: w1 };
-    const box2 = { ...selected, width: w1, x: selected.x + w1, audioStart: undefined, audioEnd: undefined };
-    setBoxes((current) => {
-      const next = [...current];
-      next.splice(selectedIndex, 1, box1, box2);
-      return next;
-    });
-  };
-
-  const linkWithPrevious = () => {
-    if (selectedIndex === 0 || !selected) return;
-    const prev = boxes[selectedIndex - 1];
-    updateSelected({ surah: prev.surah, ayah: prev.ayah });
-    toast({ title: "تم الربط", description: `تم ربط الجزء بالآية ${prev.surah}:${prev.ayah}` });
+    setBoxes(current => current.filter((_, i) => i !== selectedIndex));
+    setSelectedIndex(i => Math.max(0, i - 1));
   };
 
   const dragStart = (index: number, e: React.PointerEvent<HTMLButtonElement>) => {
@@ -164,7 +102,7 @@ const AyahCalibration = () => {
     const onMove = (event: PointerEvent) => {
       const ratioX = PAGE_IMAGE_SIZE.width / canvasRect.width;
       const ratioY = PAGE_IMAGE_SIZE.height / canvasRect.height;
-      setBoxes((current) => current.map((box, i) => i === index ? {
+      setBoxes(current => current.map((box, i) => i === index ? {
         ...box,
         x: clamp(startBox.x + (event.clientX - startX) * ratioX, 0, PAGE_IMAGE_SIZE.width - startBox.width),
         y: clamp(startBox.y + (event.clientY - startY) * ratioY, 0, PAGE_IMAGE_SIZE.height - startBox.height),
@@ -178,131 +116,50 @@ const AyahCalibration = () => {
     window.addEventListener("pointerup", onUp, { once: true });
   };
 
-  // === Load audio when surah changes ===
   const ensureAudioLoaded = (surah: number, then?: () => void) => {
     const a = audioRef.current; if (!a) return;
     const targetSrc = audioPath(surah);
     const expectedFile = targetSrc.split("/").pop() || targetSrc;
     if (!a.src || !a.src.endsWith(expectedFile)) {
-      a.src = targetSrc;
-      a.load();
+      a.src = targetSrc; a.load();
       a.addEventListener("loadedmetadata", () => then?.(), { once: true });
-    } else if (a.duration > 0) {
-      then?.();
-    } else {
-      a.addEventListener("loadedmetadata", () => then?.(), { once: true });
-    }
+    } else if (a.duration > 0) { then?.(); }
+    else { a.addEventListener("loadedmetadata", () => then?.(), { once: true }); }
   };
 
-  // === Play selected box: use bound audio segment if available, else play whole file ===
   const playSelected = () => {
     if (!selected) return;
     const a = audioRef.current; if (!a) return;
     ensureAudioLoaded(selected.surah, () => {
       const start = selected.audioStart ?? 0;
       const end = selected.audioEnd;
-      stopAtRef.current = previewBound && end && end > start ? end : null;
+      stopAtRef.current = end && end > start ? end : null;
       a.currentTime = start;
       a.play().catch(() => {});
     });
   };
 
-  // === Capture buttons: bind current playback time to selected box ===
   const setStartFromCurrent = () => {
     if (!selected || !audioRef.current) return;
-    const t = audioRef.current.currentTime;
-    updateSelected({ audioStart: Number(t.toFixed(3)), speaker });
-    toast({ title: "تم تحديد البداية", description: `${fmtTime(t)} للآية ${selected.surah}:${selected.ayah}` });
+    const t = Number(audioRef.current.currentTime.toFixed(3));
+    updateSelected({ audioStart: t, speaker });
+    toast({ title: "✅ بداية", description: `${fmtTime(t)}` });
   };
 
   const setEndFromCurrent = () => {
     if (!selected || !audioRef.current) return;
-    const t = audioRef.current.currentTime;
-    updateSelected({ audioEnd: Number(t.toFixed(3)), speaker });
-    toast({ title: "تم تحديد النهاية", description: `${fmtTime(t)} للآية ${selected.surah}:${selected.ayah}` });
+    const t = Number(audioRef.current.currentTime.toFixed(3));
+    updateSelected({ audioEnd: t, speaker });
+    toast({ title: "✅ نهاية", description: `${fmtTime(t)}` });
   };
 
   const clearBinding = () => {
     if (!selected) return;
     updateSelected({ audioStart: undefined, audioEnd: undefined });
-    toast({ title: "أُلغي الربط الصوتي" });
   };
 
-  const bindSegmentToSelected = (segment: PageSegment) => {
-    if (!selected) return;
-    updateSelected({ audioStart: segment.start, audioEnd: segment.end, speaker: segment.speaker });
-    setSpeaker(segment.speaker);
-    ensureAudioLoaded(segment.surah, () => {
-      const a = audioRef.current;
-      if (!a) return;
-      a.currentTime = segment.start;
-      stopAtRef.current = segment.end;
-      a.play().catch(() => {});
-    });
-    toast({ title: "تم ربط المقطع", description: `المقطع أصبح مربوطاً بالآية ${selected.surah}:${selected.ayah}` });
-  };
-
-  // === Seek by tapping the timeline ===
-  const onSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const a = audioRef.current; if (!a) return;
-    const t = Number(e.target.value);
-    a.currentTime = t;
-    setCurrentTime(t);
-    stopAtRef.current = null; // user took manual control
-  };
-
-  const onTimeUpdate = () => {
-    const a = audioRef.current; if (!a) return;
-    setCurrentTime(a.currentTime);
-    if (stopAtRef.current !== null && a.currentTime >= stopAtRef.current - 0.02) {
-      a.pause();
-      stopAtRef.current = null;
-    }
-  };
-
-  const onLoadedMeta = () => {
-    const a = audioRef.current; if (!a) return;
-    setDuration(a.duration || 0);
-  };
-
-  const markLive = useCallback(() => {
-    if (!selected || !audioRef.current) return;
-    const t = Number(audioRef.current.currentTime.toFixed(3));
-    
-    // Set end of previous box if appropriate
-    if (selectedIndex > 0) {
-      const prev = boxes[selectedIndex - 1];
-      if (prev.surah === selected.surah) {
-        setBoxes(curr => curr.map((b, i) => i === selectedIndex - 1 ? { ...b, audioEnd: t } : b));
-      }
-    }
-
-    updateSelected({ audioStart: t, speaker });
-    toast({ title: "تم التحديد", description: `بداية ${selected.surah}:${selected.ayah} عند ${fmtTime(t)}` });
-
-    if (selectedIndex < boxes.length - 1) {
-      setSelectedIndex(selectedIndex + 1);
-    }
-  }, [selected, selectedIndex, boxes, speaker]);
-
-  // Keyboard shortcut for live mode
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if (isLiveMode && e.code === "Space") {
-        e.preventDefault();
-        markLive();
-      }
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [isLiveMode, markLive]);
-
-  // AI/Auto link logic
   const autoLinkFromTimings = () => {
     const surahTimes: Record<number, number[]> = {};
-    const boxesBySurah: Record<number, number[]> = {};
-
-    // Collect all unique surahs on this page
     const surahs = Array.from(new Set(boxes.map(b => b.surah)));
     surahs.forEach(s => {
       const t = getSurahTimings(s);
@@ -310,43 +167,40 @@ const AyahCalibration = () => {
     });
 
     setBoxes(current => {
-      const next = [...current];
       const usedCounts: Record<number, number> = {};
-      
-      return next.map(box => {
+      return current.map(box => {
         const times = surahTimes[box.surah];
         if (!times) return box;
-        
         const count = usedCounts[box.surah] || 0;
         usedCounts[box.surah] = count + 1;
-        
         if (times[count] !== undefined) {
-          return {
-            ...box,
-            audioStart: times[count],
-            audioEnd: times[count + 1] ?? (times[count] + 3),
-            speaker: "teacher"
-          };
+          return { ...box, audioStart: times[count], audioEnd: times[count + 1] ?? (times[count] + 3), speaker: "teacher" };
         }
         return box;
       });
     });
-    toast({ title: "تم الربط التلقائي", description: "تم ربط المربعات بالتوقيتات المسجلة في أداة /timings" });
+    toast({ title: "✅ تم الربط التلقائي" });
   };
 
-  // Pre-load audio on selection change
   useEffect(() => {
     if (selected) ensureAudioLoaded(selected.surah);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.surah]);
 
-  // Stop audio when page changes
   useEffect(() => { stopAudio(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [pageSrc]);
 
-  const saveAll = (silent = false) => {
+  const onTimeUpdate = () => {
+    const a = audioRef.current; if (!a) return;
+    setCurrentTime(a.currentTime);
+    if (stopAtRef.current !== null && a.currentTime >= stopAtRef.current - 0.02) {
+      a.pause(); stopAtRef.current = null;
+    }
+  };
+
+  const saveAll = useCallback((silent = false) => {
     savePageAyahBoxes(pageSrc, boxes);
-    
-    // Also sync to SurahTimings segments
+
+    // Sync to SurahTimings
     const surahMap: Record<number, number[]> = {};
     boxes.forEach(b => {
       if (b.audioStart !== undefined) {
@@ -361,75 +215,76 @@ const AyahCalibration = () => {
       if (existing) {
         const segPrefix = `📍 معايرة: ${pageSrc.split("/").pop()}`;
         const otherSegments = existing.segments?.filter(s => !s.label?.startsWith(segPrefix)) || [];
-        
         const sortedTimes = times.sort((a, b) => a - b);
         const newSegments: AudioSegment[] = sortedTimes.map((t, i) => ({
           id: `calib-${n}-${pageSrc}-${i}`,
           start: t,
-          end: sortedTimes[i + 1] ?? (t + 3), // default 3s if no next segment
+          end: sortedTimes[i + 1] ?? (t + 3),
           speaker: "teacher",
           label: `${segPrefix} - جزء ${i + 1}`
         }));
-
-        saveSurahTimings(n, {
-          ...existing,
-          segments: [...otherSegments, ...newSegments]
-        });
+        saveSurahTimings(n, { ...existing, segments: [...otherSegments, ...newSegments] });
       }
     });
 
     if (!silent) {
-      const bound = boxes.filter((b) => b.audioStart !== undefined && b.audioEnd !== undefined).length;
-      toast({ title: "تم الحفظ ✅", description: `${boxes.length} مربع، ${bound} مربوط بصوت` });
+      setIsSaving(true);
+      const bound = boxes.filter(b => b.audioStart !== undefined && b.audioEnd !== undefined).length;
+      toast({ title: "✅ تم الحفظ", description: `${boxes.length} مربع، ${bound} مربوط` });
+      setTimeout(() => setIsSaving(false), 1200);
     }
-  };
-
-  // Auto-save on changes
-  useEffect(() => {
-    const timer = setTimeout(() => saveAll(true), 1000);
-    return () => clearTimeout(timer);
   }, [boxes, pageSrc]);
 
-  const colors = speakerColors[speaker];
-  const hasBinding = selected?.audioStart !== undefined && selected?.audioEnd !== undefined;
+  // Auto-save every 2 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => saveAll(true), 2000);
+    return () => clearTimeout(timer);
+  }, [boxes, pageSrc, saveAll]);
 
-  const surahTimings = useMemo(() => selected ? getSurahTimings(selected.surah) : null, [selected?.surah]);
-  
-  const applyTimingFromSegment = (startTime: number, endTime?: number) => {
-    if (!selected) return;
-    updateSelected({ 
-      audioStart: startTime, 
-      audioEnd: endTime ?? startTime + 2, // default 2s if no end
-      speaker 
-    });
-    toast({ title: "تم تطبيق التوقيت", description: `من المقاطع المسجلة: ${fmtTime(startTime)}` });
-  };
+  const hasBinding = selected?.audioStart !== undefined && selected?.audioEnd !== undefined;
+  const boundCount = boxes.filter(b => b.audioStart !== undefined && b.audioEnd !== undefined).length;
 
   return (
-    <main className="min-h-screen bg-background text-foreground p-3" dir="rtl">
+    <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white p-3" dir="rtl">
       <audio
         ref={audioRef}
         crossOrigin="anonymous"
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onTimeUpdate={onTimeUpdate}
-        onLoadedMetadata={onLoadedMeta}
-        onDurationChange={onLoadedMeta}
+        onLoadedMetadata={() => { const a = audioRef.current; if (a) setDuration(a.duration || 0); }}
+        onDurationChange={() => { const a = audioRef.current; if (a) setDuration(a.duration || 0); }}
       />
+
       <div className="mx-auto max-w-5xl space-y-3">
-        <header className="flex items-center justify-between gap-2 rounded-xl bg-card p-3 shadow-sm">
-          <a href="/" className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary" aria-label="رجوع"><ArrowRight className="h-5 w-5" /></a>
+        {/* Header */}
+        <header className="flex items-center justify-between gap-2 rounded-2xl bg-slate-800/80 backdrop-blur border border-slate-700 p-3">
+          <a href="/" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-700 hover:bg-slate-600 transition-colors">
+            <ArrowRight className="h-5 w-5" />
+          </a>
           <div className="flex-1 text-center">
-            <h1 className="font-amiri text-xl font-bold">ضبط تظلال ومعايرة الآيات</h1>
-            <p className="text-xs text-muted-foreground">حدّد المربع، استخدم "تقسيم" للآيات الطويلة، واربط الصوت بالآية.</p>
+            <h1 className="font-amiri text-xl font-bold bg-gradient-to-r from-amber-300 to-emerald-300 bg-clip-text text-transparent">
+              ضبط تظليل الآيات
+            </h1>
+            <p className="text-xs text-slate-400">
+              {boundCount}/{boxes.length} آية مربوطة · حفظ تلقائي
+            </p>
           </div>
-          <button onClick={() => saveAll(false)} className="flex h-10 items-center gap-1 rounded-full bg-accent px-3 font-bold text-accent-foreground shadow-md active:scale-95 transition-all"><Save className="h-4 w-4" /> حفظ الكل</button>
+          <button
+            onClick={() => saveAll(false)}
+            className={`flex h-10 items-center gap-1 rounded-full px-4 font-bold text-sm shadow-lg active:scale-95 transition-all ${
+              isSaving ? "bg-emerald-600 text-white" : "bg-gradient-to-r from-amber-500 to-amber-600 text-black"
+            }`}
+          >
+            <Save className="h-4 w-4" /> {isSaving ? "✅" : "حفظ"}
+          </button>
         </header>
 
-        <section className="grid gap-3 lg:grid-cols-[1fr_320px]">
-          <div className="max-h-[78vh] overflow-auto rounded-xl bg-card p-2 shadow-sm touch-none">
+        <section className="grid gap-3 lg:grid-cols-[1fr_300px]">
+          {/* Canvas */}
+          <div className="max-h-[80vh] overflow-auto rounded-2xl bg-slate-800/60 backdrop-blur border border-slate-700 p-2 touch-none">
             <div ref={canvasRef} className="relative mx-auto origin-top" style={{ width: PAGE_IMAGE_SIZE.width * scale, height: PAGE_IMAGE_SIZE.height * scale }}>
-              <img src={pageSrc} alt="صفحة المصحف للمعايرة" className="absolute inset-0 h-full w-full select-none object-fill" draggable={false} />
+              <img src={pageSrc} alt="صفحة المصحف" className="absolute inset-0 h-full w-full select-none object-fill" draggable={false} />
               {boxes.map((box, index) => {
                 const isSelected = index === selectedIndex;
                 const bound = box.audioStart !== undefined && box.audioEnd !== undefined;
@@ -439,20 +294,17 @@ const AyahCalibration = () => {
                   <button
                     key={`${box.surah}-${box.ayah}-${index}`}
                     onPointerDown={(e) => dragStart(index, e)}
-                    className="absolute rounded-md border-2 transition-colors touch-none"
+                    className="absolute rounded-md border-2 transition-all touch-none"
                     style={{
-                      left: box.x * scale,
-                      top: box.y * scale,
-                      width: box.width * scale,
-                      height: box.height * scale,
+                      left: box.x * scale, top: box.y * scale,
+                      width: box.width * scale, height: box.height * scale,
                       mixBlendMode: "multiply",
-                      background: isSelected ? colors.fill : (bound ? boxColors.fill : "rgba(156,163,175,0.18)"),
-                      borderColor: isSelected ? colors.stroke : (bound ? boxColors.stroke : "rgba(107,114,128,0.5)"),
+                      background: isSelected ? speakerColors[speaker].fill : (bound ? boxColors.fill : "rgba(156,163,175,0.15)"),
+                      borderColor: isSelected ? speakerColors[speaker].stroke : (bound ? boxColors.stroke : "rgba(107,114,128,0.4)"),
                       borderStyle: bound ? "solid" : "dashed",
                     }}
-                    aria-label={`سورة ${box.surah} آية ${box.ayah}`}
                   >
-                    <span className="absolute right-1 top-1 rounded-full bg-card/90 px-1 text-xs font-bold">
+                    <span className="absolute right-1 top-1 rounded-full bg-black/70 px-1.5 text-[10px] font-bold text-white">
                       {box.surah}:{box.ayah}{bound ? " 🔗" : ""}
                     </span>
                   </button>
@@ -461,184 +313,135 @@ const AyahCalibration = () => {
             </div>
           </div>
 
-          <aside className="space-y-3 rounded-xl bg-card p-3 shadow-sm">
-            <label className="block text-sm font-bold">الصفحة</label>
-            <select value={pageSrc} onChange={(e) => loadPage(e.target.value)} className="w-full rounded-lg border border-border bg-background p-2">
-              {pageSources.map((src) => <option key={src} value={src}>{src.replace("/pages/", "")}</option>)}
-            </select>
-
-            <label className="block text-sm font-bold">الآية المحددة</label>
-            <select value={selectedIndex} onChange={(e) => { setSelectedIndex(Number(e.target.value)); stopAudio(); }} className="w-full rounded-lg border border-border bg-background p-2">
-              {boxes.map((box, index) => {
-                const bound = box.audioStart !== undefined && box.audioEnd !== undefined;
-                return <option key={`${box.surah}-${box.ayah}-${index}`} value={index}>{bound ? "🔗 " : "○ "}سورة {box.surah} - آية {box.ayah} · جزء {index + 1}</option>;
-              })}
-            </select>
-
-            {/* Speaker */}
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setSpeaker("teacher")} className={`p-2 rounded-lg font-bold text-sm ${speaker === "teacher" ? "bg-amber-400 text-amber-950" : "bg-secondary"}`}>👨‍🏫 معلم</button>
-              <button onClick={() => setSpeaker("kids")} className={`p-2 rounded-lg font-bold text-sm ${speaker === "kids" ? "bg-sky-400 text-sky-950" : "bg-secondary"}`}>👦 طفل</button>
+          {/* Sidebar */}
+          <aside className="space-y-3 max-h-[80vh] overflow-y-auto">
+            {/* Page selector */}
+            <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3">
+              <label className="block text-xs font-bold text-slate-400 mb-1">الصفحة</label>
+              <select value={pageSrc} onChange={(e) => loadPage(e.target.value)} className="w-full rounded-lg bg-slate-700 border-slate-600 p-2 text-sm text-white">
+                {pageSources.map(src => <option key={src} value={src}>{src.replace("/pages/", "")}</option>)}
+              </select>
             </div>
 
-            {/* Audio scrubber */}
-            <div className="rounded-lg bg-secondary/60 p-2 space-y-1">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span>{fmtTime(currentTime)}</span>
-                <span className="text-muted-foreground">{fmtTime(duration)}</span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={duration || 0}
-                step={0.01}
-                value={currentTime}
-                onChange={onSeek}
-                className="w-full"
-              />
-              <div className="flex items-center gap-1">
-                <button onClick={isPlaying ? stopAudio : playSelected} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary p-2 text-primary-foreground font-bold text-sm">
-                  {isPlaying ? <><Pause className="h-4 w-4" /> إيقاف</> : <><Play className="h-4 w-4" /> تشغيل</>}
-                </button>
-                <label className="flex items-center gap-1 text-xs px-2">
-                  <input type="checkbox" checked={previewBound} onChange={(e) => setPreviewBound(e.target.checked)} />
-                  ضمن الحدود
-                </label>
+            {/* Ayah selector */}
+            <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3">
+              <label className="block text-xs font-bold text-slate-400 mb-1">الآية ({selectedIndex + 1}/{boxes.length})</label>
+              <select
+                value={selectedIndex}
+                onChange={(e) => { setSelectedIndex(Number(e.target.value)); stopAudio(); }}
+                className="w-full rounded-lg bg-slate-700 border-slate-600 p-2 text-sm text-white"
+              >
+                {boxes.map((box, i) => {
+                  const bound = box.audioStart !== undefined && box.audioEnd !== undefined;
+                  return <option key={i} value={i}>{bound ? "🔗 " : "○ "}سورة {box.surah} آية {box.ayah}</option>;
+                })}
+              </select>
+              <div className="flex gap-1 mt-2">
+                <button
+                  disabled={selectedIndex <= 0}
+                  onClick={() => { setSelectedIndex(i => i - 1); stopAudio(); }}
+                  className="flex-1 p-2 rounded-lg bg-slate-700 text-sm font-bold disabled:opacity-30"
+                >← السابقة</button>
+                <button
+                  disabled={selectedIndex >= boxes.length - 1}
+                  onClick={() => { setSelectedIndex(i => i + 1); stopAudio(); }}
+                  className="flex-1 p-2 rounded-lg bg-slate-700 text-sm font-bold disabled:opacity-30"
+                >التالية →</button>
               </div>
             </div>
 
-            {pageSegments.length > 0 && (
-              <div className="rounded-lg border border-border bg-secondary/50 p-2 space-y-2">
-                <div className="text-xs font-bold">🎧 مقاطع /timings المحفوظة</div>
-                <div className="max-h-40 space-y-1 overflow-y-auto">
-                  {pageSegments.map((segment, index) => (
-                    <button
-                      key={`${segment.surah}-${segment.id}`}
-                      onClick={() => bindSegmentToSelected(segment)}
-                      className="flex w-full items-center justify-between gap-2 rounded-md bg-card p-2 text-xs font-bold"
-                    >
-                      <span>{segment.speaker === "teacher" ? "👨‍🏫" : "👦"} سورة {segment.surah} · {segment.label || `مقطع ${index + 1}`}</span>
-                      <span className="font-mono text-muted-foreground">{fmtTime(segment.start)} → {fmtTime(segment.end)}</span>
-                    </button>
-                  ))}
-                </div>
+            {/* Audio player */}
+            <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3 space-y-2">
+              <div className="flex items-center justify-between text-xs font-mono text-slate-400">
+                <span className="text-emerald-400">{fmtTime(currentTime)}</span>
+                <span>{fmtTime(duration)}</span>
               </div>
-            )}
+              <input type="range" min={0} max={duration || 0} step={0.01} value={currentTime}
+                onChange={(e) => { const a = audioRef.current; if (a) { a.currentTime = Number(e.target.value); setCurrentTime(Number(e.target.value)); stopAtRef.current = null; } }}
+                className="w-full accent-emerald-500" />
+              <button
+                onClick={isPlaying ? stopAudio : playSelected}
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-700 p-2 text-sm font-bold shadow-lg active:scale-95 transition-transform"
+              >
+                {isPlaying ? <><Pause className="h-4 w-4" /> إيقاف</> : <><Play className="h-4 w-4" /> تشغيل</>}
+              </button>
+            </div>
 
             {/* Binding controls */}
-            <div className="rounded-lg border-2 border-emerald-500/40 bg-emerald-500/5 p-2 space-y-2">
-              <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400">🎯 ربط الصوت بهذه الآية</div>
+            <div className="rounded-xl bg-emerald-950/40 border border-emerald-500/30 p-3 space-y-2">
+              <div className="text-xs font-bold text-emerald-400">🎯 ربط الصوت بالآية {selected?.surah}:{selected?.ayah}</div>
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={setStartFromCurrent} className="rounded-lg bg-emerald-600 p-2 text-white text-sm font-bold">⏺ بداية ← الآن</button>
-                <button onClick={setEndFromCurrent} className="rounded-lg bg-rose-600 p-2 text-white text-sm font-bold">⏹ نهاية ← الآن</button>
+                <button onClick={setStartFromCurrent} className="rounded-lg bg-emerald-600 p-2 text-white text-xs font-bold active:scale-95">⏺ بداية</button>
+                <button onClick={setEndFromCurrent} className="rounded-lg bg-rose-600 p-2 text-white text-xs font-bold active:scale-95">⏹ نهاية</button>
               </div>
-              <div className="text-xs text-center font-mono bg-card rounded p-1">
+              <div className="text-xs text-center font-mono bg-slate-800 rounded-lg p-2 text-slate-300">
                 {selected?.audioStart !== undefined ? fmtTime(selected.audioStart) : "—"}
                 {" → "}
                 {selected?.audioEnd !== undefined ? fmtTime(selected.audioEnd) : "—"}
                 {hasBinding && selected?.audioEnd! > selected?.audioStart! && (
-                  <span className="text-muted-foreground"> ({(selected!.audioEnd! - selected!.audioStart!).toFixed(2)}ث)</span>
+                  <span className="text-slate-500"> ({(selected!.audioEnd! - selected!.audioStart!).toFixed(2)}ث)</span>
                 )}
               </div>
               {hasBinding && (
-                <button onClick={clearBinding} className="w-full text-xs rounded-lg bg-secondary p-1 flex items-center justify-center gap-1">
+                <button onClick={clearBinding} className="w-full text-xs rounded-lg bg-slate-700 p-1.5 flex items-center justify-center gap-1 text-slate-300">
                   <Link2 className="h-3 w-3" /> إلغاء الربط
                 </button>
               )}
 
-              <div className="pt-2 space-y-2">
-                <button 
-                  onClick={() => setIsLiveMode(!isLiveMode)}
-                  className={`w-full p-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 border-2 transition-all ${isLiveMode ? "bg-rose-500 text-white border-rose-600 animate-pulse" : "bg-secondary border-transparent"}`}
-                >
-                  {isLiveMode ? "⏹ إيقاف وضع التسجيل المباشر" : "⏺ وضع التسجيل المباشر (Space)"}
-                </button>
-                
-                {isLiveMode && (
-                  <button onClick={markLive} className="w-full p-4 rounded-xl bg-rose-600 text-white font-black text-lg shadow-lg active:scale-95">
-                    تحديد الآية الآن!
-                  </button>
-                )}
+              <button
+                onClick={autoLinkFromTimings}
+                className="w-full p-2 rounded-lg bg-violet-600/20 border border-violet-500/40 text-violet-300 font-bold text-xs flex items-center justify-center gap-1 active:scale-95"
+              >
+                🪄 ربط تلقائي من /timings
+              </button>
+            </div>
 
-                <button 
-                  onClick={autoLinkFromTimings}
-                  className="w-full p-2 rounded-lg bg-indigo-500/10 border border-indigo-500 text-indigo-700 font-bold text-xs flex items-center justify-center gap-1"
-                >
-                  🪄 ربط تلقائي من /timings
-                </button>
-              </div>
-              
-              {/* Link from saved segments */}
-              {surahTimings && (surahTimings.teacher.length > 0 || (surahTimings.segments && surahTimings.segments.length > 0)) && (
-                <div className="mt-2 pt-2 border-t border-emerald-500/20">
-                  <label className="block text-[10px] font-bold text-emerald-600 mb-1">استيراد من التوقيتات المسجلة:</label>
-                  <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
-                    {/* Teacher timings as a segment */}
-                    <div className="flex flex-wrap gap-1">
-                      {surahTimings.teacher.map((t, i) => (
-                        <button 
-                          key={i} 
-                          onClick={() => applyTimingFromSegment(t, surahTimings.teacher[i+1])}
-                          className="text-[10px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-1 rounded"
-                        >
-                          آية {i+1}
-                        </button>
-                      ))}
-                    </div>
-                    {/* Custom segments */}
-                    {surahTimings.segments?.map((seg, sIdx) => (
-                      <button 
-                        key={sIdx} 
-                        onClick={() => applyTimingFromSegment(seg.start, seg.end)}
-                        className="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-800 px-1 rounded"
-                      >
-                        {seg.label || `مقطع ${sIdx + 1}`} ({fmtTime(seg.start)})
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+            {/* Speaker */}
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => setSpeaker("teacher")} className={`p-2 rounded-lg font-bold text-sm transition-all ${speaker === "teacher" ? "bg-amber-500 text-black" : "bg-slate-700 text-slate-300"}`}>👨‍🏫 معلم</button>
+              <button onClick={() => setSpeaker("kids")} className={`p-2 rounded-lg font-bold text-sm transition-all ${speaker === "kids" ? "bg-sky-500 text-black" : "bg-slate-700 text-slate-300"}`}>👦 طفل</button>
             </div>
 
             {/* Move/Resize */}
-            <div className="grid grid-cols-3 gap-2 text-sm font-bold">
-              <span />
-              <button onClick={() => move(0, -step)} className="rounded-lg bg-secondary p-3">↑</button>
-              <span />
-              <button onClick={() => move(step, 0)} className="rounded-lg bg-secondary p-3">→</button>
-              <button onClick={() => move(0, step)} className="rounded-lg bg-secondary p-3">↓</button>
-              <button onClick={() => move(-step, 0)} className="rounded-lg bg-secondary p-3">←</button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => resize(step, 0)} className="rounded-lg bg-secondary p-2 text-sm">عرض +</button>
-              <button onClick={() => resize(-step, 0)} className="rounded-lg bg-secondary p-2 text-sm">عرض -</button>
-              <button onClick={() => resize(0, step)} className="rounded-lg bg-secondary p-2 text-sm">ارتفاع +</button>
-              <button onClick={() => resize(0, -step)} className="rounded-lg bg-secondary p-2 text-sm">ارتفاع -</button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={unifyWidth} className="rounded-lg bg-emerald-500/10 border border-emerald-500 text-emerald-700 p-2 font-bold text-xs">📐 توحيد العرض</button>
-              <button onClick={unifyHeight} className="rounded-lg bg-amber-500/10 border border-amber-500 text-amber-700 p-2 font-bold text-xs">📐 توحيد الارتفاع</button>
+            <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3 space-y-2">
+              <div className="text-xs font-bold text-slate-400">تحريك وتغيير الحجم</div>
+              <div className="grid grid-cols-3 gap-1 text-sm font-bold">
+                <span />
+                <button onClick={() => move(0, -step)} className="rounded-lg bg-slate-700 p-2 active:bg-slate-600">↑</button>
+                <span />
+                <button onClick={() => move(step, 0)} className="rounded-lg bg-slate-700 p-2 active:bg-slate-600">→</button>
+                <button onClick={() => move(0, step)} className="rounded-lg bg-slate-700 p-2 active:bg-slate-600">↓</button>
+                <button onClick={() => move(-step, 0)} className="rounded-lg bg-slate-700 p-2 active:bg-slate-600">←</button>
+              </div>
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                <button onClick={() => resize(step, 0)} className="rounded-lg bg-slate-700 p-1.5">عرض +</button>
+                <button onClick={() => resize(-step, 0)} className="rounded-lg bg-slate-700 p-1.5">عرض -</button>
+                <button onClick={() => resize(0, step)} className="rounded-lg bg-slate-700 p-1.5">ارتفاع +</button>
+                <button onClick={() => resize(0, -step)} className="rounded-lg bg-slate-700 p-1.5">ارتفاع -</button>
+              </div>
             </div>
 
+            {/* Actions */}
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={duplicateSelected} className="flex items-center justify-center gap-1 rounded-lg bg-accent p-2 font-bold text-accent-foreground text-sm"><Copy className="h-4 w-4" /> جزء آخر</button>
-              <button onClick={linkWithPrevious} disabled={selectedIndex === 0} className="flex items-center justify-center gap-1 rounded-lg bg-sky-500 p-2 font-bold text-white text-sm disabled:opacity-50"><Link2 className="h-4 w-4" /> ربط بالسابق</button>
+              <button onClick={duplicateSelected} className="flex items-center justify-center gap-1 rounded-lg bg-slate-700 p-2 text-xs font-bold active:scale-95">
+                <Copy className="h-3 w-3" /> نسخ المربع
+              </button>
+              <button onClick={deleteSelected} className="flex items-center justify-center gap-1 rounded-lg bg-red-950/50 border border-red-500/30 text-red-400 p-2 text-xs font-bold active:scale-95">
+                <Trash2 className="h-3 w-3" /> حذف
+              </button>
             </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={splitHorizontal} className="flex items-center justify-center gap-1 rounded-lg bg-secondary p-2 font-bold text-sm">↔ انقسام أفقي</button>
-              <button onClick={splitVertical} className="flex items-center justify-center gap-1 rounded-lg bg-secondary p-2 font-bold text-sm">↕ انقسام رأسي</button>
-            </div>
-
-            <button onClick={deleteSelected} className="w-full flex items-center justify-center gap-1 rounded-lg bg-destructive p-2 font-bold text-destructive-foreground text-sm"><Trash2 className="h-4 w-4" /> حذف الجزء المحدد</button>
 
             <div className="flex gap-2">
-              <button onClick={() => setScale((s) => clamp(s + 0.1, 0.25, 1.4))} className="flex-1 rounded-lg bg-primary p-2 text-primary-foreground"><ZoomIn className="mx-auto h-4 w-4" /></button>
-              <button onClick={() => setScale((s) => clamp(s - 0.1, 0.25, 1.4))} className="flex-1 rounded-lg bg-primary p-2 text-primary-foreground"><ZoomOut className="mx-auto h-4 w-4" /></button>
+              <button onClick={() => setScale(s => clamp(s + 0.1, 0.25, 1.4))} className="flex-1 rounded-lg bg-slate-700 p-2 active:bg-slate-600"><ZoomIn className="mx-auto h-4 w-4" /></button>
+              <button onClick={() => setScale(s => clamp(s - 0.1, 0.25, 1.4))} className="flex-1 rounded-lg bg-slate-700 p-2 active:bg-slate-600"><ZoomOut className="mx-auto h-4 w-4" /></button>
             </div>
 
-            <button onClick={() => { resetPageAyahBoxes(pageSrc); setBoxes(AYAH_COORDINATES[pageSrc].map((b) => ({ ...b }))); }} className="flex w-full items-center justify-center gap-2 rounded-lg bg-destructive/80 p-2 text-destructive-foreground text-sm"><RotateCcw className="h-4 w-4" /> إعادة ضبط</button>
+            <button
+              onClick={() => { resetPageAyahBoxes(pageSrc); setBoxes(AYAH_COORDINATES[pageSrc].map(b => ({ ...b }))); }}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-950/50 border border-red-500/30 p-2 text-red-400 text-xs font-bold active:scale-95"
+            >
+              <RotateCcw className="h-3 w-3" /> إعادة ضبط المربعات
+            </button>
           </aside>
         </section>
       </div>
