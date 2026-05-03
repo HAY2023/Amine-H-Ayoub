@@ -227,6 +227,13 @@ const AyahCalibration = () => {
   // Stop audio when page changes
   useEffect(() => { stopAudio(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [pageSrc]);
 
+  // Auto-save every calibration edit so highlights never disappear after navigation.
+  useEffect(() => {
+    if (boxes.length === 0) return;
+    const id = window.setTimeout(() => savePageAyahBoxes(pageSrc, boxes), 250);
+    return () => window.clearTimeout(id);
+  }, [boxes, pageSrc]);
+
   const saveAll = () => {
     savePageAyahBoxes(pageSrc, boxes);
     const bound = boxes.filter((b) => b.audioStart !== undefined && b.audioEnd !== undefined).length;
