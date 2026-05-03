@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Pause, Play, RotateCcw, Save, Trash2, ZoomIn, ZoomOut, Link2, Copy } from "lucide-react";
+import { ArrowRight, Pause, Play, Plus, RotateCcw, Save, Trash2, ZoomIn, ZoomOut, Link2, Copy } from "lucide-react";
 import { AyahBox, AYAH_COORDINATES, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
 import { AudioSegment, getSavedTimings, getSurahTimings, saveSurahTimings } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
@@ -89,6 +89,20 @@ const AyahCalibration = () => {
     if (boxes.length <= 1) return;
     setBoxes(current => current.filter((_, i) => i !== selectedIndex));
     setSelectedIndex(i => Math.max(0, i - 1));
+  };
+
+  const addNewBox = () => {
+    const lastBox = boxes[boxes.length - 1];
+    const newBox: AyahBox = {
+      surah: lastBox?.surah ?? 1,
+      ayah: (lastBox?.ayah ?? 0) + 1,
+      x: lastBox?.x ?? 140,
+      y: lastBox ? clamp(lastBox.y + lastBox.height + 10, 0, PAGE_IMAGE_SIZE.height - 100) : 300,
+      width: lastBox?.width ?? 980,
+      height: lastBox?.height ?? 100,
+    };
+    setBoxes(current => [...current, newBox]);
+    setSelectedIndex(boxes.length);
   };
 
   const dragStart = (index: number, e: React.PointerEvent<HTMLButtonElement>) => {
@@ -323,8 +337,8 @@ const AyahCalibration = () => {
               </select>
             </div>
 
-            {/* Ayah selector */}
-            <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3">
+            {/* Ayah selector + editing */}
+            <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3 space-y-2">
               <label className="block text-xs font-bold text-slate-400 mb-1">الآية ({selectedIndex + 1}/{boxes.length})</label>
               <select
                 value={selectedIndex}
@@ -336,7 +350,32 @@ const AyahCalibration = () => {
                   return <option key={i} value={i}>{bound ? "🔗 " : "○ "}سورة {box.surah} آية {box.ayah}</option>;
                 })}
               </select>
-              <div className="flex gap-1 mt-2">
+
+              {/* Edit surah and ayah numbers */}
+              {selected && (
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block">
+                    <span className="text-[10px] text-slate-500">رقم السورة</span>
+                    <input
+                      type="number" min={1} max={114}
+                      value={selected.surah}
+                      onChange={(e) => updateSelected({ surah: parseInt(e.target.value) || 1 })}
+                      className="w-full rounded-lg bg-slate-700 border-slate-600 p-1.5 text-sm text-white"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-[10px] text-slate-500">رقم الآية</span>
+                    <input
+                      type="number" min={1}
+                      value={selected.ayah}
+                      onChange={(e) => updateSelected({ ayah: parseInt(e.target.value) || 1 })}
+                      className="w-full rounded-lg bg-slate-700 border-slate-600 p-1.5 text-sm text-white"
+                    />
+                  </label>
+                </div>
+              )}
+
+              <div className="flex gap-1">
                 <button
                   disabled={selectedIndex <= 0}
                   onClick={() => { setSelectedIndex(i => i - 1); stopAudio(); }}
@@ -348,6 +387,14 @@ const AyahCalibration = () => {
                   className="flex-1 p-2 rounded-lg bg-slate-700 text-sm font-bold disabled:opacity-30"
                 >التالية →</button>
               </div>
+
+              {/* Add new box */}
+              <button
+                onClick={addNewBox}
+                className="w-full p-2 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-transform"
+              >
+                <Plus className="h-3.5 w-3.5" /> إضافة تظليل جديد
+              </button>
             </div>
 
             {/* Audio player */}

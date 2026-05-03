@@ -139,17 +139,17 @@ const TimingsRecorder = () => {
     const a = audioRef.current; if (a) { a.pause(); a.currentTime = 0; }
   };
 
-  const autoDetectSegments = async () => {
+  const autoDetectSegments = async (forceCount = 0) => {
     const a = audioRef.current; if (!a) return;
     setDetecting(true);
     try {
       const { segments: detected } = await detectAudioSegments(
-        a.src, AYAH_COUNTS[surahNum] || 0, silenceThreshold, minSilenceMs
+        a.src, forceCount, silenceThreshold, minSilenceMs
       );
       const surahName = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
       const labeled = detected.map((seg, index) => ({
         ...seg,
-        label: `${surahName} - آية ${index + 1}`
+        label: `${surahName} - مقطع ${index + 1}`
       }));
       setSegments(labeled);
     } finally { setDetecting(false); }
@@ -297,17 +297,25 @@ const TimingsRecorder = () => {
                   className="w-full accent-violet-500" dir="ltr" />
               </label>
             </div>
-            <button
-              onClick={autoDetectSegments}
-              disabled={detecting || !duration}
-              className="w-full p-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 active:scale-[0.98] transition-transform"
-            >
-              {detecting ? (
-                <><span className="animate-spin">⏳</span> جارٍ التحليل...</>
-              ) : (
-                <>🤖 تقسيم بالذكاء الاصطناعي ({AYAH_COUNTS[surahNum]} آية)</>
-              )}
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => autoDetectSegments(0)}
+                disabled={detecting || !duration}
+                className="p-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-1 shadow-lg shadow-violet-500/20 active:scale-[0.98] transition-transform text-xs"
+              >
+                {detecting ? "⏳ تحليل..." : "🤖 كشف كل المقاطع"}
+              </button>
+              <button
+                onClick={() => autoDetectSegments(AYAH_COUNTS[surahNum] || 0)}
+                disabled={detecting || !duration}
+                className="p-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-1 shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-transform text-xs"
+              >
+                {detecting ? "⏳ تحليل..." : `📐 تقسيم ${AYAH_COUNTS[surahNum]} آية`}
+              </button>
+            </div>
+            <p className="text-[10px] text-violet-400 text-center">
+              "كشف كل المقاطع" يجد جميع الفواصل الطبيعية · "تقسيم" يُطابق عدد الآيات
+            </p>
           </div>
         </div>
 
