@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Copy, Link2, Pause, Play, RotateCcw, Save, Trash2, ZoomIn, ZoomOut } from "lucide-react";
 import { AyahBox, AYAH_COORDINATES, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
+import { getSurahTimings, saveSurahTimings } from "@/data/ayahTimings";
 import { toast } from "@/hooks/use-toast";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
@@ -97,6 +98,14 @@ const AyahCalibration = () => {
     const x = selected.x;
     const width = selected.width;
     setBoxes((current) => current.map((box) => ({ ...box, x, width })));
+    toast({ title: "تم توحيد العرض", description: "أصبح لكل المربعات نفس العرض والموضع الأفقي" });
+  };
+
+  const unifyHeight = () => {
+    if (!selected) return;
+    const height = selected.height;
+    setBoxes((current) => current.map((box) => ({ ...box, height })));
+    toast({ title: "تم توحيد الارتفاع", description: "أصبح لكل المربعات نفس الارتفاع" });
   };
 
   const splitHorizontal = () => {
@@ -237,14 +246,57 @@ const AyahCalibration = () => {
   // Stop audio when page changes
   useEffect(() => { stopAudio(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [pageSrc]);
 
-  const saveAll = () => {
+  const saveAll = (silent = false) => {
     savePageAyahBoxes(pageSrc, boxes);
-    const bound = boxes.filter((b) => b.audioStart !== undefined && b.audioEnd !== undefined).length;
-    toast({ title: "تم الحفظ ✅", description: `${boxes.length} مربع، ${bound} مربوط بصوت` });
+    
+    // Also sync to SurahTimings segments
+    const surahMap: Record<number, number[]> = {};
+    boxes.forEach(b => {
+      if (b.audioStart !== undefined) {
+        if (!surahMap[b.surah]) surahMap[b.surah] = [];
+        surahMap[b.surah].push(b.audioStart);
+      }
+    });
+
+    Object.entries(surahMap).forEach(([sNum, times]) => {
+      const n = parseInt(sNum);
+      const existing = getSurahTimings(n);
+      if (existing) {
+        const segName = `📍 معايرة: ${pageSrc.split("/").pop()}`;
+        const otherSegments = existing.segments?.filter(s => s.name !== segName) || [];
+        saveSurahTimings(n, {
+          ...existing,
+          segments: [...otherSegments, { name: segName, timings: times.sort((a,b) => a-b) }]
+        });
+      }
+    });
+
+    if (!silent) {
+      const bound = boxes.filter((b) => b.audioStart !== undefined && b.audioEnd !== undefined).length;
+      toast({ title: "تم الحفظ ✅", description: `${boxes.length} مربع، ${bound} مربوط بصوت` });
+    }
   };
+
+  // Auto-save on changes
+  useEffect(() => {
+    const timer = setTimeout(() => saveAll(true), 1000);
+    return () => clearTimeout(timer);
+  }, [boxes, pageSrc]);
 
   const colors = speakerColors[speaker];
   const hasBinding = selected?.audioStart !== undefined && selected?.audioEnd !== undefined;
+
+  const surahTimings = useMemo(() => selected ? getSurahTimings(selected.surah) : null, [selected?.surah]);
+  
+  const applyTimingFromSegment = (startTime: number, endTime?: number) => {
+    if (!selected) return;
+    updateSelected({ 
+      audioStart: startTime, 
+      audioEnd: endTime ?? startTime + 2, // default 2s if no end
+      speaker 
+    });
+    toast({ title: "تم تطبيق التوقيت", description: `من المقاطع المسجلة: ${fmtTime(startTime)}` });
+  };
 
   return (
     <main className="min-h-screen bg-background text-foreground p-3" dir="rtl">
@@ -264,7 +316,7 @@ const AyahCalibration = () => {
             <h1 className="font-amiri text-xl font-bold">ضبط تظلال ومعايرة الآيات</h1>
             <p className="text-xs text-muted-foreground">حدّد المربع، استخدم "تقسيم" للآيات الطويلة، واربط الصوت بالآية.</p>
           </div>
-          <button onClick={saveAll} className="flex h-10 items-center gap-1 rounded-full bg-accent px-3 font-bold text-accent-foreground"><Save className="h-4 w-4" /> حفظ الكل</button>
+          <button onClick={() => saveAll(false)} className="flex h-10 items-center gap-1 rounded-full bg-accent px-3 font-bold text-accent-foreground shadow-md active:scale-95 transition-all"><Save className="h-4 w-4" /> حفظ الكل</button>
         </header>
 
         <section className="grid gap-3 lg:grid-cols-[1fr_320px]">
@@ -368,6 +420,44 @@ const AyahCalibration = () => {
                   <Link2 className="h-3 w-3" /> إلغاء الربط
                 </button>
               )}
+              
+              {/* Link from saved segments */}
+              {surahTimings && (surahTimings.teacher.length > 0 || (surahTimings.segments && surahTimings.segments.length > 0)) && (
+                <div className="mt-2 pt-2 border-t border-emerald-500/20">
+                  <label className="block text-[10px] font-bold text-emerald-600 mb-1">استيراد من التوقيتات المسجلة:</label>
+                  <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
+                    {/* Teacher timings as a segment */}
+                    <div className="flex flex-wrap gap-1">
+                      {surahTimings.teacher.map((t, i) => (
+                        <button 
+                          key={i} 
+                          onClick={() => applyTimingFromSegment(t, surahTimings.teacher[i+1])}
+                          className="text-[10px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-1 rounded"
+                        >
+                          آية {i+1}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Custom segments */}
+                    {surahTimings.segments?.map((seg, sIdx) => (
+                      <div key={sIdx} className="space-y-1">
+                        <div className="text-[9px] text-muted-foreground font-bold">{seg.name}:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {seg.timings.map((t, i) => (
+                            <button 
+                              key={i} 
+                              onClick={() => applyTimingFromSegment(t, seg.timings[i+1])}
+                              className="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-800 px-1 rounded"
+                            >
+                              {i+1}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Move/Resize */}
@@ -386,7 +476,10 @@ const AyahCalibration = () => {
               <button onClick={() => resize(0, -step)} className="rounded-lg bg-secondary p-2 text-sm">ارتفاع -</button>
             </div>
 
-            <button onClick={unifyWidth} className="w-full rounded-lg bg-emerald-500 p-2 font-bold text-white text-sm">📐 نفس العرض للكل</button>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={unifyWidth} className="rounded-lg bg-emerald-500/10 border border-emerald-500 text-emerald-700 p-2 font-bold text-xs">📐 توحيد العرض</button>
+              <button onClick={unifyHeight} className="rounded-lg bg-amber-500/10 border border-amber-500 text-amber-700 p-2 font-bold text-xs">📐 توحيد الارتفاع</button>
+            </div>
 
             <div className="grid grid-cols-2 gap-2">
               <button onClick={duplicateSelected} className="flex items-center justify-center gap-1 rounded-lg bg-accent p-2 font-bold text-accent-foreground text-sm"><Copy className="h-4 w-4" /> جزء آخر</button>

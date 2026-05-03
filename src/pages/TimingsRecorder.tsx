@@ -67,7 +67,7 @@ async function detectAyahStarts(
 
   // If too many onsets, keep the strongest gaps (longest silences)
   let starts = allStarts;
-  if (allStarts.length > expectedCount) {
+  if (expectedCount > 0 && allStarts.length > expectedCount) {
     // rank silences by length (descending) and keep first N-1; always keep 0
     const ranked = [...silenceRuns].sort((a, b) => (b.end - b.start) - (a.end - a.start));
     const keep = ranked.slice(0, expectedCount - 1).map((r) => r.end);
@@ -164,6 +164,17 @@ const TimingsRecorder = () => {
     });
   };
 
+  const removeTiming = (segIdx: number, timeIdx: number) => {
+    setSegments(prev => {
+      const next = [...prev];
+      next[segIdx] = {
+        ...next[segIdx],
+        timings: next[segIdx].timings.filter((_, i) => i !== timeIdx)
+      };
+      return next;
+    });
+  };
+
   const splitByMinute = () => {
     if (!duration) return;
     const count = Math.floor(duration / 60);
@@ -179,21 +190,23 @@ const TimingsRecorder = () => {
   };
 
   // Auto-detect ALL ayahs
-  const autoDetectActive = async () => {
+  const autoDetectActive = async (forceAll = false) => {
     const a = audioRef.current; if (!a) return;
     setDetecting(true);
     try {
-      const { starts } = await detectAyahStarts(a.src, ayahCount, silenceThreshold, minSilenceMs);
+      const countToDetect = forceAll ? 0 : ayahCount;
+      const { starts } = await detectAyahStarts(a.src, countToDetect, silenceThreshold, minSilenceMs);
       setSegments(prev => {
         const next = [...prev];
-        next[activeSegIdx] = { ...next[activeSegIdx], timings: starts.slice(0, ayahCount) };
+        next[activeSegIdx] = { ...next[activeSegIdx], timings: starts };
         return next;
       });
     } finally { setDetecting(false); }
   };
 
   const addSegment = () => {
-    const name = prompt("اسم المقطع الجديد:");
+    const sName = SURAH_NAMES[surahNum] || "";
+    const name = prompt("اسم المقطع الجديد (مثال: سورة الفاتحة 1-3):", sName);
     if (name) {
       setSegments(prev => [...prev, { name, timings: [] }]);
       setActiveSegIdx(segments.length);
@@ -258,6 +271,21 @@ const TimingsRecorder = () => {
   const seekToTime = (t: number) => {
     const a = audioRef.current; if (!a) return;
     a.currentTime = t;
+  };
+
+  const playInterval = (start: number, end?: number) => {
+    const a = audioRef.current; if (!a) return;
+    a.currentTime = start;
+    a.play().catch(() => {});
+    if (end) {
+      const checkStop = () => {
+        if (a.currentTime >= end - 0.05) {
+          a.pause();
+          a.removeEventListener("timeupdate", checkStop);
+        }
+      };
+      a.addEventListener("timeupdate", checkStop);
+    }
   };
 
   const fmt = (s: number) => {
@@ -376,13 +404,23 @@ const TimingsRecorder = () => {
             >
               ⏱️ تقسيم بالدقائق (كل 60ث)
             </button>
-            <button
-              onClick={autoDetectActive}
-              disabled={detecting || !duration}
-              className="p-2 rounded-lg bg-violet-600 text-white text-xs font-bold disabled:opacity-40 flex items-center justify-center gap-1"
-            >
-              {detecting ? "جارٍ التحليل..." : "🔍 كشف تلقائي للمقطع"}
-            </button>
+            <div className="flex gap-1">
+              <button
+                onClick={() => autoDetectActive(false)}
+                disabled={detecting || !duration}
+                className="flex-1 p-2 rounded-lg bg-violet-600 text-white text-xs font-bold disabled:opacity-40 flex items-center justify-center gap-1"
+              >
+                {detecting ? "..." : `🔍 كشف (${ayahCount})`}
+              </button>
+              <button
+                onClick={() => autoDetectActive(true)}
+                disabled={detecting || !duration}
+                className="flex-1 p-2 rounded-lg bg-indigo-600 text-white text-xs font-bold disabled:opacity-40 flex items-center justify-center gap-1"
+                title="كشف جميع الوقفات (AI)"
+              >
+                {detecting ? "..." : "🤖 كشف ذكي"}
+              </button>
+            </div>
           </div>
 
           {/* Manual mark buttons */}
@@ -437,13 +475,30 @@ const TimingsRecorder = () => {
         <div className="space-y-3">
           {segments.map((seg, sIdx) => seg.timings.length > 0 && (
             <div key={sIdx} className="bg-card border border-border rounded-xl p-4">
-              <p className="font-bold mb-2 text-sm">{seg.name}:</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-bold text-sm">{seg.name}:</p>
+                <button 
+                  onClick={() => playInterval(seg.timings[0], seg.timings[seg.timings.length - 1])}
+                  className="text-[10px] flex items-center gap-1 bg-accent/20 text-accent-foreground px-2 py-1 rounded"
+                >
+                  <Play className="w-3 h-3" /> تشغيل المقطع كاملاً
+                </button>
+              </div>
               <div className="flex flex-wrap gap-1">
                 {seg.timings.map((t, i) => (
-                  <button key={i} onClick={() => seekToTime(t)}
-                    className={`px-2 py-1 rounded text-xs font-mono ${activeSegIdx === sIdx ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}`}>
-                    {i + 1}: {t}s
-                  </button>
+                  <div key={i} className={`flex items-center gap-0.5 rounded border border-border group ${activeSegIdx === sIdx ? "bg-accent/10" : "bg-muted/30"}`}>
+                    <button onClick={() => playInterval(t, seg.timings[i+1])}
+                      className={`px-2 py-1 text-xs font-mono flex items-center gap-1 ${activeSegIdx === sIdx ? "text-accent-foreground font-bold" : "text-muted-foreground"}`}>
+                      <Play className="w-2.5 h-2.5 opacity-40 group-hover:opacity-100" />
+                      {i + 1}: {t}s
+                    </button>
+                    <button 
+                      onClick={() => removeTiming(sIdx, i)}
+                      className="p-1 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>

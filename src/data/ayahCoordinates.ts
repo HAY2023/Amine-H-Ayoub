@@ -91,8 +91,11 @@ export const getSavedAyahCoordinates = (): Record<string, AyahBox[]> => {
 };
 
 export const getPageAyahBoxes = (pageSrc: string) => {
-  const saved = getSavedAyahCoordinates()[pageSrc];
-  return cloneBoxes(saved && saved.length > 0 ? saved : AYAH_COORDINATES[pageSrc] ?? []);
+  const allSaved = getSavedAyahCoordinates();
+  if (pageSrc in allSaved) {
+    return cloneBoxes(allSaved[pageSrc]);
+  }
+  return cloneBoxes(AYAH_COORDINATES[pageSrc] ?? []);
 };
 
 export const savePageAyahBoxes = (pageSrc: string, boxes: AyahBox[]) => {
