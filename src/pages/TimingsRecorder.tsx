@@ -75,7 +75,7 @@ async function detectAudioSegments(
       start: Number(seg.start.toFixed(3)),
       end: Number(seg.end.toFixed(3)),
       speaker: "teacher" as const,
-      label: `مقطع ${index + 1}`,
+      label: `آية ${index + 1}`,
     }));
   ctx.close();
   return { segments, duration: audio.duration };
