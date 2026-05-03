@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { Play, Pause, RotateCcw, Copy, Bookmark, Baby, Wand2, Save, Check, SkipForward, Trash2 } from "lucide-react";
-import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings } from "@/data/ayahTimings";
+import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings, AudioSegment } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
@@ -11,13 +11,18 @@ const SURAH_NAMES: Record<number, string> = {
   11: "الفيل", 12: "الهمزة", 13: "العصر", 14: "التكاثر",
 };
 
-// ====== Auto-detection via silence analysis (Web Audio API) ======
-async function detectAyahStarts(
+// ====== Smart segmentation via adaptive audio energy analysis ======
+const percentile = (values: number[], p: number) => {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.floor(sorted.length * p)))];
+};
+
+async function detectAudioSegments(
   audioUrl: string,
-  expectedCount: number,
   silenceThreshold = 0.015,
   minSilenceMs = 350,
-): Promise<{ starts: number[]; duration: number }> {
+): Promise<{ segments: AudioSegment[]; duration: number }> {
   const res = await fetch(audioUrl);
   const buf = await res.arrayBuffer();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,48 +45,47 @@ async function detectAyahStarts(
     rms.push(Math.sqrt(sum / win));
   }
 
-  // find silence runs
-  const silenceRuns: { start: number; end: number; mid: number }[] = [];
-  let silentStart = -1;
-  for (let i = 0; i < rms.length; i++) {
-    if (rms[i] < silenceThreshold) {
-      if (silentStart === -1) silentStart = i;
-    } else {
-      if (silentStart !== -1) {
-        const len = i - silentStart;
-        if (len >= minSilenceWindows) {
-          silenceRuns.push({
-            start: (silentStart * win) / sr,
-            end: (i * win) / sr,
-            mid: ((silentStart + i) * win) / 2 / sr,
-          });
-        }
-        silentStart = -1;
+  const noiseFloor = percentile(rms, 0.18);
+  const speechPeak = percentile(rms, 0.92);
+  const adaptiveThreshold = Math.max(silenceThreshold, noiseFloor + (speechPeak - noiseFloor) * 0.18);
+  const active = rms.map((v) => v >= adaptiveThreshold);
+  const rawSegments: { start: number; end: number }[] = [];
+  let startWindow = -1;
+  let silentRun = 0;
+  for (let i = 0; i < active.length; i++) {
+    if (active[i]) {
+      if (startWindow === -1) startWindow = i;
+      silentRun = 0;
+    } else if (startWindow !== -1) {
+      silentRun++;
+      if (silentRun >= minSilenceWindows) {
+        rawSegments.push({ start: (startWindow * win) / sr, end: ((i - silentRun + 1) * win) / sr });
+        startWindow = -1;
+        silentRun = 0;
       }
     }
   }
+  if (startWindow !== -1) rawSegments.push({ start: (startWindow * win) / sr, end: audio.duration });
 
-  // Ayah starts = end of each silence run (= speech onset). First start = 0.
-  const onsets = silenceRuns.map((r) => r.end);
-  const allStarts = [0, ...onsets].sort((a, b) => a - b);
-
-  // If too many onsets, keep the strongest gaps (longest silences)
-  let starts = allStarts;
-  if (allStarts.length > expectedCount) {
-    // rank silences by length (descending) and keep first N-1; always keep 0
-    const ranked = [...silenceRuns].sort((a, b) => (b.end - b.start) - (a.end - a.start));
-    const keep = ranked.slice(0, expectedCount - 1).map((r) => r.end);
-    starts = [0, ...keep].sort((a, b) => a - b);
-  }
-
+  const segments = rawSegments
+    .map((seg) => ({ start: Math.max(0, seg.start - 0.04), end: Math.min(audio.duration, seg.end + 0.08) }))
+    .filter((seg) => seg.end - seg.start >= 0.45)
+    .map((seg, index) => ({
+      id: `${Date.now()}-${index}`,
+      start: Number(seg.start.toFixed(3)),
+      end: Number(seg.end.toFixed(3)),
+      speaker: "teacher" as const,
+      label: `مقطع ${index + 1}`,
+    }));
   ctx.close();
-  return { starts: starts.map((s) => parseFloat(s.toFixed(2))), duration: audio.duration };
+  return { segments, duration: audio.duration };
 }
 
 const TimingsRecorder = () => {
   const [surahNum, setSurahNum] = useState(1);
   const [teacher, setTeacher] = useState<number[]>([]);
   const [kids, setKids] = useState<number[]>([]);
+  const [segments, setSegments] = useState<AudioSegment[]>([]);
   const [kidsStart, setKidsStart] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
@@ -101,9 +105,10 @@ const TimingsRecorder = () => {
     if (saved) {
       setTeacher(saved.teacher || []);
       setKids(saved.kids || []);
+      setSegments(saved.segments || []);
       setKidsStart(saved.kidsStart ?? null);
     } else {
-      setTeacher([]); setKids([]); setKidsStart(null);
+      setTeacher([]); setKids([]); setSegments([]); setKidsStart(null);
     }
   }, [surahNum]);
 
@@ -113,12 +118,16 @@ const TimingsRecorder = () => {
   };
 
   const resetAll = () => {
-    setTeacher([]); setKids([]); setKidsStart(null);
+    setTeacher([]); setKids([]); setSegments([]); setKidsStart(null);
     const a = audioRef.current; if (a) { a.pause(); a.currentTime = 0; }
   };
 
   const markAyah = () => {
     const t = parseFloat(current.toFixed(2));
+    setSegments((items) => {
+      const next = items.map((seg, index) => index === items.length - 1 && seg.end <= t ? { ...seg, end: t } : seg);
+      return [...next, { id: `${Date.now()}`, start: t, end: Math.min(duration || t + 2, t + 2), speaker: inKidsSection ? "kids" : "teacher", label: `مقطع ${next.length + 1}` }];
+    });
     if (inKidsSection) setKids(k => [...k, t]);
     else setTeacher(arr => [...arr, t]);
   };
@@ -126,7 +135,8 @@ const TimingsRecorder = () => {
   const markKidsStart = () => setKidsStart(parseFloat(current.toFixed(2)));
 
   const popLast = () => {
-    if (inKidsSection && kids.length > 0) setKids(k => k.slice(0, -1));
+    if (segments.length > 0) setSegments((items) => items.slice(0, -1));
+    else if (inKidsSection && kids.length > 0) setKids(k => k.slice(0, -1));
     else if (teacher.length > 0) setTeacher(arr => arr.slice(0, -1));
   };
 
@@ -135,39 +145,33 @@ const TimingsRecorder = () => {
     const a = audioRef.current; if (!a) return;
     setDetecting(true);
     try {
-      const { starts } = await detectAyahStarts(a.src, 99, silenceThreshold, minSilenceMs);
-      const next = starts.find((s) => s > current + 0.15);
-      if (next !== undefined) a.currentTime = next;
+      const { segments: detected } = await detectAudioSegments(a.src, silenceThreshold, minSilenceMs);
+      const next = detected.find((seg) => seg.start > current + 0.15);
+      if (next) a.currentTime = next.start;
     } finally { setDetecting(false); }
   };
 
-  // Auto-detect ALL ayahs
-  const autoDetectTeacher = async () => {
+  // Auto-detect free audio chunks without forcing ayah count
+  const autoDetectSegments = async () => {
     const a = audioRef.current; if (!a) return;
-    const expected = kidsStart !== null ? ayahCount : ayahCount;
     setDetecting(true);
     try {
-      const { starts } = await detectAyahStarts(a.src, expected, silenceThreshold, minSilenceMs);
-      // If there's a kids section, restrict to teacher portion
-      const teacherStarts = kidsStart !== null ? starts.filter((s) => s < kidsStart) : starts;
-      setTeacher(teacherStarts.slice(0, ayahCount));
+      const { segments: detected } = await detectAudioSegments(a.src, silenceThreshold, minSilenceMs);
+      setSegments(detected);
+      setTeacher(detected.filter((seg) => seg.speaker === "teacher").map((seg) => seg.start));
+      setKids(detected.filter((seg) => seg.speaker === "kids").map((seg) => seg.start));
     } finally { setDetecting(false); }
   };
 
-  const autoDetectKids = async () => {
-    const a = audioRef.current; if (!a || kidsStart === null) return;
-    setDetecting(true);
-    try {
-      const { starts } = await detectAyahStarts(a.src, ayahCount + 5, silenceThreshold, minSilenceMs);
-      // keep starts within kids section, ensure first is at/near kidsStart
-      const kidsStarts = starts.filter((s) => s >= kidsStart - 0.1);
-      setKids(kidsStarts.slice(0, ayahCount));
-    } finally { setDetecting(false); }
+  const deleteSegment = (id: string) => {
+    setSegments((items) => items.filter((seg) => seg.id !== id));
   };
 
   const applyAndSave = () => {
-    const payload: SurahTimings = { teacher };
-    if (kidsStart !== null) { payload.kidsStart = kidsStart; payload.kids = kids; }
+    const normalizedTeacher = segments.length > 0 ? segments.filter((seg) => seg.speaker === "teacher").map((seg) => seg.start) : teacher;
+    const normalizedKids = segments.length > 0 ? segments.filter((seg) => seg.speaker === "kids").map((seg) => seg.start) : kids;
+    const payload: SurahTimings = { teacher: normalizedTeacher, segments };
+    if (kidsStart !== null || normalizedKids.length > 0) { payload.kidsStart = kidsStart ?? normalizedKids[0]; payload.kids = normalizedKids; }
     saveSurahTimings(surahNum, payload);
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);
@@ -179,21 +183,32 @@ const TimingsRecorder = () => {
   };
 
   const json = useMemo(() => {
-    const obj: Record<string, unknown> = { teacher };
+    const obj: Record<string, unknown> = { teacher, segments };
     if (kidsStart !== null) { obj.kidsStart = kidsStart; obj.kids = kids; }
     const inner = JSON.stringify(obj, null, 2)
       .split("\n").map((l, i) => i === 0 ? l : "    " + l).join("\n");
     return `  ${surahNum}: ${inner},`;
-  }, [surahNum, teacher, kids, kidsStart]);
+  }, [surahNum, teacher, kids, kidsStart, segments]);
 
   const copy = () => navigator.clipboard.writeText(json);
 
   const seekToAyah = (i: number) => {
-    const list = i < teacher.length ? teacher : kids;
-    const idx = i < teacher.length ? i : i - teacher.length;
-    const t = list[idx];
+    const t = segments[i]?.start ?? (i < teacher.length ? teacher[i] : kids[i - teacher.length]);
     const a = audioRef.current; if (!a || t === undefined) return;
     a.currentTime = t;
+  };
+
+  const playSegment = (seg: AudioSegment) => {
+    const a = audioRef.current; if (!a) return;
+    a.currentTime = seg.start;
+    a.play().catch(() => {});
+    const stop = () => {
+      if (a.currentTime >= seg.end - 0.02) {
+        a.pause();
+        a.removeEventListener("timeupdate", stop);
+      }
+    };
+    a.addEventListener("timeupdate", stop);
   };
 
   const fmt = (s: number) => {
@@ -274,7 +289,7 @@ const TimingsRecorder = () => {
           {/* Auto-detection controls */}
           <div className="rounded-lg bg-violet-50 border border-violet-200 p-3 space-y-2">
             <p className="text-xs font-bold text-violet-900 flex items-center gap-1">
-              <Wand2 className="w-3.5 h-3.5" /> الكشف التلقائي عبر تحليل الصمت
+              <Wand2 className="w-3.5 h-3.5" /> تقسيم ذكي AI للمقاطع الصوتية
             </p>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <label className="block">
@@ -290,20 +305,13 @@ const TimingsRecorder = () => {
                   className="w-full" dir="ltr" />
               </label>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <button
-                onClick={autoDetectTeacher}
+                onClick={autoDetectSegments}
                 disabled={detecting || !duration}
                 className="p-2 rounded-lg bg-violet-600 text-white text-sm font-bold disabled:opacity-40 flex items-center justify-center gap-1"
               >
-                {detecting ? "جارٍ التحليل..." : "🔍 كشف آيات المعلم"}
-              </button>
-              <button
-                onClick={autoDetectKids}
-                disabled={detecting || !duration || kidsStart === null}
-                className="p-2 rounded-lg bg-sky-600 text-white text-sm font-bold disabled:opacity-40"
-              >
-                🔍 كشف آيات الطفل
+                {detecting ? "جارٍ التحليل..." : "🤖 تقسيم الصوت إلى مقاطع"}
               </button>
             </div>
           </div>
@@ -342,7 +350,7 @@ const TimingsRecorder = () => {
           </div>
 
           <p className="text-xs text-muted-foreground text-center">
-            المعلم: {teacher.length} / {ayahCount} • الطفل: {kids.length} / {ayahCount}
+            المقاطع: {segments.length} • المعلم: {teacher.length} • الطفل: {kids.length}
           </p>
         </div>
 
@@ -362,33 +370,29 @@ const TimingsRecorder = () => {
           </button>
         </div>
 
-        {/* Marked list */}
-        {(teacher.length > 0 || kids.length > 0) && (
+        {/* Detected segments */}
+        {segments.length > 0 && (
           <div className="bg-card border border-border rounded-xl p-4">
-            <p className="font-bold mb-2 text-sm">العلامات المسجلة (انقر للقفز):</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-xs text-amber-700 font-bold mb-1">👨‍🏫 المعلم</p>
-                <div className="flex flex-wrap gap-1">
-                  {teacher.map((t, i) => (
-                    <button key={i} onClick={() => seekToAyah(i)}
-                      className="px-2 py-1 rounded text-xs bg-amber-100 text-amber-900 font-mono">
-                      {i + 1}: {t}s
-                    </button>
-                  ))}
+            <p className="font-bold mb-2 text-sm">المقاطع المحفوظة إلى /calibrate:</p>
+            <div className="space-y-2">
+              {segments.map((seg, i) => (
+                <div key={seg.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded-lg bg-secondary/70 p-2">
+                  <button onClick={() => playSegment(seg)} className="text-right text-xs font-bold">
+                    ▶️ {seg.label || `مقطع ${i + 1}`} · {fmt(seg.start)} → {fmt(seg.end)}
+                  </button>
+                  <select
+                    value={seg.speaker}
+                    onChange={(e) => setSegments((items) => items.map((item) => item.id === seg.id ? { ...item, speaker: e.target.value as AudioSegment["speaker"] } : item))}
+                    className="rounded-md border border-border bg-background px-1 py-1 text-xs"
+                  >
+                    <option value="teacher">معلم</option>
+                    <option value="kids">طفل</option>
+                  </select>
+                  <button onClick={() => deleteSegment(seg.id)} className="rounded-md bg-destructive/10 p-2 text-destructive" aria-label="حذف المقطع">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
-              </div>
-              <div>
-                <p className="text-xs text-sky-700 font-bold mb-1">👦 الطفل</p>
-                <div className="flex flex-wrap gap-1">
-                  {kids.map((t, i) => (
-                    <button key={i} onClick={() => seekToAyah(teacher.length + i)}
-                      className="px-2 py-1 rounded text-xs bg-sky-100 text-sky-900 font-mono">
-                      {i + 1}: {t}s
-                    </button>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         )}
@@ -409,10 +413,5 @@ const TimingsRecorder = () => {
     </div>
   );
 };
-
-// small inline trash icon to avoid extra import
-const Trash2Icon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
-);
 
 export default TimingsRecorder;

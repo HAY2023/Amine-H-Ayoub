@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Copy, Link2, Pause, Play, RotateCcw, Save, Trash2, ZoomIn, ZoomOut } from "lucide-react";
 import { AyahBox, AYAH_COORDINATES, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
+import { AudioSegment, getSavedTimings } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { toast } from "@/hooks/use-toast";
 
@@ -10,6 +11,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 const step = 10;
 
 type Speaker = "teacher" | "kids";
+type PageSegment = AudioSegment & { surah: number };
 
 const speakerColors: Record<Speaker, { fill: string; stroke: string; label: string }> = {
   teacher: { fill: "rgba(250,204,21,0.45)", stroke: "rgba(250,204,21,0.85)", label: "👨‍🏫 معلم" },
@@ -38,6 +40,11 @@ const AyahCalibration = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<number | null>(null);
   const selected = boxes[selectedIndex];
+  const pageSegments = useMemo<PageSegment[]>(() => {
+    const saved = getSavedTimings();
+    const surahs = Array.from(new Set(boxes.map((box) => box.surah)));
+    return surahs.flatMap((surah) => (saved[surah]?.segments || []).map((segment) => ({ ...segment, surah })));
+  }, [boxes, pageSrc]);
 
   const loadPage = (src: string) => {
     setPageSrc(src);
@@ -174,6 +181,20 @@ const AyahCalibration = () => {
     toast({ title: "أُلغي الربط الصوتي" });
   };
 
+  const bindSegmentToSelected = (segment: PageSegment) => {
+    if (!selected) return;
+    updateSelected({ audioStart: segment.start, audioEnd: segment.end, speaker: segment.speaker });
+    setSpeaker(segment.speaker);
+    ensureAudioLoaded(segment.surah, () => {
+      const a = audioRef.current;
+      if (!a) return;
+      a.currentTime = segment.start;
+      stopAtRef.current = segment.end;
+      a.play().catch(() => {});
+    });
+    toast({ title: "تم ربط المقطع", description: `المقطع أصبح مربوطاً بالآية ${selected.surah}:${selected.ayah}` });
+  };
+
   // === Seek by tapping the timeline ===
   const onSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const a = audioRef.current; if (!a) return;
@@ -205,6 +226,13 @@ const AyahCalibration = () => {
 
   // Stop audio when page changes
   useEffect(() => { stopAudio(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [pageSrc]);
+
+  // Auto-save every calibration edit so highlights never disappear after navigation.
+  useEffect(() => {
+    if (boxes.length === 0) return;
+    const id = window.setTimeout(() => savePageAyahBoxes(pageSrc, boxes), 250);
+    return () => window.clearTimeout(id);
+  }, [boxes, pageSrc]);
 
   const saveAll = () => {
     savePageAyahBoxes(pageSrc, boxes);
@@ -316,6 +344,24 @@ const AyahCalibration = () => {
                 </label>
               </div>
             </div>
+
+            {pageSegments.length > 0 && (
+              <div className="rounded-lg border border-border bg-secondary/50 p-2 space-y-2">
+                <div className="text-xs font-bold">🎧 مقاطع /timings المحفوظة</div>
+                <div className="max-h-40 space-y-1 overflow-y-auto">
+                  {pageSegments.map((segment, index) => (
+                    <button
+                      key={`${segment.surah}-${segment.id}`}
+                      onClick={() => bindSegmentToSelected(segment)}
+                      className="flex w-full items-center justify-between gap-2 rounded-md bg-card p-2 text-xs font-bold"
+                    >
+                      <span>{segment.speaker === "teacher" ? "👨‍🏫" : "👦"} سورة {segment.surah} · {segment.label || `مقطع ${index + 1}`}</span>
+                      <span className="font-mono text-muted-foreground">{fmtTime(segment.start)} → {fmtTime(segment.end)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Binding controls */}
             <div className="rounded-lg border-2 border-emerald-500/40 bg-emerald-500/5 p-2 space-y-2">
