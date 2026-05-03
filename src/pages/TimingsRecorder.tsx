@@ -19,63 +19,81 @@ const percentile = (values: number[], p: number) => {
 
 async function detectAudioSegments(
   audioUrl: string,
+  targetCount = 0,
   silenceThreshold = 0.015,
   minSilenceMs = 350,
 ): Promise<{ segments: AudioSegment[]; duration: number }> {
   const res = await fetch(audioUrl);
   const buf = await res.arrayBuffer();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const Ctx: typeof AudioContext = (window.AudioContext || (window as any).webkitAudioContext);
-  const ctx = new Ctx();
+  const Ctx: typeof (window.AudioContext || (window as any).webkitAudioContext);
+  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
   const audio = await ctx.decodeAudioData(buf);
   const data = audio.getChannelData(0);
   const sr = audio.sampleRate;
-  const win = Math.floor(sr * 0.02); // 20ms window RMS
-  const minSilenceWindows = Math.max(1, Math.floor((minSilenceMs / 1000) * (sr / win)));
-
+  
+  // 1. Calculate RMS energy in 20ms windows
+  const winSize = Math.floor(sr * 0.02);
   const rms: number[] = [];
-  for (let i = 0; i + win <= data.length; i += win) {
+  for (let i = 0; i + winSize <= data.length; i += winSize) {
     let sum = 0;
-    for (let j = 0; j < win; j++) {
+    for (let j = 0; j < winSize; j++) {
       const v = data[i + j];
       sum += v * v;
     }
-    rms.push(Math.sqrt(sum / win));
+    rms.push(Math.sqrt(sum / winSize));
   }
 
-  const noiseFloor = percentile(rms, 0.18);
-  const speechPeak = percentile(rms, 0.92);
-  const adaptiveThreshold = Math.max(silenceThreshold, noiseFloor + (speechPeak - noiseFloor) * 0.18);
-  const active = rms.map((v) => v >= adaptiveThreshold);
+  // 2. Adaptive thresholding
+  const noiseFloor = percentile(rms, 0.15);
+  const speechPeak = percentile(rms, 0.90);
+  const threshold = Math.max(silenceThreshold, noiseFloor + (speechPeak - noiseFloor) * 0.15);
   
-  const rawSegments: { start: number; end: number }[] = [];
-  let startWindow = -1;
-  let silentRun = 0;
+  // 3. Find raw activity (with small 5-window smoothing)
+  const active = rms.map((v, i) => {
+    const neighbors = rms.slice(Math.max(0, i - 2), i + 3);
+    const avg = neighbors.reduce((a, b) => a + b, 0) / neighbors.length;
+    return avg >= threshold;
+  });
+
+  // 4. Find all silence gaps (runs of 'false')
+  const gaps: { start: number; end: number; duration: number }[] = [];
+  let gapStart = -1;
   for (let i = 0; i < active.length; i++) {
-    if (active[i]) {
-      if (startWindow === -1) startWindow = i;
-      silentRun = 0;
-    } else if (startWindow !== -1) {
-      silentRun++;
-      if (silentRun >= minSilenceWindows) {
-        rawSegments.push({ start: (startWindow * win) / sr, end: ((i - silentRun + 1) * win) / sr });
-        startWindow = -1;
-        silentRun = 0;
+    if (!active[i]) {
+      if (gapStart === -1) gapStart = i;
+    } else if (gapStart !== -1) {
+      const duration = ((i - gapStart) * winSize) / sr;
+      if (duration * 1000 >= minSilenceMs) {
+        gaps.push({ start: (gapStart * winSize) / sr, end: (i * winSize) / sr, duration });
       }
+      gapStart = -1;
     }
   }
-  if (startWindow !== -1) rawSegments.push({ start: (startWindow * win) / sr, end: audio.duration });
 
-  const segments = rawSegments
-    .map((seg) => ({ start: Math.max(0, seg.start - 0.04), end: Math.min(audio.duration, seg.end + 0.08) }))
-    .filter((seg) => seg.end - seg.start >= 0.45)
-    .map((seg, index) => ({
-      id: `${Date.now()}-${index}`,
-      start: Number(seg.start.toFixed(3)),
-      end: Number(seg.end.toFixed(3)),
-      speaker: "teacher" as const,
-      label: `مقطع ${index + 1}`,
-    }));
+  // 5. If targetCount is specified, keep only the longest gaps to define boundaries
+  let finalBoundaries: number[] = [];
+  if (targetCount > 1 && gaps.length >= targetCount - 1) {
+    // Sort gaps by duration descending and take the top (targetCount - 1)
+    const topGaps = [...gaps].sort((a, b) => b.duration - a.duration).slice(0, targetCount - 1);
+    // Sort them back chronologically
+    finalBoundaries = topGaps.map(g => g.end).sort((a, b) => a - b);
+  } else {
+    // Just use all detected gaps as boundaries
+    finalBoundaries = gaps.map(g => g.end);
+  }
+
+  // 6. Create segments based on boundaries
+  const starts = [0, ...finalBoundaries];
+  const ends = [...finalBoundaries, audio.duration];
+  
+  const segments: AudioSegment[] = starts.map((s, i) => ({
+    id: `${Date.now()}-${i}`,
+    start: Number(s.toFixed(3)),
+    end: Number(ends[i].toFixed(3)),
+    speaker: "teacher",
+    label: `آية ${i + 1}`,
+  }));
 
   ctx.close();
   return { segments, duration: audio.duration };
@@ -150,7 +168,7 @@ const TimingsRecorder = () => {
     const a = audioRef.current; if (!a) return;
     setDetecting(true);
     try {
-      const { segments: detected } = await detectAudioSegments(a.src, silenceThreshold, minSilenceMs);
+      const { segments: detected } = await detectAudioSegments(a.src, 0, silenceThreshold, minSilenceMs);
       const next = detected.find((seg) => seg.start > current + 0.15);
       if (next) a.currentTime = next.start;
     } finally { setDetecting(false); }
@@ -160,7 +178,7 @@ const TimingsRecorder = () => {
     const a = audioRef.current; if (!a) return;
     setDetecting(true);
     try {
-      const { segments: detected } = await detectAudioSegments(a.src, silenceThreshold, minSilenceMs);
+      const { segments: detected } = await detectAudioSegments(a.src, AYAH_COUNTS[surahNum] || 0, silenceThreshold, minSilenceMs);
       const surahName = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
       const labeled = detected.map((seg, index) => ({ ...seg, label: `${surahName} - آية ${index + 1}` }));
       setSegments(labeled);
