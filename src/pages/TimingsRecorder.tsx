@@ -75,7 +75,7 @@ async function detectAudioSegments(
       start: Number(seg.start.toFixed(3)),
       end: Number(seg.end.toFixed(3)),
       speaker: "teacher" as const,
-      label: `مقطع ${index + 1}`,
+      label: `آية ${index + 1}`,
     }));
   ctx.close();
   return { segments, duration: audio.duration };
@@ -157,9 +157,11 @@ const TimingsRecorder = () => {
     setDetecting(true);
     try {
       const { segments: detected } = await detectAudioSegments(a.src, silenceThreshold, minSilenceMs);
-      setSegments(detected);
-      setTeacher(detected.filter((seg) => seg.speaker === "teacher").map((seg) => seg.start));
-      setKids(detected.filter((seg) => seg.speaker === "kids").map((seg) => seg.start));
+      const surahName = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
+      const labeled = detected.map((seg, index) => ({ ...seg, label: `${surahName} - آية ${index + 1}` }));
+      setSegments(labeled);
+      setTeacher(labeled.filter((seg) => seg.speaker === "teacher").map((seg) => seg.start));
+      setKids(labeled.filter((seg) => seg.speaker === "kids").map((seg) => seg.start));
     } finally { setDetecting(false); }
   };
 
