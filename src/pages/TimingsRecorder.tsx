@@ -124,6 +124,10 @@ const TimingsRecorder = () => {
 
   const markAyah = () => {
     const t = parseFloat(current.toFixed(2));
+    setSegments((items) => {
+      const next = items.map((seg, index) => index === items.length - 1 && seg.end <= t ? { ...seg, end: t } : seg);
+      return [...next, { id: `${Date.now()}`, start: t, end: Math.min(duration || t + 2, t + 2), speaker: inKidsSection ? "kids" : "teacher", label: `مقطع ${next.length + 1}` }];
+    });
     if (inKidsSection) setKids(k => [...k, t]);
     else setTeacher(arr => [...arr, t]);
   };
@@ -285,7 +289,7 @@ const TimingsRecorder = () => {
           {/* Auto-detection controls */}
           <div className="rounded-lg bg-violet-50 border border-violet-200 p-3 space-y-2">
             <p className="text-xs font-bold text-violet-900 flex items-center gap-1">
-              <Wand2 className="w-3.5 h-3.5" /> الكشف التلقائي عبر تحليل الصمت
+              <Wand2 className="w-3.5 h-3.5" /> تقسيم ذكي AI للمقاطع الصوتية
             </p>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <label className="block">
@@ -301,20 +305,13 @@ const TimingsRecorder = () => {
                   className="w-full" dir="ltr" />
               </label>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <button
-                onClick={autoDetectTeacher}
+                onClick={autoDetectSegments}
                 disabled={detecting || !duration}
                 className="p-2 rounded-lg bg-violet-600 text-white text-sm font-bold disabled:opacity-40 flex items-center justify-center gap-1"
               >
-                {detecting ? "جارٍ التحليل..." : "🔍 كشف آيات المعلم"}
-              </button>
-              <button
-                onClick={autoDetectKids}
-                disabled={detecting || !duration || kidsStart === null}
-                className="p-2 rounded-lg bg-sky-600 text-white text-sm font-bold disabled:opacity-40"
-              >
-                🔍 كشف آيات الطفل
+                {detecting ? "جارٍ التحليل..." : "🤖 تقسيم الصوت إلى مقاطع"}
               </button>
             </div>
           </div>
@@ -353,7 +350,7 @@ const TimingsRecorder = () => {
           </div>
 
           <p className="text-xs text-muted-foreground text-center">
-            المعلم: {teacher.length} / {ayahCount} • الطفل: {kids.length} / {ayahCount}
+            المقاطع: {segments.length} • المعلم: {teacher.length} • الطفل: {kids.length}
           </p>
         </div>
 
