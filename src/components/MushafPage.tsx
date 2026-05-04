@@ -72,12 +72,15 @@ const MushafPage = ({ onBack }: Props) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentAyah, setCurrentAyah] = useState(0);
   const [currentSpeaker, setCurrentSpeaker] = useState<Speaker>("teacher");
+  const [playMode, setPlayMode] = useState<PlayMode>("both"); // teacher, kids, or both (correction)
   const [continuousPlay, setContinuousPlay] = useState(true);
   const [repeatCount, setRepeatCount] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
   const lastSavedTimeRef = useRef(0);
   const stopAtRef = useRef<number | null>(null); // stop playback when reaching this time
   const currentRepeatRef = useRef(0);
+  // In "both" mode, track whether we just played teacher (next is kids) or kids (next is advance)
+  const bothPhaseRef = useRef<"teacher" | "kids">("teacher");
 
   useEffect(() => {
     const r = () => setIsDesktop(window.innerWidth >= 1024);
@@ -191,7 +194,8 @@ const MushafPage = ({ onBack }: Props) => {
 
   // ---- Ayah-by-ayah playback ----
   // If a calibrated box with audioStart/audioEnd is supplied, use it directly (most accurate).
-  const playAyah = useCallback((surah: SurahAudio, ayahNum: number, boundSegment?: { audioStart?: number; audioEnd?: number; speaker?: Speaker }) => {
+  // forceSpeaker: override speaker for this particular play call (used in "both" mode)
+  const playAyah = useCallback((surah: SurahAudio, ayahNum: number, boundSegment?: { audioStart?: number; audioEnd?: number; speaker?: Speaker }, forceSpeaker?: Speaker) => {
     const a = audioRef.current; if (!a) return;
     const sameSrc = a.src && a.src.endsWith(surah.src.split("/").pop() || surah.src);
 
@@ -203,7 +207,7 @@ const MushafPage = ({ onBack }: Props) => {
       const dur = a.duration || 0;
       // Bound segment from /calibrate takes priority
       if (boundSegment && typeof boundSegment.audioStart === "number") {
-        const sp: Speaker = boundSegment.speaker ?? "teacher";
+        const sp: Speaker = forceSpeaker ?? boundSegment.speaker ?? "teacher";
         setCurrentSpeaker(sp);
         const startT = boundSegment.audioStart;
         const endT = typeof boundSegment.audioEnd === "number" && boundSegment.audioEnd > startT
@@ -214,9 +218,11 @@ const MushafPage = ({ onBack }: Props) => {
         a.play().catch(() => {});
         return;
       }
-      setCurrentSpeaker("teacher");
-      const startT = getAyahStartTime(surah.number, ayahNum, dur, "teacher");
-      const nextT = computeAyahEnd(surah, ayahNum, "teacher", dur);
+      // Determine which speaker to use
+      const sp: Speaker = forceSpeaker ?? "teacher";
+      setCurrentSpeaker(sp);
+      const startT = getAyahStartTime(surah.number, ayahNum, dur, sp);
+      const nextT = computeAyahEnd(surah, ayahNum, sp, dur);
       stopAtRef.current = nextT;
       a.currentTime = startT;
       a.play().catch(() => {});
@@ -275,15 +281,59 @@ const MushafPage = ({ onBack }: Props) => {
 
   const handleAyahSegmentEnd = () => {
     stopAtRef.current = null;
+
+    // In "both" mode (تصحيح): alternate teacher → kids for the same ayah
+    if (playMode === "both" && activeSurah && hasKidsSection(activeSurah.number)) {
+      if (bothPhaseRef.current === "teacher") {
+        // Teacher just finished → now play kids for same ayah
+        bothPhaseRef.current = "kids";
+        playAyah(activeSurah, currentAyah, undefined, "kids");
+        return;
+      } else {
+        // Kids just finished → handle repeat, then advance
+        bothPhaseRef.current = "teacher";
+        if (currentRepeatRef.current < repeatCount) {
+          currentRepeatRef.current++;
+          playAyah(activeSurah, currentAyah, undefined, "teacher");
+          return;
+        }
+        // Advance to next ayah
+        currentRepeatRef.current = 0;
+        if (continuousPlay) {
+          if (currentAyah < activeSurah.ayahCount) {
+            setSelectedAyah(currentAyah + 1);
+            playAyah(activeSurah, currentAyah + 1, undefined, "teacher");
+          } else {
+            const page = pages[currentPage];
+            const surahIdx = page.surahs.findIndex(s => s.number === activeSurah.number);
+            if (surahIdx >= 0 && surahIdx < page.surahs.length - 1) {
+              const nextSurah = page.surahs[surahIdx + 1];
+              setSelectedSurahIdx(surahIdx + 1);
+              setSelectedAyah(1);
+              playAyah(nextSurah, 1, undefined, "teacher");
+            } else {
+              setIsPlaying(false);
+            }
+          }
+        } else {
+          setIsPlaying(false);
+        }
+        return;
+      }
+    }
+
+    // Single speaker modes (teacher only or kids only)
+    const speakerForMode: Speaker = playMode === "kids" ? "kids" : "teacher";
+
     if (currentRepeatRef.current < repeatCount) {
       currentRepeatRef.current++;
-      if (activeSurah) playAyah(activeSurah, currentAyah);
+      if (activeSurah) playAyah(activeSurah, currentAyah, undefined, speakerForMode);
     } else {
       currentRepeatRef.current = 0;
       if (continuousPlay && activeSurah) {
         if (currentAyah < activeSurah.ayahCount) {
           setSelectedAyah(currentAyah + 1);
-          playAyah(activeSurah, currentAyah + 1);
+          playAyah(activeSurah, currentAyah + 1, undefined, speakerForMode);
         } else {
           const page = pages[currentPage];
           const surahIdx = page.surahs.findIndex(s => s.number === activeSurah.number);
@@ -291,7 +341,7 @@ const MushafPage = ({ onBack }: Props) => {
              const nextSurah = page.surahs[surahIdx + 1];
              setSelectedSurahIdx(surahIdx + 1);
              setSelectedAyah(1);
-             playAyah(nextSurah, 1);
+             playAyah(nextSurah, 1, undefined, speakerForMode);
           } else {
              setIsPlaying(false);
           }
@@ -404,7 +454,9 @@ const MushafPage = ({ onBack }: Props) => {
                         setSelectedSurahIdx(page.surahs.indexOf(surah));
                         setSelectedAyah(box.ayah);
                         currentRepeatRef.current = 0;
-                        playAyah(surah, box.ayah, { audioStart: box.audioStart, audioEnd: box.audioEnd, speaker: box.speaker });
+                        bothPhaseRef.current = "teacher";
+                        const startSpeaker: Speaker = playMode === "kids" ? "kids" : "teacher";
+                        playAyah(surah, box.ayah, { audioStart: box.audioStart, audioEnd: box.audioEnd, speaker: startSpeaker });
                       }}
                       className="absolute rounded-md outline-none transition-colors hover:bg-accent/10 active:bg-accent/20"
                       style={{
@@ -511,13 +563,39 @@ const MushafPage = ({ onBack }: Props) => {
               </div>
             </div>
 
-            {/* Playback Settings */}
-            <div className="flex flex-col gap-3 mb-4 bg-white/40 p-3 rounded-xl border border-white/60">
+            {/* Play mode selector */}
+            <div className="mb-4 bg-white/40 p-3 rounded-xl border border-white/60">
+              <p className="text-xs font-bold mb-2 text-muted-foreground">وضع التشغيل</p>
+              <div className="flex gap-1.5 mb-3">
+                {([
+                  { mode: "both" as PlayMode, label: "🎧 تصحيح", desc: "معلم ثم طفل" },
+                  { mode: "teacher" as PlayMode, label: "🎙️ معلم", desc: "صوت المعلم فقط" },
+                  { mode: "kids" as PlayMode, label: "👦 أطفال", desc: "صوت الأطفال فقط" },
+                ]).map(({ mode, label, desc }) => (
+                  <button
+                    key={mode}
+                    onClick={() => { setPlayMode(mode); bothPhaseRef.current = "teacher"; }}
+                    className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all border ${
+                      playMode === mode
+                        ? mode === "both"
+                          ? "bg-gradient-to-br from-amber-400/30 to-sky-400/30 border-amber-400/60 text-foreground shadow"
+                          : mode === "teacher"
+                            ? "bg-amber-400/20 border-amber-400/50 text-amber-800 shadow"
+                            : "bg-sky-400/20 border-sky-400/50 text-sky-800 shadow"
+                        : "bg-white/70 border-border/60 text-foreground/70"
+                    }`}
+                  >
+                    <div>{label}</div>
+                    <div className="text-[10px] font-normal opacity-70 mt-0.5">{desc}</div>
+                  </button>
+                ))}
+              </div>
+
               <label className="flex items-center gap-2 text-sm font-bold cursor-pointer text-foreground/80">
                 <input type="checkbox" checked={continuousPlay} onChange={(e) => setContinuousPlay(e.target.checked)} className="accent-accent w-4 h-4" />
-                تشغيل متواصل للسورة التالية
+                تشغيل متواصل للآية التالية
               </label>
-              <div className="flex items-center gap-2 text-sm font-bold text-foreground/80">
+              <div className="flex items-center gap-2 text-sm font-bold text-foreground/80 mt-2">
                 <span>تكرار الآية:</span>
                 <select 
                   value={repeatCount} 
@@ -568,7 +646,9 @@ const MushafPage = ({ onBack }: Props) => {
                     onClick={() => {
                       setSelectedAyah(n);
                       currentRepeatRef.current = 0;
-                      playAyah(selectedSurah, n);
+                      bothPhaseRef.current = "teacher";
+                      const startSpeaker: Speaker = playMode === "kids" ? "kids" : "teacher";
+                      playAyah(selectedSurah, n, undefined, startSpeaker);
                     }}
                     className={`aspect-square rounded-lg text-sm font-bold transition-all ${
                       selectedAyah === n
