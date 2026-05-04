@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
-import { Play, Pause, RotateCcw, Save, Check, Trash2, Wand2, Volume2, StopCircle } from "lucide-react";
+import { Play, Pause, RotateCcw, Save, Check, Trash2, Wand2, Volume2, StopCircle, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings, AudioSegment } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 
@@ -327,13 +328,27 @@ const TimingsRecorder = () => {
           >
             {savedFlash ? <><Check className="w-5 h-5" /> تم الحفظ ✅</> : <><Save className="w-5 h-5" /> حفظ</>}
           </button>
-          <button
+           <button
             onClick={clearSaved}
             className="p-3 rounded-xl bg-red-950/50 border border-red-500/30 text-red-400 font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
           >
             <Trash2 className="w-5 h-5" /> حذف الكل
           </button>
         </div>
+
+        {/* Link to calibrate */}
+        {segments.length > 0 && (
+          <Link
+            to="/calibrate"
+            className="block w-full p-3 rounded-xl bg-gradient-to-r from-violet-600/20 to-amber-600/20 border border-violet-500/30 text-center font-bold text-sm text-violet-300 hover:text-white hover:border-violet-400 transition-all active:scale-[0.98]"
+          >
+            <div className="flex items-center justify-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              <span>الانتقال لصفحة المعايرة (ربط الصوت بتظليل الآيات)</span>
+            </div>
+            <p className="text-xs text-violet-400/70 mt-1">بعد الحفظ، اذهب لصفحة /calibrate لربط المقاطع بالتظليل</p>
+          </Link>
+        )}
 
         {/* Segments list */}
         {segments.length > 0 && (

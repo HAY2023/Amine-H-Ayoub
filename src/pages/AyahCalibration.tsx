@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Pause, Play, Plus, RotateCcw, Save, Trash2, ZoomIn, ZoomOut, Link2, Copy } from "lucide-react";
 import { AyahBox, AYAH_COORDINATES, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
-import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
+import { getSavedTimings, getSurahTimings, AudioSegment } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { toast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -173,27 +174,66 @@ const AyahCalibration = () => {
   };
 
   const autoLinkFromTimings = () => {
-    const surahTimes: Record<number, number[]> = {};
+    const savedAll = getSavedTimings();
     const surahs = Array.from(new Set(boxes.map(b => b.surah)));
+
+    // Collect segments and teacher timings for each surah
+    const surahSegments: Record<number, AudioSegment[]> = {};
+    const surahTeacherTimes: Record<number, number[]> = {};
     surahs.forEach(s => {
-      const t = getSurahTimings(s);
-      if (t && t.teacher.length > 0) surahTimes[s] = t.teacher;
+      const saved = savedAll[s];
+      if (saved) {
+        // Prefer segments from /timings (they have speaker info)
+        if (saved.segments && saved.segments.length > 0) {
+          surahSegments[s] = saved.segments;
+        }
+        if (saved.teacher && saved.teacher.length > 0) {
+          surahTeacherTimes[s] = saved.teacher;
+        }
+      } else {
+        const t = getSurahTimings(s);
+        if (t && t.teacher.length > 0) surahTeacherTimes[s] = t.teacher;
+      }
     });
 
     setBoxes(current => {
       const usedCounts: Record<number, number> = {};
       return current.map(box => {
-        const times = surahTimes[box.surah];
-        if (!times) return box;
         const count = usedCounts[box.surah] || 0;
         usedCounts[box.surah] = count + 1;
-        if (times[count] !== undefined) {
-          return { ...box, audioStart: times[count], audioEnd: times[count + 1] ?? (times[count] + 3), speaker: "teacher" };
+
+        // Try segments first (most accurate, has speaker info)
+        const segs = surahSegments[box.surah];
+        if (segs) {
+          // Find segments matching this ayah index for teacher
+          const teacherSegs = segs.filter(s => s.speaker === "teacher");
+          const kidsSegs = segs.filter(s => s.speaker === "kids");
+          const seg = teacherSegs[count] || segs[count];
+          if (seg) {
+            return {
+              ...box,
+              audioStart: seg.start,
+              audioEnd: seg.end,
+              speaker: seg.speaker,
+            };
+          }
         }
+
+        // Fallback to teacher timings array
+        const times = surahTeacherTimes[box.surah];
+        if (times && times[count] !== undefined) {
+          return {
+            ...box,
+            audioStart: times[count],
+            audioEnd: times[count + 1] ?? (times[count] + 3),
+            speaker: "teacher",
+          };
+        }
+
         return box;
       });
     });
-    toast({ title: "✅ تم الربط التلقائي" });
+    toast({ title: "✅ تم الربط التلقائي", description: "تم ربط المقاطع المحفوظة من صفحة التقسيم" });
   };
 
   useEffect(() => {
@@ -321,7 +361,8 @@ const AyahCalibration = () => {
               >
                 {boxes.map((box, i) => {
                   const bound = box.audioStart !== undefined && box.audioEnd !== undefined;
-                  return <option key={i} value={i}>{bound ? "🔗 " : "○ "}سورة {box.surah} آية {box.ayah}</option>;
+                  const sp = box.speaker === "kids" ? "👦" : "👨‍🏫";
+                  return <option key={i} value={i}>{bound ? `🔗${sp} ` : "○ "}سورة {box.surah} آية {box.ayah}</option>;
                 })}
               </select>
 
@@ -415,6 +456,13 @@ const AyahCalibration = () => {
               >
                 🪄 ربط تلقائي من /timings
               </button>
+
+              <Link
+                to="/timings"
+                className="w-full p-2 rounded-lg bg-amber-600/20 border border-amber-500/40 text-amber-300 font-bold text-xs flex items-center justify-center gap-1 hover:text-white hover:border-amber-400 transition-all"
+              >
+                🎙️ الانتقال لصفحة التقسيم
+              </Link>
             </div>
 
             {/* Speaker */}
