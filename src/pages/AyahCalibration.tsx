@@ -92,6 +92,15 @@ const AyahCalibration = () => {
     setSelectedIndex(i => Math.max(0, i - 1));
   };
 
+  const applyHeightToAll = () => {
+    if (!selected) return;
+    setBoxes(current => current.map(box => ({
+      ...box,
+      height: selected.height
+    })));
+    toast({ title: "✅ تم توحيد الارتفاع", description: "تم تطبيق الارتفاع المحدد على جميع المربعات" });
+  };
+
   const addNewBox = () => {
     const lastBox = boxes[boxes.length - 1];
     const newBox: AyahBox = {
@@ -488,6 +497,9 @@ const AyahCalibration = () => {
                 <button onClick={() => resize(0, step)} className="rounded-lg bg-slate-700 p-1.5">ارتفاع +</button>
                 <button onClick={() => resize(0, -step)} className="rounded-lg bg-slate-700 p-1.5">ارتفاع -</button>
               </div>
+              <button onClick={applyHeightToAll} className="w-full rounded-lg bg-emerald-600/20 border border-emerald-500/40 p-2 text-emerald-300 font-bold text-xs active:scale-95 transition-transform mt-1">
+                توحيد الارتفاع لجميع الآيات
+              </button>
             </div>
 
             {/* Actions */}
