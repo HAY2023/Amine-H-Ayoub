@@ -193,9 +193,8 @@ const MushafPage = ({ onBack }: Props) => {
   };
 
   // ---- Ayah-by-ayah playback ----
-  // If a calibrated box with audioStart/audioEnd is supplied, use it directly (most accurate).
   // forceSpeaker: override speaker for this particular play call (used in "both" mode)
-  const playAyah = useCallback((surah: SurahAudio, ayahNum: number, boundSegment?: { audioStart?: number; audioEnd?: number; speaker?: Speaker }, forceSpeaker?: Speaker) => {
+  const playAyah = useCallback((surah: SurahAudio, ayahNum: number, forceSpeaker?: Speaker) => {
     const a = audioRef.current; if (!a) return;
     const sameSrc = a.src && a.src.endsWith(surah.src.split("/").pop() || surah.src);
 
@@ -205,22 +204,33 @@ const MushafPage = ({ onBack }: Props) => {
 
     const start = () => {
       const dur = a.duration || 0;
-      // Bound segment from /calibrate takes priority
-      if (boundSegment && typeof boundSegment.audioStart === "number") {
-        const sp: Speaker = forceSpeaker ?? boundSegment.speaker ?? "teacher";
-        setCurrentSpeaker(sp);
-        const startT = boundSegment.audioStart;
-        const endT = typeof boundSegment.audioEnd === "number" && boundSegment.audioEnd > startT
-          ? boundSegment.audioEnd
+      const sp: Speaker = forceSpeaker ?? "teacher";
+      setCurrentSpeaker(sp);
+
+      // Find if this ayah has a manually calibrated box in any page
+      let box = null;
+      for (const p of pages) {
+        const boxes = getPageAyahBoxes(p.src);
+        const found = boxes.find(b => b.surah === surah.number && b.ayah === ayahNum);
+        if (found) { box = found; break; }
+      }
+
+      const hasBound = box && typeof box.audioStart === "number";
+      const boxSpeaker = box?.speaker || "teacher";
+
+      // Use manually bound segment ONLY if its speaker matches what we want to play
+      if (hasBound && box.audioStart !== undefined && boxSpeaker === sp) {
+        const startT = box.audioStart;
+        const endT = typeof box.audioEnd === "number" && box.audioEnd > startT
+          ? box.audioEnd
           : computeAyahEnd(surah, ayahNum, sp, dur);
         stopAtRef.current = endT;
         a.currentTime = startT;
         a.play().catch(() => {});
         return;
       }
-      // Determine which speaker to use
-      const sp: Speaker = forceSpeaker ?? "teacher";
-      setCurrentSpeaker(sp);
+
+      // Default to AI segmented timings from /timings
       const startT = getAyahStartTime(surah.number, ayahNum, dur, sp);
       const nextT = computeAyahEnd(surah, ayahNum, sp, dur);
       stopAtRef.current = nextT;
@@ -287,14 +297,14 @@ const MushafPage = ({ onBack }: Props) => {
       if (bothPhaseRef.current === "teacher") {
         // Teacher just finished → now play kids for same ayah
         bothPhaseRef.current = "kids";
-        playAyah(activeSurah, currentAyah, undefined, "kids");
+        playAyah(activeSurah, currentAyah, "kids");
         return;
       } else {
         // Kids just finished → handle repeat, then advance
         bothPhaseRef.current = "teacher";
         if (currentRepeatRef.current < repeatCount) {
           currentRepeatRef.current++;
-          playAyah(activeSurah, currentAyah, undefined, "teacher");
+          playAyah(activeSurah, currentAyah, "teacher");
           return;
         }
         // Advance to next ayah
@@ -302,7 +312,7 @@ const MushafPage = ({ onBack }: Props) => {
         if (continuousPlay) {
           if (currentAyah < activeSurah.ayahCount) {
             setSelectedAyah(currentAyah + 1);
-            playAyah(activeSurah, currentAyah + 1, undefined, "teacher");
+            playAyah(activeSurah, currentAyah + 1, "teacher");
           } else {
             const page = pages[currentPage];
             const surahIdx = page.surahs.findIndex(s => s.number === activeSurah.number);
@@ -310,7 +320,7 @@ const MushafPage = ({ onBack }: Props) => {
               const nextSurah = page.surahs[surahIdx + 1];
               setSelectedSurahIdx(surahIdx + 1);
               setSelectedAyah(1);
-              playAyah(nextSurah, 1, undefined, "teacher");
+              playAyah(nextSurah, 1, "teacher");
             } else {
               setIsPlaying(false);
             }
@@ -456,7 +466,7 @@ const MushafPage = ({ onBack }: Props) => {
                         currentRepeatRef.current = 0;
                         bothPhaseRef.current = "teacher";
                         const startSpeaker: Speaker = playMode === "kids" ? "kids" : "teacher";
-                        playAyah(surah, box.ayah, { audioStart: box.audioStart, audioEnd: box.audioEnd, speaker: startSpeaker });
+                        playAyah(surah, box.ayah, startSpeaker);
                       }}
                       className="absolute rounded-md outline-none transition-colors hover:bg-accent/10 active:bg-accent/20"
                       style={{
