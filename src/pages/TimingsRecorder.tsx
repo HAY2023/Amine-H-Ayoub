@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
-import { Play, Pause, RotateCcw, Save, Check, Trash2, Wand2, Volume2, StopCircle, ArrowLeft } from "lucide-react";
+import { Play, Pause, RotateCcw, Save, Check, Trash2, Wand2, Volume2, StopCircle, ArrowLeft, Link2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings, AudioSegment } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
@@ -165,6 +165,26 @@ const TimingsRecorder = () => {
       stopAtRef.current = null;
     }
   }, [playingSegId]);
+
+  const mergeWithNext = useCallback((index: number) => {
+    setSegments(items => {
+      if (index >= items.length - 1) return items;
+      const current = items[index];
+      const next = items[index + 1];
+      const merged: AudioSegment = {
+        ...current,
+        end: next.end,
+      };
+      return [
+        ...items.slice(0, index),
+        merged,
+        ...items.slice(index + 2),
+      ];
+    });
+    setPlayingSegId(null);
+    stopAtRef.current = null;
+    const a = audioRef.current; if (a) a.pause();
+  }, []);
 
   const playSegment = useCallback((seg: AudioSegment) => {
     const a = audioRef.current; if (!a) return;
@@ -407,13 +427,25 @@ const TimingsRecorder = () => {
                         <option value="kids">طفل</option>
                       </select>
 
-                      {/* Delete */}
-                      <button
-                        onClick={() => deleteSegment(seg.id)}
-                        className="w-9 h-9 rounded-lg bg-red-950/50 text-red-400 flex items-center justify-center hover:bg-red-600 hover:text-white transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {/* Merge & Delete */}
+                      <div className="flex gap-1">
+                        {i < segments.length - 1 && (
+                          <button
+                            onClick={() => mergeWithNext(i)}
+                            title="دمج مع المقطع التالي"
+                            className="w-9 h-9 rounded-lg bg-blue-950/50 text-blue-400 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors"
+                          >
+                            <Link2 className="h-4 w-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => deleteSegment(seg.id)}
+                          title="حذف المقطع"
+                          className="w-9 h-9 rounded-lg bg-red-950/50 text-red-400 flex items-center justify-center hover:bg-red-600 hover:text-white transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
