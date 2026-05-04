@@ -35,10 +35,18 @@ const AyahCalibration = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [segmentsList, setSegmentsList] = useState<AudioSegment[]>([]);
   const canvasRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<number | null>(null);
   const selected = boxes[selectedIndex];
+
+  useEffect(() => {
+    if (selected) {
+      const all = getSavedTimings();
+      setSegmentsList(all[selected.surah]?.segments || []);
+    }
+  }, [selected?.surah]);
 
   const loadPage = (src: string) => {
     setPageSrc(src);
@@ -272,6 +280,19 @@ const AyahCalibration = () => {
     }
   }, [boxes, pageSrc]);
 
+  // Track latest state for synchronous save on unmount (HMR)
+  const stateRef = useRef({ pageSrc, boxes });
+  useEffect(() => {
+    stateRef.current = { pageSrc, boxes };
+  }, [pageSrc, boxes]);
+
+  useEffect(() => {
+    // Ensure we save right before component unmounts (e.g., during code edit / HMR)
+    return () => {
+      savePageAyahBoxes(stateRef.current.pageSrc, stateRef.current.boxes);
+    };
+  }, []);
+
   // Auto-save every 2 seconds
   useEffect(() => {
     const timer = setTimeout(() => saveAll(true), 2000);
@@ -473,6 +494,47 @@ const AyahCalibration = () => {
                 🎙️ الانتقال لصفحة التقسيم
               </Link>
             </div>
+
+            {/* Segments List for Manual Binding */}
+            {segmentsList.length > 0 && (
+              <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3 space-y-2 max-h-56 overflow-y-auto">
+                <div className="text-[10px] font-bold text-slate-400">مقاطع مسجلة (سورة {selected?.surah})</div>
+                {segmentsList.map((seg, i) => (
+                  <div key={seg.id} className="flex items-center gap-2 bg-slate-700/50 p-2 rounded-lg border border-slate-600/50">
+                    <button
+                      onClick={() => {
+                        ensureAudioLoaded(selected!.surah, () => {
+                          const a = audioRef.current; if (!a) return;
+                          a.currentTime = seg.start;
+                          stopAtRef.current = seg.end;
+                          a.play().catch(() => {});
+                        });
+                      }}
+                      className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white active:scale-95 shrink-0"
+                    >
+                      <Play className="w-3 h-3" />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] text-white font-bold truncate" title={seg.label}>
+                        {seg.speaker === "teacher" ? "👨‍🏫" : "👦"} {seg.label || `مقطع ${i + 1}`}
+                      </div>
+                      <div className="text-[9px] text-slate-400 font-mono">
+                        {fmtTime(seg.start)} → {fmtTime(seg.end)}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        updateSelected({ audioStart: seg.start, audioEnd: seg.end, speaker: seg.speaker });
+                        toast({ title: "✅ تم الربط", description: `تم ربط المقطع: ${seg.label || i + 1}` });
+                      }}
+                      className="px-2 h-8 rounded bg-violet-600 text-white text-[10px] font-bold active:scale-95 shrink-0"
+                    >
+                      ربط 🔗
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Speaker */}
             <div className="grid grid-cols-2 gap-2">
