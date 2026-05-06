@@ -105,8 +105,8 @@ const TimingsRecorder = () => {
   const [detecting, setDetecting] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const [playingSegId, setPlayingSegId] = useState<string | null>(null);
-  const [silenceThreshold, setSilenceThreshold] = useState(0.012);
-  const [minSilenceMs, setMinSilenceMs] = useState(250);
+  const [silenceThreshold, setSilenceThreshold] = useState(0.02);
+  const [minSilenceMs, setMinSilenceMs] = useState(400);
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<{ end: number; id: string } | null>(null);
 
