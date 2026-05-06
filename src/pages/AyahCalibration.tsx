@@ -49,6 +49,8 @@ const AyahCalibration = () => {
   }, [selected?.surah]);
 
   const loadPage = (src: string) => {
+    // Save current page boxes before switching to avoid losing edits
+    savePageAyahBoxes(pageSrc, boxes);
     setPageSrc(src);
     setBoxes(getPageAyahBoxes(src));
     setSelectedIndex(0);
