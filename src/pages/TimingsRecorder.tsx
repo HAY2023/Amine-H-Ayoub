@@ -109,8 +109,42 @@ const TimingsRecorder = () => {
   const [playingSegId, setPlayingSegId] = useState<string | null>(null);
   const [silenceThreshold, setSilenceThreshold] = useState(0.02);
   const [minSilenceMs, setMinSilenceMs] = useState(400);
+  const [aiSplitting, setAiSplitting] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<{ end: number; id: string } | null>(null);
+
+  const aiSplit = async () => {
+    setAiSplitting(true);
+    try {
+      const audioUrl = audioPath(surahNum);
+      const surahName = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
+      const ayahCount = AYAH_COUNTS[surahNum] || 0;
+      toast({ title: "🤖 يحلل AI الصوت...", description: "قد يستغرق 30-90 ثانية" });
+      const { data, error } = await supabase.functions.invoke("ai-split-audio", {
+        body: { audioUrl, surahName, ayahCount },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const aiSegs = (data?.segments || []) as Array<{ ayahIndex: number; speaker: "teacher" | "kids"; start: number; end: number }>;
+      if (aiSegs.length === 0) throw new Error("لم يُرجع AI أي مقاطع");
+      const labeled: AudioSegment[] = aiSegs
+        .sort((a, b) => a.start - b.start)
+        .map((s, i) => ({
+          id: `ai-${Date.now()}-${i}`,
+          start: Number(s.start.toFixed(3)),
+          end: Number(s.end.toFixed(3)),
+          speaker: s.speaker,
+          label: `${surahName} - آية ${s.ayahIndex} (${s.speaker === "teacher" ? "معلم" : "طفل"})`,
+        }));
+      setSegments(labeled);
+      toast({ title: "✅ تم التقسيم بـ AI", description: `${labeled.length} مقطع` });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "خطأ غير معروف";
+      toast({ title: "❌ فشل التقسيم", description: msg, variant: "destructive" });
+    } finally {
+      setAiSplitting(false);
+    }
+  };
 
   useEffect(() => {
     const saved = getSavedTimings()[surahNum];
