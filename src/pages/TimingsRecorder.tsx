@@ -21,8 +21,8 @@ const percentile = (values: number[], p: number) => {
 async function detectAudioSegments(
   audioUrl: string,
   targetCount = 0,
-  silenceThreshold = 0.012,
-  minSilenceMs = 250,
+  silenceThreshold = 0.02,
+  minSilenceMs = 400,
 ): Promise<{ segments: AudioSegment[]; duration: number }> {
   const res = await fetch(audioUrl);
   const buf = await res.arrayBuffer();
@@ -32,65 +32,57 @@ async function detectAudioSegments(
   const data = audio.getChannelData(0);
   const sr = audio.sampleRate;
 
-  // 10ms windows for higher precision
-  const winSize = Math.floor(sr * 0.01);
+  // Proven algorithm from split-tool.html: 50ms windows, fixed threshold, midpoints
+  const winSize = Math.floor(sr * 0.05);
   const rms: number[] = [];
-  for (let i = 0; i + winSize <= data.length; i += winSize) {
+  for (let i = 0; i < data.length; i += winSize) {
     let sum = 0;
-    for (let j = 0; j < winSize; j++) {
+    const end = Math.min(winSize, data.length - i);
+    for (let j = 0; j < end; j++) {
       const v = data[i + j];
       sum += v * v;
     }
-    rms.push(Math.sqrt(sum / winSize));
+    rms.push(Math.sqrt(sum / end));
   }
 
-  // Adaptive thresholding
-  const noiseFloor = percentile(rms, 0.10);
-  const speechPeak = percentile(rms, 0.92);
-  const threshold = Math.max(silenceThreshold, noiseFloor + (speechPeak - noiseFloor) * 0.12);
-
-  // Smoothed activity detection (3-window)
-  const active = rms.map((_, i) => {
-    const neighbors = rms.slice(Math.max(0, i - 1), i + 2);
-    const avg = neighbors.reduce((a, b) => a + b, 0) / neighbors.length;
-    return avg >= threshold;
-  });
-
-  // Find silence gaps
-  const gaps: { start: number; end: number; duration: number; midpoint: number }[] = [];
-  let gapStart = -1;
-  for (let i = 0; i < active.length; i++) {
-    if (!active[i]) {
-      if (gapStart === -1) gapStart = i;
-    } else if (gapStart !== -1) {
-      const durSec = ((i - gapStart) * winSize) / sr;
-      if (durSec * 1000 >= minSilenceMs) {
-        const startSec = (gapStart * winSize) / sr;
-        const endSec = (i * winSize) / sr;
-        gaps.push({ start: startSec, end: endSec, duration: durSec, midpoint: (startSec + endSec) / 2 });
+  // Find silent regions (continuous below threshold)
+  const silentRegions: { start: number; end: number; mid: number; duration: number }[] = [];
+  let inSilence = false;
+  let silenceStart = 0;
+  for (let i = 0; i < rms.length; i++) {
+    if (rms[i] < silenceThreshold) {
+      if (!inSilence) { inSilence = true; silenceStart = i; }
+    } else {
+      if (inSilence) {
+        inSilence = false;
+        const durSec = ((i - silenceStart) * winSize) / sr;
+        if (durSec * 1000 >= minSilenceMs) {
+          const startSec = (silenceStart * winSize) / sr;
+          const endSec = (i * winSize) / sr;
+          silentRegions.push({ start: startSec, end: endSec, mid: (startSec + endSec) / 2, duration: durSec });
+        }
       }
-      gapStart = -1;
     }
   }
 
-  // Use midpoints for cleaner boundaries
-  let finalBoundaries: number[] = [];
-  if (targetCount > 1 && gaps.length >= targetCount - 1) {
-    const topGaps = [...gaps].sort((a, b) => b.duration - a.duration).slice(0, targetCount - 1);
-    finalBoundaries = topGaps.map(g => g.midpoint).sort((a, b) => a - b);
-  } else {
-    finalBoundaries = gaps.map(g => g.midpoint);
+  // Use midpoints as cut boundaries (matches working split-tool.html)
+  let boundaries = silentRegions.map(r => r.mid);
+
+  // If user wants exact count, keep N-1 longest silences
+  if (targetCount > 1 && boundaries.length > targetCount - 1) {
+    const topGaps = [...silentRegions].sort((a, b) => b.duration - a.duration).slice(0, targetCount - 1);
+    boundaries = topGaps.map(g => g.mid).sort((a, b) => a - b);
   }
 
-  const starts = [0, ...finalBoundaries];
-  const ends = [...finalBoundaries, audio.duration];
+  const starts = [0, ...boundaries];
+  const ends = [...boundaries, audio.duration];
 
   const segments: AudioSegment[] = starts.map((s, i) => ({
     id: `${Date.now()}-${i}`,
     start: Number(s.toFixed(3)),
     end: Number(ends[i].toFixed(3)),
-    speaker: "teacher",
-    label: `آية ${i + 1}`,
+    speaker: (i % 2 === 1 ? "teacher" : "kids") as "teacher" | "kids",
+    label: `مقطع ${i + 1}`,
   }));
 
   ctx.close();
