@@ -49,6 +49,8 @@ const AyahCalibration = () => {
   }, [selected?.surah]);
 
   const loadPage = (src: string) => {
+    // Save current page boxes before switching to avoid losing edits
+    savePageAyahBoxes(pageSrc, boxes);
     setPageSrc(src);
     setBoxes(getPageAyahBoxes(src));
     setSelectedIndex(0);
@@ -317,9 +319,13 @@ const AyahCalibration = () => {
       <div className="mx-auto max-w-5xl space-y-3">
         {/* Header */}
         <header className="flex items-center justify-between gap-2 rounded-2xl bg-slate-800/80 backdrop-blur border border-slate-700 p-3">
-          <a href="/" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-700 hover:bg-slate-600 transition-colors">
+          <Link
+            to="/"
+            onClick={() => savePageAyahBoxes(pageSrc, boxes)}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-700 hover:bg-slate-600 transition-colors"
+          >
             <ArrowRight className="h-5 w-5" />
-          </a>
+          </Link>
           <div className="flex-1 text-center">
             <h1 className="font-amiri text-xl font-bold bg-gradient-to-r from-amber-300 to-emerald-300 bg-clip-text text-transparent">
               ضبط تظليل الآيات
