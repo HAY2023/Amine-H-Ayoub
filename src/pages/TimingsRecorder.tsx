@@ -1,8 +1,10 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
-import { Play, Pause, RotateCcw, Save, Check, Trash2, Wand2, Volume2, StopCircle, ArrowLeft, Link2 } from "lucide-react";
+import { Play, Pause, RotateCcw, Save, Check, Trash2, Wand2, Volume2, StopCircle, ArrowLeft, Link2, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings, AudioSegment } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 
@@ -107,8 +109,42 @@ const TimingsRecorder = () => {
   const [playingSegId, setPlayingSegId] = useState<string | null>(null);
   const [silenceThreshold, setSilenceThreshold] = useState(0.02);
   const [minSilenceMs, setMinSilenceMs] = useState(400);
+  const [aiSplitting, setAiSplitting] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<{ end: number; id: string } | null>(null);
+
+  const aiSplit = async () => {
+    setAiSplitting(true);
+    try {
+      const audioUrl = audioPath(surahNum);
+      const surahName = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
+      const ayahCount = AYAH_COUNTS[surahNum] || 0;
+      toast({ title: "🤖 يحلل AI الصوت...", description: "قد يستغرق 30-90 ثانية" });
+      const { data, error } = await supabase.functions.invoke("ai-split-audio", {
+        body: { audioUrl, surahName, ayahCount },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const aiSegs = (data?.segments || []) as Array<{ ayahIndex: number; speaker: "teacher" | "kids"; start: number; end: number }>;
+      if (aiSegs.length === 0) throw new Error("لم يُرجع AI أي مقاطع");
+      const labeled: AudioSegment[] = aiSegs
+        .sort((a, b) => a.start - b.start)
+        .map((s, i) => ({
+          id: `ai-${Date.now()}-${i}`,
+          start: Number(s.start.toFixed(3)),
+          end: Number(s.end.toFixed(3)),
+          speaker: s.speaker,
+          label: `${surahName} - آية ${s.ayahIndex} (${s.speaker === "teacher" ? "معلم" : "طفل"})`,
+        }));
+      setSegments(labeled);
+      toast({ title: "✅ تم التقسيم بـ AI", description: `${labeled.length} مقطع` });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "خطأ غير معروف";
+      toast({ title: "❌ فشل التقسيم", description: msg, variant: "destructive" });
+    } finally {
+      setAiSplitting(false);
+    }
+  };
 
   useEffect(() => {
     const saved = getSavedTimings()[surahNum];
@@ -289,6 +325,24 @@ const TimingsRecorder = () => {
                 <span>{fmt(duration)}</span>
               </div>
             </div>
+          </div>
+
+          {/* AI-powered split (best quality) */}
+          <div className="rounded-xl bg-gradient-to-br from-fuchsia-950/60 to-purple-950/60 border border-fuchsia-500/40 p-4 space-y-3">
+            <p className="text-sm font-bold text-fuchsia-200 flex items-center gap-2">
+              <Sparkles className="w-4 h-4" /> تقسيم بالذكاء الاصطناعي (الأدق)
+            </p>
+            <p className="text-[11px] text-fuchsia-300/80">
+              يستمع AI للتلاوة ويحدد بداية ونهاية كل آية للمعلم والأطفال بدقة عالية. لا يعتمد على الصمت.
+            </p>
+            <button
+              onClick={aiSplit}
+              disabled={aiSplitting || !duration}
+              className="w-full p-3 rounded-xl bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-fuchsia-500/30 active:scale-[0.98] transition-transform"
+            >
+              <Sparkles className="w-5 h-5" />
+              {aiSplitting ? "⏳ يحلل AI الصوت..." : "✨ تقسيم بالذكاء الاصطناعي"}
+            </button>
           </div>
 
           {/* AI Detection */}
