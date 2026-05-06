@@ -327,6 +327,24 @@ const TimingsRecorder = () => {
             </div>
           </div>
 
+          {/* AI-powered split (best quality) */}
+          <div className="rounded-xl bg-gradient-to-br from-fuchsia-950/60 to-purple-950/60 border border-fuchsia-500/40 p-4 space-y-3">
+            <p className="text-sm font-bold text-fuchsia-200 flex items-center gap-2">
+              <Sparkles className="w-4 h-4" /> تقسيم بالذكاء الاصطناعي (الأدق)
+            </p>
+            <p className="text-[11px] text-fuchsia-300/80">
+              يستمع AI للتلاوة ويحدد بداية ونهاية كل آية للمعلم والأطفال بدقة عالية. لا يعتمد على الصمت.
+            </p>
+            <button
+              onClick={aiSplit}
+              disabled={aiSplitting || !duration}
+              className="w-full p-3 rounded-xl bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-fuchsia-500/30 active:scale-[0.98] transition-transform"
+            >
+              <Sparkles className="w-5 h-5" />
+              {aiSplitting ? "⏳ يحلل AI الصوت..." : "✨ تقسيم بالذكاء الاصطناعي"}
+            </button>
+          </div>
+
           {/* AI Detection */}
           <div className="rounded-xl bg-violet-950/50 border border-violet-500/30 p-4 space-y-3">
             <p className="text-sm font-bold text-violet-300 flex items-center gap-2">
