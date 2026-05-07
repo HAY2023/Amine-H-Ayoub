@@ -464,6 +464,68 @@ const TimingsRecorder = () => {
           </button>
         </div>
 
+        {/* Verify accuracy panel */}
+        {segments.length > 0 && (
+          <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-4">
+            <button
+              onClick={() => setShowVerify(v => !v)}
+              className="w-full flex items-center justify-between text-sm font-bold text-emerald-300"
+            >
+              <span>🔍 تحقق من الدقة</span>
+              <span className="text-xs text-slate-400">{showVerify ? "▼" : "◀"}</span>
+            </button>
+            {showVerify && (() => {
+              const durs = segments.map(s => s.end - s.start);
+              const avg = durs.reduce((a, b) => a + b, 0) / durs.length;
+              const minD = Math.min(...durs);
+              const maxD = Math.max(...durs);
+              const teacherCount = segments.filter(s => s.speaker === "teacher").length;
+              const kidsCount = segments.filter(s => s.speaker === "kids").length;
+              const expected = (AYAH_COUNTS[surahNum] || 0) * 2;
+              const gaps = segments.slice(1).map((s, i) => s.start - segments[i].end);
+              const overlaps = gaps.filter(g => g < -0.05).length;
+              const bigGaps = gaps.filter(g => g > 1.5).length;
+              const tooShort = durs.filter(d => d < 0.5).length;
+              return (
+                <div className="mt-3 space-y-2 text-xs" dir="rtl">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-slate-700/50 rounded-lg p-2"><span className="text-slate-400">مقاطع: </span><b className="text-white">{segments.length}</b><span className="text-slate-500"> / متوقع {expected || "—"}</span></div>
+                    <div className="bg-slate-700/50 rounded-lg p-2"><span className="text-slate-400">معلم/طفل: </span><b className="text-amber-300">{teacherCount}</b>/<b className="text-sky-300">{kidsCount}</b></div>
+                    <div className="bg-slate-700/50 rounded-lg p-2"><span className="text-slate-400">متوسط: </span><b className="text-white">{avg.toFixed(2)}s</b></div>
+                    <div className="bg-slate-700/50 rounded-lg p-2"><span className="text-slate-400">أقصر/أطول: </span><b className="text-white">{minD.toFixed(2)}/{maxD.toFixed(2)}s</b></div>
+                    {overlaps > 0 && <div className="col-span-2 bg-red-950/50 border border-red-500/40 rounded-lg p-2 text-red-300">⚠️ {overlaps} مقاطع متداخلة</div>}
+                    {bigGaps > 0 && <div className="col-span-2 bg-amber-950/50 border border-amber-500/40 rounded-lg p-2 text-amber-300">⚠️ {bigGaps} فجوة كبيرة (&gt;1.5s)</div>}
+                    {tooShort > 0 && <div className="col-span-2 bg-amber-950/50 border border-amber-500/40 rounded-lg p-2 text-amber-300">⚠️ {tooShort} مقاطع قصيرة جداً (&lt;0.5s)</div>}
+                  </div>
+                  <p className="text-[10px] text-slate-500 text-center pt-1">
+                    إن وجدت أخطاء: زِد "أقل صمت" لتقليل التقطيع، أو قلل "حد الصمت" لكشف فواصل خفيفة
+                  </p>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Versions history */}
+        {versions.length > 0 && (
+          <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-4">
+            <p className="text-sm font-bold text-violet-300 mb-2">📚 النسخ المحفوظة ({versions.length})</p>
+            <div className="space-y-1.5 max-h-60 overflow-y-auto">
+              {versions.map(v => (
+                <div key={v.id} className="flex items-center gap-2 bg-slate-700/40 rounded-lg p-2 text-xs">
+                  <span className="text-lg">{v.source === "ai" ? "🤖" : v.source === "silence" ? "🔉" : "✋"}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-white truncate">{v.name}</div>
+                    <div className="text-slate-400 text-[10px]">{v.segments.length} مقطع · {new Date(v.createdAt).toLocaleString("ar")}</div>
+                  </div>
+                  <button onClick={() => loadVersion(v)} className="px-2 py-1 rounded bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600 hover:text-white text-[10px] font-bold">تحميل</button>
+                  <button onClick={() => deleteVersion(v.id)} className="w-7 h-7 rounded bg-red-950/50 text-red-400 flex items-center justify-center hover:bg-red-600 hover:text-white"><Trash2 className="w-3 h-3" /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Link to calibrate */}
         {segments.length > 0 && (
           <Link
