@@ -98,6 +98,28 @@ const fmt = (s: number) => {
   return `${m}:${sec}`;
 };
 
+// === Versions storage (history of AI/manual splits) ===
+interface SplitVersion {
+  id: string;
+  name: string;
+  createdAt: number;
+  source: "ai" | "silence" | "manual";
+  segments: AudioSegment[];
+}
+const VERSIONS_KEY = "mushaf:splitVersions:v1";
+const getVersions = (surah: number): SplitVersion[] => {
+  if (typeof window === "undefined") return [];
+  try { const all = JSON.parse(localStorage.getItem(VERSIONS_KEY) || "{}"); return all[surah] || []; }
+  catch { return []; }
+};
+const saveVersions = (surah: number, versions: SplitVersion[]) => {
+  if (typeof window === "undefined") return;
+  let all: Record<number, SplitVersion[]> = {};
+  try { all = JSON.parse(localStorage.getItem(VERSIONS_KEY) || "{}"); } catch { /* ignore */ }
+  all[surah] = versions;
+  localStorage.setItem(VERSIONS_KEY, JSON.stringify(all));
+};
+
 const TimingsRecorder = () => {
   const [surahNum, setSurahNum] = useState(1);
   const [segments, setSegments] = useState<AudioSegment[]>([]);
@@ -110,8 +132,35 @@ const TimingsRecorder = () => {
   const [silenceThreshold, setSilenceThreshold] = useState(0.02);
   const [minSilenceMs, setMinSilenceMs] = useState(400);
   const [aiSplitting, setAiSplitting] = useState(false);
+  const [versions, setVersions] = useState<SplitVersion[]>([]);
+  const [showVerify, setShowVerify] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<{ end: number; id: string } | null>(null);
+
+  // Add a new version snapshot
+  const addVersion = useCallback((source: SplitVersion["source"], segs: AudioSegment[]) => {
+    const newVer: SplitVersion = {
+      id: `v-${Date.now()}`,
+      name: `${source === "ai" ? "AI" : source === "silence" ? "صمت" : "يدوي"} #${versions.length + 1}`,
+      createdAt: Date.now(),
+      source,
+      segments: segs.map(s => ({ ...s })),
+    };
+    const next = [newVer, ...versions].slice(0, 10); // keep latest 10
+    setVersions(next);
+    saveVersions(surahNum, next);
+  }, [versions, surahNum]);
+
+  const loadVersion = (v: SplitVersion) => {
+    setSegments(v.segments.map(s => ({ ...s, id: `${v.id}-${s.id}` })));
+    toast({ title: "✅ تم تحميل النسخة", description: v.name });
+  };
+
+  const deleteVersion = (id: string) => {
+    const next = versions.filter(v => v.id !== id);
+    setVersions(next);
+    saveVersions(surahNum, next);
+  };
 
   const aiSplit = async () => {
     setAiSplitting(true);
@@ -119,7 +168,7 @@ const TimingsRecorder = () => {
       const audioUrl = audioPath(surahNum);
       const surahName = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
       const ayahCount = AYAH_COUNTS[surahNum] || 0;
-      toast({ title: "🤖 يحلل AI الصوت...", description: "قد يستغرق 30-90 ثانية" });
+      toast({ title: "🤖 يحلل AI الصوت بعمق...", description: "نموذج xhigh — قد يستغرق 1-3 دقائق" });
       const { data, error } = await supabase.functions.invoke("ai-split-audio", {
         body: { audioUrl, surahName, ayahCount },
       });
@@ -137,7 +186,8 @@ const TimingsRecorder = () => {
           label: `${surahName} - آية ${s.ayahIndex} (${s.speaker === "teacher" ? "معلم" : "طفل"})`,
         }));
       setSegments(labeled);
-      toast({ title: "✅ تم التقسيم بـ AI", description: `${labeled.length} مقطع` });
+      addVersion("ai", labeled);
+      toast({ title: "✅ تم التقسيم بـ AI", description: `${labeled.length} مقطع — حُفظ كنسخة` });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "خطأ غير معروف";
       toast({ title: "❌ فشل التقسيم", description: msg, variant: "destructive" });
@@ -146,14 +196,25 @@ const TimingsRecorder = () => {
     }
   };
 
+  // Load saved segments + versions when surah changes
   useEffect(() => {
     const saved = getSavedTimings()[surahNum];
-    if (saved) {
-      setSegments(saved.segments || []);
-    } else {
-      setSegments([]);
-    }
+    setSegments(saved?.segments || []);
+    setVersions(getVersions(surahNum));
   }, [surahNum]);
+
+  // Auto-save segments to localStorage so code edits / HMR don't wipe progress
+  useEffect(() => {
+    if (segments.length === 0) return;
+    const t = setTimeout(() => {
+      const teacher = segments.filter(s => s.speaker === "teacher").map(s => s.start);
+      const kids = segments.filter(s => s.speaker === "kids").map(s => s.start);
+      const payload: SurahTimings = { teacher, segments };
+      if (kids.length > 0) { payload.kids = kids; payload.kidsStart = kids[0]; }
+      saveSurahTimings(surahNum, payload);
+    }, 800);
+    return () => clearTimeout(t);
+  }, [segments, surahNum]);
 
   const togglePlay = () => {
     const a = audioRef.current; if (!a) return;
@@ -181,6 +242,7 @@ const TimingsRecorder = () => {
         label: `${surahName} - مقطع ${index + 1}`
       }));
       setSegments(labeled);
+      addVersion("silence", labeled);
     } finally { setDetecting(false); }
   };
 
@@ -401,6 +463,68 @@ const TimingsRecorder = () => {
             <Trash2 className="w-5 h-5" /> حذف الكل
           </button>
         </div>
+
+        {/* Verify accuracy panel */}
+        {segments.length > 0 && (
+          <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-4">
+            <button
+              onClick={() => setShowVerify(v => !v)}
+              className="w-full flex items-center justify-between text-sm font-bold text-emerald-300"
+            >
+              <span>🔍 تحقق من الدقة</span>
+              <span className="text-xs text-slate-400">{showVerify ? "▼" : "◀"}</span>
+            </button>
+            {showVerify && (() => {
+              const durs = segments.map(s => s.end - s.start);
+              const avg = durs.reduce((a, b) => a + b, 0) / durs.length;
+              const minD = Math.min(...durs);
+              const maxD = Math.max(...durs);
+              const teacherCount = segments.filter(s => s.speaker === "teacher").length;
+              const kidsCount = segments.filter(s => s.speaker === "kids").length;
+              const expected = (AYAH_COUNTS[surahNum] || 0) * 2;
+              const gaps = segments.slice(1).map((s, i) => s.start - segments[i].end);
+              const overlaps = gaps.filter(g => g < -0.05).length;
+              const bigGaps = gaps.filter(g => g > 1.5).length;
+              const tooShort = durs.filter(d => d < 0.5).length;
+              return (
+                <div className="mt-3 space-y-2 text-xs" dir="rtl">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-slate-700/50 rounded-lg p-2"><span className="text-slate-400">مقاطع: </span><b className="text-white">{segments.length}</b><span className="text-slate-500"> / متوقع {expected || "—"}</span></div>
+                    <div className="bg-slate-700/50 rounded-lg p-2"><span className="text-slate-400">معلم/طفل: </span><b className="text-amber-300">{teacherCount}</b>/<b className="text-sky-300">{kidsCount}</b></div>
+                    <div className="bg-slate-700/50 rounded-lg p-2"><span className="text-slate-400">متوسط: </span><b className="text-white">{avg.toFixed(2)}s</b></div>
+                    <div className="bg-slate-700/50 rounded-lg p-2"><span className="text-slate-400">أقصر/أطول: </span><b className="text-white">{minD.toFixed(2)}/{maxD.toFixed(2)}s</b></div>
+                    {overlaps > 0 && <div className="col-span-2 bg-red-950/50 border border-red-500/40 rounded-lg p-2 text-red-300">⚠️ {overlaps} مقاطع متداخلة</div>}
+                    {bigGaps > 0 && <div className="col-span-2 bg-amber-950/50 border border-amber-500/40 rounded-lg p-2 text-amber-300">⚠️ {bigGaps} فجوة كبيرة (&gt;1.5s)</div>}
+                    {tooShort > 0 && <div className="col-span-2 bg-amber-950/50 border border-amber-500/40 rounded-lg p-2 text-amber-300">⚠️ {tooShort} مقاطع قصيرة جداً (&lt;0.5s)</div>}
+                  </div>
+                  <p className="text-[10px] text-slate-500 text-center pt-1">
+                    إن وجدت أخطاء: زِد "أقل صمت" لتقليل التقطيع، أو قلل "حد الصمت" لكشف فواصل خفيفة
+                  </p>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Versions history */}
+        {versions.length > 0 && (
+          <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-4">
+            <p className="text-sm font-bold text-violet-300 mb-2">📚 النسخ المحفوظة ({versions.length})</p>
+            <div className="space-y-1.5 max-h-60 overflow-y-auto">
+              {versions.map(v => (
+                <div key={v.id} className="flex items-center gap-2 bg-slate-700/40 rounded-lg p-2 text-xs">
+                  <span className="text-lg">{v.source === "ai" ? "🤖" : v.source === "silence" ? "🔉" : "✋"}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-white truncate">{v.name}</div>
+                    <div className="text-slate-400 text-[10px]">{v.segments.length} مقطع · {new Date(v.createdAt).toLocaleString("ar")}</div>
+                  </div>
+                  <button onClick={() => loadVersion(v)} className="px-2 py-1 rounded bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600 hover:text-white text-[10px] font-bold">تحميل</button>
+                  <button onClick={() => deleteVersion(v.id)} className="w-7 h-7 rounded bg-red-950/50 text-red-400 flex items-center justify-center hover:bg-red-600 hover:text-white"><Trash2 className="w-3 h-3" /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Link to calibrate */}
         {segments.length > 0 && (
