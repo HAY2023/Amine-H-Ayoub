@@ -424,6 +424,10 @@ const MushafPage = ({ onBack }: Props) => {
               >
                 {getPageAyahBoxes(page.src).map((box, i) => {
                   const isCurrent = activeSurah?.number === box.surah && currentAyah === box.ayah && isPlaying;
+                  const bound = box.audioStart !== undefined && box.audioEnd !== undefined;
+                  const boxSpeaker: Speaker = box.speaker ?? "teacher";
+                  const restFill = bound ? speakerColors[boxSpeaker].bg : previewHighlight;
+                  const restStroke = bound ? speakerColors[boxSpeaker].glow : previewStroke;
                   return (
                     <rect
                       key={`${box.surah}-${box.ayah}-${i}`}
@@ -432,9 +436,9 @@ const MushafPage = ({ onBack }: Props) => {
                       width={box.width}
                       height={box.height}
                       rx="10"
-                      fill={isCurrent ? speakerColors[currentSpeaker].bg : previewHighlight}
-                      stroke={isCurrent ? speakerColors[currentSpeaker].glow : previewStroke}
-                      strokeWidth={isCurrent ? 5 : 1.5}
+                      fill={isCurrent ? speakerColors[currentSpeaker].bg : restFill}
+                      stroke={isCurrent ? speakerColors[currentSpeaker].glow : restStroke}
+                      strokeWidth={isCurrent ? 5 : (bound ? 3 : 1.5)}
                       style={{ mixBlendMode: "multiply" }}
                       className={isCurrent ? "animate-pulse" : ""}
                     />
