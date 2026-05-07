@@ -36,8 +36,9 @@ serve(async (req) => {
 
     const userText = `هذا تلاوة سورة "${surahName}" (${ayahCount} آيات). حلّل الصوت وأرجع لكل آية مقطعين (معلم ثم أطفال إن وُجدا) بترتيبهما الزمني الفعلي. استخدم الأداة لإرجاع النتيجة.`;
 
-    const body = {
-      model: "google/gemini-2.5-pro",
+    const body: Record<string, unknown> = {
+      model: "google/gemini-3.1-pro-preview",
+      reasoning: { effort: "high" },
       messages: [
         { role: "system", content: systemPrompt },
         {
