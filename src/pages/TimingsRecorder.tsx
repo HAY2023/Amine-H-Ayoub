@@ -242,6 +242,7 @@ const TimingsRecorder = () => {
         label: `${surahName} - مقطع ${index + 1}`
       }));
       setSegments(labeled);
+      addVersion("silence", labeled);
     } finally { setDetecting(false); }
   };
 
