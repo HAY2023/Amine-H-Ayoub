@@ -98,6 +98,28 @@ const fmt = (s: number) => {
   return `${m}:${sec}`;
 };
 
+// === Versions storage (history of AI/manual splits) ===
+interface SplitVersion {
+  id: string;
+  name: string;
+  createdAt: number;
+  source: "ai" | "silence" | "manual";
+  segments: AudioSegment[];
+}
+const VERSIONS_KEY = "mushaf:splitVersions:v1";
+const getVersions = (surah: number): SplitVersion[] => {
+  if (typeof window === "undefined") return [];
+  try { const all = JSON.parse(localStorage.getItem(VERSIONS_KEY) || "{}"); return all[surah] || []; }
+  catch { return []; }
+};
+const saveVersions = (surah: number, versions: SplitVersion[]) => {
+  if (typeof window === "undefined") return;
+  let all: Record<number, SplitVersion[]> = {};
+  try { all = JSON.parse(localStorage.getItem(VERSIONS_KEY) || "{}"); } catch { /* ignore */ }
+  all[surah] = versions;
+  localStorage.setItem(VERSIONS_KEY, JSON.stringify(all));
+};
+
 const TimingsRecorder = () => {
   const [surahNum, setSurahNum] = useState(1);
   const [segments, setSegments] = useState<AudioSegment[]>([]);
@@ -110,8 +132,35 @@ const TimingsRecorder = () => {
   const [silenceThreshold, setSilenceThreshold] = useState(0.02);
   const [minSilenceMs, setMinSilenceMs] = useState(400);
   const [aiSplitting, setAiSplitting] = useState(false);
+  const [versions, setVersions] = useState<SplitVersion[]>([]);
+  const [showVerify, setShowVerify] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<{ end: number; id: string } | null>(null);
+
+  // Add a new version snapshot
+  const addVersion = useCallback((source: SplitVersion["source"], segs: AudioSegment[]) => {
+    const newVer: SplitVersion = {
+      id: `v-${Date.now()}`,
+      name: `${source === "ai" ? "AI" : source === "silence" ? "صمت" : "يدوي"} #${versions.length + 1}`,
+      createdAt: Date.now(),
+      source,
+      segments: segs.map(s => ({ ...s })),
+    };
+    const next = [newVer, ...versions].slice(0, 10); // keep latest 10
+    setVersions(next);
+    saveVersions(surahNum, next);
+  }, [versions, surahNum]);
+
+  const loadVersion = (v: SplitVersion) => {
+    setSegments(v.segments.map(s => ({ ...s, id: `${v.id}-${s.id}` })));
+    toast({ title: "✅ تم تحميل النسخة", description: v.name });
+  };
+
+  const deleteVersion = (id: string) => {
+    const next = versions.filter(v => v.id !== id);
+    setVersions(next);
+    saveVersions(surahNum, next);
+  };
 
   const aiSplit = async () => {
     setAiSplitting(true);
@@ -119,7 +168,7 @@ const TimingsRecorder = () => {
       const audioUrl = audioPath(surahNum);
       const surahName = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
       const ayahCount = AYAH_COUNTS[surahNum] || 0;
-      toast({ title: "🤖 يحلل AI الصوت...", description: "قد يستغرق 30-90 ثانية" });
+      toast({ title: "🤖 يحلل AI الصوت بعمق...", description: "نموذج xhigh — قد يستغرق 1-3 دقائق" });
       const { data, error } = await supabase.functions.invoke("ai-split-audio", {
         body: { audioUrl, surahName, ayahCount },
       });
@@ -137,7 +186,8 @@ const TimingsRecorder = () => {
           label: `${surahName} - آية ${s.ayahIndex} (${s.speaker === "teacher" ? "معلم" : "طفل"})`,
         }));
       setSegments(labeled);
-      toast({ title: "✅ تم التقسيم بـ AI", description: `${labeled.length} مقطع` });
+      addVersion("ai", labeled);
+      toast({ title: "✅ تم التقسيم بـ AI", description: `${labeled.length} مقطع — حُفظ كنسخة` });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "خطأ غير معروف";
       toast({ title: "❌ فشل التقسيم", description: msg, variant: "destructive" });
@@ -146,14 +196,25 @@ const TimingsRecorder = () => {
     }
   };
 
+  // Load saved segments + versions when surah changes
   useEffect(() => {
     const saved = getSavedTimings()[surahNum];
-    if (saved) {
-      setSegments(saved.segments || []);
-    } else {
-      setSegments([]);
-    }
+    setSegments(saved?.segments || []);
+    setVersions(getVersions(surahNum));
   }, [surahNum]);
+
+  // Auto-save segments to localStorage so code edits / HMR don't wipe progress
+  useEffect(() => {
+    if (segments.length === 0) return;
+    const t = setTimeout(() => {
+      const teacher = segments.filter(s => s.speaker === "teacher").map(s => s.start);
+      const kids = segments.filter(s => s.speaker === "kids").map(s => s.start);
+      const payload: SurahTimings = { teacher, segments };
+      if (kids.length > 0) { payload.kids = kids; payload.kidsStart = kids[0]; }
+      saveSurahTimings(surahNum, payload);
+    }, 800);
+    return () => clearTimeout(t);
+  }, [segments, surahNum]);
 
   const togglePlay = () => {
     const a = audioRef.current; if (!a) return;
