@@ -217,8 +217,8 @@ const TimingsRecorder = () => {
 
   // Auto-save segments to localStorage so code edits / HMR don't wipe progress
   useEffect(() => {
-    if (segments.length === 0) return;
     latestRef.current = { surahNum, segments };
+    if (segments.length === 0) return;
     const t = setTimeout(() => persistSegments(surahNum, segments), 300);
     return () => clearTimeout(t);
   }, [segments, surahNum, persistSegments]);
@@ -312,11 +312,7 @@ const TimingsRecorder = () => {
   }, []);
 
   const applyAndSave = () => {
-    const teacher = segments.filter(s => s.speaker === "teacher").map(s => s.start);
-    const kids = segments.filter(s => s.speaker === "kids").map(s => s.start);
-    const payload: SurahTimings = { teacher, segments };
-    if (kids.length > 0) { payload.kids = kids; payload.kidsStart = kids[0]; }
-    saveSurahTimings(surahNum, payload);
+    persistSegments(surahNum, segments);
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);
   };
