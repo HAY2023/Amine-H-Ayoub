@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X } from "lucide-react";
-import { AYAH_COUNTS, getCurrentAyahAtTime, getAyahStartTime, hasKidsSection, getSpeakerAtTime } from "@/data/ayahTimings";
+import { AYAH_COUNTS, getCurrentAyahAtTime, getAyahSegment, getAyahStartTime, hasKidsSection, getSpeakerAtTime } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 
@@ -205,13 +205,17 @@ const MushafPage = ({ onBack }: Props) => {
 
     const start = () => {
       const dur = a.duration || 0;
-      // Bound segment from /calibrate takes priority
-      if (boundSegment && typeof boundSegment.audioStart === "number") {
-        const sp: Speaker = forceSpeaker ?? boundSegment.speaker ?? "teacher";
+      // Bound segment from /calibrate or saved /timings takes priority
+      const sp: Speaker = forceSpeaker ?? boundSegment?.speaker ?? "teacher";
+      const savedSegment = getAyahSegment(surah.number, ayahNum, sp);
+      const preciseBound = savedSegment
+        ? { audioStart: savedSegment.start, audioEnd: savedSegment.end, speaker: savedSegment.speaker }
+        : boundSegment;
+      if (preciseBound && typeof preciseBound.audioStart === "number") {
         setCurrentSpeaker(sp);
-        const startT = boundSegment.audioStart;
-        const endT = typeof boundSegment.audioEnd === "number" && boundSegment.audioEnd > startT
-          ? boundSegment.audioEnd
+        const startT = preciseBound.audioStart;
+        const endT = typeof preciseBound.audioEnd === "number" && preciseBound.audioEnd > startT
+          ? preciseBound.audioEnd
           : computeAyahEnd(surah, ayahNum, sp, dur);
         stopAtRef.current = endT;
         a.currentTime = startT;
@@ -219,7 +223,6 @@ const MushafPage = ({ onBack }: Props) => {
         return;
       }
       // Determine which speaker to use
-      const sp: Speaker = forceSpeaker ?? "teacher";
       setCurrentSpeaker(sp);
       const startT = getAyahStartTime(surah.number, ayahNum, dur, sp);
       const nextT = computeAyahEnd(surah, ayahNum, sp, dur);
