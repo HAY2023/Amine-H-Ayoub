@@ -118,9 +118,9 @@ async function snapSegmentsToVoice(audioUrl: string, segments: AudioSegment[]): 
   const noise = percentile(rms, 0.2);
   const speech = percentile(rms, 0.78);
   const threshold = Math.max(0.006, noise + (speech - noise) * 0.28);
+  const clampIndex = (i: number, max: number) => Math.min(Math.max(i, 0), max);
   const toTime = (i: number) => (i * win) / sr;
   const toIndex = (t: number) => clampIndex(Math.round((t * sr) / win), rms.length - 1);
-  const clampIndex = (i: number, max: number) => Math.min(Math.max(i, 0), max);
   const refined = segments.map((segment, index) => {
     const startSearch = clampIndex(toIndex(segment.start - 0.7), rms.length - 1);
     const startEnd = clampIndex(toIndex(segment.start + 0.7), rms.length - 1);
