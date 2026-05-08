@@ -242,10 +242,11 @@ const TimingsRecorder = () => {
           ayah: s.ayahIndex,
           label: `${surahName} - آية ${s.ayahIndex} (${s.speaker === "teacher" ? "معلم" : "طفل"})`,
         }));
-      setSegments(labeled);
-      persistSegments(surahNum, labeled);
-      addVersion("ai", labeled);
-      toast({ title: "✅ تم التقسيم بـ AI", description: `${labeled.length} مقطع — حُفظ كنسخة` });
+      const refined = await snapSegmentsToVoice(audioUrl, labeled).catch(() => labeled);
+      setSegments(refined);
+      persistSegments(surahNum, refined);
+      addVersion("ai", refined);
+      toast({ title: "✅ تم التقسيم بـ AI", description: `${refined.length} مقطع — تم تحسين الحواف وحفظها كنسخة` });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "خطأ غير معروف";
       toast({ title: "❌ فشل التقسيم", description: msg, variant: "destructive" });
@@ -296,7 +297,7 @@ const TimingsRecorder = () => {
       const surahName = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
       const labeled = detected.map((seg, index) => ({
         ...seg,
-        label: `${surahName} - مقطع ${index + 1}`
+        label: `${surahName} - آية ${seg.ayah ?? Math.floor(index / 2) + 1} (${seg.speaker === "teacher" ? "معلم" : "طفل"})`
       }));
       setSegments(labeled);
       addVersion("silence", labeled);
@@ -488,11 +489,11 @@ const TimingsRecorder = () => {
                 {detecting ? "⏳ تحليل..." : "🤖 كشف كل المقاطع"}
               </button>
               <button
-                onClick={() => autoDetectSegments(AYAH_COUNTS[surahNum] || 0)}
+                onClick={() => autoDetectSegments((AYAH_COUNTS[surahNum] || 0) * 2)}
                 disabled={detecting || !duration}
                 className="p-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-1 shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-transform text-xs"
               >
-                {detecting ? "⏳ تحليل..." : `📐 تقسيم ${AYAH_COUNTS[surahNum]} آية`}
+                {detecting ? "⏳ تحليل..." : `📐 تقسيم ${AYAH_COUNTS[surahNum]} آية × معلم/طفل`}
               </button>
             </div>
             <p className="text-[10px] text-violet-400 text-center">
