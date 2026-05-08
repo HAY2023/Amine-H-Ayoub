@@ -136,6 +136,16 @@ const TimingsRecorder = () => {
   const [showVerify, setShowVerify] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<{ end: number; id: string } | null>(null);
+  const latestRef = useRef({ surahNum, segments });
+
+  const persistSegments = useCallback((targetSurah: number, targetSegments: AudioSegment[]) => {
+    if (targetSegments.length === 0) return;
+    const teacher = targetSegments.filter(s => s.speaker === "teacher").map(s => s.start);
+    const kids = targetSegments.filter(s => s.speaker === "kids").map(s => s.start);
+    const payload: SurahTimings = { teacher, segments: targetSegments };
+    if (kids.length > 0) { payload.kids = kids; payload.kidsStart = kids[0]; }
+    saveSurahTimings(targetSurah, payload);
+  }, []);
 
   // Add a new version snapshot
   const addVersion = useCallback((source: SplitVersion["source"], segs: AudioSegment[]) => {
@@ -183,9 +193,11 @@ const TimingsRecorder = () => {
           start: Number(s.start.toFixed(3)),
           end: Number(s.end.toFixed(3)),
           speaker: s.speaker,
+          ayah: s.ayahIndex,
           label: `${surahName} - آية ${s.ayahIndex} (${s.speaker === "teacher" ? "معلم" : "طفل"})`,
         }));
       setSegments(labeled);
+      persistSegments(surahNum, labeled);
       addVersion("ai", labeled);
       toast({ title: "✅ تم التقسيم بـ AI", description: `${labeled.length} مقطع — حُفظ كنسخة` });
     } catch (e) {
@@ -206,15 +218,14 @@ const TimingsRecorder = () => {
   // Auto-save segments to localStorage so code edits / HMR don't wipe progress
   useEffect(() => {
     if (segments.length === 0) return;
-    const t = setTimeout(() => {
-      const teacher = segments.filter(s => s.speaker === "teacher").map(s => s.start);
-      const kids = segments.filter(s => s.speaker === "kids").map(s => s.start);
-      const payload: SurahTimings = { teacher, segments };
-      if (kids.length > 0) { payload.kids = kids; payload.kidsStart = kids[0]; }
-      saveSurahTimings(surahNum, payload);
-    }, 800);
+    latestRef.current = { surahNum, segments };
+    const t = setTimeout(() => persistSegments(surahNum, segments), 300);
     return () => clearTimeout(t);
-  }, [segments, surahNum]);
+  }, [segments, surahNum, persistSegments]);
+
+  useEffect(() => {
+    return () => persistSegments(latestRef.current.surahNum, latestRef.current.segments);
+  }, [persistSegments]);
 
   const togglePlay = () => {
     const a = audioRef.current; if (!a) return;
