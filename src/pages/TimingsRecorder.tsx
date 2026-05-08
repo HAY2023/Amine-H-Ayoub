@@ -83,8 +83,9 @@ async function detectAudioSegments(
     id: `${Date.now()}-${i}`,
     start: Number(s.toFixed(3)),
     end: Number(ends[i].toFixed(3)),
-    speaker: (i % 2 === 1 ? "teacher" : "kids") as "teacher" | "kids",
-    label: `مقطع ${i + 1}`,
+    speaker: (i % 2 === 0 ? "teacher" : "kids") as "teacher" | "kids",
+    ayah: Math.floor(i / 2) + 1,
+    label: `آية ${Math.floor(i / 2) + 1} - ${i % 2 === 0 ? "معلم" : "طفل"}`,
   }));
 
   ctx.close();
@@ -97,6 +98,51 @@ const fmt = (s: number) => {
   const sec = (s % 60).toFixed(2).padStart(5, "0");
   return `${m}:${sec}`;
 };
+
+async function snapSegmentsToVoice(audioUrl: string, segments: AudioSegment[]): Promise<AudioSegment[]> {
+  const res = await fetch(audioUrl);
+  const buf = await res.arrayBuffer();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const audio = await ctx.decodeAudioData(buf);
+  const data = audio.getChannelData(0);
+  const sr = audio.sampleRate;
+  const win = Math.max(256, Math.floor(sr * 0.02));
+  const rms: number[] = [];
+  for (let i = 0; i < data.length; i += win) {
+    let sum = 0;
+    const end = Math.min(win, data.length - i);
+    for (let j = 0; j < end; j++) sum += data[i + j] * data[i + j];
+    rms.push(Math.sqrt(sum / end));
+  }
+  const noise = percentile(rms, 0.2);
+  const speech = percentile(rms, 0.78);
+  const threshold = Math.max(0.006, noise + (speech - noise) * 0.28);
+  const toTime = (i: number) => (i * win) / sr;
+  const toIndex = (t: number) => clampIndex(Math.round((t * sr) / win), rms.length - 1);
+  const clampIndex = (i: number, max: number) => Math.min(Math.max(i, 0), max);
+  const refined = segments.map((segment, index) => {
+    const startSearch = clampIndex(toIndex(segment.start - 0.7), rms.length - 1);
+    const startEnd = clampIndex(toIndex(segment.start + 0.7), rms.length - 1);
+    const endSearch = clampIndex(toIndex(segment.end - 0.7), rms.length - 1);
+    const endEnd = clampIndex(toIndex(segment.end + 0.7), rms.length - 1);
+    let startIdx = toIndex(segment.start);
+    for (let i = startSearch; i <= startEnd; i++) {
+      if (rms[i] >= threshold && rms[i + 1] >= threshold) { startIdx = i; break; }
+    }
+    let endIdx = toIndex(segment.end);
+    for (let i = endEnd; i >= endSearch; i--) {
+      if (rms[i] >= threshold && rms[i - 1] >= threshold) { endIdx = i + 1; break; }
+    }
+    const prevEnd = index > 0 ? segments[index - 1].end : 0;
+    const nextStart = index < segments.length - 1 ? segments[index + 1].start : audio.duration;
+    const start = Math.max(prevEnd, Number(toTime(startIdx).toFixed(3)));
+    const end = Math.min(nextStart, Number(toTime(endIdx).toFixed(3)));
+    return end > start + 0.25 ? { ...segment, start, end } : segment;
+  });
+  ctx.close();
+  return refined;
+}
 
 // === Versions storage (history of AI/manual splits) ===
 interface SplitVersion {
