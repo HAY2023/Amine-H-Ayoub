@@ -129,7 +129,9 @@ const MushafPage = ({ onBack }: Props) => {
         await document.exitFullscreen();
         setIsFullscreen(false);
       }
-    } catch {}
+    } catch {
+      setIsFullscreen(false);
+    }
   }, []);
   useEffect(() => {
     const h = () => setIsFullscreen(!!document.fullscreenElement);
@@ -177,7 +179,8 @@ const MushafPage = ({ onBack }: Props) => {
     }
     // swipe horizontally → page nav
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
-      dx > 0 ? goPrev() : goNext();
+      if (dx > 0) goPrev();
+      else goNext();
       return;
     }
     // double tap detection (for fullscreen) — only when not tapping an ayah hotspot
