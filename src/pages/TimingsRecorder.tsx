@@ -83,8 +83,9 @@ async function detectAudioSegments(
     id: `${Date.now()}-${i}`,
     start: Number(s.toFixed(3)),
     end: Number(ends[i].toFixed(3)),
-    speaker: (i % 2 === 1 ? "teacher" : "kids") as "teacher" | "kids",
-    label: `مقطع ${i + 1}`,
+    speaker: (i % 2 === 0 ? "teacher" : "kids") as "teacher" | "kids",
+    ayah: Math.floor(i / 2) + 1,
+    label: `آية ${Math.floor(i / 2) + 1} - ${i % 2 === 0 ? "معلم" : "طفل"}`,
   }));
 
   ctx.close();
@@ -97,6 +98,51 @@ const fmt = (s: number) => {
   const sec = (s % 60).toFixed(2).padStart(5, "0");
   return `${m}:${sec}`;
 };
+
+async function snapSegmentsToVoice(audioUrl: string, segments: AudioSegment[]): Promise<AudioSegment[]> {
+  const res = await fetch(audioUrl);
+  const buf = await res.arrayBuffer();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const audio = await ctx.decodeAudioData(buf);
+  const data = audio.getChannelData(0);
+  const sr = audio.sampleRate;
+  const win = Math.max(256, Math.floor(sr * 0.02));
+  const rms: number[] = [];
+  for (let i = 0; i < data.length; i += win) {
+    let sum = 0;
+    const end = Math.min(win, data.length - i);
+    for (let j = 0; j < end; j++) sum += data[i + j] * data[i + j];
+    rms.push(Math.sqrt(sum / end));
+  }
+  const noise = percentile(rms, 0.2);
+  const speech = percentile(rms, 0.78);
+  const threshold = Math.max(0.006, noise + (speech - noise) * 0.28);
+  const clampIndex = (i: number, max: number) => Math.min(Math.max(i, 0), max);
+  const toTime = (i: number) => (i * win) / sr;
+  const toIndex = (t: number) => clampIndex(Math.round((t * sr) / win), rms.length - 1);
+  const refined = segments.map((segment, index) => {
+    const startSearch = clampIndex(toIndex(segment.start - 0.7), rms.length - 1);
+    const startEnd = clampIndex(toIndex(segment.start + 0.7), rms.length - 1);
+    const endSearch = clampIndex(toIndex(segment.end - 0.7), rms.length - 1);
+    const endEnd = clampIndex(toIndex(segment.end + 0.7), rms.length - 1);
+    let startIdx = toIndex(segment.start);
+    for (let i = startSearch; i <= startEnd; i++) {
+      if (rms[i] >= threshold && rms[i + 1] >= threshold) { startIdx = i; break; }
+    }
+    let endIdx = toIndex(segment.end);
+    for (let i = endEnd; i >= endSearch; i--) {
+      if (rms[i] >= threshold && rms[i - 1] >= threshold) { endIdx = i + 1; break; }
+    }
+    const prevEnd = index > 0 ? segments[index - 1].end : 0;
+    const nextStart = index < segments.length - 1 ? segments[index + 1].start : audio.duration;
+    const start = Math.max(prevEnd, Number(toTime(startIdx).toFixed(3)));
+    const end = Math.min(nextStart, Number(toTime(endIdx).toFixed(3)));
+    return end > start + 0.25 ? { ...segment, start, end } : segment;
+  });
+  ctx.close();
+  return refined;
+}
 
 // === Versions storage (history of AI/manual splits) ===
 interface SplitVersion {
@@ -136,6 +182,16 @@ const TimingsRecorder = () => {
   const [showVerify, setShowVerify] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<{ end: number; id: string } | null>(null);
+  const latestRef = useRef({ surahNum, segments });
+
+  const persistSegments = useCallback((targetSurah: number, targetSegments: AudioSegment[]) => {
+    if (targetSegments.length === 0) return;
+    const teacher = targetSegments.filter(s => s.speaker === "teacher").map(s => s.start);
+    const kids = targetSegments.filter(s => s.speaker === "kids").map(s => s.start);
+    const payload: SurahTimings = { teacher, segments: targetSegments };
+    if (kids.length > 0) { payload.kids = kids; payload.kidsStart = kids[0]; }
+    saveSurahTimings(targetSurah, payload);
+  }, []);
 
   // Add a new version snapshot
   const addVersion = useCallback((source: SplitVersion["source"], segs: AudioSegment[]) => {
@@ -183,11 +239,14 @@ const TimingsRecorder = () => {
           start: Number(s.start.toFixed(3)),
           end: Number(s.end.toFixed(3)),
           speaker: s.speaker,
+          ayah: s.ayahIndex,
           label: `${surahName} - آية ${s.ayahIndex} (${s.speaker === "teacher" ? "معلم" : "طفل"})`,
         }));
-      setSegments(labeled);
-      addVersion("ai", labeled);
-      toast({ title: "✅ تم التقسيم بـ AI", description: `${labeled.length} مقطع — حُفظ كنسخة` });
+      const refined = await snapSegmentsToVoice(audioUrl, labeled).catch(() => labeled);
+      setSegments(refined);
+      persistSegments(surahNum, refined);
+      addVersion("ai", refined);
+      toast({ title: "✅ تم التقسيم بـ AI", description: `${refined.length} مقطع — تم تحسين الحواف وحفظها كنسخة` });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "خطأ غير معروف";
       toast({ title: "❌ فشل التقسيم", description: msg, variant: "destructive" });
@@ -205,16 +264,15 @@ const TimingsRecorder = () => {
 
   // Auto-save segments to localStorage so code edits / HMR don't wipe progress
   useEffect(() => {
+    latestRef.current = { surahNum, segments };
     if (segments.length === 0) return;
-    const t = setTimeout(() => {
-      const teacher = segments.filter(s => s.speaker === "teacher").map(s => s.start);
-      const kids = segments.filter(s => s.speaker === "kids").map(s => s.start);
-      const payload: SurahTimings = { teacher, segments };
-      if (kids.length > 0) { payload.kids = kids; payload.kidsStart = kids[0]; }
-      saveSurahTimings(surahNum, payload);
-    }, 800);
+    const t = setTimeout(() => persistSegments(surahNum, segments), 300);
     return () => clearTimeout(t);
-  }, [segments, surahNum]);
+  }, [segments, surahNum, persistSegments]);
+
+  useEffect(() => {
+    return () => persistSegments(latestRef.current.surahNum, latestRef.current.segments);
+  }, [persistSegments]);
 
   const togglePlay = () => {
     const a = audioRef.current; if (!a) return;
@@ -239,7 +297,7 @@ const TimingsRecorder = () => {
       const surahName = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
       const labeled = detected.map((seg, index) => ({
         ...seg,
-        label: `${surahName} - مقطع ${index + 1}`
+        label: `${surahName} - آية ${seg.ayah ?? Math.floor(index / 2) + 1} (${seg.speaker === "teacher" ? "معلم" : "طفل"})`
       }));
       setSegments(labeled);
       addVersion("silence", labeled);
@@ -301,11 +359,7 @@ const TimingsRecorder = () => {
   }, []);
 
   const applyAndSave = () => {
-    const teacher = segments.filter(s => s.speaker === "teacher").map(s => s.start);
-    const kids = segments.filter(s => s.speaker === "kids").map(s => s.start);
-    const payload: SurahTimings = { teacher, segments };
-    if (kids.length > 0) { payload.kids = kids; payload.kidsStart = kids[0]; }
-    saveSurahTimings(surahNum, payload);
+    persistSegments(surahNum, segments);
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);
   };
@@ -435,11 +489,11 @@ const TimingsRecorder = () => {
                 {detecting ? "⏳ تحليل..." : "🤖 كشف كل المقاطع"}
               </button>
               <button
-                onClick={() => autoDetectSegments(AYAH_COUNTS[surahNum] || 0)}
+                onClick={() => autoDetectSegments((AYAH_COUNTS[surahNum] || 0) * 2)}
                 disabled={detecting || !duration}
                 className="p-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-1 shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-transform text-xs"
               >
-                {detecting ? "⏳ تحليل..." : `📐 تقسيم ${AYAH_COUNTS[surahNum]} آية`}
+                {detecting ? "⏳ تحليل..." : `📐 تقسيم ${AYAH_COUNTS[surahNum]} آية × معلم/طفل`}
               </button>
             </div>
             <p className="text-[10px] text-violet-400 text-center">

@@ -1,3 +1,5 @@
+import { AudioSegment, getSavedTimings } from "./ayahTimings";
+
 export interface AyahBox {
   surah: number;
   ayah: number;
@@ -80,6 +82,34 @@ export const AYAH_COORDINATES: Record<string, AyahBox[]> = {
 
 const cloneBoxes = (boxes: AyahBox[]) => boxes.map((box) => ({ ...box }));
 
+const getLabelAyah = (label?: string): number | null => {
+  const match = label?.match(/آية\s*(\d+)|ايه\s*(\d+)|ayah\s*(\d+)/i);
+  const value = match ? Number(match[1] || match[2] || match[3]) : NaN;
+  return Number.isFinite(value) && value > 0 ? value : null;
+};
+
+const inferSegmentAyah = (segments: AudioSegment[], target: AudioSegment): number => {
+  if (typeof target.ayah === "number" && target.ayah > 0) return target.ayah;
+  const fromLabel = getLabelAyah(target.label);
+  if (fromLabel) return fromLabel;
+  const sameSpeaker = segments
+    .filter((segment) => segment.speaker === target.speaker)
+    .sort((a, b) => a.start - b.start);
+  return Math.max(1, sameSpeaker.findIndex((segment) => segment.id === target.id) + 1);
+};
+
+const withSavedTimingBindings = (boxes: AyahBox[]) => {
+  const savedTimings = getSavedTimings();
+  return boxes.map((box) => {
+    if (box.audioStart !== undefined && box.audioEnd !== undefined) return box;
+    const segments = [...(savedTimings[box.surah]?.segments ?? [])].sort((a, b) => a.start - b.start);
+    const segment = segments.find((item) => item.speaker === "teacher" && inferSegmentAyah(segments, item) === box.ayah)
+      ?? segments.find((item) => inferSegmentAyah(segments, item) === box.ayah);
+    if (!segment) return box;
+    return { ...box, audioStart: segment.start, audioEnd: segment.end, speaker: segment.speaker };
+  });
+};
+
 export const getSavedAyahCoordinates = (): Record<string, AyahBox[]> => {
   if (typeof window === "undefined") return {};
   try {
@@ -93,9 +123,9 @@ export const getSavedAyahCoordinates = (): Record<string, AyahBox[]> => {
 export const getPageAyahBoxes = (pageSrc: string) => {
   const allSaved = getSavedAyahCoordinates();
   if (pageSrc in allSaved) {
-    return cloneBoxes(allSaved[pageSrc]);
+    return withSavedTimingBindings(cloneBoxes(allSaved[pageSrc]));
   }
-  return cloneBoxes(AYAH_COORDINATES[pageSrc] ?? []);
+  return withSavedTimingBindings(cloneBoxes(AYAH_COORDINATES[pageSrc] ?? []));
 };
 
 export const savePageAyahBoxes = (pageSrc: string, boxes: AyahBox[]) => {

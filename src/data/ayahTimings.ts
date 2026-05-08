@@ -31,6 +31,8 @@ export interface AudioSegment {
   end: number;
   speaker: "teacher" | "kids";
   label?: string;
+  /** Optional 1-based ayah number returned by AI. */
+  ayah?: number;
 }
 
 export interface SurahTimings {
@@ -95,8 +97,38 @@ function normalize(entry: SurahTimings | number[] | undefined): SurahTimings | n
 /** Resolve timings: prefer saved (LocalStorage) over hardcoded. */
 function resolveTimings(surahNumber: number): SurahTimings | null {
   const saved = getSavedTimings()[surahNumber];
-  if (saved && saved.teacher && saved.teacher.length > 0) return saved;
+  if (saved && ((saved.teacher && saved.teacher.length > 0) || (saved.segments && saved.segments.length > 0))) {
+    return { ...saved, teacher: saved.teacher ?? [] };
+  }
   return normalize(AYAH_TIMINGS[surahNumber]);
+}
+
+const getLabelAyah = (label?: string): number | null => {
+  const match = label?.match(/آية\s*(\d+)|ايه\s*(\d+)|ayah\s*(\d+)/i);
+  const value = match ? Number(match[1] || match[2] || match[3]) : NaN;
+  return Number.isFinite(value) && value > 0 ? value : null;
+};
+
+const inferSegmentAyah = (segments: AudioSegment[], target: AudioSegment): number => {
+  if (typeof target.ayah === "number" && target.ayah > 0) return target.ayah;
+  const fromLabel = getLabelAyah(target.label);
+  if (fromLabel) return fromLabel;
+  const sameSpeaker = segments
+    .filter((segment) => segment.speaker === target.speaker)
+    .sort((a, b) => a.start - b.start);
+  return Math.max(1, sameSpeaker.findIndex((segment) => segment.id === target.id) + 1);
+};
+
+export function getAyahSegment(
+  surahNumber: number,
+  ayahIndex: number,
+  speaker: "teacher" | "kids" = "teacher",
+): AudioSegment | null {
+  const t = resolveTimings(surahNumber);
+  const segments = [...(t?.segments ?? [])].sort((a, b) => a.start - b.start);
+  return segments.find((segment) =>
+    segment.speaker === speaker && inferSegmentAyah(segments, segment) === ayahIndex
+  ) ?? null;
 }
 
 export function getSurahTimings(surahNumber: number): SurahTimings | null {
@@ -137,6 +169,17 @@ export function getCurrentAyahAtTime(
   const total = AYAH_COUNTS[surahNumber] ?? 1;
   const t = resolveTimings(surahNumber);
 
+  if (t?.segments && t.segments.length > 0) {
+    const segments = [...t.segments].sort((a, b) => a.start - b.start);
+    const currentSegment = segments.find((segment) => currentTime >= segment.start - 0.05 && currentTime < segment.end + 0.05);
+    if (currentSegment) {
+      return {
+        ayah: Math.min(inferSegmentAyah(segments, currentSegment), total),
+        speaker: currentSegment.speaker,
+      };
+    }
+  }
+
   // Manual timings path
   if (t && t.teacher.length > 0) {
     const speaker = getSpeakerAtTime(surahNumber, currentTime);
@@ -166,6 +209,9 @@ export function getAyahStartTime(
   audioDuration: number,
   speaker: "teacher" | "kids" = "teacher",
 ): number {
+  const segment = getAyahSegment(surahNumber, ayahIndex, speaker);
+  if (segment) return segment.start;
+
   const t = resolveTimings(surahNumber);
   if (t) {
     const list = speaker === "kids" && t.kids ? t.kids : t.teacher;
