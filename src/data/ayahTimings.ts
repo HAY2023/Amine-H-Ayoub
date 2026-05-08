@@ -169,6 +169,17 @@ export function getCurrentAyahAtTime(
   const total = AYAH_COUNTS[surahNumber] ?? 1;
   const t = resolveTimings(surahNumber);
 
+  if (t?.segments && t.segments.length > 0) {
+    const segments = [...t.segments].sort((a, b) => a.start - b.start);
+    const currentSegment = segments.find((segment) => currentTime >= segment.start - 0.05 && currentTime < segment.end + 0.05);
+    if (currentSegment) {
+      return {
+        ayah: Math.min(inferSegmentAyah(segments, currentSegment), total),
+        speaker: currentSegment.speaker,
+      };
+    }
+  }
+
   // Manual timings path
   if (t && t.teacher.length > 0) {
     const speaker = getSpeakerAtTime(surahNumber, currentTime);
@@ -198,6 +209,9 @@ export function getAyahStartTime(
   audioDuration: number,
   speaker: "teacher" | "kids" = "teacher",
 ): number {
+  const segment = getAyahSegment(surahNumber, ayahIndex, speaker);
+  if (segment) return segment.start;
+
   const t = resolveTimings(surahNumber);
   if (t) {
     const list = speaker === "kids" && t.kids ? t.kids : t.teacher;
