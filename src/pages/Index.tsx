@@ -9,6 +9,8 @@ import BottomNav, { TabType } from "@/components/BottomNav";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
+import { Link } from "react-router-dom";
+import { Zap, Sliders } from "lucide-react";
 
 const LAST_SURAH_KEY = "audio:lastSurah";
 const LAST_TIME_KEY = "audio:lastTime";
@@ -109,6 +111,24 @@ const Index = () => {
 
         <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
           <SearchBar value={search} onChange={setSearch} />
+
+          {/* أدوات سريعة */}
+          <div className="flex gap-2">
+            <Link
+              to="/recitation-methods"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-gradient-to-r from-violet-500/15 to-fuchsia-500/15 border border-violet-500/20 text-violet-700 dark:text-violet-300 font-bold text-xs hover:border-violet-500/40 transition-all active:scale-95"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>تقسيم ذكي</span>
+            </Link>
+            <Link
+              to="/calibrate"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500/15 to-orange-500/15 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-xs hover:border-amber-500/40 transition-all active:scale-95"
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              <span>معايرة</span>
+            </Link>
+          </div>
 
           {loading && (
             <div className="space-y-3">

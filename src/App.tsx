@@ -5,8 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import TimingsRecorder from "./pages/TimingsRecorder.tsx";
 import AyahCalibration from "./pages/AyahCalibration.tsx";
+import RecitationMethods from "./pages/RecitationMethods.tsx";
 
 const queryClient = new QueryClient();
 
@@ -18,8 +18,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/timings" element={<TimingsRecorder />} />
           <Route path="/calibrate" element={<AyahCalibration />} />
+          <Route path="/recitation-methods" element={<RecitationMethods />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

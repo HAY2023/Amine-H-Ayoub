@@ -44,7 +44,7 @@ export interface SurahTimings {
 
 export const AYAH_TIMINGS: Record<number, SurahTimings | number[]> = {};
 
-// === LocalStorage overrides (saved from /timings tool) ===
+// === LocalStorage overrides (saved from /recitation-methods split tool) ===
 const TIMINGS_STORAGE_KEY = "mushaf:ayahTimings:v1";
 
 export function getSavedTimings(): Record<number, SurahTimings> {

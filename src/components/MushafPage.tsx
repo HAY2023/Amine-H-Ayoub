@@ -13,6 +13,9 @@ type PlayMode = "teacher" | "kids" | "both"; // both = teacher then kids for the
 const STORAGE_KEY = "mushaf:lastPage";
 const MUSHAF_LAST_SURAH = "mushaf:lastSurah";
 const MUSHAF_LAST_TIME = "mushaf:lastTime";
+const MUSHAF_PLAY_MODE = "mushaf:playMode";
+const MUSHAF_CONTINUOUS = "mushaf:continuousPlay";
+const MUSHAF_REPEAT = "mushaf:repeatCount";
 
 interface SurahAudio { name: string; number: number; src: string; ayahCount: number; }
 interface PageInfo { name: string; src: string; surahs: SurahAudio[]; }
@@ -62,8 +65,28 @@ const MushafPage = ({ onBack }: Props) => {
     return isNaN(s) || s < 0 || s >= pages.length ? 0 : s;
   });
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" ? window.innerWidth >= 1024 : false);
-  const [controlsOpen, setControlsOpen] = useState(false);
+  const [controlsOpen, setControlsOpen] = useState(() => typeof window !== "undefined" && window.innerWidth >= 1024);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Force re-read calibration data from localStorage when returning from /calibrate
+  const [boxesVersion, setBoxesVersion] = useState(0);
+  useEffect(() => {
+    const bump = () => setBoxesVersion(v => v + 1);
+    // When tab becomes visible again (user returns from /calibrate)
+    const onVis = () => { if (document.visibilityState === "visible") bump(); };
+    // When localStorage changes (from another tab or same-tab navigation)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key?.startsWith("mushaf:ayah")) bump();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("storage", onStorage);
+    // Also bump when component first mounts
+    bump();
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   // Audio state
   const [activeSurah, setActiveSurah] = useState<SurahAudio | null>(null);
@@ -72,9 +95,18 @@ const MushafPage = ({ onBack }: Props) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentAyah, setCurrentAyah] = useState(0);
   const [currentSpeaker, setCurrentSpeaker] = useState<Speaker>("teacher");
-  const [playMode, setPlayMode] = useState<PlayMode>("both"); // teacher, kids, or both (correction)
-  const [continuousPlay, setContinuousPlay] = useState(true);
-  const [repeatCount, setRepeatCount] = useState(0);
+  const [playMode, setPlayMode] = useState<PlayMode>(() => {
+    const saved = localStorage.getItem(MUSHAF_PLAY_MODE);
+    return (saved === "teacher" || saved === "kids" || saved === "both") ? saved : "both";
+  });
+  const [continuousPlay, setContinuousPlay] = useState(() => {
+    const saved = localStorage.getItem(MUSHAF_CONTINUOUS);
+    return saved !== null ? saved === "true" : true;
+  });
+  const [repeatCount, setRepeatCount] = useState(() => {
+    const saved = parseInt(localStorage.getItem(MUSHAF_REPEAT) || "0", 10);
+    return isNaN(saved) ? 0 : saved;
+  });
   const audioRef = useRef<HTMLAudioElement>(null);
   const lastSavedTimeRef = useRef(0);
   const stopAtRef = useRef<number | null>(null); // stop playback when reaching this time
@@ -87,6 +119,11 @@ const MushafPage = ({ onBack }: Props) => {
     window.addEventListener("resize", r); return () => window.removeEventListener("resize", r);
   }, []);
   useEffect(() => { localStorage.setItem(STORAGE_KEY, String(currentPage)); }, [currentPage]);
+
+  // Persist user settings
+  useEffect(() => { localStorage.setItem(MUSHAF_PLAY_MODE, playMode); }, [playMode]);
+  useEffect(() => { localStorage.setItem(MUSHAF_CONTINUOUS, String(continuousPlay)); }, [continuousPlay]);
+  useEffect(() => { localStorage.setItem(MUSHAF_REPEAT, String(repeatCount)); }, [repeatCount]);
 
   // Stop on page change
   useEffect(() => {
@@ -208,7 +245,7 @@ const MushafPage = ({ onBack }: Props) => {
 
     const start = () => {
       const dur = a.duration || 0;
-      // Bound segment from /calibrate or saved /timings takes priority
+      // Bound segment from /calibrate or saved splits takes priority
       const sp: Speaker = forceSpeaker ?? boundSegment?.speaker ?? "teacher";
       const savedSegment = getAyahSegment(surah.number, ayahNum, sp);
       const preciseBound = savedSegment
@@ -234,7 +271,7 @@ const MushafPage = ({ onBack }: Props) => {
       a.play().catch(() => {});
     };
 
-    setControlsOpen(false);
+    if (!isDesktop) setControlsOpen(false);
 
     if (!sameSrc) {
       a.src = surah.src;
@@ -376,6 +413,14 @@ const MushafPage = ({ onBack }: Props) => {
     return [pages[currentPage]];
   }, [currentPage, isDesktop]);
 
+  // Pre-compute boxes for visible pages, re-read from localStorage when boxesVersion changes
+  const pageBoxes = useMemo(() => {
+    const map: Record<string, ReturnType<typeof getPageAyahBoxes>> = {};
+    visiblePages.forEach(p => { map[p.src] = getPageAyahBoxes(p.src); });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visiblePages, boxesVersion]);
+
   // Preload neighbors
   useEffect(() => {
     [currentPage - 1, currentPage + 1, currentPage + 2]
@@ -428,7 +473,7 @@ const MushafPage = ({ onBack }: Props) => {
                 preserveAspectRatio="none"
                 aria-hidden="true"
               >
-                {getPageAyahBoxes(page.src).map((box, i) => {
+                {(pageBoxes[page.src] || []).map((box, i) => {
                   const isCurrent = activeSurah?.number === box.surah && currentAyah === box.ayah && isPlaying;
                   const bound = box.audioStart !== undefined && box.audioEnd !== undefined;
                   const boxSpeaker: Speaker = box.speaker ?? "teacher";
@@ -453,7 +498,7 @@ const MushafPage = ({ onBack }: Props) => {
               </svg>
 
               <div className="absolute inset-0">
-                {getPageAyahBoxes(page.src).map((box) => {
+                {(pageBoxes[page.src] || []).map((box) => {
                   const surah = page.surahs.find((s) => s.number === box.surah);
                   if (!surah) return null;
                   return (
