@@ -1,1 +1,4 @@
 project_id = "gimdekpxutvnopovofmc"
+
+[functions.ai-split-audio]
+verify_jwt = false
