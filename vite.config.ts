@@ -1,13 +1,16 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { fileURLToPath } from "url";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8080,
     hmr: {
       overlay: false,
     },
@@ -22,9 +25,9 @@ export default defineConfig(({ mode }) => ({
       },
       includeAssets: ["favicon.ico", "my-photo.png", "background-kids.jpg"],
       manifest: {
-        name: "المصحف المعلم برواية ورش",
-        short_name: "المصحف المعلم",
-        description: "تطبيق تعليمي لحفظ القرآن الكريم بالتكرار",
+        name: "Quran Kids Teacher",
+        short_name: "Quran Kids",
+        description: "Educational app for learning Quran by repetition",
         theme_color: "#D2B48C",
         background_color: "#F5F5DC",
         display: "standalone",
@@ -61,34 +64,6 @@ export default defineConfig(({ mode }) => ({
               cacheName: "audio-cache",
               expiration: {
                 maxEntries: 500,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            urlPattern: /^\/images\/.*\.(png|jpg|jpeg)$/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "images-cache",
-              expiration: {
-                maxEntries: 500,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/cdn\.islamic\.network\/.*\.mp3$/,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "external-audio-cache",
-              expiration: {
-                maxEntries: 1000,
                 maxAgeSeconds: 60 * 60 * 24 * 365,
               },
               cacheableResponse: {
@@ -102,8 +77,11 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
+  },
+  optimizeDeps: {
+    exclude: ["@ricky0123/vad-web", "onnxruntime-web"],
   },
 }));

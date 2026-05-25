@@ -4,9 +4,9 @@ import {
   ArrowRight, ArrowLeft, Play, Pause, Volume2, StopCircle, Check, Trash2,
   Wand2, RotateCcw, Save, Zap, Link2,
 } from "lucide-react";
-import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings, AudioSegment } from "@/data/ayahTimings";
-import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
-import { toast } from "@/hooks/use-toast";
+import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings, AudioSegment } from "../data/ayahTimings";
+import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
+import { toast } from "../hooks/use-toast";
 import { NonRealTimeVAD } from "@ricky0123/vad-web";
 import { env } from "onnxruntime-web";
 
