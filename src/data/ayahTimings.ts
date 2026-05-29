@@ -1,3 +1,5 @@
+import { supabase } from "../lib/supabase";
+
 /**
  * توقيتات الآيات اليدوية لكل سورة (بالثواني).
  *
@@ -42,8 +44,22 @@ export interface SurahTimings {
 
 export const AYAH_TIMINGS: Record<number, SurahTimings | number[]> = {};
 
+
 // === LocalStorage overrides (saved from /timings tool) ===
 const TIMINGS_STORAGE_KEY = "mushaf:ayahTimings:v1";
+
+export const syncTimingsFromServer = async () => {
+  if (typeof window === "undefined") return;
+  try {
+    const { data, error } = await supabase.from("store").select("value").eq("key", TIMINGS_STORAGE_KEY).single();
+    if (data && data.value) {
+      localStorage.setItem(TIMINGS_STORAGE_KEY, JSON.stringify(data.value));
+      window.dispatchEvent(new Event("mushaf:sync_complete"));
+    }
+  } catch (e) {
+    console.error("Supabase sync timings error:", e);
+  }
+};
 
 export function getSavedTimings(): Record<number, SurahTimings> {
   if (typeof window === "undefined") return {};
@@ -53,18 +69,30 @@ export function getSavedTimings(): Record<number, SurahTimings> {
   } catch { return {}; }
 }
 
-export function saveSurahTimings(surahNumber: number, timings: SurahTimings): void {
+export async function saveSurahTimings(surahNumber: number, timings: SurahTimings) {
   if (typeof window === "undefined") return;
   const all = getSavedTimings();
   all[surahNumber] = timings;
   localStorage.setItem(TIMINGS_STORAGE_KEY, JSON.stringify(all));
+  
+  try {
+    await supabase.from("store").upsert({ key: TIMINGS_STORAGE_KEY, value: all });
+  } catch (e) {
+    console.error("Supabase save timings error:", e);
+  }
 }
 
-export function clearSavedSurahTimings(surahNumber: number): void {
+export async function clearSavedSurahTimings(surahNumber: number) {
   if (typeof window === "undefined") return;
   const all = getSavedTimings();
   delete all[surahNumber];
   localStorage.setItem(TIMINGS_STORAGE_KEY, JSON.stringify(all));
+  
+  try {
+    await supabase.from("store").upsert({ key: TIMINGS_STORAGE_KEY, value: all });
+  } catch (e) {
+    console.error("Supabase delete timings error:", e);
+  }
 }
 
 /** Approximate ayah counts for surahs in this app. */

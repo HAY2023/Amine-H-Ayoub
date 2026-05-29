@@ -1,3 +1,5 @@
+import { supabase } from "../lib/supabase";
+
 export interface AyahBox {
   surah: number;
   ayah: number;
@@ -5,10 +7,13 @@ export interface AyahBox {
   y: number;
   width: number;
   height: number;
-  /** Optional: precise audio segment bound to this highlight (in seconds). */
+  /** Optional: precise audio segment bound to this highlight (in seconds) for the teacher. */
   audioStart?: number;
   audioEnd?: number;
-  /** Optional: which speaker section this segment belongs to. */
+  /** Optional: precise audio segment bound for the kids/child. */
+  kidsStart?: number;
+  kidsEnd?: number;
+  /** Optional: which speaker section this segment belongs to (deprecated in favor of dual timing support). */
   speaker?: "teacher" | "kids";
 }
 
@@ -80,6 +85,20 @@ export const AYAH_COORDINATES: Record<string, AyahBox[]> = {
 
 const cloneBoxes = (boxes: AyahBox[]) => boxes.map((box) => ({ ...box }));
 
+
+export const syncCoordinatesFromServer = async () => {
+  if (typeof window === "undefined") return;
+  try {
+    const { data, error } = await supabase.from("store").select("value").eq("key", CALIBRATION_STORAGE_KEY).single();
+    if (data && data.value) {
+      localStorage.setItem(CALIBRATION_STORAGE_KEY, JSON.stringify(data.value));
+      window.dispatchEvent(new Event("mushaf:sync_complete"));
+    }
+  } catch (e) {
+    console.error("Supabase sync error:", e);
+  }
+};
+
 export const getSavedAyahCoordinates = (): Record<string, AyahBox[]> => {
   if (typeof window === "undefined") return {};
   try {
@@ -98,18 +117,28 @@ export const getPageAyahBoxes = (pageSrc: string) => {
   return cloneBoxes(AYAH_COORDINATES[pageSrc] ?? []);
 };
 
-export const savePageAyahBoxes = (pageSrc: string, boxes: AyahBox[]) => {
+export const savePageAyahBoxes = async (pageSrc: string, boxes: AyahBox[]) => {
   if (typeof window === "undefined") return;
   const saved = getSavedAyahCoordinates();
   saved[pageSrc] = cloneBoxes(boxes);
   localStorage.setItem(CALIBRATION_STORAGE_KEY, JSON.stringify(saved));
+  try {
+    await supabase.from("store").upsert({ key: CALIBRATION_STORAGE_KEY, value: saved });
+  } catch (e) {
+    console.error("Supabase save error:", e);
+  }
 };
 
-export const resetPageAyahBoxes = (pageSrc: string) => {
+export const resetPageAyahBoxes = async (pageSrc: string) => {
   if (typeof window === "undefined") return;
   const saved = getSavedAyahCoordinates();
   delete saved[pageSrc];
   localStorage.setItem(CALIBRATION_STORAGE_KEY, JSON.stringify(saved));
+  try {
+    await supabase.from("store").upsert({ key: CALIBRATION_STORAGE_KEY, value: saved });
+  } catch (e) {
+    console.error("Supabase delete error:", e);
+  }
 };
 
 export const getAllPageSources = () => Object.keys(AYAH_COORDINATES);

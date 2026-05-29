@@ -1,0 +1,30 @@
+# Fly.io configuration
+app = "quran-audio-segmentation"
+primary_region = "jnb"
+
+[build]
+  image = "quran-audio-segmentation"
+
+[env]
+  PORT = "8000"
+
+[[services]]
+  internal_port = 8000
+  processes = ["app"]
+
+  [services.http_checks]
+    enabled = true
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    protocol = "http"
+    timeout = "5s"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443

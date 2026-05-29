@@ -36,7 +36,7 @@ serve(async (req) => {
       throw new Error("Missing required fields: storageUrl, surahNumber, ayahCount");
     }
 
-    const PYTHON_SERVICE_URL = Deno.env.get("PYTHON_SERVICE_URL") || "http://localhost:8000";
+    const PYTHON_SERVICE_URL = Deno.env.get("PYTHON_SERVICE_URL") || "https://quran-audio-segmentation.fly.dev";
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 

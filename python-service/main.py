@@ -1,21 +1,20 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
 from pydantic import BaseModel
-from typing import Optional, List
-import logging
-import time
-import asyncio
+import requests
+import numpy as np
+import librosa
+import torch
+from typing import Optional
+import os
+from datetime import datetime
+from dotenv import load_dotenv
 
-from pipeline import AudioProcessor, AudioSegment
+load_dotenv()
+HF_TOKEN = os.getenv("HF_TOKEN")
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-app = FastAPI(title="Quran Audio Segmentation API", version="1.0.0")
+app = FastAPI(title="Audio Segmentation Service", version="1.0")
 
 # CORS
 app.add_middleware(
@@ -26,186 +25,167 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global processor instance
-processor = None
-
-
-@app.on_event("startup")
-async def startup_event():
-    global processor
-    logger.info("Initializing AudioProcessor...")
-    processor = AudioProcessor()
-    logger.info("AudioProcessor ready!")
-
-
-# Request/Response models
+# Models
 class ProcessAudioRequest(BaseModel):
     audioUrl: str
     surahNumber: int
     ayahCount: int
     sessionId: Optional[str] = None
-    referenceTeacher: Optional[str] = None
-    referenceKids: Optional[str] = None
-    isStereo: Optional[bool] = False
-
-
-class AudioSegmentResponse(BaseModel):
-    start: float
-    end: float
-    speaker: str
-    ayah: Optional[int]
-
 
 class ProcessAudioResponse(BaseModel):
-    sessionId: Optional[str]
-    segments: List[AudioSegmentResponse]
+    success: bool
+    segments: list
     duration: float
     processingTimeMs: int
-    status: str = "completed"
 
+# Global Models
+vad_model = None
+utils = None
+diarization_pipeline = None
 
-class HealthResponse(BaseModel):
-    status: str
-    device: str
+@app.on_event("startup")
+async def load_models():
+    global vad_model, utils, diarization_pipeline
+    
+    print("Loading Silero VAD...")
+    try:
+        vad_model, utils = torch.hub.load('snakers4/silero-vad', model='silero_vad')
+        print("✅ Silero VAD loaded")
+    except Exception as e:
+        print(f"⚠️ Silero VAD Error: {e}")
 
+    print("Loading Pyannote Diarization Pipeline...")
+    try:
+        from pyannote.audio import Pipeline
+        if HF_TOKEN and HF_TOKEN != "your_huggingface_token_here":
+            diarization_pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.0", use_auth_token=HF_TOKEN)
+            print("✅ Pyannote Diarization Pipeline loaded successfully")
+        else:
+            print("⚠️ HF_TOKEN not set correctly. Pyannote cannot be loaded. Will use fallback logic.")
+    except Exception as e:
+        print(f"⚠️ Error loading Pyannote: {e}")
 
-# Endpoints
-@app.get("/health", response_model=HealthResponse)
-async def health_check():
-    """Health check endpoint."""
-    return HealthResponse(
-        status="healthy",
-        device="cuda" if processor and processor.device == "cuda" else "cpu"
-    )
-
-
-@app.post("/process-audio", response_model=ProcessAudioResponse)
+@app.post("/process-audio")
 async def process_audio(request: ProcessAudioRequest):
-    """
-    Main endpoint: Process audio file and segment it.
-
-    Args:
-        audioUrl: URL to audio file in Supabase Storage
-        surahNumber: Surah number (1-114)
-        ayahCount: Number of ayahs in the surah
-        sessionId: Optional session ID for tracking
-        referenceTeacher: Optional URL to teacher reference audio
-        referenceKids: Optional URL to kids reference audio
-        isStereo: Whether audio is stereo (left=teacher, right=kids)
-
-    Returns:
-        Segments with timestamps and speaker identification
-    """
-    if not processor:
-        raise HTTPException(status_code=500, detail="Processor not initialized")
-
-    if not request.audioUrl:
-        raise HTTPException(status_code=400, detail="audioUrl is required")
-
-    start_time = time.time()
-
     try:
-        logger.info(f"Processing audio: {request.audioUrl}")
-
-        # Download audio
-        y, sr = await processor.download_audio(request.audioUrl)
+        start = datetime.now()
+        
+        # Download Audio
+        resp = requests.get(request.audioUrl, timeout=30)
+        temp_file = f"/tmp/audio_{int(datetime.now().timestamp()*1000)}.wav"
+        with open(temp_file, 'wb') as f:
+            f.write(resp.content)
+        
+        # Load audio with librosa
+        y, sr = librosa.load(temp_file, sr=16000, mono=True)
         duration = len(y) / sr
-        logger.info(f"Audio loaded: {duration:.1f}s at {sr}Hz")
-
-        # Pre-process
-        y_clean = processor.preprocess_audio(y, sr)
-
-        # Process
-        segments = processor.process_audio_hybrid(
-            y=y_clean,
-            sr=sr,
-            surah_number=request.surahNumber,
-            ayah_count=request.ayahCount,
-            is_stereo=request.isStereo,
-            reference_teacher_url=request.referenceTeacher,
-            reference_kids_url=request.referenceKids,
-        )
-
-        # Assign ayah numbers
-        segments = processor.assign_ayahs(segments, request.ayahCount)
-
-        # Convert to response
-        segment_responses = [seg.to_dict() for seg in segments]
-
-        processing_time = int((time.time() - start_time) * 1000)
-
-        logger.info(
-            f"✅ Completed: {len(segments)} segments in {processing_time}ms"
-        )
-
-        return ProcessAudioResponse(
-            sessionId=request.sessionId,
-            segments=[AudioSegmentResponse(**seg) for seg in segment_responses],
-            duration=duration,
-            processingTimeMs=processing_time,
-            status="completed",
-        )
-
-    except Exception as e:
-        logger.error(f"❌ Error processing audio: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/identify-speaker")
-async def identify_speaker(
-    audioUrl: str,
-    referenceUrl: str,
-    referenceType: str = "teacher",  # "teacher" or "kids"
-):
-    """
-    Helper endpoint: Compare audio segment with reference to identify speaker.
-
-    Args:
-        audioUrl: URL to audio segment
-        referenceUrl: URL to reference audio
-        referenceType: Expected speaker type
-
-    Returns:
-        Similarity score (0.0-1.0) and identified speaker
-    """
-    if not processor:
-        raise HTTPException(status_code=500, detail="Processor not initialized")
-
-    try:
-        # For now, return placeholder
-        # TODO: Implement with resemblyzer embeddings
+        
+        segments = []
+        
+        # Stage 1: Noise Reduction
+        import noisereduce as nr
+        import soundfile as sf
+        y_clean = nr.reduce_noise(y=y, sr=sr)
+        
+        # Normalize
+        y_norm = y_clean / (np.max(np.abs(y_clean)) + 1e-7)
+        
+        clean_temp = temp_file.replace(".wav", "_clean.wav")
+        sf.write(clean_temp, y_norm, sr)
+        
+        if diarization_pipeline is not None:
+            # Stage 2 & 4: VAD and Speaker Diarization via Pyannote
+            diarization = diarization_pipeline(clean_temp, num_speakers=2)
+            
+            # Stage 5: Speaker Identification (Simulated)
+            speaker_mapping = {} 
+            raw_segments = []
+            
+            for turn, _, speaker in diarization.itertracks(yield_label=True):
+                raw_segments.append({
+                    "start": turn.start,
+                    "end": turn.end,
+                    "speaker": speaker
+                })
+            
+            if raw_segments:
+                # Assuming Teacher speaks first
+                first_speaker = raw_segments[0]["speaker"]
+                speaker_mapping[first_speaker] = "teacher"
+                
+                # Assign the other speaker as "kids"
+                for seg in raw_segments:
+                    if seg["speaker"] not in speaker_mapping:
+                        speaker_mapping[seg["speaker"]] = "kids"
+                        break
+                        
+                for i, seg in enumerate(raw_segments):
+                    role = speaker_mapping.get(seg["speaker"], "kids")
+                    ayah = (i // 2) + 1
+                    
+                    segments.append({
+                        "id": f"split-{int(datetime.now().timestamp() * 1000)}-{i}",
+                        "start": round(seg["start"], 3),
+                        "end": round(seg["end"], 3),
+                        "speaker": role,
+                        "ayah": ayah,
+                        "label": f"سورة {request.surahNumber} - آية {ayah} ({'معلم' if role == 'teacher' else 'طفل'})"
+                    })
+        else:
+            # Fallback: Use Silero VAD without Diarization if Pyannote isn't loaded
+            if vad_model is not None and utils is not None:
+                (get_speech_ts, _, _, _, _) = utils
+                # Ensure tensor is float32
+                audio_tensor = torch.tensor(y_norm, dtype=torch.float32)
+                
+                speech_timestamps = get_speech_ts(
+                    audio_tensor,
+                    vad_model,
+                    threshold=0.5,
+                    min_speech_duration_ms=300,
+                    min_silence_duration_ms=200
+                )
+                
+                for i, ts in enumerate(speech_timestamps):
+                    role = "teacher" if i % 2 == 0 else "kids"
+                    ayah = (i // 2) + 1
+                    start_s = ts['start'] / 16000
+                    end_s = ts['end'] / 16000
+                    
+                    segments.append({
+                        "id": f"split-{int(datetime.now().timestamp() * 1000)}-{i}",
+                        "start": round(start_s, 3),
+                        "end": round(end_s, 3),
+                        "speaker": role,
+                        "ayah": ayah,
+                        "label": f"سورة {request.surahNumber} - آية {ayah} ({'معلم' if role == 'teacher' else 'طفل'})"
+                    })
+            else:
+                raise Exception("Neither Pyannote nor Silero VAD could be loaded.")
+        
+        # Cleanup
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
+        if os.path.exists(clean_temp):
+            os.remove(clean_temp)
+            
+        proc_time = int((datetime.now() - start).total_seconds() * 1000)
+        
         return {
-            "similarity": 0.85,
-            "speaker": referenceType,
-            "confidence": "high",
+            "success": True,
+            "segments": segments,
+            "duration": duration,
+            "processingTimeMs": proc_time
         }
+        
     except Exception as e:
-        logger.error(f"Error identifying speaker: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@app.get("/")
-async def root():
-    """Root endpoint with API info."""
-    return {
-        "name": "Quran Audio Segmentation API",
-        "version": "1.0.0",
-        "endpoints": {
-            "health": "/health",
-            "process_audio": "/process-audio",
-            "identify_speaker": "/identify-speaker",
-        },
-        "docs": "/docs",
-    }
-
+@app.get("/health")
+def health():
+    return {"status": "ok", "pyannote_ready": diarization_pipeline is not None}
 
 if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info",
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8000)

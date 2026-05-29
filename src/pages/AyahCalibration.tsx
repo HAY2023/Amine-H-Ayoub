@@ -36,6 +36,7 @@ const AyahCalibration = () => {
   const [duration, setDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [segmentsList, setSegmentsList] = useState<AudioSegment[]>([]);
+  const [history, setHistory] = useState<AyahBox[][]>([]);
   const canvasRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<number | null>(null);
@@ -48,9 +49,30 @@ const AyahCalibration = () => {
     }
   }, [selected?.surah]);
 
+  const saveHistory = useCallback((currentBoxes: AyahBox[]) => {
+    setHistory(prev => {
+      const next = [...prev, currentBoxes];
+      if (next.length > 20) next.shift(); // Keep last 20 states
+      return next;
+    });
+  }, []);
+
+  const undo = () => {
+    if (history.length === 0) {
+      toast({ title: "⚠️ لا يوجد تراجع", description: "لم تقم بأي تعديلات للتراجع عنها" });
+      return;
+    }
+    const previous = history[history.length - 1];
+    setHistory(prev => prev.slice(0, -1));
+    setBoxes(previous);
+    setSelectedIndex(i => Math.min(i, Math.max(0, previous.length - 1)));
+    toast({ title: "↩️ تراجع", description: "تم التراجع عن التعديل الأخير" });
+  };
+
   const loadPage = (src: string) => {
     setPageSrc(src);
     setBoxes(getPageAyahBoxes(src));
+    setHistory([]);
     setSelectedIndex(0);
     stopAudio();
   };
@@ -82,6 +104,7 @@ const AyahCalibration = () => {
 
   const duplicateSelected = () => {
     if (!selected) return;
+    saveHistory(boxes);
     const copy: AyahBox = {
       ...selected,
       y: clamp(selected.y + selected.height + 8, 0, PAGE_IMAGE_SIZE.height - selected.height),
@@ -96,12 +119,14 @@ const AyahCalibration = () => {
 
   const deleteSelected = () => {
     if (boxes.length <= 1) return;
+    saveHistory(boxes);
     setBoxes(current => current.filter((_, i) => i !== selectedIndex));
     setSelectedIndex(i => Math.max(0, i - 1));
   };
 
   const applyHeightToAll = () => {
     if (!selected) return;
+    saveHistory(boxes);
     setBoxes(current => current.map(box => ({
       ...box,
       height: selected.height
@@ -109,23 +134,45 @@ const AyahCalibration = () => {
     toast({ title: "✅ تم توحيد الارتفاع", description: "تم تطبيق الارتفاع المحدد على جميع المربعات" });
   };
 
+  const applyWidthAndXToAll = () => {
+    if (!selected) return;
+    saveHistory(boxes);
+    setBoxes(current => current.map(box => ({
+      ...box,
+      x: selected.x,
+      width: selected.width
+    })));
+    toast({ title: "✅ محاذاة العرض والمكان", description: "تم مساواة البداية والنهاية لجميع المربعات" });
+  };
+
   const addNewBox = () => {
-    const lastBox = boxes[boxes.length - 1];
+    saveHistory(boxes);
+    const referenceBox = selected || boxes[boxes.length - 1];
     const newBox: AyahBox = {
-      surah: lastBox?.surah ?? 1,
-      ayah: (lastBox?.ayah ?? 0) + 1,
-      x: lastBox?.x ?? 140,
-      y: lastBox ? clamp(lastBox.y + lastBox.height + 10, 0, PAGE_IMAGE_SIZE.height - 100) : 300,
-      width: lastBox?.width ?? 980,
-      height: lastBox?.height ?? 100,
+      surah: referenceBox?.surah ?? 1,
+      ayah: (referenceBox?.ayah ?? 0) + 1,
+      x: referenceBox?.x ?? 140,
+      y: referenceBox ? clamp(referenceBox.y + referenceBox.height + 10, 0, PAGE_IMAGE_SIZE.height - 100) : 300,
+      width: referenceBox?.width ?? 980,
+      height: referenceBox?.height ?? 100,
     };
-    setBoxes(current => [...current, newBox]);
-    setSelectedIndex(boxes.length);
+    
+    setBoxes(current => {
+      if (selected) {
+        const next = [...current.slice(0, selectedIndex + 1), newBox, ...current.slice(selectedIndex + 1)];
+        setSelectedIndex(selectedIndex + 1);
+        return next;
+      } else {
+        setSelectedIndex(current.length);
+        return [...current, newBox];
+      }
+    });
   };
 
   const dragStart = (index: number, e: React.PointerEvent<HTMLButtonElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     setSelectedIndex(index);
+    saveHistory(boxes);
     const canvasRect = canvasRef.current?.getBoundingClientRect();
     if (!canvasRect) return;
     const startX = e.clientX;
@@ -174,20 +221,31 @@ const AyahCalibration = () => {
   const setStartFromCurrent = () => {
     if (!selected || !audioRef.current) return;
     const t = Number(audioRef.current.currentTime.toFixed(3));
-    updateSelected({ audioStart: t, speaker });
-    toast({ title: "✅ بداية", description: `${fmtTime(t)}` });
+    if (speaker === "teacher") {
+      updateSelected({ audioStart: t });
+      toast({ title: "✅ بداية المعلم", description: `${fmtTime(t)}` });
+    } else {
+      updateSelected({ kidsStart: t });
+      toast({ title: "✅ بداية الطفل", description: `${fmtTime(t)}` });
+    }
   };
 
   const setEndFromCurrent = () => {
     if (!selected || !audioRef.current) return;
     const t = Number(audioRef.current.currentTime.toFixed(3));
-    updateSelected({ audioEnd: t, speaker });
-    toast({ title: "✅ نهاية", description: `${fmtTime(t)}` });
+    if (speaker === "teacher") {
+      updateSelected({ audioEnd: t });
+      toast({ title: "✅ نهاية المعلم", description: `${fmtTime(t)}` });
+    } else {
+      updateSelected({ kidsEnd: t });
+      toast({ title: "✅ نهاية الطفل", description: `${fmtTime(t)}` });
+    }
   };
 
   const clearBinding = () => {
     if (!selected) return;
-    updateSelected({ audioStart: undefined, audioEnd: undefined });
+    updateSelected({ audioStart: undefined, audioEnd: undefined, kidsStart: undefined, kidsEnd: undefined });
+    toast({ title: "✅ تم إلغاء الربط الصوتي بالكامل" });
   };
 
   const autoLinkFromTimings = () => {
@@ -222,16 +280,19 @@ const AyahCalibration = () => {
         // Try segments first (most accurate, has speaker info)
         const segs = surahSegments[box.surah];
         if (segs) {
-          // Find segments matching this ayah index for teacher
           const teacherSegs = segs.filter(s => s.speaker === "teacher");
           const kidsSegs = segs.filter(s => s.speaker === "kids");
-          const seg = teacherSegs[count] || segs[count];
-          if (seg) {
+          const tSeg = teacherSegs[count];
+          const kSeg = kidsSegs[count];
+          
+          if (tSeg || kSeg) {
             return {
               ...box,
-              audioStart: seg.start,
-              audioEnd: seg.end,
-              speaker: seg.speaker,
+              audioStart: tSeg?.start,
+              audioEnd: tSeg?.end,
+              kidsStart: kSeg?.start,
+              kidsEnd: kSeg?.end,
+              speaker: "teacher", // legacy fallback
             };
           }
         }
@@ -250,7 +311,7 @@ const AyahCalibration = () => {
         return box;
       });
     });
-    toast({ title: "✅ تم الربط التلقائي", description: "تم ربط المقاطع المحفوظة من صفحة التقسيم" });
+    toast({ title: "✅ تم الربط التلقائي", description: "تم ربط مقاطع المعلم والأطفال بنجاح من صفحة التقسيم" });
   };
 
   useEffect(() => {
@@ -280,11 +341,115 @@ const AyahCalibration = () => {
     }
   }, [boxes, pageSrc]);
 
-  // Track latest state for synchronous save on unmount (HMR)
-  const stateRef = useRef({ pageSrc, boxes });
+  // Track latest state for synchronous save on unmount (HMR) and keyboard shortcuts
+  const stateRef = useRef({ pageSrc, boxes, selectedIndex, selected });
   useEffect(() => {
-    stateRef.current = { pageSrc, boxes };
-  }, [pageSrc, boxes]);
+    stateRef.current = { pageSrc, boxes, selectedIndex, selected };
+  }, [pageSrc, boxes, selectedIndex, selected]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if focus is on an input or select
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'SELECT') {
+        return;
+      }
+
+      const currentSelected = stateRef.current.selected;
+      
+      // Box movement/manipulation helpers that use the latest state
+      const moveBox = (dx: number, dy: number) => {
+        if (!currentSelected) return;
+        setBoxes(current => current.map((box, i) => i === stateRef.current.selectedIndex ? {
+          ...box,
+          x: clamp(currentSelected.x + dx, 0, PAGE_IMAGE_SIZE.width - currentSelected.width),
+          y: clamp(currentSelected.y + dy, 0, PAGE_IMAGE_SIZE.height - currentSelected.height),
+        } : box));
+      };
+
+      const resizeBox = (dw: number, dh: number) => {
+        if (!currentSelected) return;
+        setBoxes(current => current.map((box, i) => i === stateRef.current.selectedIndex ? {
+          ...box,
+          width: clamp(currentSelected.width + dw, 30, PAGE_IMAGE_SIZE.width - currentSelected.x),
+          height: clamp(currentSelected.height + dh, 25, PAGE_IMAGE_SIZE.height - currentSelected.y),
+        } : box));
+      };
+
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          moveBox(0, -step);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          moveBox(0, step);
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          moveBox(-step, 0);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          moveBox(step, 0);
+          break;
+        case '+':
+        case '=':
+          e.preventDefault();
+          resizeBox(step, 0);
+          break;
+        case '-':
+        case '_':
+          e.preventDefault();
+          resizeBox(-step, 0);
+          break;
+        case 'y':
+        case 'Y':
+        case 'غ':
+          e.preventDefault();
+          if (currentSelected) {
+            setBoxes(current => {
+              const copy: AyahBox = {
+                ...currentSelected,
+                y: clamp(currentSelected.y + currentSelected.height + 8, 0, PAGE_IMAGE_SIZE.height - currentSelected.height),
+                audioStart: undefined, audioEnd: undefined,
+              };
+              const next = [...current.slice(0, stateRef.current.selectedIndex + 1), copy, ...current.slice(stateRef.current.selectedIndex + 1)];
+              setSelectedIndex(stateRef.current.selectedIndex + 1);
+              return next;
+            });
+          }
+          break;
+        case 'u':
+        case 'U':
+        case 'ع':
+          e.preventDefault();
+          setBoxes(current => {
+            const referenceBox = currentSelected || current[current.length - 1];
+            const newBox: AyahBox = {
+              surah: referenceBox?.surah ?? 1,
+              ayah: (referenceBox?.ayah ?? 0) + 1,
+              x: referenceBox?.x ?? 140,
+              y: referenceBox ? clamp(referenceBox.y + referenceBox.height + 10, 0, PAGE_IMAGE_SIZE.height - 100) : 300,
+              width: referenceBox?.width ?? 980,
+              height: referenceBox?.height ?? 100,
+            };
+            if (currentSelected) {
+              const idx = stateRef.current.selectedIndex;
+              const next = [...current.slice(0, idx + 1), newBox, ...current.slice(idx + 1)];
+              setSelectedIndex(idx + 1);
+              return next;
+            } else {
+              setSelectedIndex(current.length);
+              return [...current, newBox];
+            }
+          });
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     // Ensure we save right before component unmounts (e.g., during code edit / HMR)
@@ -299,8 +464,40 @@ const AyahCalibration = () => {
     return () => clearTimeout(timer);
   }, [boxes, pageSrc, saveAll]);
 
-  const hasBinding = selected?.audioStart !== undefined && selected?.audioEnd !== undefined;
-  const boundCount = boxes.filter(b => b.audioStart !== undefined && b.audioEnd !== undefined).length;
+  const hasBinding = (selected?.audioStart !== undefined && selected?.audioEnd !== undefined) ||
+                     (selected?.kidsStart !== undefined && selected?.kidsEnd !== undefined);
+  const boundCount = boxes.filter(b => 
+    (b.audioStart !== undefined && b.audioEnd !== undefined) || 
+    (b.kidsStart !== undefined && b.kidsEnd !== undefined)
+  ).length;
+
+  const exportData = () => {
+    try {
+      const raw = localStorage.getItem("mushaf:ayahCoordinates:v1");
+      if (raw) {
+        navigator.clipboard.writeText(raw);
+        toast({ title: "✅ تم النسخ بنجاح!", description: "اذهب إلى الموقع الآخر واضغط 'استيراد'" });
+      } else {
+        toast({ title: "لا يوجد بيانات", description: "لم تقم بحفظ أي تظليل بعد" });
+      }
+    } catch {
+      toast({ title: "خطأ في النسخ", variant: "destructive" });
+    }
+  };
+
+  const importData = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const data = JSON.parse(text);
+      if (typeof data === "object") {
+        localStorage.setItem("mushaf:ayahCoordinates:v1", text);
+        toast({ title: "✅ تم الاستيراد", description: "جاري تحديث الصفحة..." });
+        setTimeout(() => window.location.reload(), 1000);
+      }
+    } catch {
+      toast({ title: "❌ خطأ في الاستيراد", description: "تأكد من أنك نسخت البيانات الصحيحة", variant: "destructive" });
+    }
+  };
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white p-3" dir="rtl">
@@ -328,14 +525,42 @@ const AyahCalibration = () => {
               {boundCount}/{boxes.length} آية مربوطة · حفظ تلقائي
             </p>
           </div>
-          <button
-            onClick={() => saveAll(false)}
-            className={`flex h-10 items-center gap-1 rounded-full px-4 font-bold text-sm shadow-lg active:scale-95 transition-all ${
-              isSaving ? "bg-emerald-600 text-white" : "bg-gradient-to-r from-amber-500 to-amber-600 text-black"
-            }`}
-          >
-            <Save className="h-4 w-4" /> {isSaving ? "✅" : "حفظ"}
-          </button>
+          <div className="flex gap-2">
+            <div className="flex gap-1 bg-slate-700/50 p-1 rounded-full">
+              <button
+                onClick={exportData}
+                className="flex items-center justify-center px-3 text-xs font-bold text-slate-300 hover:text-white transition-colors"
+                title="نسخ التظليلات لنقلها لموقع آخر"
+              >
+                تصدير
+              </button>
+              <div className="w-px bg-slate-600 my-1" />
+              <button
+                onClick={importData}
+                className="flex items-center justify-center px-3 text-xs font-bold text-slate-300 hover:text-white transition-colors"
+                title="لصق التظليلات من موقع آخر"
+              >
+                استيراد
+              </button>
+            </div>
+            <button
+              onClick={undo}
+              disabled={history.length === 0}
+              className={`flex h-10 items-center gap-1 rounded-full px-4 font-bold text-sm shadow-lg active:scale-95 transition-all ${
+                history.length === 0 ? "bg-slate-700/50 text-slate-500" : "bg-slate-700 hover:bg-slate-600 text-white"
+              }`}
+            >
+              <RotateCcw className="h-4 w-4" /> تراجع
+            </button>
+            <button
+              onClick={() => saveAll(false)}
+              className={`flex h-10 items-center gap-1 rounded-full px-4 font-bold text-sm shadow-lg active:scale-95 transition-all ${
+                isSaving ? "bg-emerald-600 text-white" : "bg-gradient-to-r from-amber-500 to-amber-600 text-black"
+              }`}
+            >
+              <Save className="h-4 w-4" /> {isSaving ? "✅" : "حفظ"}
+            </button>
+          </div>
         </header>
 
         <section className="grid gap-3 lg:grid-cols-[1fr_300px]">
@@ -392,7 +617,7 @@ const AyahCalibration = () => {
                 {boxes.map((box, i) => {
                   const bound = box.audioStart !== undefined && box.audioEnd !== undefined;
                   const sp = box.speaker === "kids" ? "👦" : "👨‍🏫";
-                  return <option key={i} value={i}>{bound ? `🔗${sp} ` : "○ "}سورة {box.surah} آية {box.ayah}</option>;
+                  return <option key={i} value={i}>{box.surah}:{box.ayah} {bound ? `🔗${sp}` : "○"} (سورة {box.surah})</option>;
                 })}
               </select>
 
@@ -440,6 +665,17 @@ const AyahCalibration = () => {
               >
                 <Plus className="h-3.5 w-3.5" /> إضافة تظليل جديد
               </button>
+              
+              <div className="flex gap-1">
+                <button
+                  onClick={applyHeightToAll}
+                  className="w-full p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-[10px] font-bold active:scale-95 text-slate-300 transition-colors"
+                >↕️ توحيد الارتفاع</button>
+                <button
+                  onClick={applyWidthAndXToAll}
+                  className="w-full p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-[10px] font-bold active:scale-95 text-slate-300 transition-colors"
+                >↔️ توحيد السطر</button>
+              </div>
             </div>
 
             {/* Audio player */}
@@ -461,22 +697,45 @@ const AyahCalibration = () => {
 
             {/* Binding controls */}
             <div className="rounded-xl bg-emerald-950/40 border border-emerald-500/30 p-3 space-y-2">
-              <div className="text-xs font-bold text-emerald-400">🎯 ربط الصوت بالآية {selected?.surah}:{selected?.ayah}</div>
+              <div className="text-xs font-bold text-emerald-400">
+                🎯 ربط الصوت بالآية {selected?.surah}:{selected?.ayah}
+                <span className="block text-[10px] text-slate-400 mt-0.5 font-bold">
+                  الوضع النشط: <b className={speaker === "teacher" ? "text-amber-400" : "text-sky-400"}>{speaker === "teacher" ? "👨‍🏫 ربط المعلم" : "👦 ربط الطفل"}</b>
+                </span>
+              </div>
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={setStartFromCurrent} className="rounded-lg bg-emerald-600 p-2 text-white text-xs font-bold active:scale-95">⏺ بداية</button>
-                <button onClick={setEndFromCurrent} className="rounded-lg bg-rose-600 p-2 text-white text-xs font-bold active:scale-95">⏹ نهاية</button>
+                <button onClick={setStartFromCurrent} className="rounded-lg bg-emerald-600 p-2 text-white text-xs font-bold active:scale-95 flex items-center justify-center gap-1" title="تحديد بداية المقطع المختار للربط">⏺ بداية</button>
+                <button onClick={setEndFromCurrent} className="rounded-lg bg-rose-600 p-2 text-white text-xs font-bold active:scale-95 flex items-center justify-center gap-1" title="تحديد نهاية المقطع المختار للربط">⏹ نهاية</button>
               </div>
-              <div className="text-xs text-center font-mono bg-slate-800 rounded-lg p-2 text-slate-300">
-                {selected?.audioStart !== undefined ? fmtTime(selected.audioStart) : "—"}
-                {" → "}
-                {selected?.audioEnd !== undefined ? fmtTime(selected.audioEnd) : "—"}
-                {hasBinding && selected?.audioEnd! > selected?.audioStart! && (
-                  <span className="text-slate-500"> ({(selected!.audioEnd! - selected!.audioStart!).toFixed(2)}ث)</span>
-                )}
+              
+              <div className="space-y-1 bg-slate-800 rounded-lg p-2 font-mono text-[10px] text-slate-300">
+                <div className="flex justify-between items-center border-b border-slate-700/50 pb-1">
+                  <span className="text-amber-400 font-bold">👨‍🏫 المعلم:</span>
+                  <span>
+                    {selected?.audioStart !== undefined ? fmtTime(selected.audioStart) : "—"}
+                    {" → "}
+                    {selected?.audioEnd !== undefined ? fmtTime(selected.audioEnd) : "—"}
+                    {selected?.audioStart !== undefined && selected?.audioEnd !== undefined && (
+                      <span className="text-slate-500"> ({(selected.audioEnd - selected.audioStart).toFixed(1)}ث)</span>
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-1">
+                  <span className="text-sky-400 font-bold">👦 الطفل:</span>
+                  <span>
+                    {selected?.kidsStart !== undefined ? fmtTime(selected.kidsStart) : "—"}
+                    {" → "}
+                    {selected?.kidsEnd !== undefined ? fmtTime(selected.kidsEnd) : "—"}
+                    {selected?.kidsStart !== undefined && selected?.kidsEnd !== undefined && (
+                      <span className="text-slate-500"> ({(selected.kidsEnd - selected.kidsStart).toFixed(1)}ث)</span>
+                    )}
+                  </span>
+                </div>
               </div>
+
               {hasBinding && (
                 <button onClick={clearBinding} className="w-full text-xs rounded-lg bg-slate-700 p-1.5 flex items-center justify-center gap-1 text-slate-300">
-                  <Link2 className="h-3 w-3" /> إلغاء الربط
+                  <Link2 className="h-3 w-3" /> إلغاء الربط بالكامل
                 </button>
               )}
 
@@ -524,8 +783,13 @@ const AyahCalibration = () => {
                     </div>
                     <button
                       onClick={() => {
-                        updateSelected({ audioStart: seg.start, audioEnd: seg.end, speaker: seg.speaker });
-                        toast({ title: "✅ تم الربط", description: `تم ربط المقطع: ${seg.label || i + 1}` });
+                        if (seg.speaker === "teacher") {
+                          updateSelected({ audioStart: seg.start, audioEnd: seg.end });
+                          toast({ title: "✅ تم ربط المعلم", description: `تم ربط مقطع المعلم: ${seg.label || i + 1}` });
+                        } else {
+                          updateSelected({ kidsStart: seg.start, kidsEnd: seg.end });
+                          toast({ title: "✅ تم ربط الطفل", description: `تم ربط مقطع الطفل: ${seg.label || i + 1}` });
+                        }
                       }}
                       className="px-2 h-8 rounded bg-violet-600 text-white text-[10px] font-bold active:scale-95 shrink-0"
                     >

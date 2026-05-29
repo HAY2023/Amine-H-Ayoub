@@ -9,6 +9,7 @@ import BottomNav, { TabType } from "@/components/BottomNav";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
+import RecitationMethods from "./RecitationMethods";
 
 const LAST_SURAH_KEY = "audio:lastSurah";
 const LAST_TIME_KEY = "audio:lastTime";
@@ -90,6 +91,19 @@ const Index = () => {
 
   if (activeTab === "mushaf") {
     return <MushafPage onBack={() => setActiveTab("audio")} />;
+  }
+
+  if (activeTab === "methods") {
+    return (
+      <div className="pb-24">
+        <RecitationMethods onBack={() => setActiveTab("audio")} />
+        <BottomNav
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          hasPlayer={!!currentSurah}
+        />
+      </div>
+    );
   }
 
   return (

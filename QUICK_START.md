@@ -1,83 +1,86 @@
-# Quick Start - Audio Segmentation
+# ⚡ البدء السريع - نظام رفع الصوت
 
-## 1. Start Python Service
+## 3 خطوات فقط:
 
+### 1️⃣ إصلاح قاعدة البيانات
+```bash
+supabase migration up
+```
+✅ يحل مشكلة RLS
+
+### 2️⃣ نشر الخدمة (اختر واحداً)
+
+**Fly.io:**
+```bash
+cd python-service && flyctl deploy
+```
+
+**Railway:**
+```bash
+cd python-service && railway up
+```
+
+**Docker (محلي):**
 ```bash
 cd python-service
-python -m venv venv
-venv\Scripts\activate  # Windows
-pip install -r requirements.txt
-python main.py
+docker build -t quran-audio .
+docker run -p 8000:8000 quran-audio
 ```
 
-✅ Service runs on `http://localhost:8000`
-
-## 2. Deploy Edge Function
-
-```bash
-supabase functions deploy process-audio
+### 3️⃣ ضبط الـ URL
+في Supabase Console → Edge Functions → Secrets:
+```
+PYTHON_SERVICE_URL=https://your-service-url.fly.dev
 ```
 
-✅ Function available at `/functions/v1/process-audio`
-
-## 3. Run React App
+## ✅ جاهز!
 
 ```bash
 npm run dev
+# انتقل إلى http://localhost:5173/upload
 ```
-
-✅ App runs on `http://localhost:5173`
-
-## 4. Test Upload Page
-
-Navigate to: **http://localhost:5173/upload**
-
-1. Drag or select an MP3/WAV file
-2. Set Surah = 1, Ayahs = 7
-3. Click "Process Audio"
-4. View results
 
 ---
 
-## Architecture Summary
+## كل ما أضفناه:
+
+✅ **Migration الجديد** - إصلاح RLS
+✅ **Python FastAPI Service** - معالجة صوتية كاملة
+✅ **Navigation Menu** - قائمة تنقل جديدة
+✅ **AudioUploadPage** - صفحة رفع الملفات
+✅ **Edge Function** - ربط React بـ Python
+
+---
+
+## الملفات:
 
 ```
-Upload Page → Supabase Storage → Edge Function → Python Service → Database
+python-service/
+├── main.py                 # الخدمة
+├── requirements.txt        # المكتبات
+├── Dockerfile             # Docker
+├── fly.toml              # Fly.io
+├── railway.json          # Railway
+└── README.md            # توثيق كامل
+
+supabase/
+└── migrations/
+    └── 20260525000200...  # إصلاح RLS
+
+src/
+├── components/Navigation.tsx
+└── pages/AudioUploadPage.tsx (موجود)
 ```
 
-## Key Files
+## المشاكل الشائعة:
 
-| What | Where |
-|---|---|
-| Python server | `python-service/main.py` |
-| Upload UI | `src/pages/AudioUploadPage.tsx` |
-| API hook | `src/hooks/useAudioSegmentation.ts` |
-| Database | `supabase/migrations/*sql` |
-| Edge function | `supabase/functions/process-audio/` |
+| المشكلة | الحل |
+|------|------|
+| RLS error | `supabase migration up` |
+| Python error | تحقق من الـ URL في Secrets |
+| بطء المعالجة | حجم الملف كبير أو اتصال ضعيف |
+| لا توجد نتائج | تأكد VAD يكتشف صوت في الملف |
 
-## Test Endpoints
+---
 
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# Process audio (requires file in storage)
-curl -X POST http://localhost:8000/process-audio \
-  -H "Content-Type: application/json" \
-  -d '{
-    "audioUrl": "https://...",
-    "surahNumber": 1,
-    "ayahCount": 7
-  }'
-```
-
-## Common Issues
-
-| Issue | Fix |
-|---|---|
-| Python module not found | `pip install -r requirements.txt` |
-| Port 8000 already in use | `python -m main --port 8001` |
-| Storage upload fails | Ensure `quran-audio` bucket exists |
-| Edge Function not found | Run `supabase functions deploy` |
-
-See `AUDIO_SETUP.md` for detailed troubleshooting.
+اقرأ التفاصيل الكاملة في `AUDIO_SETUP.md`
