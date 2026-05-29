@@ -47,7 +47,7 @@ const AyahCalibration = () => {
       const all = getSavedTimings();
       setSegmentsList(all[selected.surah]?.segments || []);
     }
-  }, [selected?.surah]);
+  }, [selected]);
 
   const saveHistory = useCallback((currentBoxes: AyahBox[]) => {
     setHistory(prev => {
@@ -319,7 +319,7 @@ const AyahCalibration = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.surah]);
 
-  useEffect(() => { stopAudio(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [pageSrc]);
+  useEffect(() => { stopAudio(); }, [pageSrc]);
 
   const onTimeUpdate = () => {
     const a = audioRef.current; if (!a) return;

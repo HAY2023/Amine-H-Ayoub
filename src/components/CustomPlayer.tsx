@@ -148,22 +148,30 @@ const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
 
           {/* Progress bar */}
           <div className="px-4 pt-2">
-            <div className="relative h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div className="relative group">
+              <div className="relative h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all duration-150"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={0.1}
+                value={progress}
+                onChange={seek}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                style={{ margin: 0, padding: 0, top: '-4px', height: 'calc(100% + 8px)' }}
+                dir="ltr"
+              />
+              {/* Thumb indicator */}
               <div
-                className="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all duration-150"
-                style={{ width: `${progress}%` }}
+                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-lg shadow-amber-500/40 border-2 border-amber-400 transition-all pointer-events-none opacity-0 group-hover:opacity-100"
+                style={{ left: `calc(${progress}% - 6px)` }}
               />
             </div>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={0.1}
-              value={progress}
-              onChange={seek}
-              className="w-full h-6 opacity-0 absolute -mt-4 cursor-pointer"
-              dir="ltr"
-            />
             <div className="flex justify-between text-[10px] text-slate-500 tabular-nums mt-1" dir="ltr">
               <span className="text-amber-400">{formatTime(current)}</span>
               <span>{formatTime(duration)}</span>
