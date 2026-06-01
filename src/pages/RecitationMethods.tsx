@@ -590,7 +590,7 @@ function WaveformDisplay({
       const amp = hasWaveform ? (waveform[i] / mxA) * (H * 0.4) : 2;
       const t = ((i + 0.5) / wLen) * duration; // use bin center for time lookup
       
-      const seg = segments.find(s => t >= s.start && t <= s.end);
+      let seg = segments.find(s => t >= s.start && t <= s.end);
 
       const barGrad = c.createLinearGradient(0, cy - amp, 0, cy + amp);
       
@@ -615,12 +615,7 @@ function WaveformDisplay({
       const barWidth = Math.max(bW - 0.5, 1);
       
       c.beginPath();
-      const bx = xCenter - barWidth / 2, by = cy - amp, bh = amp * 2;
-      if (typeof c.roundRect === "function") {
-        c.roundRect(bx, by, barWidth, bh, 2);
-      } else {
-        c.rect(bx, by, barWidth, bh);
-      }
+      c.roundRect(xCenter - barWidth / 2, cy - amp, barWidth, amp * 2, 2);
       c.fill();
     }
     c.shadowBlur = 0;
@@ -634,7 +629,7 @@ function WaveformDisplay({
       for (let i = 0; i < boundaryScores.length; i++) {
         const x = (i / boundaryScores.length) * W;
         const y = baseY - (boundaryScores[i] / blMx) * blH;
-        if (i === 0) { c.moveTo(x, y); } else { c.lineTo(x, y); }
+        i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
       }
       
       c.shadowColor = "#e040fb";
@@ -653,6 +648,7 @@ function WaveformDisplay({
       c.fillStyle = fillGrad;
       c.fill();
     }
+    c.fill();
     c.shadowBlur = 0;
 
   }, [waveform, boundaryScores, segments, duration, zoomLevel]);

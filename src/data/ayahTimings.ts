@@ -32,7 +32,6 @@ export interface AudioSegment {
   start: number;
   end: number;
   speaker: "teacher" | "kids";
-  ayah?: number;
   label?: string;
 }
 

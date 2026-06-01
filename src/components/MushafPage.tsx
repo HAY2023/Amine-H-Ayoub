@@ -82,20 +82,6 @@ const MushafPage = ({ onBack }: Props) => {
   // In "both" mode, track whether we just played teacher (next is kids) or kids (next is advance)
   const bothPhaseRef = useRef<"teacher" | "kids">("teacher");
 
-  // ═══ Refs to avoid stale closures in callbacks ═══
-  const playModeRef = useRef(playMode);
-  const continuousPlayRef = useRef(continuousPlay);
-  const repeatCountRef = useRef(repeatCount);
-  const activeSurahRef = useRef(activeSurah);
-  const currentAyahRef = useRef(currentAyah);
-  const currentPageRef = useRef(currentPage);
-  useEffect(() => { playModeRef.current = playMode; }, [playMode]);
-  useEffect(() => { continuousPlayRef.current = continuousPlay; }, [continuousPlay]);
-  useEffect(() => { repeatCountRef.current = repeatCount; }, [repeatCount]);
-  useEffect(() => { activeSurahRef.current = activeSurah; }, [activeSurah]);
-  useEffect(() => { currentAyahRef.current = currentAyah; }, [currentAyah]);
-  useEffect(() => { currentPageRef.current = currentPage; }, [currentPage]);
-
   const [syncTrigger, setSyncTrigger] = useState(0);
   const [activeMenuAyah, setActiveMenuAyah] = useState<{ surah: SurahAudio; ayah: number } | null>(null);
 
@@ -154,9 +140,7 @@ const MushafPage = ({ onBack }: Props) => {
         await document.exitFullscreen();
         setIsFullscreen(false);
       }
-    } catch {
-      // Fullscreen API may not be supported or may be blocked
-    }
+    } catch {}
   }, []);
   useEffect(() => {
     const h = () => setIsFullscreen(!!document.fullscreenElement);
@@ -167,8 +151,8 @@ const MushafPage = ({ onBack }: Props) => {
   // Navigation
   const step = isDesktop ? 2 : 1;
   const goToPage = (i: number) => { if (i >= 0 && i < pages.length) setCurrentPage(i); };
-  const goPrev = useCallback(() => goToPage(Math.max(0, currentPageRef.current - (isDesktop ? 2 : 1))), [isDesktop]);
-  const goNext = useCallback(() => goToPage(Math.min(pages.length - 1, currentPageRef.current + (isDesktop ? 2 : 1))), [isDesktop]);
+  const goPrev = () => goToPage(Math.max(0, currentPage - step));
+  const goNext = () => goToPage(Math.min(pages.length - 1, currentPage + step));
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -177,7 +161,7 @@ const MushafPage = ({ onBack }: Props) => {
       if (e.key === "Escape") { if (controlsOpen) setControlsOpen(false); else onBack(); }
     };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
-  }, [goPrev, goNext, controlsOpen, onBack]);
+  }, [currentPage, isDesktop, controlsOpen]);
 
   // Swipe nav + swipe-up to open controls
   const touchX = useRef<number | null>(null);
@@ -204,7 +188,7 @@ const MushafPage = ({ onBack }: Props) => {
     }
     // swipe horizontally → page nav
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
-      if (dx > 0) { goPrev(); } else { goNext(); }
+      dx > 0 ? goPrev() : goNext();
       return;
     }
     // double tap detection (for fullscreen) — only when not tapping an ayah hotspot
@@ -283,7 +267,7 @@ const MushafPage = ({ onBack }: Props) => {
       if (a.duration > 0) start();
       else a.addEventListener("loadedmetadata", start, { once: true });
     }
-  }, []); // stable — uses no state directly, speaker is passed as argument
+  }, []);
 
   // compute end time of an ayah for a given speaker (start of next ayah, or boundary)
   const computeAyahEnd = (surah: SurahAudio, ayahNum: number, speaker: Speaker, dur: number): number => {
@@ -324,40 +308,33 @@ const MushafPage = ({ onBack }: Props) => {
     }
   };
 
-  const handleAyahSegmentEnd = useCallback(() => {
+  const handleAyahSegmentEnd = () => {
     stopAtRef.current = null;
-    // Read latest state via refs to avoid stale closures
-    const pm = playModeRef.current;
-    const surah = activeSurahRef.current;
-    const ayah = currentAyahRef.current;
-    const cp = currentPageRef.current;
-    const contPlay = continuousPlayRef.current;
-    const repCount = repeatCountRef.current;
 
     // In "both" mode (تصحيح): alternate teacher → kids for the same ayah
-    if (pm === "both" && surah && hasKidsSection(surah.number)) {
+    if (playMode === "both" && activeSurah && hasKidsSection(activeSurah.number)) {
       if (bothPhaseRef.current === "teacher") {
         // Teacher just finished → now play kids for same ayah
         bothPhaseRef.current = "kids";
-        playAyah(surah, ayah, "kids");
+        playAyah(activeSurah, currentAyah, "kids");
         return;
       } else {
         // Kids just finished → handle repeat, then advance
         bothPhaseRef.current = "teacher";
-        if (currentRepeatRef.current < repCount) {
+        if (currentRepeatRef.current < repeatCount) {
           currentRepeatRef.current++;
-          playAyah(surah, ayah, "teacher");
+          playAyah(activeSurah, currentAyah, "teacher");
           return;
         }
         // Advance to next ayah
         currentRepeatRef.current = 0;
-        if (contPlay) {
-          if (ayah < surah.ayahCount) {
-            setSelectedAyah(ayah + 1);
-            playAyah(surah, ayah + 1, "teacher");
+        if (continuousPlay) {
+          if (currentAyah < activeSurah.ayahCount) {
+            setSelectedAyah(currentAyah + 1);
+            playAyah(activeSurah, currentAyah + 1, "teacher");
           } else {
-            const page = pages[cp];
-            const surahIdx = page.surahs.findIndex(s => s.number === surah.number);
+            const page = pages[currentPage];
+            const surahIdx = page.surahs.findIndex(s => s.number === activeSurah.number);
             if (surahIdx >= 0 && surahIdx < page.surahs.length - 1) {
               const nextSurah = page.surahs[surahIdx + 1];
               setSelectedSurahIdx(surahIdx + 1);
@@ -375,20 +352,20 @@ const MushafPage = ({ onBack }: Props) => {
     }
 
     // Single speaker modes (teacher only or kids only)
-    const speakerForMode: Speaker = pm === "kids" ? "kids" : "teacher";
+    const speakerForMode: Speaker = playMode === "kids" ? "kids" : "teacher";
 
-    if (currentRepeatRef.current < repCount) {
+    if (currentRepeatRef.current < repeatCount) {
       currentRepeatRef.current++;
-      if (surah) playAyah(surah, ayah, speakerForMode);
+      if (activeSurah) playAyah(activeSurah, currentAyah, speakerForMode);
     } else {
       currentRepeatRef.current = 0;
-      if (contPlay && surah) {
-        if (ayah < surah.ayahCount) {
-          setSelectedAyah(ayah + 1);
-          playAyah(surah, ayah + 1, speakerForMode);
+      if (continuousPlay && activeSurah) {
+        if (currentAyah < activeSurah.ayahCount) {
+          setSelectedAyah(currentAyah + 1);
+          playAyah(activeSurah, currentAyah + 1, speakerForMode);
         } else {
-          const page = pages[cp];
-          const surahIdx = page.surahs.findIndex(s => s.number === surah.number);
+          const page = pages[currentPage];
+          const surahIdx = page.surahs.findIndex(s => s.number === activeSurah.number);
           if (surahIdx >= 0 && surahIdx < page.surahs.length - 1) {
              const nextSurah = page.surahs[surahIdx + 1];
              setSelectedSurahIdx(surahIdx + 1);
@@ -402,7 +379,7 @@ const MushafPage = ({ onBack }: Props) => {
         setIsPlaying(false);
       }
     }
-  }, [playAyah]);
+  };
 
   const handleEnded = () => {
     handleAyahSegmentEnd();
@@ -433,8 +410,9 @@ const MushafPage = ({ onBack }: Props) => {
   const selectedSurah = currentPageSurahs[selectedSurahIdx] || currentPageSurahs[0];
   const ayahCount = selectedSurah?.ayahCount || 0;
 
-  // Tap on image background → open controls panel (also supports swipe up)
-  const onImageClick = () => { setControlsOpen(prev => !prev); };
+  // tap on image background → no longer opens controls (use swipe up). 
+  // We keep a noop so users learn the swipe gesture via the hint.
+  const onImageClick = () => { /* swipe up to open controls */ };
 
   return (
     <div
@@ -474,8 +452,7 @@ const MushafPage = ({ onBack }: Props) => {
                 aria-hidden="true"
               >
                 {getPageAyahBoxes(page.src).map((box, i) => {
-                  const isActive = activeSurah?.number === box.surah && currentAyah === box.ayah;
-                  const isCurrentlyPlaying = isActive && isPlaying;
+                  const isCurrent = activeSurah?.number === box.surah && currentAyah === box.ayah && isPlaying;
                   return (
                     <rect
                       key={`${box.surah}-${box.ayah}-${i}`}
@@ -484,11 +461,11 @@ const MushafPage = ({ onBack }: Props) => {
                       width={box.width}
                       height={box.height}
                       rx="10"
-                      fill={isActive ? speakerColors[currentSpeaker].bg : previewHighlight}
-                      stroke={isActive ? speakerColors[currentSpeaker].glow : previewStroke}
-                      strokeWidth={isActive ? 5 : 1.5}
+                      fill={isCurrent ? speakerColors[currentSpeaker].bg : previewHighlight}
+                      stroke={isCurrent ? speakerColors[currentSpeaker].glow : previewStroke}
+                      strokeWidth={isCurrent ? 5 : 1.5}
                       style={{ mixBlendMode: "multiply" }}
-                      className={isCurrentlyPlaying ? "animate-pulse" : ""}
+                      className={isCurrent ? "animate-pulse" : ""}
                     />
                   );
                 })}
