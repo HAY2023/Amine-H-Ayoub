@@ -47,7 +47,7 @@ const AyahCalibration = () => {
       const all = getSavedTimings();
       setSegmentsList(all[selected.surah]?.segments || []);
     }
-  }, [selected?.surah]);
+  }, [selected]);
 
   const saveHistory = useCallback((currentBoxes: AyahBox[]) => {
     setHistory(prev => {
@@ -272,18 +272,17 @@ const AyahCalibration = () => {
     });
 
     setBoxes(current => {
-      const usedCounts: Record<number, number> = {};
       return current.map(box => {
-        const count = usedCounts[box.surah] || 0;
-        usedCounts[box.surah] = count + 1;
-
         // Try segments first (most accurate, has speaker info)
         const segs = surahSegments[box.surah];
         if (segs) {
           const teacherSegs = segs.filter(s => s.speaker === "teacher");
           const kidsSegs = segs.filter(s => s.speaker === "kids");
-          const tSeg = teacherSegs[count];
-          const kSeg = kidsSegs[count];
+          
+          // Use the actual Ayah number (1-indexed) to find the correct segment
+          const ayahIndex = box.ayah - 1;
+          const tSeg = teacherSegs[ayahIndex];
+          const kSeg = kidsSegs[ayahIndex];
           
           if (tSeg || kSeg) {
             return {
@@ -298,13 +297,12 @@ const AyahCalibration = () => {
         }
 
         // Fallback to teacher timings array
-        const times = surahTeacherTimes[box.surah];
-        if (times && times[count] !== undefined) {
+        const teacherTimes = surahTeacherTimes[box.surah];
+        if (teacherTimes && teacherTimes.length > box.ayah - 1) {
           return {
             ...box,
-            audioStart: times[count],
-            audioEnd: times[count + 1] ?? (times[count] + 3),
-            speaker: "teacher",
+            audioStart: teacherTimes[box.ayah - 1],
+            audioEnd: teacherTimes[box.ayah], // might be undefined for last ayah, which is fine
           };
         }
 
@@ -319,7 +317,7 @@ const AyahCalibration = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.surah]);
 
-  useEffect(() => { stopAudio(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [pageSrc]);
+  useEffect(() => { stopAudio(); }, [pageSrc]);
 
   const onTimeUpdate = () => {
     const a = audioRef.current; if (!a) return;
