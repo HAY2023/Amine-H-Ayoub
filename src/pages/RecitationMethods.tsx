@@ -590,7 +590,7 @@ function WaveformDisplay({
       const amp = hasWaveform ? (waveform[i] / mxA) * (H * 0.4) : 2;
       const t = ((i + 0.5) / wLen) * duration; // use bin center for time lookup
       
-      let seg = segments.find(s => t >= s.start && t <= s.end);
+      const seg = segments.find(s => t >= s.start && t <= s.end);
 
       const barGrad = c.createLinearGradient(0, cy - amp, 0, cy + amp);
       

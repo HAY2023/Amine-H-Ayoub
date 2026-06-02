@@ -15,6 +15,8 @@ export interface AyahBox {
   kidsEnd?: number;
   /** Optional: which speaker section this segment belongs to (deprecated in favor of dual timing support). */
   speaker?: "teacher" | "kids";
+  /** Optional: Custom name/label for the box (e.g. "البسملة") */
+  label?: string;
 }
 
 const CALIBRATION_STORAGE_KEY = "mushaf:ayahCoordinates:v1";
@@ -95,7 +97,8 @@ export const syncCoordinatesFromServer = async () => {
       window.dispatchEvent(new Event("mushaf:sync_complete"));
     }
   } catch (e) {
-    console.error("Supabase sync error:", e);
+    // Silent fail - use local coordinates
+    console.debug("Supabase sync info:", e);
   }
 };
 

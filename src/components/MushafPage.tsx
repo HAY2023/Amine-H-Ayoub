@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X } from "lucide-react";
-import { AYAH_COUNTS, getCurrentAyahAtTime, getAyahStartTime, hasKidsSection, getSpeakerAtTime } from "@/data/ayahTimings";
+import { getSavedTimings } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 
@@ -67,23 +67,25 @@ const MushafPage = ({ onBack }: Props) => {
 
   // Audio state
   const [activeSurah, setActiveSurah] = useState<SurahAudio | null>(null);
-  const [selectedSurahIdx, setSelectedSurahIdx] = useState(0); // index within current page
-  const [selectedAyah, setSelectedAyah] = useState(1);
+  const [selectedSurahIdx, setSelectedSurahIdx] = useState(0);
+  const [selectedAyah, setSelectedAyah] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentAyah, setCurrentAyah] = useState(0);
-  const [currentSpeaker, setCurrentSpeaker] = useState<Speaker>("teacher");
-  const [playMode, setPlayMode] = useState<PlayMode>("both"); // teacher, kids, or both (correction)
+  const [playMode, setPlayMode] = useState<PlayMode>("both");
   const [continuousPlay, setContinuousPlay] = useState(true);
   const [repeatCount, setRepeatCount] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
   const lastSavedTimeRef = useRef(0);
-  const stopAtRef = useRef<number | null>(null); // stop playback when reaching this time
+  const stopAtRef = useRef<number | null>(null);
   const currentRepeatRef = useRef(0);
-  // In "both" mode, track whether we just played teacher (next is kids) or kids (next is advance)
   const bothPhaseRef = useRef<"teacher" | "kids">("teacher");
+  const currentAyahRef = useRef(-1);
+  const currentBoxIndexRef = useRef(-1);
+  const currentSpeakerRef = useRef<Speaker>("teacher");
+  const requestRef = useRef<number>();
+  const isHandlingSegmentEndRef = useRef(false);
 
   const [syncTrigger, setSyncTrigger] = useState(0);
-  const [activeMenuAyah, setActiveMenuAyah] = useState<{ surah: SurahAudio; ayah: number } | null>(null);
+  const [activeMenuAyah, setActiveMenuAyah] = useState<{ surah: SurahAudio; ayah: number; label?: string; boxIndex?: number } | null>(null);
 
   useEffect(() => {
     const r = () => setIsDesktop(window.innerWidth >= 1024);
@@ -99,12 +101,12 @@ const MushafPage = ({ onBack }: Props) => {
 
   useEffect(() => { localStorage.setItem(STORAGE_KEY, String(currentPage)); }, [currentPage]);
 
-  // Stop on page change
   useEffect(() => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
-    setActiveSurah(null); setIsPlaying(false); setCurrentAyah(0);
-    setSelectedSurahIdx(0); setSelectedAyah(1);
+    setActiveSurah(null); setIsPlaying(false); currentAyahRef.current = -1; currentBoxIndexRef.current = -1;
+    setSelectedSurahIdx(0); setSelectedAyah(-1);
     stopAtRef.current = null; currentRepeatRef.current = 0;
+    clearAllHighlights();
   }, [currentPage]);
 
   // Resume last surah (once)
@@ -140,7 +142,9 @@ const MushafPage = ({ onBack }: Props) => {
         await document.exitFullscreen();
         setIsFullscreen(false);
       }
-    } catch {}
+    } catch {
+      // Fullscreen request denied or not supported
+    }
   }, []);
   useEffect(() => {
     const h = () => setIsFullscreen(!!document.fullscreenElement);
@@ -150,9 +154,9 @@ const MushafPage = ({ onBack }: Props) => {
 
   // Navigation
   const step = isDesktop ? 2 : 1;
-  const goToPage = (i: number) => { if (i >= 0 && i < pages.length) setCurrentPage(i); };
-  const goPrev = () => goToPage(Math.max(0, currentPage - step));
-  const goNext = () => goToPage(Math.min(pages.length - 1, currentPage + step));
+  const goToPage = useCallback((i: number) => { if (i >= 0 && i < pages.length) setCurrentPage(i); }, []);
+  const goPrev = useCallback(() => goToPage(Math.max(0, currentPage - step)), [currentPage, step, goToPage]);
+  const goNext = useCallback(() => goToPage(Math.min(pages.length - 1, currentPage + step)), [currentPage, step, goToPage]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -161,7 +165,7 @@ const MushafPage = ({ onBack }: Props) => {
       if (e.key === "Escape") { if (controlsOpen) setControlsOpen(false); else onBack(); }
     };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
-  }, [currentPage, isDesktop, controlsOpen]);
+  }, [currentPage, isDesktop, controlsOpen, goPrev, goNext, onBack]);
 
   // Swipe nav + swipe-up to open controls
   const touchX = useRef<number | null>(null);
@@ -188,7 +192,7 @@ const MushafPage = ({ onBack }: Props) => {
     }
     // swipe horizontally → page nav
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
-      dx > 0 ? goPrev() : goNext();
+      if (dx > 0) goPrev(); else goNext();
       return;
     }
     // double tap detection (for fullscreen) — only when not tapping an ayah hotspot
@@ -203,58 +207,114 @@ const MushafPage = ({ onBack }: Props) => {
     }
   };
 
+  const clearAllHighlights = useCallback(() => {
+    const rects = document.querySelectorAll('.ayah-rect');
+    rects.forEach(r => {
+      const el = r as SVGRectElement;
+      el.style.fill = previewHighlight;
+      el.style.stroke = previewStroke;
+      el.style.strokeWidth = "1.5";
+      el.classList.remove('animate-pulse');
+    });
+  }, []);
+
+  const highlightAyah = useCallback((boxIndex: number, speaker: Speaker) => {
+    clearAllHighlights();
+    const selector = `.ayah-rect-idx-${boxIndex}`;
+    const boxes = document.querySelectorAll(selector);
+    boxes.forEach(r => {
+      const el = r as SVGRectElement;
+      el.style.fill = speakerColors[speaker].bg;
+      el.style.stroke = speakerColors[speaker].glow;
+      el.style.strokeWidth = "5";
+      el.classList.add('animate-pulse');
+    });
+  }, [clearAllHighlights]);
+
   // ---- Ayah-by-ayah playback ----
   // forceSpeaker: override speaker for this particular play call (used in "both" mode)
-  const playAyah = useCallback((surah: SurahAudio, ayahNum: number, forceSpeaker?: Speaker) => {
+  const playAyah = useCallback((surah: SurahAudio, ayahNum: number, forceSpeaker?: Speaker, boxIndex?: number) => {
     const a = audioRef.current; if (!a) return;
     const sameSrc = a.src && a.src.endsWith(surah.src.split("/").pop() || surah.src);
 
     setActiveSurah(surah);
-    setCurrentAyah(ayahNum);
+    currentAyahRef.current = ayahNum;
+    currentBoxIndexRef.current = boxIndex ?? -1;
     stopAtRef.current = null;
 
-    const start = () => {
-      const dur = a.duration || 0;
+    const startPlayback = () => {
       const sp: Speaker = forceSpeaker ?? "teacher";
-      setCurrentSpeaker(sp);
+      currentSpeakerRef.current = sp;
 
-      // Find if this ayah has a manually calibrated box in any page
-      let box = null;
-      for (const p of pages) {
-        const boxes = getPageAyahBoxes(p.src);
-        const found = boxes.find(b => b.surah === surah.number && b.ayah === ayahNum);
-        if (found) { box = found; break; }
+      const timings = getSavedTimings()[surah.number];
+      const segments = timings?.segments || [];
+
+      let startT = 0;
+      let nextT = a.duration || 1e9;
+      let foundTimingInBox = false;
+
+      const pageBoxes = getPageAyahBoxes(pages[currentPage].src);
+      const surahBoxes = pageBoxes.filter(b => b.surah === surah.number);
+      const box = boxIndex !== undefined ? pageBoxes[boxIndex] : surahBoxes.find(b => b.ayah === ayahNum);
+
+      if (box) {
+         if (sp === "teacher" && box.audioStart !== undefined && box.audioEnd !== undefined) {
+             startT = box.audioStart;
+             nextT = box.audioEnd;
+             foundTimingInBox = true;
+         } else if (sp === "kids" && box.kidsStart !== undefined && box.kidsEnd !== undefined) {
+             startT = box.kidsStart;
+             nextT = box.kidsEnd;
+             foundTimingInBox = true;
+         }
       }
 
-      // Use manually bound segment if it exists for the current playing speaker role
-      if (box) {
-        if (sp === "teacher" && typeof box.audioStart === "number") {
-          const startT = box.audioStart;
-          const endT = typeof box.audioEnd === "number" && box.audioEnd > startT
-            ? box.audioEnd
-            : computeAyahEnd(surah, ayahNum, sp, dur);
-          stopAtRef.current = endT;
-          a.currentTime = startT;
-          a.play().catch(() => {});
-          return;
-        } else if (sp === "kids" && typeof box.kidsStart === "number") {
-          const startT = box.kidsStart;
-          const endT = typeof box.kidsEnd === "number" && box.kidsEnd > startT
-            ? box.kidsEnd
-            : computeAyahEnd(surah, ayahNum, sp, dur);
-          stopAtRef.current = endT;
-          a.currentTime = startT;
-          a.play().catch(() => {});
-          return;
+      if (!foundTimingInBox) {
+        if (segments.length > 0) {
+          const speakerSegments = segments.filter(s => s.speaker === sp).sort((a, b) => a.start - b.start);
+          const segIdx = ayahNum > 0 ? ayahNum - 1 : 0;
+          const seg = speakerSegments[segIdx];
+          if (seg) {
+            startT = seg.start;
+            nextT = seg.end;
+          } else {
+            setIsPlaying(false);
+            stopAtRef.current = null;
+            return;
+          }
+        } else {
+          const list = sp === "kids" && timings?.kids ? timings.kids : timings?.teacher || [];
+          const segIdx = ayahNum > 0 ? ayahNum - 1 : 0;
+
+          if (list[segIdx] !== undefined) {
+            startT = list[segIdx];
+            nextT = list[segIdx + 1] !== undefined ? list[segIdx + 1] : a.duration || 1e9;
+            if (sp === "teacher" && timings?.kidsStart !== undefined && nextT > timings.kidsStart) {
+              nextT = timings.kidsStart;
+            }
+            if (sp === "teacher" && timings?.kids && timings.kids[segIdx] !== undefined) {
+              const kidStartT = timings.kids[segIdx];
+              if (kidStartT > startT && kidStartT < nextT) {
+                nextT = kidStartT;
+              }
+            }
+            if (sp === "kids" && timings?.teacher && timings.teacher[segIdx + 1] !== undefined) {
+              const nextTeacherStart = timings.teacher[segIdx + 1];
+              if (nextTeacherStart > startT && nextTeacherStart < nextT) {
+                nextT = nextTeacherStart;
+              }
+            }
+          } else {
+            setIsPlaying(false);
+            stopAtRef.current = null;
+            return;
+          }
         }
       }
 
-      // Default to AI segmented timings from /timings
-      const startT = getAyahStartTime(surah.number, ayahNum, dur, sp);
-      const nextT = computeAyahEnd(surah, ayahNum, sp, dur);
-      stopAtRef.current = nextT;
+      stopAtRef.current = Math.max(nextT, startT + 0.1);
       a.currentTime = startT;
-      a.play().catch(() => {});
+      a.play().then(() => setIsPlaying(true)).catch(console.error);
     };
 
     setControlsOpen(false);
@@ -262,12 +322,12 @@ const MushafPage = ({ onBack }: Props) => {
     if (!sameSrc) {
       a.src = surah.src;
       a.load();
-      a.addEventListener("loadedmetadata", start, { once: true });
+      a.addEventListener("loadedmetadata", startPlayback, { once: true });
     } else {
-      if (a.duration > 0) start();
-      else a.addEventListener("loadedmetadata", start, { once: true });
+      if (a.duration > 0) startPlayback();
+      else a.addEventListener("loadedmetadata", startPlayback, { once: true });
     }
-  }, []);
+  }, [currentPage]);
 
   // compute end time of an ayah for a given speaker (start of next ayah, or boundary)
   const computeAyahEnd = (surah: SurahAudio, ayahNum: number, speaker: Speaker, dur: number): number => {
@@ -284,112 +344,247 @@ const MushafPage = ({ onBack }: Props) => {
     return dur || 1e9;
   };
 
-  // Time update
-  const handleTimeUpdate = () => {
+  const trackAudio = useCallback(() => {
     const a = audioRef.current;
-    if (!a || !activeSurah || a.duration <= 0) return;
+    if (!a || !activeSurah) return;
 
-    // ayah display follow
-    const { ayah, speaker } = getCurrentAyahAtTime(activeSurah.number, a.currentTime, a.duration);
-    if (ayah > 0) setCurrentAyah(ayah);
-    if (speaker && speaker !== currentSpeaker) setCurrentSpeaker(speaker);
-
-    // stop when reaching scheduled end
     if (stopAtRef.current !== null && a.currentTime >= stopAtRef.current - 0.05) {
-      a.pause();
-      handleAyahSegmentEnd();
+      if (!isHandlingSegmentEndRef.current) {
+        isHandlingSegmentEndRef.current = true;
+        a.pause();
+        setIsPlaying(false);
+        handleAyahSegmentEnd();
+      }
+      return;
     }
 
-    // throttled save
+    const pageBoxes = getPageAyahBoxes(pages[currentPage].src);
+    const surahBoxes = pageBoxes.filter(b => b.surah === activeSurah.number);
+
+    let activeBox = null;
+    let foundSpeaker: Speaker | null = null;
+    let activeBoxGlobalIndex = -1;
+
+    for (let i = 0; i < pageBoxes.length; i++) {
+      const box = pageBoxes[i];
+      if (box.surah !== activeSurah.number) continue;
+
+      if (box.audioStart !== undefined && box.audioEnd !== undefined && a.currentTime >= box.audioStart && a.currentTime <= box.audioEnd) {
+        activeBox = box;
+        foundSpeaker = "teacher";
+        activeBoxGlobalIndex = i;
+        break;
+      }
+      if (box.kidsStart !== undefined && box.kidsEnd !== undefined && a.currentTime >= box.kidsStart && a.currentTime <= box.kidsEnd) {
+        activeBox = box;
+        foundSpeaker = "kids";
+        activeBoxGlobalIndex = i;
+        break;
+      }
+    }
+
+    if (activeBox && foundSpeaker) {
+      if (activeBoxGlobalIndex !== currentBoxIndexRef.current || foundSpeaker !== currentSpeakerRef.current) {
+        currentAyahRef.current = activeBox.ayah;
+        currentBoxIndexRef.current = activeBoxGlobalIndex;
+        currentSpeakerRef.current = foundSpeaker;
+        highlightAyah(activeBoxGlobalIndex, foundSpeaker);
+      }
+    } else {
+      const timings = getSavedTimings()[activeSurah.number];
+      const segments = timings?.segments || [];
+      if (segments.length > 0) {
+        const activeSeg = segments.find(s => a.currentTime >= s.start && a.currentTime <= s.end);
+        if (activeSeg) {
+          const speakerSegments = segments.filter(s => s.speaker === activeSeg.speaker).sort((a, b) => a.start - b.start);
+          const ayahIdx = speakerSegments.findIndex(s => s.id === activeSeg.id);
+          const sortedBoxes = [...surahBoxes].sort((a, b) => a.ayah - b.ayah);
+          const ayahNumber = sortedBoxes[ayahIdx]?.ayah ?? (ayahIdx + 1);
+
+          if (ayahNumber !== currentAyahRef.current || activeSeg.speaker !== currentSpeakerRef.current || currentBoxIndexRef.current !== -1) {
+            currentAyahRef.current = ayahNumber;
+            currentBoxIndexRef.current = -1;
+            currentSpeakerRef.current = activeSeg.speaker;
+          }
+        } else {
+          if (currentAyahRef.current !== -1) {
+            currentAyahRef.current = -1;
+            currentBoxIndexRef.current = -1;
+            clearAllHighlights();
+          }
+        }
+      } else {
+        if (timings && timings.teacher.length > 0) {
+          let speaker: Speaker = "teacher";
+          if (timings.kidsStart !== undefined && a.currentTime >= timings.kidsStart) {
+            speaker = "kids";
+          }
+          const list = speaker === "kids" && timings.kids ? timings.kids : timings.teacher;
+          let idx = 0;
+          for (let i = 0; i < list.length; i++) {
+            if (list[i] <= a.currentTime + 0.05) idx = i;
+            else break;
+          }
+          const sortedBoxes = [...surahBoxes].sort((a, b) => a.ayah - b.ayah);
+          const actualCount = Math.max(...surahBoxes.map(b => b.ayah));
+          const fallbackNumber = Math.min(idx + 1, actualCount);
+          const ayahNumber = sortedBoxes[idx]?.ayah ?? fallbackNumber;
+          if (ayahNumber !== currentAyahRef.current || speaker !== currentSpeakerRef.current || currentBoxIndexRef.current !== -1) {
+            currentAyahRef.current = ayahNumber;
+            currentBoxIndexRef.current = -1;
+            currentSpeakerRef.current = speaker;
+          }
+        }
+      }
+    }
+
     if (Math.abs(a.currentTime - lastSavedTimeRef.current) >= 2) {
       lastSavedTimeRef.current = a.currentTime;
       localStorage.setItem(MUSHAF_LAST_SURAH, String(activeSurah.number));
       localStorage.setItem(MUSHAF_LAST_TIME, String(a.currentTime));
     }
-  };
 
-  const handleAyahSegmentEnd = () => {
+    if (!a.paused) {
+      requestRef.current = requestAnimationFrame(trackAudio);
+    }
+  }, [activeSurah, currentPage, handleAyahSegmentEnd, highlightAyah]);
+
+  useEffect(() => {
+    if (isPlaying) {
+      requestRef.current = requestAnimationFrame(trackAudio);
+    } else {
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    }
+    return () => {
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    };
+  }, [isPlaying, trackAudio]);
+
+  const advanceSurah = useCallback((sp: Speaker) => {
+    if (!activeSurah) return;
+    const page = pages[currentPage];
+    const surahIdx = page.surahs.findIndex(s => s.number === activeSurah.number);
+    if (surahIdx >= 0 && surahIdx < page.surahs.length - 1) {
+      const nextSurah = page.surahs[surahIdx + 1];
+      setSelectedSurahIdx(surahIdx + 1);
+
+      const pageBoxes = getPageAyahBoxes(page.src);
+      const nextSurahBoxes = pageBoxes.filter(b => b.surah === nextSurah.number).sort((a,b) => a.ayah - b.ayah);
+      const firstAyah = nextSurahBoxes[0]?.ayah ?? 1;
+      const firstBoxIndex = nextSurahBoxes.length > 0 ? pageBoxes.indexOf(nextSurahBoxes[0]) : undefined;
+
+      setSelectedAyah(firstAyah);
+      playAyah(nextSurah, firstAyah, sp, firstBoxIndex);
+    } else {
+      setIsPlaying(false);
+      clearAllHighlights();
+    }
+  }, [activeSurah, currentPage, playAyah]);
+
+  const handleAyahSegmentEnd = useCallback(() => {
     stopAtRef.current = null;
+    isHandlingSegmentEndRef.current = false;
+    const a = audioRef.current; if (!a || !activeSurah) return;
 
-    // In "both" mode (تصحيح): alternate teacher → kids for the same ayah
-    if (playMode === "both" && activeSurah && hasKidsSection(activeSurah.number)) {
+    const timings = getSavedTimings()[activeSurah.number];
+    const hasKids = timings?.segments?.some(s => s.speaker === "kids") || timings?.kidsStart !== undefined;
+
+    const advanceToNextSegment = (sp: Speaker) => {
+      const pageBoxes = getPageAyahBoxes(pages[currentPage].src);
+      const surahBoxesUnsorted = pageBoxes.filter(b => b.surah === activeSurah.number);
+      const sortedBoxesWithIndex = surahBoxesUnsorted.map(b => ({ box: b, globalIndex: pageBoxes.indexOf(b) }))
+        .sort((a, b) => a.box.ayah - b.box.ayah);
+
+      let nextItem = null;
+      let currentIndex = -1;
+
+      if (currentBoxIndexRef.current !== -1) {
+        currentIndex = sortedBoxesWithIndex.findIndex(item => item.globalIndex === currentBoxIndexRef.current);
+      } else {
+        currentIndex = sortedBoxesWithIndex.map(item => item.box.ayah).lastIndexOf(currentAyahRef.current);
+      }
+
+      for (let i = currentIndex + 1; i < sortedBoxesWithIndex.length; i++) {
+        const candidate = sortedBoxesWithIndex[i];
+        if (candidate.box.ayah === currentAyahRef.current) {
+          const hasTimings = (sp === "teacher" && candidate.box.audioStart !== undefined && candidate.box.audioEnd !== undefined) ||
+                             (sp === "kids" && candidate.box.kidsStart !== undefined && candidate.box.kidsEnd !== undefined);
+          if (hasTimings) {
+            nextItem = candidate;
+            break;
+          }
+        } else if (candidate.box.ayah > currentAyahRef.current) {
+          nextItem = candidate;
+          break;
+        }
+      }
+
+      if (nextItem) {
+        setSelectedAyah(nextItem.box.ayah);
+        playAyah(activeSurah, nextItem.box.ayah, sp, nextItem.globalIndex);
+      } else {
+        advanceSurah(sp);
+      }
+    };
+
+    if (playMode === "both" && hasKids) {
       if (bothPhaseRef.current === "teacher") {
-        // Teacher just finished → now play kids for same ayah
         bothPhaseRef.current = "kids";
-        playAyah(activeSurah, currentAyah, "kids");
+        playAyah(activeSurah, currentAyahRef.current, "kids", currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
         return;
       } else {
-        // Kids just finished → handle repeat, then advance
         bothPhaseRef.current = "teacher";
         if (currentRepeatRef.current < repeatCount) {
           currentRepeatRef.current++;
-          playAyah(activeSurah, currentAyah, "teacher");
+          playAyah(activeSurah, currentAyahRef.current, "teacher", currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
           return;
         }
-        // Advance to next ayah
         currentRepeatRef.current = 0;
         if (continuousPlay) {
-          if (currentAyah < activeSurah.ayahCount) {
-            setSelectedAyah(currentAyah + 1);
-            playAyah(activeSurah, currentAyah + 1, "teacher");
-          } else {
-            const page = pages[currentPage];
-            const surahIdx = page.surahs.findIndex(s => s.number === activeSurah.number);
-            if (surahIdx >= 0 && surahIdx < page.surahs.length - 1) {
-              const nextSurah = page.surahs[surahIdx + 1];
-              setSelectedSurahIdx(surahIdx + 1);
-              setSelectedAyah(1);
-              playAyah(nextSurah, 1, "teacher");
-            } else {
-              setIsPlaying(false);
-            }
-          }
+          advanceToNextSegment("teacher");
         } else {
           setIsPlaying(false);
+          clearAllHighlights();
         }
         return;
       }
     }
 
-    // Single speaker modes (teacher only or kids only)
     const speakerForMode: Speaker = playMode === "kids" ? "kids" : "teacher";
 
     if (currentRepeatRef.current < repeatCount) {
       currentRepeatRef.current++;
-      if (activeSurah) playAyah(activeSurah, currentAyah, speakerForMode);
+      playAyah(activeSurah, currentAyahRef.current, speakerForMode, currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
     } else {
       currentRepeatRef.current = 0;
-      if (continuousPlay && activeSurah) {
-        if (currentAyah < activeSurah.ayahCount) {
-          setSelectedAyah(currentAyah + 1);
-          playAyah(activeSurah, currentAyah + 1, speakerForMode);
-        } else {
-          const page = pages[currentPage];
-          const surahIdx = page.surahs.findIndex(s => s.number === activeSurah.number);
-          if (surahIdx >= 0 && surahIdx < page.surahs.length - 1) {
-             const nextSurah = page.surahs[surahIdx + 1];
-             setSelectedSurahIdx(surahIdx + 1);
-             setSelectedAyah(1);
-             playAyah(nextSurah, 1, speakerForMode);
-          } else {
-             setIsPlaying(false);
-          }
-        }
+      if (continuousPlay) {
+        advanceToNextSegment(speakerForMode);
       } else {
         setIsPlaying(false);
+        clearAllHighlights();
       }
     }
-  };
+  }, [activeSurah, playMode, repeatCount, continuousPlay, playAyah, currentPage, advanceSurah]);
 
   const handleEnded = () => {
     handleAyahSegmentEnd();
   };
 
-  // Pause/resume
   const togglePlayPause = () => {
     const a = audioRef.current; if (!a || !activeSurah) return;
-    if (isPlaying) a.pause();
-    else a.play().catch(() => {});
+    if (isPlaying) {
+      a.pause();
+      setIsPlaying(false);
+    } else {
+      if (currentAyahRef.current === -1) {
+        const pageBoxes = getPageAyahBoxes(pages[currentPage]?.src || "");
+        const surahBoxes = pageBoxes.filter(b => b.surah === activeSurah.number).sort((a,b) => a.ayah - b.ayah);
+        const firstAyah = surahBoxes[0]?.ayah ?? 1;
+        playAyah(activeSurah, firstAyah, playMode === "kids" ? "kids" : "teacher");
+      } else {
+        a.play().then(() => setIsPlaying(true)).catch(() => { });
+      }
+    }
   };
 
 
@@ -425,7 +620,6 @@ const MushafPage = ({ onBack }: Props) => {
         onEnded={handleEnded}
         onPause={() => setIsPlaying(false)}
         onPlay={() => setIsPlaying(true)}
-        onTimeUpdate={handleTimeUpdate}
       />
 
       {/* Edge-to-edge image(s) with per-ayah tappable hotspots */}
@@ -451,28 +645,25 @@ const MushafPage = ({ onBack }: Props) => {
                 preserveAspectRatio="none"
                 aria-hidden="true"
               >
-                {getPageAyahBoxes(page.src).map((box, i) => {
-                  const isCurrent = activeSurah?.number === box.surah && currentAyah === box.ayah && isPlaying;
-                  return (
-                    <rect
-                      key={`${box.surah}-${box.ayah}-${i}`}
-                      x={box.x}
-                      y={box.y}
-                      width={box.width}
-                      height={box.height}
-                      rx="10"
-                      fill={isCurrent ? speakerColors[currentSpeaker].bg : previewHighlight}
-                      stroke={isCurrent ? speakerColors[currentSpeaker].glow : previewStroke}
-                      strokeWidth={isCurrent ? 5 : 1.5}
-                      style={{ mixBlendMode: "multiply" }}
-                      className={isCurrent ? "animate-pulse" : ""}
-                    />
-                  );
-                })}
+                {getPageAyahBoxes(page.src).map((box, i) => (
+                  <rect
+                    key={`ayah-rect-${box.surah}-${box.ayah}-${i}`}
+                    className={`ayah-rect ayah-rect-${box.surah}-${box.ayah} ayah-rect-idx-${i}`}
+                    x={box.x}
+                    y={box.y}
+                    width={box.width}
+                    height={box.height}
+                    rx="10"
+                    fill={previewHighlight}
+                    stroke={previewStroke}
+                    strokeWidth={1.5}
+                    style={{ mixBlendMode: "multiply", transition: "all 0.1s linear" }}
+                  />
+                ))}
               </svg>
 
               <div className="absolute inset-0">
-                {getPageAyahBoxes(page.src).map((box) => {
+                {getPageAyahBoxes(page.src).map((box, i) => {
                   const surah = page.surahs.find((s) => s.number === box.surah);
                   if (!surah) return null;
                   return (
@@ -480,7 +671,7 @@ const MushafPage = ({ onBack }: Props) => {
                       key={`${box.surah}-${box.ayah}-tap`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setActiveMenuAyah({ surah, ayah: box.ayah });
+                        setActiveMenuAyah({ surah, ayah: box.ayah, label: box.label, boxIndex: i });
                       }}
                       className="absolute rounded-md outline-none transition-colors hover:bg-accent/10 active:bg-accent/20"
                       style={{
@@ -641,10 +832,12 @@ const MushafPage = ({ onBack }: Props) => {
               <div className="mb-3">
                 <p className="text-xs font-bold mb-1.5 text-muted-foreground">السورة</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {currentPageSurahs.map((s, i) => (
+                  {currentPageSurahs.map((s, i) => {
+                    const firstA = getPageAyahBoxes(pages[currentPage]?.src || "").filter(b => b.surah === s.number).sort((a,b)=>a.ayah-b.ayah)[0]?.ayah ?? 1;
+                    return (
                     <button
                       key={s.number}
-                      onClick={() => { setSelectedSurahIdx(i); setSelectedAyah(1); }}
+                      onClick={() => { setSelectedSurahIdx(i); setSelectedAyah(firstA); }}
                       className={`px-3 py-1.5 rounded-full text-sm font-amiri border transition-all ${
                         selectedSurahIdx === i
                           ? "bg-accent text-accent-foreground border-accent shadow"
@@ -653,7 +846,8 @@ const MushafPage = ({ onBack }: Props) => {
                     >
                       {s.name}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -672,14 +866,18 @@ const MushafPage = ({ onBack }: Props) => {
                       currentRepeatRef.current = 0;
                       bothPhaseRef.current = "teacher";
                       const startSpeaker: Speaker = playMode === "kids" ? "kids" : "teacher";
-                      playAyah(selectedSurah, n, startSpeaker);
+                      const pageBoxes = getPageAyahBoxes(pages[currentPage].src);
+                      const surahBoxes = pageBoxes.filter(b => b.surah === selectedSurah.number);
+                      const firstBox = surahBoxes.find(b => b.ayah === n);
+                      const boxIndex = firstBox ? pageBoxes.indexOf(firstBox) : undefined;
+                      playAyah(selectedSurah, n, startSpeaker, boxIndex);
                     }}
                     className={`aspect-square rounded-lg text-sm font-bold transition-all ${
                       selectedAyah === n
                         ? "bg-accent text-accent-foreground shadow scale-105"
                         : "bg-white/70 hover:bg-white"
-                    } ${currentAyah === n && isPlaying ? "ring-2 ring-offset-1" : ""}`}
-                    style={currentAyah === n && isPlaying ? { boxShadow: `0 0 0 2px ${speakerColors[currentSpeaker].glow}` } : undefined}
+                    } ${currentAyahRef.current === n && isPlaying ? "ring-2 ring-offset-1" : ""}`}
+                    style={currentAyahRef.current === n && isPlaying ? { boxShadow: `0 0 0 2px ${speakerColors[currentSpeakerRef.current].glow}` } : undefined}
                   >
                     {n}
                   </button>
@@ -707,15 +905,15 @@ const MushafPage = ({ onBack }: Props) => {
           onClick={togglePlayPause}
           className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold animate-fade-in cursor-pointer hover:scale-105 active:scale-95 transition-transform shadow-md"
           style={{
-            background: speakerColors[currentSpeaker].bg,
-            border: `1px solid ${speakerColors[currentSpeaker].glow}`,
-            color: speakerColors[currentSpeaker].text,
+            background: speakerColors[currentSpeakerRef.current].bg,
+            border: `1px solid ${speakerColors[currentSpeakerRef.current].glow}`,
+            color: speakerColors[currentSpeakerRef.current].text,
             backdropFilter: "blur(8px)",
             opacity: 0.85,
           }}
         >
           <span>🎧</span>
-          <span className="font-amiri">{activeSurah.name} · آية {currentAyah}</span>
+          <span className="font-amiri">{activeSurah.name} · آية {currentAyahRef.current}</span>
         </div>
       )}
       {/* Floating glassmorphic options menu when clicking an Ayah */}
@@ -738,7 +936,7 @@ const MushafPage = ({ onBack }: Props) => {
                 سورة {activeMenuAyah.surah.name}
               </h3>
               <p className="text-xs font-bold text-slate-500">
-                الآية رقم {activeMenuAyah.ayah}
+                {activeMenuAyah.label ? activeMenuAyah.label : `الآية رقم ${activeMenuAyah.ayah}`}
               </p>
             </div>
 
@@ -752,7 +950,7 @@ const MushafPage = ({ onBack }: Props) => {
                   currentRepeatRef.current = 0;
                   bothPhaseRef.current = "teacher";
                   setPlayMode("teacher");
-                  playAyah(activeMenuAyah.surah, activeMenuAyah.ayah, "teacher");
+                  playAyah(activeMenuAyah.surah, activeMenuAyah.ayah, "teacher", activeMenuAyah.boxIndex);
                   setActiveMenuAyah(null);
                 }}
                 className="w-full py-3 px-4 rounded-2xl bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/50 text-amber-900 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-sm"
@@ -767,7 +965,7 @@ const MushafPage = ({ onBack }: Props) => {
                   currentRepeatRef.current = 0;
                   bothPhaseRef.current = "teacher";
                   setPlayMode("kids");
-                  playAyah(activeMenuAyah.surah, activeMenuAyah.ayah, "kids");
+                  playAyah(activeMenuAyah.surah, activeMenuAyah.ayah, "kids", activeMenuAyah.boxIndex);
                   setActiveMenuAyah(null);
                 }}
                 className="w-full py-3 px-4 rounded-2xl bg-sky-400/20 hover:bg-sky-400/30 border border-sky-400/50 text-sky-900 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-sm"
@@ -782,7 +980,7 @@ const MushafPage = ({ onBack }: Props) => {
                   currentRepeatRef.current = 0;
                   bothPhaseRef.current = "teacher";
                   setPlayMode("both");
-                  playAyah(activeMenuAyah.surah, activeMenuAyah.ayah, "teacher");
+                  playAyah(activeMenuAyah.surah, activeMenuAyah.ayah, "teacher", activeMenuAyah.boxIndex);
                   setActiveMenuAyah(null);
                 }}
                 className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-400/30 to-sky-400/30 hover:from-amber-400/40 hover:to-sky-400/40 border border-amber-400/40 text-slate-800 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-md"

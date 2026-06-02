@@ -28,7 +28,7 @@ export async function alignAyahsViterbi(
   // Viterbi will find the best path. To simplify, we will group the raw regions into exactly `ayahCount * 2` segments based on duration.
 
   // Clean raw regions: merge micro gaps (< 0.2s)
-  let merged: SpeechRegion[] = [];
+  const merged: SpeechRegion[] = [];
   if (rawRegions.length > 0) {
     let current = { ...rawRegions[0] };
     for (let i = 1; i < rawRegions.length; i++) {

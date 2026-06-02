@@ -586,7 +586,7 @@ const AyahCalibration = () => {
                     }}
                   >
                     <span className="absolute right-1 top-1 rounded-full bg-black/70 px-1.5 text-[10px] font-bold text-white">
-                      {box.surah}:{box.ayah}{bound ? " 🔗" : ""}
+                      {box.surah}:{box.label || box.ayah}{bound ? " 🔗" : ""}
                     </span>
                   </button>
                 );
@@ -615,7 +615,7 @@ const AyahCalibration = () => {
                 {boxes.map((box, i) => {
                   const bound = box.audioStart !== undefined && box.audioEnd !== undefined;
                   const sp = box.speaker === "kids" ? "👦" : "👨‍🏫";
-                  return <option key={i} value={i}>{box.surah}:{box.ayah} {bound ? `🔗${sp}` : "○"} (سورة {box.surah})</option>;
+                  return <option key={i} value={i}>{box.label || `${box.surah}:${box.ayah}`} {bound ? `🔗${sp}` : "○"}</option>;
                 })}
               </select>
 
@@ -634,9 +634,22 @@ const AyahCalibration = () => {
                   <label className="block">
                     <span className="text-[10px] text-slate-500">رقم الآية</span>
                     <input
-                      type="number" min={1}
+                      type="number" min={0}
                       value={selected.ayah}
-                      onChange={(e) => updateSelected({ ayah: parseInt(e.target.value) || 1 })}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        updateSelected({ ayah: isNaN(val) ? 0 : val });
+                      }}
+                      className="w-full rounded-lg bg-slate-700 border-slate-600 p-1.5 text-sm text-white"
+                    />
+                  </label>
+                  <label className="block col-span-2">
+                    <span className="text-[10px] text-slate-500">اسم مخصص للمربع (اختياري)</span>
+                    <input
+                      type="text"
+                      placeholder="مثال: البسملة"
+                      value={selected.label || ""}
+                      onChange={(e) => updateSelected({ label: e.target.value })}
                       className="w-full rounded-lg bg-slate-700 border-slate-600 p-1.5 text-sm text-white"
                     />
                   </label>
@@ -696,7 +709,7 @@ const AyahCalibration = () => {
             {/* Binding controls */}
             <div className="rounded-xl bg-emerald-950/40 border border-emerald-500/30 p-3 space-y-2">
               <div className="text-xs font-bold text-emerald-400">
-                🎯 ربط الصوت بالآية {selected?.surah}:{selected?.ayah}
+                🎯 ربط الصوت بـ {selected?.label || `الآية ${selected?.surah}:${selected?.ayah}`}
                 <span className="block text-[10px] text-slate-400 mt-0.5 font-bold">
                   الوضع النشط: <b className={speaker === "teacher" ? "text-amber-400" : "text-sky-400"}>{speaker === "teacher" ? "👨‍🏫 ربط المعلم" : "👦 ربط الطفل"}</b>
                 </span>

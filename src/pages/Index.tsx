@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import AppHeader from "@/components/AppHeader";
 import PointsDisplay from "@/components/PointsDisplay";
 import SurahList from "@/components/SurahList";
@@ -15,6 +16,7 @@ const LAST_SURAH_KEY = "audio:lastSurah";
 const LAST_TIME_KEY = "audio:lastTime";
 
 const Index = () => {
+  const navigate = useNavigate();
   const { surahs, loading, error, retry } = useSurahData();
   const { points, level, recordAyah } = useProgress();
   const [currentSurah, setCurrentSurah] = useState<SurahItem | null>(null);
@@ -90,6 +92,7 @@ const Index = () => {
   };
 
   if (activeTab === "mushaf") {
+    // Should not reach here normally, but fallback just in case
     return <MushafPage onBack={() => setActiveTab("audio")} />;
   }
 
@@ -188,7 +191,13 @@ const Index = () => {
 
       <BottomNav
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={(tab) => {
+          if (tab === "mushaf") {
+            navigate("/");
+          } else {
+            setActiveTab(tab);
+          }
+        }}
         hasPlayer={!!currentSurah}
       />
     </div>
