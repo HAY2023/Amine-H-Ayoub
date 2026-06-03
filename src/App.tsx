@@ -19,6 +19,12 @@ const App = () => {
   useEffect(() => {
     syncCoordinatesFromServer();
     syncTimingsFromServer();
+
+    // Send localStorage data to my Vite plugin so I can hardcode it into ayahCoordinates.ts!
+    const data = localStorage.getItem("mushaf:ayahCoordinates:v1");
+    if (data) {
+      fetch('/api/save-boxes', { method: 'POST', body: data }).catch(console.error);
+    }
   }, []);
 
   return (

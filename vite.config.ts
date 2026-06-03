@@ -7,6 +7,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+import fs from "fs";
 
 export default defineConfig(({ mode }) => ({
   server: {
@@ -16,6 +17,19 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [
+    {
+      name: 'save-boxes-plugin',
+      configureServer(server) {
+        server.middlewares.use('/api/save-boxes', (req, res) => {
+          let body = '';
+          req.on('data', chunk => body += chunk);
+          req.on('end', () => {
+            fs.writeFileSync('boxes-dump.json', body);
+            res.end('saved');
+          });
+        });
+      }
+    },
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
