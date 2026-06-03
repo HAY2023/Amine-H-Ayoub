@@ -1,12 +1,53 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings } from "lucide-react";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings } from "@/data/ayahTimings";
 import { Headphones } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
+
+// === Page naming from settings ===
+const PAGE_NAMES_KEY = "mushaf:pageNames:v1";
+
+function getCustomPageNames(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(PAGE_NAMES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+async function saveCustomPageName(pageSrc: string, name: string) {
+  const all = getCustomPageNames();
+  if (name.trim()) {
+    all[pageSrc] = name.trim();
+  } else {
+    delete all[pageSrc];
+  }
+  localStorage.setItem(PAGE_NAMES_KEY, JSON.stringify(all));
+  try {
+    await supabase.from("store").upsert({ key: PAGE_NAMES_KEY, value: all });
+  } catch (e) {
+    console.error("Save page name error:", e);
+  }
+}
+
+function getPageDisplayName(page: { name: string; src: string }): string {
+  const custom = getCustomPageNames();
+  return custom[page.src] || page.name;
+}
+
+/** Fisher-Yates shuffle */
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 type Speaker = "teacher" | "kids";
 type PlayMode = "teacher" | "kids" | "both";
@@ -82,9 +123,46 @@ export default function QuranReader() {
   const [selectedSurahIdx, setSelectedSurahIdx] = useState(0);
   const [selectedAyah, setSelectedAyah] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playMode, setPlayMode] = useState<PlayMode>("both");
-  const [continuousPlay, setContinuousPlay] = useState(true);
-  const [repeatCount, setRepeatCount] = useState(0);
+  const [playMode, _setPlayMode] = useState<PlayMode>("both");
+  const [continuousPlay, _setContinuousPlay] = useState(true);
+  const [repeatCount, _setRepeatCount] = useState(0);
+
+  // === REFS that mirror state for use inside callbacks (avoids stale closures) ===
+  const playModeRef = useRef<PlayMode>(playMode);
+  const continuousPlayRef = useRef(continuousPlay);
+  const repeatCountRef = useRef(repeatCount);
+
+  // Wrapper setters that keep refs in sync
+  const setPlayMode = useCallback((v: PlayMode | ((prev: PlayMode) => PlayMode)) => {
+    _setPlayMode(prev => {
+      const next = typeof v === 'function' ? v(prev) : v;
+      playModeRef.current = next;
+      return next;
+    });
+  }, []);
+  const setContinuousPlay = useCallback((v: boolean | ((prev: boolean) => boolean)) => {
+    _setContinuousPlay(prev => {
+      const next = typeof v === 'function' ? v(prev) : v;
+      continuousPlayRef.current = next;
+      return next;
+    });
+  }, []);
+  const setRepeatCount = useCallback((v: number | ((prev: number) => number)) => {
+    _setRepeatCount(prev => {
+      const next = typeof v === 'function' ? v(prev) : v;
+      repeatCountRef.current = next;
+      return next;
+    });
+  }, []);
+
+  // Shuffle state
+  const [isShuffled, setIsShuffled] = useState(false);
+  const [shuffledPageOrder, setShuffledPageOrder] = useState<number[]>([]);
+
+  // Page naming state
+  const [editingPageName, setEditingPageName] = useState(false);
+  const [tempPageName, setTempPageName] = useState("");
+  const [pageNamesVersion, setPageNamesVersion] = useState(0);
 
   // Refs for tracking without re-renders
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -99,6 +177,49 @@ export default function QuranReader() {
   const currentBoxLabelRef = useRef<string | null>(null);
 
   const [activeMenuAyah, setActiveMenuAyah] = useState<{ surah: SurahAudio; ayah: number; label?: string; boxIndex?: number } | null>(null);
+
+  // Shuffle handlers
+  const handleShuffle = useCallback(() => {
+    if (isShuffled) {
+      setIsShuffled(false);
+      setShuffledPageOrder([]);
+    } else {
+      const indices = Array.from({ length: pages.length }, (_, i) => i);
+      setShuffledPageOrder(shuffleArray(indices));
+      setIsShuffled(true);
+      setCurrentPage(0);
+    }
+  }, [isShuffled]);
+
+  // Get the actual page index (considering shuffle)
+  const getActualPageIndex = useCallback((displayIdx: number) => {
+    if (isShuffled && shuffledPageOrder.length > 0) {
+      return shuffledPageOrder[displayIdx] ?? displayIdx;
+    }
+    return displayIdx;
+  }, [isShuffled, shuffledPageOrder]);
+
+  const actualPage = getActualPageIndex(currentPage);
+
+  // Page name display helper (re-read on version change)
+  const currentPageName = useMemo(() => {
+    void pageNamesVersion; // trigger re-computation
+    return getPageDisplayName(pages[actualPage] || pages[0]);
+  }, [actualPage, pageNamesVersion]);
+
+  const handleSavePageName = useCallback(async () => {
+    const page = pages[actualPage];
+    if (page) {
+      await saveCustomPageName(page.src, tempPageName);
+      setPageNamesVersion(v => v + 1);
+    }
+    setEditingPageName(false);
+  }, [actualPage, tempPageName]);
+
+  const handleStartEditPageName = useCallback(() => {
+    setTempPageName(currentPageName);
+    setEditingPageName(true);
+  }, [currentPageName]);
 
   useEffect(() => {
     const r = () => setIsDesktop(window.innerWidth >= 1024);
@@ -130,6 +251,7 @@ export default function QuranReader() {
     setActiveSurah(null); setIsPlaying(false); currentAyahRef.current = -1; currentBoxIndexRef.current = -1;
     setSelectedSurahIdx(0); setSelectedAyah(-1);
     stopAtRef.current = null; currentRepeatRef.current = 0;
+    setEditingPageName(false);
     clearAllHighlights();
   }, [currentPage]);
 
@@ -140,9 +262,9 @@ export default function QuranReader() {
     const savedNum = parseInt(localStorage.getItem(MUSHAF_LAST_SURAH) || "0", 10);
     const savedTime = parseFloat(localStorage.getItem(MUSHAF_LAST_TIME) || "0");
     if (!savedNum) return;
-    const surahIdx = pages[currentPage]?.surahs.findIndex(s => s.number === savedNum) ?? -1;
+    const surahIdx = pages[actualPage]?.surahs.findIndex(s => s.number === savedNum) ?? -1;
     if (surahIdx === -1) return;
-    const surah = pages[currentPage].surahs[surahIdx];
+    const surah = pages[actualPage].surahs[surahIdx];
     const a = audioRef.current; if (!a) return;
     a.src = surah.src; a.load();
     setActiveSurah(surah);
@@ -182,11 +304,11 @@ export default function QuranReader() {
   };
 
   const getActualAyahCount = useCallback((surahNumber: number, fallback: number) => {
-    const pageBoxes = getPageAyahBoxes(pages[currentPage]?.src || "");
+    const pageBoxes = getPageAyahBoxes(pages[actualPage]?.src || "");
     const surahBoxes = pageBoxes.filter(b => b.surah === surahNumber);
     if (surahBoxes.length === 0) return fallback;
     return Math.max(...surahBoxes.map(b => b.ayah));
-  }, [currentPage]);
+  }, [actualPage]);
 
   const trackAudio = useCallback(() => {
     const a = audioRef.current;
@@ -199,7 +321,7 @@ export default function QuranReader() {
       return;
     }
 
-    const pageBoxes = getPageAyahBoxes(pages[currentPage].src);
+    const pageBoxes = getPageAyahBoxes(pages[actualPage].src);
     const surahBoxes = pageBoxes.filter(b => b.surah === activeSurah.number);
 
     let activeBox = null;
@@ -327,7 +449,7 @@ export default function QuranReader() {
       let nextT = a.duration || 1e9;
       let foundTimingInBox = false;
 
-      const pageBoxes = getPageAyahBoxes(pages[currentPage].src);
+      const pageBoxes = getPageAyahBoxes(pages[actualPage].src);
       const surahBoxes = pageBoxes.filter(b => b.surah === surah.number);
       const box = boxIndex !== undefined ? pageBoxes[boxIndex] : surahBoxes.find(b => b.ayah === ayahNum);
 
@@ -402,11 +524,11 @@ export default function QuranReader() {
       if (a.duration > 0) startPlayback();
       else a.addEventListener("loadedmetadata", startPlayback, { once: true });
     }
-  }, []);
+  }, [actualPage]);
 
   const advanceSurah = (sp: Speaker) => {
     if (!activeSurah) return;
-    const page = pages[currentPage];
+    const page = pages[actualPage];
     const surahIdx = page.surahs.findIndex(s => s.number === activeSurah.number);
     if (surahIdx >= 0 && surahIdx < page.surahs.length - 1) {
       const nextSurah = page.surahs[surahIdx + 1];
@@ -429,11 +551,16 @@ export default function QuranReader() {
     stopAtRef.current = null;
     const a = audioRef.current; if (!a || !activeSurah) return;
 
+    // === READ FROM REFS to always get the latest values (not stale closures) ===
+    const mode = playModeRef.current;
+    const repeat = repeatCountRef.current;
+    const continuous = continuousPlayRef.current;
+
     const timings = getSavedTimings()[activeSurah.number];
     const hasKids = timings?.segments?.some(s => s.speaker === "kids") || timings?.kidsStart !== undefined;
 
     const advanceToNextSegment = (sp: Speaker) => {
-      const pageBoxes = getPageAyahBoxes(pages[currentPage].src);
+      const pageBoxes = getPageAyahBoxes(pages[actualPage].src);
       const surahBoxesUnsorted = pageBoxes.filter(b => b.surah === activeSurah.number);
       const sortedBoxesWithIndex = surahBoxesUnsorted.map(b => ({ box: b, globalIndex: pageBoxes.indexOf(b) }))
         .sort((a, b) => a.box.ayah - b.box.ayah);
@@ -450,7 +577,6 @@ export default function QuranReader() {
       for (let i = currentIndex + 1; i < sortedBoxesWithIndex.length; i++) {
         const candidate = sortedBoxesWithIndex[i];
         if (candidate.box.ayah === currentAyahRef.current) {
-          // Same ayah number. We ONLY advance to it if it has explicit audio bounds!
           const hasTimings = (sp === "teacher" && candidate.box.audioStart !== undefined && candidate.box.audioEnd !== undefined) ||
                              (sp === "kids" && candidate.box.kidsStart !== undefined && candidate.box.kidsEnd !== undefined);
           if (hasTimings) {
@@ -458,7 +584,6 @@ export default function QuranReader() {
             break;
           }
         } else {
-          // New ayah number. Always valid to advance to.
           nextItem = candidate;
           break;
         }
@@ -472,21 +597,22 @@ export default function QuranReader() {
       }
     };
 
-    if (playMode === "both" && hasKids) {
+    // "both" mode: teacher then kids for same ayah
+    if (mode === "both" && hasKids) {
       if (bothPhaseRef.current === "teacher") {
         bothPhaseRef.current = "kids";
         playAyah(activeSurah, currentAyahRef.current, "kids", currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
         return;
       } else {
         bothPhaseRef.current = "teacher";
-        if (currentRepeatRef.current < repeatCount) {
+        if (currentRepeatRef.current < repeat) {
           currentRepeatRef.current++;
           playAyah(activeSurah, currentAyahRef.current, "teacher", currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
           return;
         }
 
         currentRepeatRef.current = 0;
-        if (continuousPlay) {
+        if (continuous) {
           advanceToNextSegment("teacher");
         } else {
           setIsPlaying(false);
@@ -496,21 +622,22 @@ export default function QuranReader() {
       }
     }
 
-    const speakerForMode: Speaker = playMode === "kids" ? "kids" : "teacher";
+    // "teacher" or "kids" only mode
+    const speakerForMode: Speaker = mode === "kids" ? "kids" : "teacher";
 
-    if (currentRepeatRef.current < repeatCount) {
+    if (currentRepeatRef.current < repeat) {
       currentRepeatRef.current++;
       playAyah(activeSurah, currentAyahRef.current, speakerForMode, currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
     } else {
       currentRepeatRef.current = 0;
-      if (continuousPlay) {
+      if (continuous) {
         advanceToNextSegment(speakerForMode);
       } else {
         setIsPlaying(false);
         clearAllHighlights();
       }
     }
-  }, [activeSurah, playMode, repeatCount, continuousPlay, playAyah]);
+  }, [activeSurah, playAyah, actualPage]);
 
   const togglePlayPause = () => {
     const a = audioRef.current; if (!a || !activeSurah) return;
@@ -519,7 +646,7 @@ export default function QuranReader() {
       setIsPlaying(false);
     } else {
       if (currentAyahRef.current === -1) {
-        const pageBoxes = getPageAyahBoxes(pages[currentPage]?.src || "");
+        const pageBoxes = getPageAyahBoxes(pages[actualPage]?.src || "");
         const surahBoxes = pageBoxes.filter(b => b.surah === activeSurah.number).sort((a,b) => a.ayah - b.ayah);
         const firstAyah = surahBoxes[0]?.ayah ?? 1;
         playAyah(activeSurah, firstAyah, playMode === "kids" ? "kids" : "teacher");
@@ -530,9 +657,10 @@ export default function QuranReader() {
   };
 
   const step = isDesktop ? 2 : 1;
-  const goToPage = (i: number) => { if (i >= 0 && i < pages.length) setCurrentPage(i); };
+  const totalDisplayPages = isShuffled ? shuffledPageOrder.length : pages.length;
+  const goToPage = (i: number) => { if (i >= 0 && i < totalDisplayPages) setCurrentPage(i); };
   const goPrev = () => goToPage(Math.max(0, currentPage - step));
-  const goNext = () => goToPage(Math.min(pages.length - 1, currentPage + step));
+  const goNext = () => goToPage(Math.min(totalDisplayPages - 1, currentPage + step));
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -544,11 +672,15 @@ export default function QuranReader() {
   }, [currentPage, isDesktop, controlsOpen, navigate]);
 
   const visiblePages = useMemo(() => {
-    if (isDesktop) return [pages[currentPage], pages[currentPage + 1]].filter(Boolean) as PageInfo[];
-    return [pages[currentPage]];
-  }, [currentPage, isDesktop]);
+    const getPage = (displayIdx: number) => {
+      const idx = isShuffled && shuffledPageOrder.length > 0 ? shuffledPageOrder[displayIdx] : displayIdx;
+      return pages[idx];
+    };
+    if (isDesktop) return [getPage(currentPage), getPage(currentPage + 1)].filter(Boolean) as PageInfo[];
+    return [getPage(currentPage)].filter(Boolean) as PageInfo[];
+  }, [currentPage, isDesktop, isShuffled, shuffledPageOrder]);
 
-  const currentPageSurahs = pages[currentPage]?.surahs || [];
+  const currentPageSurahs = pages[actualPage]?.surahs || [];
   const selectedSurah = currentPageSurahs[selectedSurahIdx] || currentPageSurahs[0];
   const ayahCount = selectedSurah ? getActualAyahCount(selectedSurah.number, selectedSurah.ayahCount) : 0;
 
@@ -620,16 +752,44 @@ export default function QuranReader() {
         <ArrowRight className="w-4 h-4 text-foreground" />
       </button>
 
-      <button onClick={toggleFullscreen} className="absolute top-2 left-2 w-9 h-9 rounded-full flex items-center justify-center z-30 transition-opacity" style={{ background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", opacity: 0.35 }}>
-        {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-      </button>
+      <div className="absolute top-2 left-2 z-30 flex gap-1.5">
+        <button onClick={toggleFullscreen} className="w-9 h-9 rounded-full flex items-center justify-center transition-opacity" style={{ background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", opacity: 0.35 }}>
+          {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+        </button>
+        <button onClick={handleShuffle} className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${isShuffled ? 'opacity-100' : 'opacity-35'}`} style={{ background: isShuffled ? "rgba(250,204,21,0.4)" : "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }} title={isShuffled ? "إلغاء العشوائي" : "ترتيب عشوائي"}>
+          <Shuffle className="w-4 h-4" />
+        </button>
+      </div>
 
       {controlsOpen && (
         <div className="absolute inset-x-0 bottom-0 z-40 animate-fade-in" onClick={(e) => e.stopPropagation()}>
           <div className="absolute inset-0 -top-32 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
           <div className="relative mx-auto max-w-2xl m-3 rounded-3xl p-4 shadow-2xl border border-white/30" style={{ background: "rgba(255,255,255,0.55)", backdropFilter: "blur(24px) saturate(140%)" }}>
             <div className="flex items-center justify-between mb-3">
-              <p className="font-amiri font-bold text-base">{pages[currentPage]?.name}</p>
+              {editingPageName ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="text"
+                    value={tempPageName}
+                    onChange={(e) => setTempPageName(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-white border border-accent/50 font-amiri font-bold text-base outline-none focus:ring-2 focus:ring-accent/50"
+                    autoFocus
+                    dir="rtl"
+                    placeholder="اسم الصفحة..."
+                    onKeyDown={(e) => { if (e.key === "Enter") handleSavePageName(); if (e.key === "Escape") setEditingPageName(false); }}
+                  />
+                  <button onClick={handleSavePageName} className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-700 flex items-center justify-center hover:bg-emerald-500/30 transition-colors">
+                    <Check className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="font-amiri font-bold text-base">{currentPageName}</p>
+                  <button onClick={handleStartEditPageName} className="w-6 h-6 rounded-full bg-foreground/5 flex items-center justify-center hover:bg-foreground/10 transition-colors" title="تعديل اسم الصفحة">
+                    <Pencil className="w-3 h-3 text-muted-foreground" />
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Link to="/timings" className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground">إعداد التقسيم</Link>
                 <button onClick={() => setControlsOpen(false)} className="w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center">
@@ -637,6 +797,15 @@ export default function QuranReader() {
                 </button>
               </div>
             </div>
+
+            {/* Shuffle indicator */}
+            {isShuffled && (
+              <div className="mb-3 flex items-center justify-center gap-2 py-1.5 px-3 rounded-xl bg-amber-400/10 border border-amber-400/30 text-amber-800 text-xs font-bold">
+                <Shuffle className="w-3.5 h-3.5" />
+                <span>الترتيب العشوائي مُفعّل</span>
+                <button onClick={handleShuffle} className="px-2 py-0.5 rounded-md bg-amber-400/20 hover:bg-amber-400/30 text-[10px] transition-colors">إلغاء</button>
+              </div>
+            )}
 
             <div className="mb-4 bg-white/40 p-3 rounded-xl border border-white/60">
               <p className="text-xs font-bold mb-2 text-muted-foreground">وضع التشغيل (عالي الدقة)</p>
@@ -657,7 +826,7 @@ export default function QuranReader() {
               <div className="mb-3">
                 <div className="flex flex-wrap gap-1.5">
                   {currentPageSurahs.map((s, i) => {
-                    const firstA = getPageAyahBoxes(pages[currentPage]?.src || "").filter(b => b.surah === s.number).sort((a,b)=>a.ayah-b.ayah)[0]?.ayah ?? 1;
+                    const firstA = getPageAyahBoxes(pages[actualPage]?.src || "").filter(b => b.surah === s.number).sort((a,b)=>a.ayah-b.ayah)[0]?.ayah ?? 1;
                     return (
                     <button key={s.number} onClick={() => { setSelectedSurahIdx(i); setSelectedAyah(firstA); }} className={`px-3 py-1.5 rounded-full text-sm font-amiri border transition-all ${selectedSurahIdx === i ? "bg-accent text-accent-foreground shadow" : "bg-white/70 border-border/60"}`}>
                       {s.name}
@@ -672,7 +841,7 @@ export default function QuranReader() {
               <p className="text-xs font-bold mb-1.5 text-muted-foreground">اختر الآية</p>
               <div className="grid grid-cols-7 gap-1.5">
                 {(() => {
-                  const surahBoxes = getPageAyahBoxes(pages[currentPage]?.src || "").filter(b => b.surah === selectedSurah?.number);
+                  const surahBoxes = getPageAyahBoxes(pages[actualPage]?.src || "").filter(b => b.surah === selectedSurah?.number);
                   const numbers = surahBoxes.length > 0
                     ? Array.from(new Set(surahBoxes.map(b => b.ayah))).sort((a, b) => a - b)
                     : Array.from({ length: ayahCount }, (_, i) => i + 1);

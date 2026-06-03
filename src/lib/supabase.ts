@@ -1,9 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = "https://zqnwhrvwovwdakuuxpkr.supabase.co";
-const supabaseAnonKey = "sb_publishable_kjhsyZVWYqoy-7sX9jJx2A_TyELp9eD";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://zqnwhrvwovwdakuuxpkr.supabase.co";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// Create a safe supabase client - won't crash if credentials are missing
+export const supabase = createClient(supabaseUrl, supabaseAnonKey || "placeholder", {
   realtime: {
     params: {
       eventsPerSecond: 10,
@@ -15,14 +16,3 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     },
   },
 });
-
-// Suppress WebSocket errors in development
-if (typeof window !== "undefined") {
-  const originalError = console.error;
-  console.error = function(...args: any[]) {
-    if (args[0]?.toString().includes("WebSocket") || args[0]?.toString().includes("ws://")) {
-      return;
-    }
-    originalError.apply(console, args);
-  };
-}

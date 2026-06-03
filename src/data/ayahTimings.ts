@@ -42,7 +42,13 @@ export interface SurahTimings {
   segments?: AudioSegment[];  // (optional) custom audio segments with start/end bounds
 }
 
-export const AYAH_TIMINGS: Record<number, SurahTimings | number[]> = {};
+export const AYAH_TIMINGS: Record<number, SurahTimings | number[]> = {
+  1: {
+    teacher: [0, 5.5, 12.0, 18.0, 24.5, 31.0, 37.0],
+    kidsStart: 43.0,
+    kids: [43.0, 48.5, 55.0, 61.0, 67.5, 74.0, 80.0],
+  }
+};
 
 
 // === LocalStorage overrides (saved from /timings tool) ===

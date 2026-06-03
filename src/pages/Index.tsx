@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import AppHeader from "@/components/AppHeader";
 import PointsDisplay from "@/components/PointsDisplay";
@@ -11,9 +11,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
 import RecitationMethods from "./RecitationMethods";
+import { Shuffle, ListOrdered } from "lucide-react";
 
 const LAST_SURAH_KEY = "audio:lastSurah";
 const LAST_TIME_KEY = "audio:lastTime";
+
+/** Fisher-Yates shuffle */
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 const Index = () => {
   const navigate = useNavigate();
@@ -21,11 +32,13 @@ const Index = () => {
   const { points, level, recordAyah } = useProgress();
   const [currentSurah, setCurrentSurah] = useState<SurahItem | null>(null);
   const [resumeTime, setResumeTime] = useState(0);
-  const [activeTab, setActiveTab] = useState<TabType>("mushaf");
+  const [activeTab, setActiveTab] = useState<TabType>("audio");
   const [search, setSearch] = useState("");
   const playerRef = useRef<CustomPlayerHandle>(null);
   const lastSavedRef = useRef(0);
   const [autoNext, setAutoNext] = useState(true);
+  const [isShuffled, setIsShuffled] = useState(false);
+  const [shuffledSurahs, setShuffledSurahs] = useState<SurahItem[]>([]);
 
   // Restore last played surah once data arrives
   useEffect(() => {
@@ -40,10 +53,21 @@ const Index = () => {
     }
   }, [surahs, currentSurah]);
 
-  const filteredSurahs = useMemo(() => {
-    if (!search.trim()) return surahs;
-    return surahs.filter((s) => s.name.includes(search.trim()));
-  }, [surahs, search]);
+  const displaySurahs = useMemo(() => {
+    const base = isShuffled ? shuffledSurahs : surahs;
+    if (!search.trim()) return base;
+    return base.filter((s) => s.name.includes(search.trim()));
+  }, [surahs, shuffledSurahs, isShuffled, search]);
+
+  const handleShuffle = useCallback(() => {
+    if (isShuffled) {
+      setIsShuffled(false);
+      setShuffledSurahs([]);
+    } else {
+      setShuffledSurahs(shuffleArray(surahs));
+      setIsShuffled(true);
+    }
+  }, [isShuffled, surahs]);
 
   const handleSelect = (surah: SurahItem) => {
     setResumeTime(0);
@@ -67,10 +91,12 @@ const Index = () => {
     }
   };
 
+  const activeSurahList = isShuffled ? shuffledSurahs : surahs;
+
   const handlePlayNext = () => {
-    if (!currentSurah || surahs.length === 0) return;
-    const idx = surahs.findIndex(s => s.number === currentSurah.number);
-    const next = surahs[idx + 1];
+    if (!currentSurah || activeSurahList.length === 0) return;
+    const idx = activeSurahList.findIndex(s => s.number === currentSurah.number);
+    const next = activeSurahList[idx + 1];
     if (next) {
       setResumeTime(0);
       setCurrentSurah(next);
@@ -80,9 +106,9 @@ const Index = () => {
   };
 
   const handlePlayPrev = () => {
-    if (!currentSurah || surahs.length === 0) return;
-    const idx = surahs.findIndex(s => s.number === currentSurah.number);
-    const prev = surahs[idx - 1];
+    if (!currentSurah || activeSurahList.length === 0) return;
+    const idx = activeSurahList.findIndex(s => s.number === currentSurah.number);
+    const prev = activeSurahList[idx - 1];
     if (prev) {
       setResumeTime(0);
       setCurrentSurah(prev);
@@ -125,7 +151,42 @@ const Index = () => {
         </div>
 
         <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-          <SearchBar value={search} onChange={setSearch} />
+          {/* Search + Shuffle */}
+          <div className="flex gap-2 items-center">
+            <div className="flex-1">
+              <SearchBar value={search} onChange={setSearch} />
+            </div>
+            <button
+              onClick={handleShuffle}
+              className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 border ${
+                isShuffled
+                  ? "bg-accent text-accent-foreground border-accent shadow-lg scale-105"
+                  : "bg-card border-border hover:border-accent/50 hover:shadow-md"
+              }`}
+              title={isShuffled ? "العودة للترتيب الأصلي" : "ترتيب عشوائي"}
+              aria-label={isShuffled ? "العودة للترتيب الأصلي" : "ترتيب عشوائي"}
+            >
+              {isShuffled ? (
+                <ListOrdered className="w-5 h-5" />
+              ) : (
+                <Shuffle className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+
+          {/* Shuffle indicator */}
+          {isShuffled && (
+            <div className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-accent/10 border border-accent/30 text-accent-foreground text-sm font-bold animate-fade-in">
+              <Shuffle className="w-4 h-4" />
+              <span>الترتيب العشوائي مُفعّل</span>
+              <button
+                onClick={handleShuffle}
+                className="mr-2 px-2 py-0.5 rounded-md bg-accent/20 hover:bg-accent/30 text-xs transition-colors"
+              >
+                إلغاء
+              </button>
+            </div>
+          )}
 
           {loading && (
             <div className="space-y-3">
@@ -165,7 +226,7 @@ const Index = () => {
 
           {!loading && !error && (
             <SurahList
-              surahs={filteredSurahs}
+              surahs={displaySurahs}
               currentPlaying={currentSurah?.number ?? null}
               onSelect={handleSelect}
             />

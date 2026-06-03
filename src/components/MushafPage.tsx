@@ -1,11 +1,42 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Pencil, Check, Shuffle } from "lucide-react";
 import { getSavedTimings } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
+import { supabase } from "@/lib/supabase";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
+
+// === Page naming from settings ===
+const PAGE_NAMES_KEY = "mushaf:pageNames:v1";
+
+function getCustomPageNames(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(PAGE_NAMES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+async function saveCustomPageName(pageSrc: string, name: string) {
+  const all = getCustomPageNames();
+  if (name.trim()) {
+    all[pageSrc] = name.trim();
+  } else {
+    delete all[pageSrc];
+  }
+  localStorage.setItem(PAGE_NAMES_KEY, JSON.stringify(all));
+  try {
+    await supabase.from("store").upsert({ key: PAGE_NAMES_KEY, value: all });
+  } catch (e) {
+    console.error("Save page name error:", e);
+  }
+}
+
+function getPageDisplayName(page: { name: string; src: string }): string {
+  const custom = getCustomPageNames();
+  return custom[page.src] || page.name;
+}
 
 type Speaker = "teacher" | "kids";
 type PlayMode = "teacher" | "kids" | "both"; // both = teacher then kids for the same ayah
@@ -70,9 +101,37 @@ const MushafPage = ({ onBack }: Props) => {
   const [selectedSurahIdx, setSelectedSurahIdx] = useState(0);
   const [selectedAyah, setSelectedAyah] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playMode, setPlayMode] = useState<PlayMode>("both");
-  const [continuousPlay, setContinuousPlay] = useState(true);
-  const [repeatCount, setRepeatCount] = useState(0);
+  const [playMode, _setPlayMode] = useState<PlayMode>("both");
+  const [continuousPlay, _setContinuousPlay] = useState(true);
+  const [repeatCount, _setRepeatCount] = useState(0);
+
+  // === REFS that mirror state for use inside callbacks (avoids stale closures) ===
+  const playModeRef = useRef<PlayMode>(playMode);
+  const continuousPlayRef = useRef(continuousPlay);
+  const repeatCountRef = useRef(repeatCount);
+
+  // Wrapper setters that keep refs in sync
+  const setPlayMode = useCallback((v: PlayMode | ((prev: PlayMode) => PlayMode)) => {
+    _setPlayMode(prev => {
+      const next = typeof v === 'function' ? v(prev) : v;
+      playModeRef.current = next;
+      return next;
+    });
+  }, []);
+  const setContinuousPlay = useCallback((v: boolean | ((prev: boolean) => boolean)) => {
+    _setContinuousPlay(prev => {
+      const next = typeof v === 'function' ? v(prev) : v;
+      continuousPlayRef.current = next;
+      return next;
+    });
+  }, []);
+  const setRepeatCount = useCallback((v: number | ((prev: number) => number)) => {
+    _setRepeatCount(prev => {
+      const next = typeof v === 'function' ? v(prev) : v;
+      repeatCountRef.current = next;
+      return next;
+    });
+  }, []);
   const audioRef = useRef<HTMLAudioElement>(null);
   const lastSavedTimeRef = useRef(0);
   const stopAtRef = useRef<number | null>(null);
@@ -86,6 +145,30 @@ const MushafPage = ({ onBack }: Props) => {
 
   const [syncTrigger, setSyncTrigger] = useState(0);
   const [activeMenuAyah, setActiveMenuAyah] = useState<{ surah: SurahAudio; ayah: number; label?: string; boxIndex?: number } | null>(null);
+
+  // Page naming state
+  const [editingPageName, setEditingPageName] = useState(false);
+  const [tempPageName, setTempPageName] = useState("");
+  const [pageNamesVersion, setPageNamesVersion] = useState(0);
+
+  const currentPageName = useMemo(() => {
+    void pageNamesVersion;
+    return getPageDisplayName(pages[currentPage] || pages[0]);
+  }, [currentPage, pageNamesVersion]);
+
+  const handleSavePageName = useCallback(async () => {
+    const page = pages[currentPage];
+    if (page) {
+      await saveCustomPageName(page.src, tempPageName);
+      setPageNamesVersion(v => v + 1);
+    }
+    setEditingPageName(false);
+  }, [currentPage, tempPageName]);
+
+  const handleStartEditPageName = useCallback(() => {
+    setTempPageName(currentPageName);
+    setEditingPageName(true);
+  }, [currentPageName]);
 
   useEffect(() => {
     const r = () => setIsDesktop(window.innerWidth >= 1024);
@@ -106,6 +189,7 @@ const MushafPage = ({ onBack }: Props) => {
     setActiveSurah(null); setIsPlaying(false); currentAyahRef.current = -1; currentBoxIndexRef.current = -1;
     setSelectedSurahIdx(0); setSelectedAyah(-1);
     stopAtRef.current = null; currentRepeatRef.current = 0;
+    setEditingPageName(false);
     clearAllHighlights();
   }, [currentPage]);
 
@@ -486,6 +570,11 @@ const MushafPage = ({ onBack }: Props) => {
     isHandlingSegmentEndRef.current = false;
     const a = audioRef.current; if (!a || !activeSurah) return;
 
+    // === READ FROM REFS to always get the latest values (not stale closures) ===
+    const mode = playModeRef.current;
+    const repeat = repeatCountRef.current;
+    const continuous = continuousPlayRef.current;
+
     const timings = getSavedTimings()[activeSurah.number];
     const hasKids = timings?.segments?.some(s => s.speaker === "kids") || timings?.kidsStart !== undefined;
 
@@ -527,20 +616,20 @@ const MushafPage = ({ onBack }: Props) => {
       }
     };
 
-    if (playMode === "both" && hasKids) {
+    if (mode === "both" && hasKids) {
       if (bothPhaseRef.current === "teacher") {
         bothPhaseRef.current = "kids";
         playAyah(activeSurah, currentAyahRef.current, "kids", currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
         return;
       } else {
         bothPhaseRef.current = "teacher";
-        if (currentRepeatRef.current < repeatCount) {
+        if (currentRepeatRef.current < repeat) {
           currentRepeatRef.current++;
           playAyah(activeSurah, currentAyahRef.current, "teacher", currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
           return;
         }
         currentRepeatRef.current = 0;
-        if (continuousPlay) {
+        if (continuous) {
           advanceToNextSegment("teacher");
         } else {
           setIsPlaying(false);
@@ -550,21 +639,21 @@ const MushafPage = ({ onBack }: Props) => {
       }
     }
 
-    const speakerForMode: Speaker = playMode === "kids" ? "kids" : "teacher";
+    const speakerForMode: Speaker = mode === "kids" ? "kids" : "teacher";
 
-    if (currentRepeatRef.current < repeatCount) {
+    if (currentRepeatRef.current < repeat) {
       currentRepeatRef.current++;
       playAyah(activeSurah, currentAyahRef.current, speakerForMode, currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
     } else {
       currentRepeatRef.current = 0;
-      if (continuousPlay) {
+      if (continuous) {
         advanceToNextSegment(speakerForMode);
       } else {
         setIsPlaying(false);
         clearAllHighlights();
       }
     }
-  }, [activeSurah, playMode, repeatCount, continuousPlay, playAyah, currentPage, advanceSurah]);
+  }, [activeSurah, playAyah, currentPage, advanceSurah]);
 
   const handleEnded = () => {
     handleAyahSegmentEnd();
@@ -761,9 +850,30 @@ const MushafPage = ({ onBack }: Props) => {
             }}
           >
             <div className="flex items-center justify-between mb-3">
-              <p className="font-amiri font-bold text-base">
-                {pages[currentPage]?.name}
-              </p>
+              {editingPageName ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="text"
+                    value={tempPageName}
+                    onChange={(e) => setTempPageName(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-white border border-accent/50 font-amiri font-bold text-base outline-none focus:ring-2 focus:ring-accent/50"
+                    autoFocus
+                    dir="rtl"
+                    placeholder="اسم الصفحة..."
+                    onKeyDown={(e) => { if (e.key === "Enter") handleSavePageName(); if (e.key === "Escape") setEditingPageName(false); }}
+                  />
+                  <button onClick={handleSavePageName} className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-700 flex items-center justify-center hover:bg-emerald-500/30 transition-colors">
+                    <Check className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="font-amiri font-bold text-base">{currentPageName}</p>
+                  <button onClick={handleStartEditPageName} className="w-6 h-6 rounded-full bg-foreground/5 flex items-center justify-center hover:bg-foreground/10 transition-colors" title="تعديل اسم الصفحة">
+                    <Pencil className="w-3 h-3 text-muted-foreground" />
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Link to="/calibrate" className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground">
                   معايرة
