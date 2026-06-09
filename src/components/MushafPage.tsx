@@ -709,6 +709,10 @@ const MushafPage = ({ onBack }: Props) => {
     }
   }, [activeSurah, playAyah, currentPage, advanceSurah, clearAllHighlights]);
 
+  useEffect(() => {
+    handleAyahSegmentEndRef.current = handleAyahSegmentEnd;
+  }, [handleAyahSegmentEnd]);
+
   const handleEnded = () => {
     handleAyahSegmentEnd();
   };
