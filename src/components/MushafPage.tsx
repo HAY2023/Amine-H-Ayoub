@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Pencil, Check, Shuffle } from "lucide-react";
-import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
+import { getSavedTimings, getSurahTimings, getAyahStartTime, hasKidsSection } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { supabase } from "@/lib/supabase";
@@ -142,6 +142,7 @@ const MushafPage = ({ onBack }: Props) => {
   const currentSpeakerRef = useRef<Speaker>("teacher");
   const requestRef = useRef<number>();
   const isHandlingSegmentEndRef = useRef(false);
+  const handleAyahSegmentEndRef = useRef<(() => void) | null>(null);
   const isSeekingRef = useRef(false);
   const expectedStartTimeRef = useRef(0);
 
@@ -192,8 +193,14 @@ const MushafPage = ({ onBack }: Props) => {
     setSelectedSurahIdx(0); setSelectedAyah(-1);
     stopAtRef.current = null; currentRepeatRef.current = 0;
     setEditingPageName(false);
-    clearAllHighlights();
-  }, [currentPage, clearAllHighlights]);
+    document.querySelectorAll('.ayah-rect').forEach(r => {
+      const el = r as SVGRectElement;
+      el.style.fill = previewHighlight;
+      el.style.stroke = previewStroke;
+      el.style.strokeWidth = "1.5";
+      el.classList.remove('animate-pulse');
+    });
+  }, [currentPage]);
 
   // Resume last surah (once)
   const resumedRef = useRef(false);
@@ -458,7 +465,7 @@ const MushafPage = ({ onBack }: Props) => {
         isHandlingSegmentEndRef.current = true;
         a.pause();
         setIsPlaying(false);
-        handleAyahSegmentEnd();
+        handleAyahSegmentEndRef.current?.();
       }
       return;
     }
@@ -579,7 +586,7 @@ const MushafPage = ({ onBack }: Props) => {
     if (!a.paused) {
       requestRef.current = requestAnimationFrame(trackAudio);
     }
-  }, [activeSurah, currentPage, handleAyahSegmentEnd, highlightAyah, clearAllHighlights]);
+  }, [activeSurah, currentPage, highlightAyah, clearAllHighlights]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -701,6 +708,10 @@ const MushafPage = ({ onBack }: Props) => {
       }
     }
   }, [activeSurah, playAyah, currentPage, advanceSurah, clearAllHighlights]);
+
+  useEffect(() => {
+    handleAyahSegmentEndRef.current = handleAyahSegmentEnd;
+  }, [handleAyahSegmentEnd]);
 
   const handleEnded = () => {
     handleAyahSegmentEnd();
