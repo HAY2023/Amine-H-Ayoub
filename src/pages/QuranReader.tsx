@@ -267,7 +267,6 @@ export default function QuranReader() {
       el.style.strokeWidth = "5";
       el.classList.add('animate-pulse');
     });
-    });
   }, [clearAllHighlights]);
   const [activeMenuAyah, setActiveMenuAyah] = useState<{ surah: SurahAudio; ayah: number; label?: string; boxIndex?: number } | null>(null);
 
