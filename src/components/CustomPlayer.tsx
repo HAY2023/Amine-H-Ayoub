@@ -1,5 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
 import { X, Play, Pause, Music, Repeat, SkipForward, SkipBack } from "lucide-react";
+import { isTauri, checkOfflineStatus, getOfflineAudioUrl } from "../utils/tauriUtils";
 
 interface Props {
   surahName: string;
@@ -51,12 +52,35 @@ const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
     }));
 
     useEffect(() => {
-      setLoading(true);
-      setError(false);
-      setIsPlaying(false);
-      initialTimeApplied.current = false;
-      audioRef.current?.load();
-    }, [audioSrc]);
+      let active = true;
+      const getSrc = async () => {
+        setLoading(true);
+        setError(false);
+        setIsPlaying(false);
+        initialTimeApplied.current = false;
+        
+        let finalSrc = audioSrc;
+        if (isTauri()) {
+          const offline = await checkOfflineStatus(surahNumber);
+          if (offline) {
+            const localUrl = await getOfflineAudioUrl(surahNumber);
+            if (localUrl) {
+              finalSrc = localUrl;
+            }
+          }
+        }
+        
+        if (active && audioRef.current) {
+          audioRef.current.src = finalSrc;
+          audioRef.current.load();
+        }
+      };
+      
+      getSrc();
+      return () => {
+        active = false;
+      };
+    }, [audioSrc, surahNumber]);
 
     useEffect(() => {
       if (audioRef.current) audioRef.current.loop = loop;
@@ -253,7 +277,6 @@ const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
 
           <audio
             ref={audioRef}
-            src={audioSrc}
             preload="metadata"
             onLoadedMetadata={(e) => {
               const a = e.target as HTMLAudioElement;

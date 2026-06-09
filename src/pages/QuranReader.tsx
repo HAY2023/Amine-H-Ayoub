@@ -6,6 +6,7 @@ import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings } from "@/data/ayahTimings";
 import { Headphones } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { isTauri, checkOfflineStatus, getOfflineAudioUrl, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 
@@ -164,6 +165,57 @@ export default function QuranReader() {
   const [tempPageName, setTempPageName] = useState("");
   const [pageNamesVersion, setPageNamesVersion] = useState(0);
 
+  // Tauri Offline States
+  const [offlineStatus, setOfflineStatus] = useState<Record<number, boolean>>({});
+  const [downloadProgress, setDownloadProgress] = useState<Record<number, number>>({});
+  const [isDownloading, setIsDownloading] = useState<Record<number, boolean>>({});
+
+  // Check offline status for all surahs on current page
+  const checkCurrentPageOffline = useCallback(async () => {
+    if (!isTauri()) return;
+    const page = pages[actualPage];
+    if (!page) return;
+    const status: Record<number, boolean> = {};
+    for (const s of page.surahs) {
+      status[s.number] = await checkOfflineStatus(s.number);
+    }
+    setOfflineStatus(prev => ({ ...prev, ...status }));
+  }, [actualPage]);
+
+  useEffect(() => {
+    checkCurrentPageOffline();
+  }, [actualPage, checkCurrentPageOffline]);
+
+  // Listen to download progress
+  useEffect(() => {
+    if (!isTauri()) return;
+    const unsub = listenToDownloadProgress((payload) => {
+      const { surah_number, progress, status } = payload;
+      setDownloadProgress(prev => ({ ...prev, [surah_number]: Math.round(progress) }));
+      
+      if (status === "completed") {
+        setIsDownloading(prev => ({ ...prev, [surah_number]: false }));
+        setOfflineStatus(prev => ({ ...prev, [surah_number]: true }));
+      } else if (status === "error") {
+        setIsDownloading(prev => ({ ...prev, [surah_number]: false }));
+      } else if (status === "downloading") {
+        setIsDownloading(prev => ({ ...prev, [surah_number]: true }));
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const resolveAudioSrc = useCallback(async (surah: SurahAudio) => {
+    if (isTauri()) {
+      const offline = await checkOfflineStatus(surah.number);
+      if (offline) {
+        const localUrl = await getOfflineAudioUrl(surah.number);
+        if (localUrl) return localUrl;
+      }
+    }
+    return surah.src;
+  }, []);
+
   // Refs for tracking without re-renders
   const audioRef = useRef<HTMLAudioElement>(null);
   const requestRef = useRef<number>();
@@ -175,6 +227,9 @@ export default function QuranReader() {
   const currentBoxIndexRef = useRef(-1);
   const currentSpeakerRef = useRef<Speaker>("teacher");
   const currentBoxLabelRef = useRef<string | null>(null);
+  const isHandlingSegmentEndRef = useRef(false);
+  const isSeekingRef = useRef(false);
+  const expectedStartTimeRef = useRef(0);
 
   const [activeMenuAyah, setActiveMenuAyah] = useState<{ surah: SurahAudio; ayah: number; label?: string; boxIndex?: number } | null>(null);
 
@@ -235,7 +290,9 @@ export default function QuranReader() {
         await document.exitFullscreen();
         setIsFullscreen(false);
       }
-    } catch { }
+    } catch (err) {
+      console.debug("Fullscreen toggle failed:", err);
+    }
   }, []);
 
   useEffect(() => {
@@ -266,16 +323,19 @@ export default function QuranReader() {
     if (surahIdx === -1) return;
     const surah = pages[actualPage].surahs[surahIdx];
     const a = audioRef.current; if (!a) return;
-    a.src = surah.src; a.load();
-    setActiveSurah(surah);
-    setSelectedSurahIdx(surahIdx);
-    a.addEventListener("loadedmetadata", () => {
-      if (savedTime > 0 && savedTime < a.duration) {
-        a.currentTime = savedTime;
-        lastSavedTimeRef.current = savedTime;
-      }
-    }, { once: true });
-  }, [currentPage]);
+    
+    resolveAudioSrc(surah).then(src => {
+      a.src = src; a.load();
+      setActiveSurah(surah);
+      setSelectedSurahIdx(surahIdx);
+      a.addEventListener("loadedmetadata", () => {
+        if (savedTime > 0 && savedTime < a.duration) {
+          a.currentTime = savedTime;
+          lastSavedTimeRef.current = savedTime;
+        }
+      }, { once: true });
+    });
+  }, [currentPage, resolveAudioSrc, actualPage]);
 
   const clearAllHighlights = () => {
     const rects = document.querySelectorAll('.ayah-rect');
@@ -314,10 +374,22 @@ export default function QuranReader() {
     const a = audioRef.current;
     if (!a || !activeSurah) return;
 
+    if (a.seeking) return;
+    if (isSeekingRef.current) {
+      if (Math.abs(a.currentTime - expectedStartTimeRef.current) < 0.15) {
+        isSeekingRef.current = false;
+      } else {
+        return;
+      }
+    }
+
     if (stopAtRef.current !== null && a.currentTime >= stopAtRef.current - 0.05) {
-      a.pause();
-      setIsPlaying(false);
-      handleAyahSegmentEnd();
+      if (!isHandlingSegmentEndRef.current) {
+        isHandlingSegmentEndRef.current = true;
+        a.pause();
+        setIsPlaying(false);
+        handleAyahSegmentEnd();
+      }
       return;
     }
 
@@ -429,9 +501,10 @@ export default function QuranReader() {
   }, [isPlaying, trackAudio]);
 
 
-  const playAyah = useCallback((surah: SurahAudio, ayahNum: number, forceSpeaker?: Speaker, boxIndex?: number) => {
+  const playAyah = useCallback(async (surah: SurahAudio, ayahNum: number, forceSpeaker?: Speaker, boxIndex?: number) => {
     const a = audioRef.current; if (!a) return;
-    const sameSrc = a.src && a.src.endsWith(surah.src.split("/").pop() || surah.src);
+    const targetSrc = await resolveAudioSrc(surah);
+    const sameSrc = a.src === targetSrc || (a.src && a.src.endsWith(surah.src.split("/").pop() || surah.src));
 
     setActiveSurah(surah);
     currentAyahRef.current = ayahNum;
@@ -510,6 +583,8 @@ export default function QuranReader() {
       }
 
       stopAtRef.current = nextT;
+      isSeekingRef.current = true;
+      expectedStartTimeRef.current = startT;
       a.currentTime = startT;
       a.play().then(() => setIsPlaying(true)).catch(console.error);
     };
@@ -517,14 +592,14 @@ export default function QuranReader() {
     setControlsOpen(false);
 
     if (!sameSrc) {
-      a.src = surah.src;
+      a.src = targetSrc;
       a.load();
       a.addEventListener("loadedmetadata", startPlayback, { once: true });
     } else {
       if (a.duration > 0) startPlayback();
       else a.addEventListener("loadedmetadata", startPlayback, { once: true });
     }
-  }, [actualPage]);
+  }, [actualPage, resolveAudioSrc]);
 
   const advanceSurah = (sp: Speaker) => {
     if (!activeSurah) return;
@@ -549,6 +624,7 @@ export default function QuranReader() {
 
   const handleAyahSegmentEnd = useCallback(() => {
     stopAtRef.current = null;
+    isHandlingSegmentEndRef.current = false;
     const a = audioRef.current; if (!a || !activeSurah) return;
 
     // === READ FROM REFS to always get the latest values (not stale closures) ===
@@ -686,7 +762,7 @@ export default function QuranReader() {
 
   return (
     <div className="fixed inset-0 w-screen h-screen z-50 bg-background overflow-hidden select-none">
-      <audio ref={audioRef} onEnded={() => setIsPlaying(false)} />
+      <audio ref={audioRef} onEnded={() => setIsPlaying(false)} onSeeked={() => { isSeekingRef.current = false; }} />
 
       <div className="flex h-full w-full" dir="rtl" onClick={() => { }}>
         {visiblePages.map((page, idx) => (
@@ -791,6 +867,31 @@ export default function QuranReader() {
                 </div>
               )}
               <div className="flex items-center gap-2">
+                {isTauri() && selectedSurah && (
+                  <div className="mr-2">
+                    {isDownloading[selectedSurah.number] ? (
+                      <div className="text-[10px] bg-amber-100/10 text-amber-500 border border-amber-500/20 font-bold px-2 py-1 rounded-full animate-pulse flex items-center gap-1">
+                        <span>⏳ جاري التحميل {downloadProgress[selectedSurah.number] || 0}%</span>
+                      </div>
+                    ) : offlineStatus[selectedSurah.number] ? (
+                      <div className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                        <span>✓ متوفر أوفلاين</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          const url = selectedSurah.src;
+                          setIsDownloading(prev => ({ ...prev, [selectedSurah.number]: true }));
+                          setDownloadProgress(prev => ({ ...prev, [selectedSurah.number]: 0 }));
+                          await downloadSurah(url, selectedSurah.number);
+                        }}
+                        className="rounded-full bg-blue-600 hover:bg-blue-700 px-2 py-1 text-[10px] font-bold text-white shadow-sm flex items-center gap-1 transition-colors"
+                      >
+                        📥 تحميل أوفلاين
+                      </button>
+                    )}
+                  </div>
+                )}
                 <Link to="/timings" className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground">إعداد التقسيم</Link>
                 <button onClick={() => setControlsOpen(false)} className="w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center">
                   <X className="w-4 h-4" />

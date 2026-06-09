@@ -142,6 +142,8 @@ const MushafPage = ({ onBack }: Props) => {
   const currentSpeakerRef = useRef<Speaker>("teacher");
   const requestRef = useRef<number>();
   const isHandlingSegmentEndRef = useRef(false);
+  const isSeekingRef = useRef(false);
+  const expectedStartTimeRef = useRef(0);
 
   const [syncTrigger, setSyncTrigger] = useState(0);
   const [activeMenuAyah, setActiveMenuAyah] = useState<{ surah: SurahAudio; ayah: number; label?: string; boxIndex?: number } | null>(null);
@@ -397,6 +399,8 @@ const MushafPage = ({ onBack }: Props) => {
       }
 
       stopAtRef.current = Math.max(nextT, startT + 0.1);
+      isSeekingRef.current = true;
+      expectedStartTimeRef.current = startT;
       a.currentTime = startT;
       a.play().then(() => setIsPlaying(true)).catch(console.error);
     };
@@ -431,6 +435,15 @@ const MushafPage = ({ onBack }: Props) => {
   const trackAudio = useCallback(() => {
     const a = audioRef.current;
     if (!a || !activeSurah) return;
+
+    if (a.seeking) return;
+    if (isSeekingRef.current) {
+      if (Math.abs(a.currentTime - expectedStartTimeRef.current) < 0.15) {
+        isSeekingRef.current = false;
+      } else {
+        return;
+      }
+    }
 
     if (stopAtRef.current !== null && a.currentTime >= stopAtRef.current - 0.05) {
       if (!isHandlingSegmentEndRef.current) {
@@ -709,6 +722,7 @@ const MushafPage = ({ onBack }: Props) => {
         onEnded={handleEnded}
         onPause={() => setIsPlaying(false)}
         onPlay={() => setIsPlaying(true)}
+        onSeeked={() => { isSeekingRef.current = false; }}
       />
 
       {/* Edge-to-edge image(s) with per-ayah tappable hotspots */}

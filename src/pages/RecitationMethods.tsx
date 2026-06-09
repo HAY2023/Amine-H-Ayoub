@@ -158,6 +158,98 @@ async function extractWaveformOnly(audioUrl: string): Promise<Float32Array> {
   }
 }
 
+function mergeRegionsToTarget(
+  regions: { s: number; e: number }[],
+  target: number,
+  hop: number,
+  sr: number
+): { s: number; e: number }[] {
+  const result = regions.map(r => ({ ...r }));
+  while (result.length > target) {
+    let bestIdx = -1;
+    let bestScore = -Infinity;
+    for (let i = 0; i < result.length - 1; i++) {
+      const gap = ((result[i + 1].s - result[i].e) * hop) / sr;
+      const dur1 = ((result[i].e - result[i].s) * hop) / sr;
+      const dur2 = ((result[i + 1].e - result[i + 1].s) * hop) / sr;
+      const maxDur = Math.max(dur1, dur2);
+      // We prefer merging regions with smaller gaps and shorter durations
+      const score = -gap * 3.0 - maxDur;
+      if (score > bestScore) {
+        bestScore = score;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx !== -1) {
+      result[bestIdx].e = result[bestIdx + 1].e;
+      result.splice(bestIdx + 1, 1);
+    } else {
+      break;
+    }
+  }
+  return result;
+}
+
+function splitRegionsToTarget(
+  regions: { s: number; e: number }[],
+  target: number,
+  smoothE: Float32Array,
+  hop: number,
+  sr: number
+): { s: number; e: number }[] {
+  const result = regions.map(r => ({ ...r }));
+  const minFrames = Math.floor((0.25 * sr) / hop); // 250ms buffer at start/end
+  
+  while (result.length < target) {
+    let longestIdx = -1;
+    let maxDur = -1;
+    for (let i = 0; i < result.length; i++) {
+      const dur = result[i].e - result[i].s;
+      if (dur > maxDur) {
+        maxDur = dur;
+        longestIdx = i;
+      }
+    }
+    
+    if (longestIdx === -1) break;
+    
+    const r = result[longestIdx];
+    let startSearch = r.s + minFrames;
+    let endSearch = r.e - minFrames;
+    
+    // Fallback if the segment is too short for 250ms buffers
+    if (endSearch <= startSearch) {
+      const buffer = Math.floor(0.20 * (r.e - r.s));
+      startSearch = r.s + buffer;
+      endSearch = r.e - buffer;
+    }
+    
+    if (endSearch <= startSearch) {
+      // Split in the middle if still invalid
+      const mid = Math.floor((r.s + r.e) / 2);
+      const r1 = { s: r.s, e: mid };
+      const r2 = { s: mid, e: r.e };
+      result.splice(longestIdx, 1, r1, r2);
+      continue;
+    }
+    
+    // Find point with minimum energy in the search range
+    let minE = Infinity;
+    let bestSplit = Math.floor((r.s + r.e) / 2);
+    for (let t = startSearch; t <= endSearch; t++) {
+      if (smoothE[t] < minE) {
+        minE = smoothE[t];
+        bestSplit = t;
+      }
+    }
+    
+    const r1 = { s: r.s, e: bestSplit };
+    const r2 = { s: bestSplit, e: r.e };
+    result.splice(longestIdx, 1, r1, r2);
+  }
+  return result;
+}
+
 async function hybridSplit(
   audioUrl: string,
   surahNum: number,
@@ -313,15 +405,29 @@ async function hybridSplit(
   for (let i = 0; i < N; i++) if (smoothBL[i] > maxBL) maxBL = smoothBL[i];
   if (maxBL > 0) for (let i = 0; i < N; i++) smoothBL[i] /= maxBL;
 
-  /* ─── ④ لا إجبار على عدد معين — الصمت الطبيعي فقط ─── */
-  onProgress?.(`✅ ${regions.length} مقطع بناءً على الصمت الطبيعي`, 55);
+  /* ─── ④ مطابقة المقاطع للعدد المطلوب للآيات (دمج / تقسيم ذكي) ─── */
+  let targetRegions = regions.map(r => ({ ...r }));
+  if (targetCount > 0) {
+    if (targetRegions.length === 0) {
+      targetRegions = [{ s: 0, e: N - 1 }];
+    }
+    
+    if (targetRegions.length > targetCount) {
+      onProgress?.(`⚖️ دمج المقاطع الزائدة: ${targetRegions.length} ← ${targetCount}...`, 45);
+      targetRegions = mergeRegionsToTarget(targetRegions, targetCount, hop, sr);
+    } else if (targetRegions.length < targetCount) {
+      onProgress?.(`✂️ تقسيم المقاطع الطويلة لتلبية الهدف: ${targetRegions.length} ← ${targetCount}...`, 45);
+      targetRegions = splitRegionsToTarget(targetRegions, targetCount, smoothE, hop, sr);
+    }
+  }
+  onProgress?.(`✅ ${targetRegions.length} مقطع (مطابق لـ ${targetCount} المطلوبة)`, 55);
 
 
   /* ─── ⑤ ضبط الحواف في أعمق نقطة صمت (Perfect Snap) ─── */
   onProgress?.("✨ ضبط الحواف في أعمق نقطة صمت...", 72);
 
   interface Refined { start: number; end: number; startS: number; endS: number; }
-  const refined: Refined[] = regions.map(r => ({
+  const refined: Refined[] = targetRegions.map(r => ({
     start: r.s * hop / sr, end: r.e * hop / sr,
     startS: Math.floor(r.s * hop), endS: Math.floor(r.e * hop)
   }));
@@ -629,7 +735,11 @@ function WaveformDisplay({
       for (let i = 0; i < boundaryScores.length; i++) {
         const x = (i / boundaryScores.length) * W;
         const y = baseY - (boundaryScores[i] / blMx) * blH;
-        i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+        if (i === 0) {
+          c.moveTo(x, y);
+        } else {
+          c.lineTo(x, y);
+        }
       }
       
       c.shadowColor = "#e040fb";
@@ -841,6 +951,8 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
   const [playingSegId, setPlayingSegId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<{ end: number; id: string } | null>(null);
+  const isSeekingRef = useRef(false);
+  const expectedStartTimeRef = useRef(0);
   const [aiProfiles, setAiProfiles] = useState<SpeakerProfile[]>([]);
   const [aiSplitting, setAiSplitting] = useState(false);
   const [waveform, setWaveform] = useState<Float32Array>(new Float32Array(0));
@@ -984,6 +1096,8 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
   const playSegment = useCallback((seg: AudioSegment) => {
     const a = audioRef.current; if (!a) return;
     if (playingSegId === seg.id) { a.pause(); setPlayingSegId(null); stopAtRef.current = null; return; }
+    isSeekingRef.current = true;
+    expectedStartTimeRef.current = seg.start;
     a.currentTime = seg.start;
     stopAtRef.current = { end: seg.end, id: seg.id };
     setPlayingSegId(seg.id);
@@ -993,6 +1107,14 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
   const onTimeUpdate = useCallback(() => {
     const a = audioRef.current; if (!a) return;
     setCurrent(a.currentTime);
+    if (a.seeking) return;
+    if (isSeekingRef.current) {
+      if (Math.abs(a.currentTime - expectedStartTimeRef.current) < 0.15) {
+        isSeekingRef.current = false;
+      } else {
+        return;
+      }
+    }
     if (stopAtRef.current && a.currentTime >= stopAtRef.current.end - 0.02) {
       a.pause(); setPlayingSegId(null); stopAtRef.current = null;
     }
@@ -1180,6 +1302,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
           <audio ref={audioRef} src={audioPath(surahNum)} crossOrigin="anonymous"
             onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)}
             onTimeUpdate={onTimeUpdate}
+            onSeeked={() => { isSeekingRef.current = false; }}
             onLoadedMetadata={(e) => setDuration((e.target as HTMLAudioElement).duration)} />
 
           <div className="flex items-center gap-3">
