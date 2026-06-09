@@ -3,20 +3,20 @@
 
 // Mapping from API surah name → page image(s)
 export const surahPageMap: Record<string, string[]> = {
-  "الفاتحة": [], // No page image uploaded for Al-Fatiha
-  "التكاثر": ["/pages/599.jpg"],
-  "العصر": ["/pages/600.jpg"],
-  "الهمزة": ["/pages/600.jpg"],
-  "الفيل": ["/pages/600.jpg"],
-  "قريش": ["/pages/601.jpg"],
-  "الماعون": ["/pages/601.jpg"],
-  "الكوثر": ["/pages/601.jpg"],
-  "الكافرون": ["/pages/602.jpg"],
-  "النصر": ["/pages/602.jpg"],
-  "المسد": ["/pages/602.jpg"],
-  "الإخلاص": ["/pages/603.jpg"],
-  "الفلق": ["/pages/603.jpg"],
-  "الناس": ["/pages/603.jpg"],
+  "الفاتحة": ["/pages/fatiha.jpg"],
+  "التكاثر": ["/pages/600.jpg"],
+  "العصر": ["/pages/601.jpg"],
+  "الهمزة": ["/pages/601.jpg"],
+  "الفيل": ["/pages/601.jpg"],
+  "قريش": ["/pages/602.jpg"],
+  "الماعون": ["/pages/602.jpg"],
+  "الكوثر": ["/pages/602.jpg"],
+  "الكافرون": ["/pages/603.jpg"],
+  "النصر": ["/pages/603.jpg"],
+  "المسد": ["/pages/603.jpg"],
+  "الإخلاص": ["/pages/604.jpg"],
+  "الفلق": ["/pages/604.jpg"],
+  "الناس": ["/pages/604.jpg"],
 };
 
 export function getPageImages(surahName: string): string[] {

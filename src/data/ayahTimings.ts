@@ -1,4 +1,4 @@
-import { supabase } from "../lib/supabase";
+import { supabase, hasValidSupabaseKey } from "../lib/supabase";
 
 /**
  * توقيتات الآيات اليدوية لكل سورة (بالثواني).
@@ -32,6 +32,7 @@ export interface AudioSegment {
   start: number;
   end: number;
   speaker: "teacher" | "kids";
+  ayah?: number;
   label?: string;
 }
 
@@ -56,6 +57,7 @@ const TIMINGS_STORAGE_KEY = "mushaf:ayahTimings:v1";
 
 export const syncTimingsFromServer = async () => {
   if (typeof window === "undefined") return;
+  if (!hasValidSupabaseKey()) return; // skip sync when no valid API key
   try {
     const { data, error } = await supabase.from("store").select("value").eq("key", TIMINGS_STORAGE_KEY).single();
     if (data && data.value) {

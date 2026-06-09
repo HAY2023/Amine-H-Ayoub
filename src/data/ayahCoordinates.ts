@@ -1,4 +1,4 @@
-import { supabase } from "../lib/supabase";
+import { supabase, hasValidSupabaseKey } from "../lib/supabase";
 
 export interface AyahBox {
   surah: number;
@@ -90,6 +90,7 @@ const cloneBoxes = (boxes: AyahBox[]) => boxes.map((box) => ({ ...box }));
 
 export const syncCoordinatesFromServer = async () => {
   if (typeof window === "undefined") return;
+  if (!hasValidSupabaseKey()) return; // skip sync when no valid API key
   try {
     const { data, error } = await supabase.from("store").select("value").eq("key", CALIBRATION_STORAGE_KEY).single();
     if (data && data.value) {

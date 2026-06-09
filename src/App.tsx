@@ -20,10 +20,10 @@ const App = () => {
     syncCoordinatesFromServer();
     syncTimingsFromServer();
 
-    // Send localStorage data to my Vite plugin so I can hardcode it into ayahCoordinates.ts!
+    // Send localStorage data to Vite plugin (dev-only, silent fail)
     const data = localStorage.getItem("mushaf:ayahCoordinates:v1");
     if (data) {
-      fetch('/api/save-boxes', { method: 'POST', body: data }).catch(console.error);
+      fetch('/api/save-boxes', { method: 'POST', body: data }).catch(() => {});
     }
   }, []);
 

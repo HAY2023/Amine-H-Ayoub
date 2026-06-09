@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Pencil, Check, Shuffle } from "lucide-react";
-import { getSavedTimings } from "@/data/ayahTimings";
+import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { supabase } from "@/lib/supabase";
@@ -302,9 +302,9 @@ const MushafPage = ({ onBack }: Props) => {
     });
   }, []);
 
-  const highlightAyah = useCallback((boxIndex: number, speaker: Speaker) => {
+  const highlightAyah = useCallback((surah: number, ayah: number, speaker: Speaker) => {
     clearAllHighlights();
-    const selector = `.ayah-rect-idx-${boxIndex}`;
+    const selector = `.ayah-rect-${surah}-${ayah}`;
     const boxes = document.querySelectorAll(selector);
     boxes.forEach(r => {
       const el = r as SVGRectElement;
@@ -330,16 +330,16 @@ const MushafPage = ({ onBack }: Props) => {
       const sp: Speaker = forceSpeaker ?? "teacher";
       currentSpeakerRef.current = sp;
 
-      const timings = getSavedTimings()[surah.number];
+      const timings = getSurahTimings(surah.number);
       const segments = timings?.segments || [];
 
       let startT = 0;
       let nextT = a.duration || 1e9;
       let foundTimingInBox = false;
 
-      const pageBoxes = getPageAyahBoxes(pages[currentPage].src);
+      const pageBoxes = pages.flatMap(p => getPageAyahBoxes(p.src));
       const surahBoxes = pageBoxes.filter(b => b.surah === surah.number);
-      const box = boxIndex !== undefined ? pageBoxes[boxIndex] : surahBoxes.find(b => b.ayah === ayahNum);
+      const box = surahBoxes.find(b => b.ayah === ayahNum);
 
       if (box) {
          if (sp === "teacher" && box.audioStart !== undefined && box.audioEnd !== undefined) {
@@ -389,9 +389,17 @@ const MushafPage = ({ onBack }: Props) => {
               }
             }
           } else {
-            setIsPlaying(false);
-            stopAtRef.current = null;
-            return;
+            // Linear estimation fallback when no timings exist
+            const total = surah.ayahCount;
+            if (total > 0 && a.duration > 0 && isFinite(a.duration)) {
+              const ayahDur = a.duration / total;
+              startT = ayahDur * segIdx;
+              nextT = ayahDur * (segIdx + 1);
+            } else {
+              setIsPlaying(false);
+              stopAtRef.current = null;
+              return;
+            }
           }
         }
       }
@@ -442,7 +450,7 @@ const MushafPage = ({ onBack }: Props) => {
       return;
     }
 
-    const pageBoxes = getPageAyahBoxes(pages[currentPage].src);
+    const pageBoxes = pages.flatMap(p => getPageAyahBoxes(p.src));
     const surahBoxes = pageBoxes.filter(b => b.surah === activeSurah.number);
 
     let activeBox = null;
@@ -472,10 +480,10 @@ const MushafPage = ({ onBack }: Props) => {
         currentAyahRef.current = activeBox.ayah;
         currentBoxIndexRef.current = activeBoxGlobalIndex;
         currentSpeakerRef.current = foundSpeaker;
-        highlightAyah(activeBoxGlobalIndex, foundSpeaker);
+        highlightAyah(activeSurah.number, activeBox.ayah, foundSpeaker);
       }
     } else {
-      const timings = getSavedTimings()[activeSurah.number];
+      const timings = getSurahTimings(activeSurah.number);
       const segments = timings?.segments || [];
       if (segments.length > 0) {
         const activeSeg = segments.find(s => a.currentTime >= s.start && a.currentTime <= s.end);
@@ -483,12 +491,15 @@ const MushafPage = ({ onBack }: Props) => {
           const speakerSegments = segments.filter(s => s.speaker === activeSeg.speaker).sort((a, b) => a.start - b.start);
           const ayahIdx = speakerSegments.findIndex(s => s.id === activeSeg.id);
           const sortedBoxes = [...surahBoxes].sort((a, b) => a.ayah - b.ayah);
-          const ayahNumber = sortedBoxes[ayahIdx]?.ayah ?? (ayahIdx + 1);
+          const matchingBox = sortedBoxes[ayahIdx] || surahBoxes.find(b => b.ayah === (ayahIdx + 1));
+          const ayahNumber = matchingBox?.ayah ?? (ayahIdx + 1);
+          const globalIdx = matchingBox ? pageBoxes.indexOf(matchingBox) : -1;
 
-          if (ayahNumber !== currentAyahRef.current || activeSeg.speaker !== currentSpeakerRef.current || currentBoxIndexRef.current !== -1) {
+          if (ayahNumber !== currentAyahRef.current || activeSeg.speaker !== currentSpeakerRef.current || currentBoxIndexRef.current !== globalIdx) {
             currentAyahRef.current = ayahNumber;
-            currentBoxIndexRef.current = -1;
+            currentBoxIndexRef.current = globalIdx;
             currentSpeakerRef.current = activeSeg.speaker;
+            highlightAyah(activeSurah.number, ayahNumber, activeSeg.speaker);
           }
         } else {
           if (currentAyahRef.current !== -1) {
@@ -512,11 +523,35 @@ const MushafPage = ({ onBack }: Props) => {
           const sortedBoxes = [...surahBoxes].sort((a, b) => a.ayah - b.ayah);
           const actualCount = Math.max(...surahBoxes.map(b => b.ayah));
           const fallbackNumber = Math.min(idx + 1, actualCount);
-          const ayahNumber = sortedBoxes[idx]?.ayah ?? fallbackNumber;
-          if (ayahNumber !== currentAyahRef.current || speaker !== currentSpeakerRef.current || currentBoxIndexRef.current !== -1) {
+          const matchingBox = sortedBoxes[idx] || surahBoxes.find(b => b.ayah === fallbackNumber);
+          const ayahNumber = matchingBox?.ayah ?? fallbackNumber;
+          const globalIdx = matchingBox ? pageBoxes.indexOf(matchingBox) : -1;
+
+          if (ayahNumber !== currentAyahRef.current || speaker !== currentSpeakerRef.current || currentBoxIndexRef.current !== globalIdx) {
             currentAyahRef.current = ayahNumber;
-            currentBoxIndexRef.current = -1;
+            currentBoxIndexRef.current = globalIdx;
             currentSpeakerRef.current = speaker;
+            highlightAyah(activeSurah.number, ayahNumber, speaker);
+          }
+        } else {
+          // Linear estimation fallback when no timings exist
+          const total = activeSurah.ayahCount;
+          if (total > 0 && a.duration > 0 && isFinite(a.duration)) {
+            const ayahDur = a.duration / total;
+            const idx = Math.min(Math.floor(a.currentTime / ayahDur), total - 1);
+            const sortedBoxes = [...surahBoxes].sort((a, b) => a.ayah - b.ayah);
+            const matchingBox = sortedBoxes[idx] || surahBoxes.find(b => b.ayah === idx + 1);
+            if (matchingBox) {
+              const ayahNumber = matchingBox.ayah;
+              const globalIdx = pageBoxes.indexOf(matchingBox);
+              const speaker = currentSpeakerRef.current || "teacher";
+              if (ayahNumber !== currentAyahRef.current || speaker !== currentSpeakerRef.current || currentBoxIndexRef.current !== globalIdx) {
+                currentAyahRef.current = ayahNumber;
+                currentBoxIndexRef.current = globalIdx;
+                currentSpeakerRef.current = speaker;
+                highlightAyah(activeSurah.number, ayahNumber, speaker);
+              }
+            }
           }
         }
       }
@@ -552,13 +587,12 @@ const MushafPage = ({ onBack }: Props) => {
       const nextSurah = page.surahs[surahIdx + 1];
       setSelectedSurahIdx(surahIdx + 1);
 
-      const pageBoxes = getPageAyahBoxes(page.src);
+      const pageBoxes = pages.flatMap(p => getPageAyahBoxes(p.src));
       const nextSurahBoxes = pageBoxes.filter(b => b.surah === nextSurah.number).sort((a,b) => a.ayah - b.ayah);
       const firstAyah = nextSurahBoxes[0]?.ayah ?? 1;
-      const firstBoxIndex = nextSurahBoxes.length > 0 ? pageBoxes.indexOf(nextSurahBoxes[0]) : undefined;
 
       setSelectedAyah(firstAyah);
-      playAyah(nextSurah, firstAyah, sp, firstBoxIndex);
+      playAyah(nextSurah, firstAyah, sp);
     } else {
       setIsPlaying(false);
       clearAllHighlights();
@@ -575,11 +609,11 @@ const MushafPage = ({ onBack }: Props) => {
     const repeat = repeatCountRef.current;
     const continuous = continuousPlayRef.current;
 
-    const timings = getSavedTimings()[activeSurah.number];
+    const timings = getSurahTimings(activeSurah.number);
     const hasKids = timings?.segments?.some(s => s.speaker === "kids") || timings?.kidsStart !== undefined;
 
     const advanceToNextSegment = (sp: Speaker) => {
-      const pageBoxes = getPageAyahBoxes(pages[currentPage].src);
+      const pageBoxes = pages.flatMap(p => getPageAyahBoxes(p.src));
       const surahBoxesUnsorted = pageBoxes.filter(b => b.surah === activeSurah.number);
       const sortedBoxesWithIndex = surahBoxesUnsorted.map(b => ({ box: b, globalIndex: pageBoxes.indexOf(b) }))
         .sort((a, b) => a.box.ayah - b.box.ayah);
@@ -610,7 +644,7 @@ const MushafPage = ({ onBack }: Props) => {
 
       if (nextItem) {
         setSelectedAyah(nextItem.box.ayah);
-        playAyah(activeSurah, nextItem.box.ayah, sp, nextItem.globalIndex);
+        playAyah(activeSurah, nextItem.box.ayah, sp);
       } else {
         advanceSurah(sp);
       }
@@ -619,13 +653,13 @@ const MushafPage = ({ onBack }: Props) => {
     if (mode === "both" && hasKids) {
       if (bothPhaseRef.current === "teacher") {
         bothPhaseRef.current = "kids";
-        playAyah(activeSurah, currentAyahRef.current, "kids", currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
+        playAyah(activeSurah, currentAyahRef.current, "kids");
         return;
       } else {
         bothPhaseRef.current = "teacher";
         if (currentRepeatRef.current < repeat) {
           currentRepeatRef.current++;
-          playAyah(activeSurah, currentAyahRef.current, "teacher", currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
+          playAyah(activeSurah, currentAyahRef.current, "teacher");
           return;
         }
         currentRepeatRef.current = 0;
@@ -643,7 +677,7 @@ const MushafPage = ({ onBack }: Props) => {
 
     if (currentRepeatRef.current < repeat) {
       currentRepeatRef.current++;
-      playAyah(activeSurah, currentAyahRef.current, speakerForMode, currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
+      playAyah(activeSurah, currentAyahRef.current, speakerForMode);
     } else {
       currentRepeatRef.current = 0;
       if (continuous) {
