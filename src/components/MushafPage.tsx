@@ -193,7 +193,7 @@ const MushafPage = ({ onBack }: Props) => {
     stopAtRef.current = null; currentRepeatRef.current = 0;
     setEditingPageName(false);
     clearAllHighlights();
-  }, [currentPage]);
+  }, [currentPage, clearAllHighlights]);
 
   // Resume last surah (once)
   const resumedRef = useRef(false);
@@ -544,7 +544,7 @@ const MushafPage = ({ onBack }: Props) => {
     if (!a.paused) {
       requestRef.current = requestAnimationFrame(trackAudio);
     }
-  }, [activeSurah, currentPage, handleAyahSegmentEnd, highlightAyah]);
+  }, [activeSurah, currentPage, handleAyahSegmentEnd, highlightAyah, clearAllHighlights]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -576,7 +576,7 @@ const MushafPage = ({ onBack }: Props) => {
       setIsPlaying(false);
       clearAllHighlights();
     }
-  }, [activeSurah, currentPage, playAyah]);
+  }, [activeSurah, currentPage, playAyah, clearAllHighlights]);
 
   const handleAyahSegmentEnd = useCallback(() => {
     stopAtRef.current = null;
@@ -666,7 +666,7 @@ const MushafPage = ({ onBack }: Props) => {
         clearAllHighlights();
       }
     }
-  }, [activeSurah, playAyah, currentPage, advanceSurah]);
+  }, [activeSurah, playAyah, currentPage, advanceSurah, clearAllHighlights]);
 
   const handleEnded = () => {
     handleAyahSegmentEnd();
