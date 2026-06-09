@@ -40,6 +40,8 @@ const AyahCalibration = () => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<number | null>(null);
+  const isSeekingRef = useRef(false);
+  const expectedStartTimeRef = useRef(0);
   const selected = boxes[selectedIndex];
 
   useEffect(() => {
@@ -213,6 +215,8 @@ const AyahCalibration = () => {
       const start = selected.audioStart ?? 0;
       const end = selected.audioEnd;
       stopAtRef.current = end && end > start ? end : null;
+      isSeekingRef.current = true;
+      expectedStartTimeRef.current = start;
       a.currentTime = start;
       a.play().catch(() => {});
     });
@@ -322,6 +326,14 @@ const AyahCalibration = () => {
   const onTimeUpdate = () => {
     const a = audioRef.current; if (!a) return;
     setCurrentTime(a.currentTime);
+    if (a.seeking) return;
+    if (isSeekingRef.current) {
+      if (Math.abs(a.currentTime - expectedStartTimeRef.current) < 0.15) {
+        isSeekingRef.current = false;
+      } else {
+        return;
+      }
+    }
     if (stopAtRef.current !== null && a.currentTime >= stopAtRef.current - 0.02) {
       a.pause(); stopAtRef.current = null;
     }
@@ -505,6 +517,7 @@ const AyahCalibration = () => {
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onTimeUpdate={onTimeUpdate}
+        onSeeked={() => { isSeekingRef.current = false; }}
         onLoadedMetadata={() => { const a = audioRef.current; if (a) setDuration(a.duration || 0); }}
         onDurationChange={() => { const a = audioRef.current; if (a) setDuration(a.duration || 0); }}
       />
@@ -775,6 +788,8 @@ const AyahCalibration = () => {
                       onClick={() => {
                         ensureAudioLoaded(selected!.surah, () => {
                           const a = audioRef.current; if (!a) return;
+                          isSeekingRef.current = true;
+                          expectedStartTimeRef.current = seg.start;
                           a.currentTime = seg.start;
                           stopAtRef.current = seg.end;
                           a.play().catch(() => {});

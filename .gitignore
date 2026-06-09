@@ -24,3 +24,12 @@ dist-ssr
 *.sw?
 .vercel
 .env
+
+# External binaries & logs
+cloudflared.exe
+vite-err.txt
+vite-log.txt
+
+# Supabase temporary files
+supabase/.temp/
+

@@ -6,6 +6,7 @@ import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
 import { Headphones } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { isTauri, checkOfflineStatus, getOfflineAudioUrl, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 
@@ -105,8 +106,8 @@ const speakerColors: Record<Speaker, { bg: string; glow: string; text: string }>
   kids: { bg: "rgba(56,189,248,0.30)", glow: "rgba(56,189,248,0.55)", text: "#0369a1" },
 };
 
-const previewHighlight = "rgba(250,204,21,0.14)";
-const previewStroke = "hsl(var(--accent) / 0.28)";
+const previewHighlight = "rgba(250,204,21,0.30)";
+const previewStroke = "rgba(250,204,21,0.80)";
 
 export default function QuranReader() {
   const navigate = useNavigate();
@@ -159,10 +160,71 @@ export default function QuranReader() {
   const [isShuffled, setIsShuffled] = useState(false);
   const [shuffledPageOrder, setShuffledPageOrder] = useState<number[]>([]);
 
+  // Get the actual page index (considering shuffle)
+  const getActualPageIndex = useCallback((displayIdx: number) => {
+    if (isShuffled && shuffledPageOrder.length > 0) {
+      return shuffledPageOrder[displayIdx] ?? displayIdx;
+    }
+    return displayIdx;
+  }, [isShuffled, shuffledPageOrder]);
+
+  const actualPage = getActualPageIndex(currentPage);
+
   // Page naming state
   const [editingPageName, setEditingPageName] = useState(false);
   const [tempPageName, setTempPageName] = useState("");
   const [pageNamesVersion, setPageNamesVersion] = useState(0);
+
+  // Tauri Offline States
+  const [offlineStatus, setOfflineStatus] = useState<Record<number, boolean>>({});
+  const [downloadProgress, setDownloadProgress] = useState<Record<number, number>>({});
+  const [isDownloading, setIsDownloading] = useState<Record<number, boolean>>({});
+
+  // Check offline status for all surahs on current page
+  const checkCurrentPageOffline = useCallback(async () => {
+    if (!isTauri()) return;
+    const page = pages[actualPage];
+    if (!page) return;
+    const status: Record<number, boolean> = {};
+    for (const s of page.surahs) {
+      status[s.number] = await checkOfflineStatus(s.number);
+    }
+    setOfflineStatus(prev => ({ ...prev, ...status }));
+  }, [actualPage]);
+
+  useEffect(() => {
+    checkCurrentPageOffline();
+  }, [actualPage, checkCurrentPageOffline]);
+
+  // Listen to download progress
+  useEffect(() => {
+    if (!isTauri()) return;
+    const unsub = listenToDownloadProgress((payload) => {
+      const { surah_number, progress, status } = payload;
+      setDownloadProgress(prev => ({ ...prev, [surah_number]: Math.round(progress) }));
+      
+      if (status === "completed") {
+        setIsDownloading(prev => ({ ...prev, [surah_number]: false }));
+        setOfflineStatus(prev => ({ ...prev, [surah_number]: true }));
+      } else if (status === "error") {
+        setIsDownloading(prev => ({ ...prev, [surah_number]: false }));
+      } else if (status === "downloading") {
+        setIsDownloading(prev => ({ ...prev, [surah_number]: true }));
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const resolveAudioSrc = useCallback(async (surah: SurahAudio) => {
+    if (isTauri()) {
+      const offline = await checkOfflineStatus(surah.number);
+      if (offline) {
+        const localUrl = await getOfflineAudioUrl(surah.number);
+        if (localUrl) return localUrl;
+      }
+    }
+    return surah.src;
+  }, []);
 
   // Refs for tracking without re-renders
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -175,8 +237,40 @@ export default function QuranReader() {
   const currentBoxIndexRef = useRef(-1);
   const currentSpeakerRef = useRef<Speaker>("teacher");
   const currentBoxLabelRef = useRef<string | null>(null);
+<<<<<<< HEAD
   const handleAyahSegmentEndRef = useRef<() => void>(() => {});
   const segmentEndGuardRef = useRef(false); // prevent double-fire from stopAt + onEnded
+=======
+  const isHandlingSegmentEndRef = useRef(false);
+  const isSeekingRef = useRef(false);
+  const expectedStartTimeRef = useRef(0);
+
+  const clearAllHighlights = useCallback(() => {
+    const rects = document.querySelectorAll('.ayah-rect');
+    rects.forEach(r => {
+      const el = r as SVGRectElement;
+      el.style.fill = previewHighlight;
+      el.style.stroke = previewStroke;
+      el.style.strokeWidth = "1.5";
+      el.classList.remove('animate-pulse');
+    });
+  }, []);
+
+  const highlightAyah = useCallback((surahNum: number, ayahNum: number, speaker: Speaker, boxIndex?: number) => {
+    clearAllHighlights();
+    const selector = boxIndex !== undefined 
+      ? `.ayah-rect-idx-${boxIndex}` 
+      : `.ayah-rect-${surahNum}-${ayahNum}`;
+    const boxes = document.querySelectorAll(selector);
+    boxes.forEach(r => {
+      const el = r as SVGRectElement;
+      el.style.fill = speakerColors[speaker].bg;
+      el.style.stroke = speakerColors[speaker].glow;
+      el.style.strokeWidth = "5";
+      el.classList.add('animate-pulse');
+    });
+  }, [clearAllHighlights]);
+>>>>>>> 4677d60a6306264d8cdc41f3a9b6cee56a4f153a
 
   const [activeMenuAyah, setActiveMenuAyah] = useState<{ surah: SurahAudio; ayah: number; label?: string; boxIndex?: number } | null>(null);
 
@@ -192,16 +286,6 @@ export default function QuranReader() {
       setCurrentPage(0);
     }
   }, [isShuffled]);
-
-  // Get the actual page index (considering shuffle)
-  const getActualPageIndex = useCallback((displayIdx: number) => {
-    if (isShuffled && shuffledPageOrder.length > 0) {
-      return shuffledPageOrder[displayIdx] ?? displayIdx;
-    }
-    return displayIdx;
-  }, [isShuffled, shuffledPageOrder]);
-
-  const actualPage = getActualPageIndex(currentPage);
 
   // Page name display helper (re-read on version change)
   const currentPageName = useMemo(() => {
@@ -237,7 +321,9 @@ export default function QuranReader() {
         await document.exitFullscreen();
         setIsFullscreen(false);
       }
-    } catch { }
+    } catch (err) {
+      console.debug("Fullscreen toggle failed:", err);
+    }
   }, []);
 
   useEffect(() => {
@@ -255,7 +341,7 @@ export default function QuranReader() {
     stopAtRef.current = null; currentRepeatRef.current = 0;
     setEditingPageName(false);
     clearAllHighlights();
-  }, [currentPage]);
+  }, [currentPage, clearAllHighlights]);
 
   const resumedRef = useRef(false);
   useEffect(() => {
@@ -268,28 +354,22 @@ export default function QuranReader() {
     if (surahIdx === -1) return;
     const surah = pages[actualPage].surahs[surahIdx];
     const a = audioRef.current; if (!a) return;
-    a.src = surah.src; a.load();
-    setActiveSurah(surah);
-    setSelectedSurahIdx(surahIdx);
-    a.addEventListener("loadedmetadata", () => {
-      if (savedTime > 0 && savedTime < a.duration) {
-        a.currentTime = savedTime;
-        lastSavedTimeRef.current = savedTime;
-      }
-    }, { once: true });
-  }, [currentPage]);
-
-  const clearAllHighlights = () => {
-    const rects = document.querySelectorAll('.ayah-rect');
-    rects.forEach(r => {
-      const el = r as SVGRectElement;
-      el.style.fill = previewHighlight;
-      el.style.stroke = previewStroke;
-      el.style.strokeWidth = "1.5";
-      el.classList.remove('animate-pulse');
+    
+    resolveAudioSrc(surah).then(src => {
+      a.src = src; a.load();
+      setActiveSurah(surah);
+      setSelectedSurahIdx(surahIdx);
+      a.addEventListener("loadedmetadata", () => {
+        if (savedTime > 0 && savedTime < a.duration) {
+          a.currentTime = savedTime;
+          lastSavedTimeRef.current = savedTime;
+        }
+      }, { once: true });
     });
-  };
+  }, [currentPage, resolveAudioSrc, actualPage]);
 
+
+<<<<<<< HEAD
   const highlightAyah = (surahNum: number, ayahNum: number, speaker: Speaker, boxIndex?: number) => {
     clearAllHighlights();
     const selector = `.ayah-rect-${surahNum}-${ayahNum}`;
@@ -302,6 +382,8 @@ export default function QuranReader() {
       el.classList.add('animate-pulse');
     });
   };
+=======
+>>>>>>> 4677d60a6306264d8cdc41f3a9b6cee56a4f153a
 
   const getActualAyahCount = useCallback((surahNumber: number, fallback: number) => {
     const pageBoxes = pages.flatMap(p => getPageAyahBoxes(p.src));
@@ -310,15 +392,247 @@ export default function QuranReader() {
     return Math.max(...surahBoxes.map(b => b.ayah));
   }, []);
 
+  const playAyah = useCallback(async (surah: SurahAudio, ayahNum: number, forceSpeaker?: Speaker, boxIndex?: number) => {
+    const a = audioRef.current; if (!a) return;
+    const targetSrc = await resolveAudioSrc(surah);
+    const sameSrc = a.src === targetSrc || (a.src && a.src.endsWith(surah.src.split("/").pop() || surah.src));
+
+    setActiveSurah(surah);
+    currentAyahRef.current = ayahNum;
+    currentBoxIndexRef.current = boxIndex ?? -1;
+    stopAtRef.current = null;
+
+    const startPlayback = () => {
+      const sp: Speaker = forceSpeaker ?? "teacher";
+      currentSpeakerRef.current = sp;
+
+      const timings = getSavedTimings()[surah.number];
+      const segments = timings?.segments || [];
+
+      let startT = 0;
+      let nextT = a.duration || 1e9;
+      let foundTimingInBox = false;
+
+      const pageBoxes = getPageAyahBoxes(pages[actualPage].src);
+      const surahBoxes = pageBoxes.filter(b => b.surah === surah.number);
+      const box = boxIndex !== undefined ? pageBoxes[boxIndex] : surahBoxes.find(b => b.ayah === ayahNum);
+
+      if (box) {
+         if (sp === "teacher" && box.audioStart !== undefined && box.audioEnd !== undefined) {
+             startT = box.audioStart;
+             nextT = box.audioEnd;
+             foundTimingInBox = true;
+         } else if (sp === "kids" && box.kidsStart !== undefined && box.kidsEnd !== undefined) {
+             startT = box.kidsStart;
+             nextT = box.kidsEnd;
+             foundTimingInBox = true;
+         }
+      }
+
+      if (!foundTimingInBox) {
+        if (segments.length > 0) {
+          const speakerSegments = segments.filter(s => s.speaker === sp).sort((a, b) => a.start - b.start);
+          const segIdx = ayahNum > 0 ? ayahNum - 1 : 0;
+          const seg = speakerSegments[segIdx];
+          if (seg) {
+            startT = seg.start;
+            nextT = seg.end;
+          } else {
+            setIsPlaying(false);
+            return;
+          }
+        } else {
+          const list = sp === "kids" && timings?.kids ? timings.kids : timings?.teacher || [];
+          const segIdx = ayahNum > 0 ? ayahNum - 1 : 0;
+          
+          if (list[segIdx] !== undefined) {
+            startT = list[segIdx];
+            nextT = list[segIdx + 1] !== undefined ? list[segIdx + 1] : a.duration || 1e9;
+            
+            // Split-file format: Teacher stops when the entire Kids section starts
+            if (sp === "teacher" && timings?.kidsStart !== undefined && nextT > timings.kidsStart) {
+              nextT = timings.kidsStart;
+            }
+            
+            // Interleaved format: Teacher stops when the Kid starts for the SAME ayah
+            if (sp === "teacher" && timings?.kids && timings.kids[segIdx] !== undefined) {
+              const kidStartT = timings.kids[segIdx];
+              if (kidStartT > startT && kidStartT < nextT) {
+                nextT = kidStartT;
+              }
+            }
+
+            // Interleaved format: Kid stops when the Teacher starts for the NEXT ayah
+            if (sp === "kids" && timings?.teacher && timings.teacher[segIdx + 1] !== undefined) {
+              const nextTeacherStart = timings.teacher[segIdx + 1];
+              if (nextTeacherStart > startT && nextTeacherStart < nextT) {
+                nextT = nextTeacherStart;
+              }
+            }
+          }
+        }
+      }
+
+      stopAtRef.current = nextT;
+      isSeekingRef.current = true;
+      expectedStartTimeRef.current = startT;
+      a.currentTime = startT;
+      a.play().then(() => setIsPlaying(true)).catch(console.error);
+    };
+
+    setControlsOpen(false);
+
+    if (!sameSrc) {
+      a.src = targetSrc;
+      a.load();
+      a.addEventListener("loadedmetadata", startPlayback, { once: true });
+    } else {
+      if (a.duration > 0) startPlayback();
+      else a.addEventListener("loadedmetadata", startPlayback, { once: true });
+    }
+  }, [actualPage, resolveAudioSrc]);
+
+  const advanceSurah = useCallback((sp: Speaker) => {
+    if (!activeSurah) return;
+    const page = pages[actualPage];
+    const surahIdx = page.surahs.findIndex(s => s.number === activeSurah.number);
+    if (surahIdx >= 0 && surahIdx < page.surahs.length - 1) {
+      const nextSurah = page.surahs[surahIdx + 1];
+      setSelectedSurahIdx(surahIdx + 1);
+      
+      const pageBoxes = getPageAyahBoxes(page.src);
+      const nextSurahBoxes = pageBoxes.filter(b => b.surah === nextSurah.number).sort((a,b) => a.ayah - b.ayah);
+      const firstAyah = nextSurahBoxes[0]?.ayah ?? 1;
+      const firstBoxIndex = nextSurahBoxes.length > 0 ? pageBoxes.indexOf(nextSurahBoxes[0]) : undefined;
+      
+      setSelectedAyah(firstAyah);
+      playAyah(nextSurah, firstAyah, sp, firstBoxIndex);
+    } else {
+      setIsPlaying(false);
+      clearAllHighlights();
+    }
+  }, [activeSurah, actualPage, playAyah, clearAllHighlights]);
+
+  const handleAyahSegmentEnd = useCallback(() => {
+    stopAtRef.current = null;
+    isHandlingSegmentEndRef.current = false;
+    const a = audioRef.current; if (!a || !activeSurah) return;
+
+    // === READ FROM REFS to always get the latest values (not stale closures) ===
+    const mode = playModeRef.current;
+    const repeat = repeatCountRef.current;
+    const continuous = continuousPlayRef.current;
+
+    const timings = getSavedTimings()[activeSurah.number];
+    const hasKids = timings?.segments?.some(s => s.speaker === "kids") || timings?.kidsStart !== undefined;
+
+    const advanceToNextSegment = (sp: Speaker) => {
+      const pageBoxes = getPageAyahBoxes(pages[actualPage].src);
+      const surahBoxesUnsorted = pageBoxes.filter(b => b.surah === activeSurah.number);
+      const sortedBoxesWithIndex = surahBoxesUnsorted.map(b => ({ box: b, globalIndex: pageBoxes.indexOf(b) }))
+        .sort((a, b) => a.box.ayah - b.box.ayah);
+
+      let nextItem = null;
+      let currentIndex = -1;
+
+      if (currentBoxIndexRef.current !== -1) {
+        currentIndex = sortedBoxesWithIndex.findIndex(item => item.globalIndex === currentBoxIndexRef.current);
+      } else {
+        currentIndex = sortedBoxesWithIndex.map(item => item.box.ayah).lastIndexOf(currentAyahRef.current);
+      }
+
+      for (let i = currentIndex + 1; i < sortedBoxesWithIndex.length; i++) {
+        const candidate = sortedBoxesWithIndex[i];
+        if (candidate.box.ayah === currentAyahRef.current) {
+          const hasTimings = (sp === "teacher" && candidate.box.audioStart !== undefined && candidate.box.audioEnd !== undefined) ||
+                             (sp === "kids" && candidate.box.kidsStart !== undefined && candidate.box.kidsEnd !== undefined);
+          if (hasTimings) {
+            nextItem = candidate;
+            break;
+          }
+        } else {
+          nextItem = candidate;
+          break;
+        }
+      }
+
+      if (nextItem) {
+        setSelectedAyah(nextItem.box.ayah);
+        playAyah(activeSurah, nextItem.box.ayah, sp, nextItem.globalIndex);
+      } else {
+        advanceSurah(sp);
+      }
+    };
+
+    // "both" mode: teacher then kids for same ayah
+    if (mode === "both" && hasKids) {
+      if (bothPhaseRef.current === "teacher") {
+        bothPhaseRef.current = "kids";
+        playAyah(activeSurah, currentAyahRef.current, "kids", currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
+        return;
+      } else {
+        bothPhaseRef.current = "teacher";
+        if (currentRepeatRef.current < repeat) {
+          currentRepeatRef.current++;
+          playAyah(activeSurah, currentAyahRef.current, "teacher", currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
+          return;
+        }
+
+        currentRepeatRef.current = 0;
+        if (continuous) {
+          advanceToNextSegment("teacher");
+        } else {
+          setIsPlaying(false);
+          clearAllHighlights();
+        }
+        return;
+      }
+    }
+
+    // "teacher" or "kids" only mode
+    const speakerForMode: Speaker = mode === "kids" ? "kids" : "teacher";
+
+    if (currentRepeatRef.current < repeat) {
+      currentRepeatRef.current++;
+      playAyah(activeSurah, currentAyahRef.current, speakerForMode, currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
+    } else {
+      currentRepeatRef.current = 0;
+      if (continuous) {
+        advanceToNextSegment(speakerForMode);
+      } else {
+        setIsPlaying(false);
+        clearAllHighlights();
+      }
+    }
+  }, [activeSurah, playAyah, actualPage, advanceSurah, clearAllHighlights]);
+
   const trackAudio = useCallback(() => {
     const a = audioRef.current;
     if (!a || !activeSurah) return;
 
+    if (a.seeking) return;
+    if (isSeekingRef.current) {
+      if (Math.abs(a.currentTime - expectedStartTimeRef.current) < 0.15) {
+        isSeekingRef.current = false;
+      } else {
+        return;
+      }
+    }
+
     if (stopAtRef.current !== null && a.currentTime >= stopAtRef.current - 0.05) {
+<<<<<<< HEAD
       a.pause();
       setIsPlaying(false);
       segmentEndGuardRef.current = true;
       handleAyahSegmentEndRef.current();
+=======
+      if (!isHandlingSegmentEndRef.current) {
+        isHandlingSegmentEndRef.current = true;
+        a.pause();
+        setIsPlaying(false);
+        handleAyahSegmentEnd();
+      }
+>>>>>>> 4677d60a6306264d8cdc41f3a9b6cee56a4f153a
       return;
     }
 
@@ -444,7 +758,7 @@ export default function QuranReader() {
     if (!a.paused) {
       requestRef.current = requestAnimationFrame(trackAudio);
     }
-  }, [activeSurah]);
+  }, [activeSurah, actualPage, getActualAyahCount, handleAyahSegmentEnd, highlightAyah, clearAllHighlights]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -457,6 +771,7 @@ export default function QuranReader() {
     };
   }, [isPlaying, trackAudio]);
 
+<<<<<<< HEAD
 
   const playAyah = useCallback((surah: SurahAudio, ayahNum: number, forceSpeaker?: Speaker, boxIndex?: number) => {
     const a = audioRef.current; if (!a) return;
@@ -692,6 +1007,8 @@ export default function QuranReader() {
     handleAyahSegmentEndRef.current = handleAyahSegmentEnd;
   }, [handleAyahSegmentEnd]);
 
+=======
+>>>>>>> 4677d60a6306264d8cdc41f3a9b6cee56a4f153a
   const togglePlayPause = () => {
     const a = audioRef.current; if (!a || !activeSurah) return;
     if (isPlaying) {
@@ -709,11 +1026,33 @@ export default function QuranReader() {
     }
   };
 
+  // Swipe page turning gestures
+  const touchStartXRef = useRef<number | null>(null);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0]?.clientX ?? null;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return;
+    const endX = e.changedTouches[0]?.clientX ?? null;
+    if (endX !== null) {
+      const diffX = endX - touchStartXRef.current;
+      const swipeThreshold = 50; // pixels
+      if (diffX > swipeThreshold) {
+        // Dragged finger to the right (RTL: Go to previous page)
+        goPrev();
+      } else if (diffX < -swipeThreshold) {
+        // Dragged finger to the left (RTL: Go to next page)
+        goNext();
+      }
+    }
+    touchStartXRef.current = null;
+  };
+
   const step = isDesktop ? 2 : 1;
   const totalDisplayPages = isShuffled ? shuffledPageOrder.length : pages.length;
-  const goToPage = (i: number) => { if (i >= 0 && i < totalDisplayPages) setCurrentPage(i); };
-  const goPrev = () => goToPage(Math.max(0, currentPage - step));
-  const goNext = () => goToPage(Math.min(totalDisplayPages - 1, currentPage + step));
+  const goToPage = useCallback((i: number) => { if (i >= 0 && i < totalDisplayPages) setCurrentPage(i); }, [totalDisplayPages]);
+  const goPrev = useCallback(() => goToPage(Math.max(0, currentPage - step)), [currentPage, goToPage, step]);
+  const goNext = useCallback(() => goToPage(Math.min(totalDisplayPages - 1, currentPage + step)), [currentPage, totalDisplayPages, goToPage, step]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -722,7 +1061,7 @@ export default function QuranReader() {
       if (e.key === "Escape") { if (controlsOpen) setControlsOpen(false); else navigate("/"); }
     };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
-  }, [currentPage, isDesktop, controlsOpen, navigate]);
+  }, [controlsOpen, navigate, goPrev, goNext]);
 
   const visiblePages = useMemo(() => {
     const getPage = (displayIdx: number) => {
@@ -741,27 +1080,32 @@ export default function QuranReader() {
     <div className="fixed inset-0 w-screen h-screen z-50 bg-background overflow-hidden select-none">
       <audio ref={audioRef} onEnded={() => {
         setIsPlaying(false);
-        // Guard: if stopAt already handled this segment end, skip
         if (segmentEndGuardRef.current) {
           segmentEndGuardRef.current = false;
           return;
         }
         handleAyahSegmentEndRef.current();
-      }} />
+      }} onSeeked={() => { isSeekingRef.current = false; }} />
 
-      <div className="flex h-full w-full" dir="rtl" onClick={() => { }}>
+      <div 
+        className="flex h-full w-full" 
+        dir="rtl" 
+        onTouchStart={handleTouchStart} 
+        onTouchEnd={handleTouchEnd}
+        onClick={() => { }}
+      >
         {visiblePages.map((page, idx) => (
-          <div key={`${page.src}-${idx}`} className="relative h-full flex-1 min-w-0 flex items-center justify-center bg-background overflow-hidden">
-            <div className="relative h-full w-full">
-              <img src={page.src} alt={page.name} className="absolute inset-0 h-full w-full select-none animate-fade-in object-fill" draggable={false} />
+          <div key={`${page.src}-${idx}`} className="relative h-full flex-1 min-w-0 flex items-center justify-center bg-background overflow-hidden p-1">
+            <div className="relative flex max-h-full max-w-full shadow-xl">
+              <img src={page.src} alt={page.name} className="block max-h-full max-w-full select-none animate-fade-in" style={{ objectFit: "contain", aspectRatio: `${PAGE_IMAGE_SIZE.width}/${PAGE_IMAGE_SIZE.height}` }} draggable={false} />
               <svg className="absolute inset-0 h-full w-full pointer-events-none" viewBox={`0 0 ${PAGE_IMAGE_SIZE.width} ${PAGE_IMAGE_SIZE.height}`} preserveAspectRatio="none">
                 {getPageAyahBoxes(page.src).map((box, i) => (
                   <rect
                     key={`ayah-rect-${box.surah}-${box.ayah}-${i}`}
                     className={`ayah-rect ayah-rect-${box.surah}-${box.ayah} ayah-rect-idx-${i}`}
                     x={box.x} y={box.y} width={box.width} height={box.height} rx="10"
-                    fill={previewHighlight} stroke={previewStroke} strokeWidth={1.5}
-                    style={{ mixBlendMode: "multiply", transition: "all 0.1s linear" }}
+                    fill={previewHighlight.replace(/rgb\(([^)]+)\)/, "rgba($1, 0.3)")} stroke={previewStroke} strokeWidth={1.5}
+                    style={{ transition: "all 0.1s linear" }}
                   />
                 ))}
               </svg>
@@ -852,7 +1196,34 @@ export default function QuranReader() {
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <Link to="/timings" className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground">إعداد التقسيم</Link>
+                {isTauri() && selectedSurah && (
+                  <div className="mr-2">
+                    {isDownloading[selectedSurah.number] ? (
+                      <div className="text-[10px] bg-amber-100/10 text-amber-500 border border-amber-500/20 font-bold px-2 py-1 rounded-full animate-pulse flex items-center gap-1">
+                        <span>⏳ جاري التحميل {downloadProgress[selectedSurah.number] || 0}%</span>
+                      </div>
+                    ) : offlineStatus[selectedSurah.number] ? (
+                      <div className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                        <span>✓ متوفر أوفلاين</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          const url = selectedSurah.src;
+                          setIsDownloading(prev => ({ ...prev, [selectedSurah.number]: true }));
+                          setDownloadProgress(prev => ({ ...prev, [selectedSurah.number]: 0 }));
+                          await downloadSurah(url, selectedSurah.number);
+                        }}
+                        className="rounded-full bg-blue-600 hover:bg-blue-700 px-2 py-1 text-[10px] font-bold text-white shadow-sm flex items-center gap-1 transition-colors"
+                      >
+                        📥 تحميل أوفلاين
+                      </button>
+                    )}
+                  </div>
+                )}
+                {!isTauri() && (
+                  <Link to="/timings" className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground">إعداد التقسيم</Link>
+                )}
                 <button onClick={() => setControlsOpen(false)} className="w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center">
                   <X className="w-4 h-4" />
                 </button>

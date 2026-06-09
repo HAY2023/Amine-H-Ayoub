@@ -142,6 +142,8 @@ const MushafPage = ({ onBack }: Props) => {
   const currentSpeakerRef = useRef<Speaker>("teacher");
   const requestRef = useRef<number>();
   const isHandlingSegmentEndRef = useRef(false);
+  const isSeekingRef = useRef(false);
+  const expectedStartTimeRef = useRef(0);
 
   const [syncTrigger, setSyncTrigger] = useState(0);
   const [activeMenuAyah, setActiveMenuAyah] = useState<{ surah: SurahAudio; ayah: number; label?: string; boxIndex?: number } | null>(null);
@@ -191,7 +193,7 @@ const MushafPage = ({ onBack }: Props) => {
     stopAtRef.current = null; currentRepeatRef.current = 0;
     setEditingPageName(false);
     clearAllHighlights();
-  }, [currentPage]);
+  }, [currentPage, clearAllHighlights]);
 
   // Resume last surah (once)
   const resumedRef = useRef(false);
@@ -405,6 +407,8 @@ const MushafPage = ({ onBack }: Props) => {
       }
 
       stopAtRef.current = Math.max(nextT, startT + 0.1);
+      isSeekingRef.current = true;
+      expectedStartTimeRef.current = startT;
       a.currentTime = startT;
       a.play().then(() => setIsPlaying(true)).catch(console.error);
     };
@@ -439,6 +443,15 @@ const MushafPage = ({ onBack }: Props) => {
   const trackAudio = useCallback(() => {
     const a = audioRef.current;
     if (!a || !activeSurah) return;
+
+    if (a.seeking) return;
+    if (isSeekingRef.current) {
+      if (Math.abs(a.currentTime - expectedStartTimeRef.current) < 0.15) {
+        isSeekingRef.current = false;
+      } else {
+        return;
+      }
+    }
 
     if (stopAtRef.current !== null && a.currentTime >= stopAtRef.current - 0.05) {
       if (!isHandlingSegmentEndRef.current) {
@@ -566,7 +579,7 @@ const MushafPage = ({ onBack }: Props) => {
     if (!a.paused) {
       requestRef.current = requestAnimationFrame(trackAudio);
     }
-  }, [activeSurah, currentPage, handleAyahSegmentEnd, highlightAyah]);
+  }, [activeSurah, currentPage, handleAyahSegmentEnd, highlightAyah, clearAllHighlights]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -597,7 +610,7 @@ const MushafPage = ({ onBack }: Props) => {
       setIsPlaying(false);
       clearAllHighlights();
     }
-  }, [activeSurah, currentPage, playAyah]);
+  }, [activeSurah, currentPage, playAyah, clearAllHighlights]);
 
   const handleAyahSegmentEnd = useCallback(() => {
     stopAtRef.current = null;
@@ -687,7 +700,7 @@ const MushafPage = ({ onBack }: Props) => {
         clearAllHighlights();
       }
     }
-  }, [activeSurah, playAyah, currentPage, advanceSurah]);
+  }, [activeSurah, playAyah, currentPage, advanceSurah, clearAllHighlights]);
 
   const handleEnded = () => {
     handleAyahSegmentEnd();
@@ -743,6 +756,7 @@ const MushafPage = ({ onBack }: Props) => {
         onEnded={handleEnded}
         onPause={() => setIsPlaying(false)}
         onPlay={() => setIsPlaying(true)}
+        onSeeked={() => { isSeekingRef.current = false; }}
       />
 
       {/* Edge-to-edge image(s) with per-ayah tappable hotspots */}

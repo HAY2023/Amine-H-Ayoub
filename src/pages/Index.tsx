@@ -11,7 +11,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
 import RecitationMethods from "./RecitationMethods";
-import { Shuffle, ListOrdered } from "lucide-react";
+import { Shuffle, ListOrdered, Loader2 } from "lucide-react";
+import { isTauri, checkOfflineStatus, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
+import { checkForUpdates, UpdateInfo } from "../utils/updateChecker";
 
 const LAST_SURAH_KEY = "audio:lastSurah";
 const LAST_TIME_KEY = "audio:lastTime";
@@ -39,6 +41,108 @@ const Index = () => {
   const [autoNext, setAutoNext] = useState(true);
   const [isShuffled, setIsShuffled] = useState(false);
   const [shuffledSurahs, setShuffledSurahs] = useState<SurahItem[]>([]);
+
+  // Tauri Offline States
+  const [offlineStatus, setOfflineStatus] = useState<Record<number, boolean>>({});
+  const [downloadProgress, setDownloadProgress] = useState<Record<number, number>>({});
+  const [isDownloading, setIsDownloading] = useState<Record<number, boolean>>({});
+
+  // App Update State
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+
+  // Check offline status for all surahs
+  const checkAllOfflineStatus = useCallback(async (surahList: SurahItem[]) => {
+    if (!isTauri()) return;
+    const status: Record<number, boolean> = {};
+    for (const s of surahList) {
+      status[s.number] = await checkOfflineStatus(s.number);
+    }
+    setOfflineStatus(prev => ({ ...prev, ...status }));
+  }, []);
+
+  // Check for updates on mount
+  useEffect(() => {
+    if (isTauri()) {
+      checkForUpdates().then((info) => {
+        if (info.hasUpdate) {
+          setUpdateInfo(info);
+        }
+      });
+    }
+  }, []);
+
+  // Re-check offline when surah list changes
+  useEffect(() => {
+    if (surahs.length > 0) {
+      checkAllOfflineStatus(surahs);
+    }
+  }, [surahs, checkAllOfflineStatus]);
+
+  // Listen to download progress
+  useEffect(() => {
+    if (!isTauri()) return;
+    const unsub = listenToDownloadProgress((payload) => {
+      const { surah_number, progress, status } = payload;
+      setDownloadProgress(prev => ({ ...prev, [surah_number]: Math.round(progress) }));
+      
+      if (status === "completed") {
+        setIsDownloading(prev => ({ ...prev, [surah_number]: false }));
+        setOfflineStatus(prev => ({ ...prev, [surah_number]: true }));
+      } else if (status === "error") {
+        setIsDownloading(prev => ({ ...prev, [surah_number]: false }));
+      } else if (status === "downloading") {
+        setIsDownloading(prev => ({ ...prev, [surah_number]: true }));
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const handleDownload = async (e: React.MouseEvent, surah: SurahItem) => {
+    e.stopPropagation(); // Prevent playing the surah when clicking download
+    if (!isTauri()) return;
+    
+    setIsDownloading(prev => ({ ...prev, [surah.number]: true }));
+    setDownloadProgress(prev => ({ ...prev, [surah.number]: 0 }));
+    try {
+      await downloadSurah(surah.audioSrc, surah.number);
+    } catch (err) {
+      console.error("Download failed:", err);
+      setIsDownloading(prev => ({ ...prev, [surah.number]: false }));
+    }
+  };
+
+  // Bulk download state & logic
+  const [downloadAllProgress, setDownloadAllProgress] = useState<{ active: boolean; current: number; total: number }>({ active: false, current: 0, total: 0 });
+  
+  const undownloadedCount = useMemo(() => {
+    return surahs.filter(s => !offlineStatus[s.number]).length;
+  }, [surahs, offlineStatus]);
+
+  const handleDownloadAll = async () => {
+    if (!isTauri() || downloadAllProgress.active) return;
+    
+    const toDownload = surahs.filter(s => !offlineStatus[s.number]);
+    if (toDownload.length === 0) return;
+
+    setDownloadAllProgress({ active: true, current: 0, total: toDownload.length });
+
+    for (let i = 0; i < toDownload.length; i++) {
+      const s = toDownload[i];
+      if (isDownloading[s.number] || offlineStatus[s.number]) continue;
+      
+      setIsDownloading(prev => ({ ...prev, [s.number]: true }));
+      setDownloadProgress(prev => ({ ...prev, [s.number]: 0 }));
+      setDownloadAllProgress(prev => ({ ...prev, current: i + 1 }));
+      try {
+        await downloadSurah(s.audioSrc, s.number);
+      } catch (err) {
+        console.error(`Bulk download failed for surah ${s.number}:`, err);
+        setIsDownloading(prev => ({ ...prev, [s.number]: false }));
+      }
+    }
+
+    setDownloadAllProgress({ active: false, current: 0, total: 0 });
+  };
 
   // Restore last played surah once data arrives
   useEffect(() => {
@@ -188,6 +292,56 @@ const Index = () => {
             </div>
           )}
 
+          {/* Update Checker Banner */}
+          {updateInfo && (
+            <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-amber-400/20 border border-amber-400/40 text-amber-900 text-sm font-bold shadow-md animate-fade-in text-right" dir="rtl">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-amber-400/30 flex items-center justify-center text-amber-800 animate-bounce shrink-0">
+                  ✨
+                </div>
+                <div>
+                  <p className="font-extrabold font-amiri text-base leading-tight">تحديث جديد متوفر: نسخة {updateInfo.latestVersion}</p>
+                  <p className="text-xs font-normal text-amber-800/80 mt-0.5">قم بتحميل التحديث للحصول على أحدث التلاوات والميزات للعمل بدون إنترنت!</p>
+                </div>
+              </div>
+              <a
+                href={updateInfo.downloadUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-xs font-black shadow-sm transition-all hover:scale-105 active:scale-95"
+              >
+                تحميل الآن
+              </a>
+            </div>
+          )}
+
+          {/* New Content / Bulk Download Banner */}
+          {isTauri() && undownloadedCount > 0 && (
+            <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-sky-500/10 border border-sky-500/25 text-sky-900 text-sm font-bold shadow-md animate-fade-in text-right" dir="rtl">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-700 shrink-0">
+                  📥
+                </div>
+                <div>
+                  <p className="font-extrabold font-amiri text-base leading-tight">تلاوات جديدة متوفرة للتحميل أوفلاين</p>
+                  <p className="text-xs font-normal text-sky-800/80 mt-0.5">
+                    {downloadAllProgress.active 
+                      ? `جاري تحميل السورة ${downloadAllProgress.current} من أصل ${downloadAllProgress.total}...`
+                      : `يوجد ${undownloadedCount} سور متوفرة على السيرفر ولم يتم تحميلها بعد.`}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleDownloadAll}
+                disabled={downloadAllProgress.active}
+                className="shrink-0 px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-black shadow-sm transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5"
+              >
+                {downloadAllProgress.active && <Loader2 className="w-3 h-3 animate-spin" />}
+                <span>{downloadAllProgress.active ? "جاري التحميل..." : "تحميل الكل"}</span>
+              </button>
+            </div>
+          )}
+
           {loading && (
             <div className="space-y-3">
               <div className="text-center py-6">
@@ -229,6 +383,11 @@ const Index = () => {
               surahs={displaySurahs}
               currentPlaying={currentSurah?.number ?? null}
               onSelect={handleSelect}
+              isTauri={isTauri()}
+              offlineStatus={offlineStatus}
+              isDownloading={isDownloading}
+              downloadProgress={downloadProgress}
+              onDownload={handleDownload}
             />
           )}
         </main>

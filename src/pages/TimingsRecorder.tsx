@@ -117,6 +117,8 @@ const TimingsRecorder = () => {
   const [minSilenceMs, setMinSilenceMs] = useState(250);
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<{ end: number; id: string } | null>(null);
+  const isSeekingRef = useRef(false);
+  const expectedStartTimeRef = useRef(0);
 
   useEffect(() => {
     const saved = getSavedTimings()[surahNum];
@@ -194,6 +196,8 @@ const TimingsRecorder = () => {
       stopAtRef.current = null;
       return;
     }
+    isSeekingRef.current = true;
+    expectedStartTimeRef.current = seg.start;
     a.currentTime = seg.start;
     stopAtRef.current = { end: seg.end, id: seg.id };
     setPlayingSegId(seg.id);
@@ -203,6 +207,14 @@ const TimingsRecorder = () => {
   const onTimeUpdate = useCallback(() => {
     const a = audioRef.current; if (!a) return;
     setCurrent(a.currentTime);
+    if (a.seeking) return;
+    if (isSeekingRef.current) {
+      if (Math.abs(a.currentTime - expectedStartTimeRef.current) < 0.15) {
+        isSeekingRef.current = false;
+      } else {
+        return;
+      }
+    }
     if (stopAtRef.current && a.currentTime >= stopAtRef.current.end - 0.02) {
       a.pause();
       setPlayingSegId(null);
@@ -274,6 +286,7 @@ const TimingsRecorder = () => {
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
             onTimeUpdate={onTimeUpdate}
+            onSeeked={() => { isSeekingRef.current = false; }}
             onLoadedMetadata={(e) => setDuration((e.target as HTMLAudioElement).duration)}
           />
 

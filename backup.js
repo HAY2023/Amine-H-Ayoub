@@ -3,8 +3,32 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const SUPABASE_URL = "https://gimdekpxutvnopovofmc.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpbWRla3B4dXR2bm9wb3ZvZm1jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MjY3MzUsImV4cCI6MjA5MjEwMjczNX0.4WoTbqnsqY8_M3cde1iqk3XCft34_o_5aKhijFq50yI";
+// Load .env manually if not already loaded by the runner
+if ((!process.env.SUPABASE_BACKUP_URL || !process.env.SUPABASE_BACKUP_KEY) && fs.existsSync(".env")) {
+  const envContent = fs.readFileSync(".env", "utf-8");
+  for (const line of envContent.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith("#")) {
+      const idx = trimmed.indexOf("=");
+      if (idx !== -1) {
+        const key = trimmed.substring(0, idx).trim();
+        let val = trimmed.substring(idx + 1).trim();
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1);
+        }
+        process.env[key] = val;
+      }
+    }
+  }
+}
+
+const SUPABASE_URL = process.env.SUPABASE_BACKUP_URL;
+const SUPABASE_KEY = process.env.SUPABASE_BACKUP_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error("❌ Error: SUPABASE_BACKUP_URL or SUPABASE_BACKUP_KEY is not defined in the environment or .env file.");
+  process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 

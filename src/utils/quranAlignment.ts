@@ -21,7 +21,7 @@ export async function alignAyahsViterbi(
   }
 
   // Calculate character length of each ayah to estimate expected relative duration
-  const ayahLengths = ayahs.slice(0, ayahCount).map((a: any) => a.text.length);
+  const ayahLengths = ayahs.slice(0, ayahCount).map((a: { text: string }) => a.text.length);
   
   // We assume the audio format is: Teacher Ayah 1, Kids Ayah 1, Teacher Ayah 2, Kids Ayah 2...
   // Or Teacher entire Surah, then Kids entire Surah.
