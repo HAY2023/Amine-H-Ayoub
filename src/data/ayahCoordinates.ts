@@ -92,13 +92,19 @@ export const syncCoordinatesFromServer = async () => {
   if (typeof window === "undefined") return;
   if (!hasValidSupabaseKey()) return; // skip sync when no valid API key
   try {
-    const { data, error } = await supabase.from("store").select("value").eq("key", CALIBRATION_STORAGE_KEY).single();
-    if (data && data.value) {
+    const { data } = await supabase.from("store").select("value").eq("key", CALIBRATION_STORAGE_KEY).maybeSingle();
+    if (data && data.value && Object.keys(data.value as any).length > 0) {
+      // Server has data → mirror to local
       localStorage.setItem(CALIBRATION_STORAGE_KEY, JSON.stringify(data.value));
       window.dispatchEvent(new Event("mushaf:sync_complete"));
+    } else {
+      // Server empty → upload local copy so it persists across devices/refreshes
+      const local = getSavedAyahCoordinates();
+      if (Object.keys(local).length > 0) {
+        await supabase.from("store").upsert({ key: CALIBRATION_STORAGE_KEY, value: local });
+      }
     }
   } catch (e) {
-    // Silent fail - use local coordinates
     console.debug("Supabase sync info:", e);
   }
 };
