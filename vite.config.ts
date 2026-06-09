@@ -19,10 +19,10 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     {
       name: 'save-boxes-plugin',
-      configureServer(server) {
-        server.middlewares.use('/api/save-boxes', (req, res) => {
+      configureServer(server: any) {
+        server.middlewares.use('/api/save-boxes', (req: any, res: any) => {
           let body = '';
-          req.on('data', chunk => body += chunk);
+          req.on('data', (chunk: any) => body += chunk);
           req.on('end', () => {
             fs.writeFileSync('boxes-dump.json', body);
             res.end('saved');
