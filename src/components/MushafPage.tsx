@@ -142,6 +142,7 @@ const MushafPage = ({ onBack }: Props) => {
   const currentSpeakerRef = useRef<Speaker>("teacher");
   const requestRef = useRef<number>();
   const isHandlingSegmentEndRef = useRef(false);
+  const handleAyahSegmentEndRef = useRef<(() => void) | null>(null);
   const isSeekingRef = useRef(false);
   const expectedStartTimeRef = useRef(0);
 
