@@ -465,7 +465,7 @@ const MushafPage = ({ onBack }: Props) => {
         isHandlingSegmentEndRef.current = true;
         a.pause();
         setIsPlaying(false);
-        handleAyahSegmentEnd();
+        handleAyahSegmentEndRef.current?.();
       }
       return;
     }
