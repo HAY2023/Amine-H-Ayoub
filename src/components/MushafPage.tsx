@@ -193,8 +193,14 @@ const MushafPage = ({ onBack }: Props) => {
     setSelectedSurahIdx(0); setSelectedAyah(-1);
     stopAtRef.current = null; currentRepeatRef.current = 0;
     setEditingPageName(false);
-    clearAllHighlights();
-  }, [currentPage, clearAllHighlights]);
+    document.querySelectorAll('.ayah-rect').forEach(r => {
+      const el = r as SVGRectElement;
+      el.style.fill = previewHighlight;
+      el.style.stroke = previewStroke;
+      el.style.strokeWidth = "1.5";
+      el.classList.remove('animate-pulse');
+    });
+  }, [currentPage]);
 
   // Resume last surah (once)
   const resumedRef = useRef(false);
