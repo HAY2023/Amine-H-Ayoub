@@ -237,10 +237,8 @@ export default function QuranReader() {
   const currentBoxIndexRef = useRef(-1);
   const currentSpeakerRef = useRef<Speaker>("teacher");
   const currentBoxLabelRef = useRef<string | null>(null);
-<<<<<<< HEAD
   const handleAyahSegmentEndRef = useRef<() => void>(() => {});
   const segmentEndGuardRef = useRef(false); // prevent double-fire from stopAt + onEnded
-=======
   const isHandlingSegmentEndRef = useRef(false);
   const isSeekingRef = useRef(false);
   const expectedStartTimeRef = useRef(0);
@@ -269,9 +267,8 @@ export default function QuranReader() {
       el.style.strokeWidth = "5";
       el.classList.add('animate-pulse');
     });
+    });
   }, [clearAllHighlights]);
->>>>>>> 4677d60a6306264d8cdc41f3a9b6cee56a4f153a
-
   const [activeMenuAyah, setActiveMenuAyah] = useState<{ surah: SurahAudio; ayah: number; label?: string; boxIndex?: number } | null>(null);
 
   // Shuffle handlers
@@ -369,21 +366,6 @@ export default function QuranReader() {
   }, [currentPage, resolveAudioSrc, actualPage]);
 
 
-<<<<<<< HEAD
-  const highlightAyah = (surahNum: number, ayahNum: number, speaker: Speaker, boxIndex?: number) => {
-    clearAllHighlights();
-    const selector = `.ayah-rect-${surahNum}-${ayahNum}`;
-    const boxes = document.querySelectorAll(selector);
-    boxes.forEach(r => {
-      const el = r as SVGRectElement;
-      el.style.fill = speakerColors[speaker].bg;
-      el.style.stroke = speakerColors[speaker].glow;
-      el.style.strokeWidth = "5";
-      el.classList.add('animate-pulse');
-    });
-  };
-=======
->>>>>>> 4677d60a6306264d8cdc41f3a9b6cee56a4f153a
 
   const getActualAyahCount = useCallback((surahNumber: number, fallback: number) => {
     const pageBoxes = pages.flatMap(p => getPageAyahBoxes(p.src));
@@ -620,19 +602,10 @@ export default function QuranReader() {
     }
 
     if (stopAtRef.current !== null && a.currentTime >= stopAtRef.current - 0.05) {
-<<<<<<< HEAD
       a.pause();
       setIsPlaying(false);
       segmentEndGuardRef.current = true;
       handleAyahSegmentEndRef.current();
-=======
-      if (!isHandlingSegmentEndRef.current) {
-        isHandlingSegmentEndRef.current = true;
-        a.pause();
-        setIsPlaying(false);
-        handleAyahSegmentEnd();
-      }
->>>>>>> 4677d60a6306264d8cdc41f3a9b6cee56a4f153a
       return;
     }
 
@@ -771,7 +744,6 @@ export default function QuranReader() {
     };
   }, [isPlaying, trackAudio]);
 
-<<<<<<< HEAD
 
   const playAyah = useCallback((surah: SurahAudio, ayahNum: number, forceSpeaker?: Speaker, boxIndex?: number) => {
     const a = audioRef.current; if (!a) return;
@@ -1007,8 +979,7 @@ export default function QuranReader() {
     handleAyahSegmentEndRef.current = handleAyahSegmentEnd;
   }, [handleAyahSegmentEnd]);
 
-=======
->>>>>>> 4677d60a6306264d8cdc41f3a9b6cee56a4f153a
+
   const togglePlayPause = () => {
     const a = audioRef.current; if (!a || !activeSurah) return;
     if (isPlaying) {
