@@ -57,6 +57,6 @@ jobs:
           tagName: app-v__VERSION__
           releaseName: "learn-quran-kids v__VERSION__"
           releaseBody: "تطبيق الحاسوب قرآن أطفال - نسخة الويندوز أوفلاين"
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

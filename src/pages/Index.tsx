@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
 import RecitationMethods from "./RecitationMethods";
-import { Shuffle, ListOrdered } from "lucide-react";
+import { Shuffle, ListOrdered, Loader2 } from "lucide-react";
 import { isTauri, checkOfflineStatus, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
 import { checkForUpdates, UpdateInfo } from "../utils/updateChecker";
 
@@ -109,6 +109,39 @@ const Index = () => {
       console.error("Download failed:", err);
       setIsDownloading(prev => ({ ...prev, [surah.number]: false }));
     }
+  };
+
+  // Bulk download state & logic
+  const [downloadAllProgress, setDownloadAllProgress] = useState<{ active: boolean; current: number; total: number }>({ active: false, current: 0, total: 0 });
+  
+  const undownloadedCount = useMemo(() => {
+    return surahs.filter(s => !offlineStatus[s.number]).length;
+  }, [surahs, offlineStatus]);
+
+  const handleDownloadAll = async () => {
+    if (!isTauri() || downloadAllProgress.active) return;
+    
+    const toDownload = surahs.filter(s => !offlineStatus[s.number]);
+    if (toDownload.length === 0) return;
+
+    setDownloadAllProgress({ active: true, current: 0, total: toDownload.length });
+
+    for (let i = 0; i < toDownload.length; i++) {
+      const s = toDownload[i];
+      if (isDownloading[s.number] || offlineStatus[s.number]) continue;
+      
+      setIsDownloading(prev => ({ ...prev, [s.number]: true }));
+      setDownloadProgress(prev => ({ ...prev, [s.number]: 0 }));
+      setDownloadAllProgress(prev => ({ ...prev, current: i + 1 }));
+      try {
+        await downloadSurah(s.audioSrc, s.number);
+      } catch (err) {
+        console.error(`Bulk download failed for surah ${s.number}:`, err);
+        setIsDownloading(prev => ({ ...prev, [s.number]: false }));
+      }
+    }
+
+    setDownloadAllProgress({ active: false, current: 0, total: 0 });
   };
 
   // Restore last played surah once data arrives
@@ -279,6 +312,33 @@ const Index = () => {
               >
                 تحميل الآن
               </a>
+            </div>
+          )}
+
+          {/* New Content / Bulk Download Banner */}
+          {isTauri() && undownloadedCount > 0 && (
+            <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-sky-500/10 border border-sky-500/25 text-sky-900 text-sm font-bold shadow-md animate-fade-in text-right" dir="rtl">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-700 shrink-0">
+                  📥
+                </div>
+                <div>
+                  <p className="font-extrabold font-amiri text-base leading-tight">تلاوات جديدة متوفرة للتحميل أوفلاين</p>
+                  <p className="text-xs font-normal text-sky-800/80 mt-0.5">
+                    {downloadAllProgress.active 
+                      ? `جاري تحميل السورة ${downloadAllProgress.current} من أصل ${downloadAllProgress.total}...`
+                      : `يوجد ${undownloadedCount} سور متوفرة على السيرفر ولم يتم تحميلها بعد.`}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleDownloadAll}
+                disabled={downloadAllProgress.active}
+                className="shrink-0 px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-black shadow-sm transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5"
+              >
+                {downloadAllProgress.active && <Loader2 className="w-3 h-3 animate-spin" />}
+                <span>{downloadAllProgress.active ? "جاري التحميل..." : "تحميل الكل"}</span>
+              </button>
             </div>
           )}
 

@@ -250,9 +250,75 @@ function splitRegionsToTarget(
   return result;
 }
 
+function computeLocalZCR(data: Float32Array, start: number, len: number): number {
+  let c = 0;
+  const end = Math.min(start + len, data.length);
+  for (let i = start + 1; i < end; i++) {
+    if ((data[i] >= 0 && data[i - 1] < 0) || (data[i] < 0 && data[i - 1] >= 0)) c++;
+  }
+  return c / Math.max(1, end - start);
+}
+
+function refineSegmentEdges(
+  startS: number,
+  endS: number,
+  data: Float32Array,
+  sr: number,
+  threshold: number
+): { startS: number; endS: number } {
+  const winSize = Math.floor(sr * 0.015); // 15ms window
+  const step = Math.floor(sr * 0.005);    // 5ms step
+  
+  let newStartS = startS;
+  let newEndS = endS;
+  
+  // 1. Trim Start (ZCR protected for soft onsets like f, s, th)
+  let consecutiveAbove = 0;
+  for (let j = startS; j < endS - winSize; j += step) {
+    const rms = computeRMS(data, j, winSize);
+    const localZCR = computeLocalZCR(data, j, winSize);
+    const isSpeech = rms >= threshold || (rms >= threshold * 0.4 && localZCR > 0.15);
+    
+    if (isSpeech) {
+      consecutiveAbove++;
+      if (consecutiveAbove >= 2) {
+        newStartS = Math.max(startS, j - Math.floor(sr * 0.015));
+        break;
+      }
+    } else {
+      consecutiveAbove = 0;
+    }
+  }
+  
+  // 2. Trim End (ZCR protected for soft offsets like s, t, d, h)
+  consecutiveAbove = 0;
+  for (let j = endS - winSize; j > newStartS; j -= step) {
+    const rms = computeRMS(data, j, winSize);
+    const localZCR = computeLocalZCR(data, j, winSize);
+    const isSpeech = rms >= threshold || (rms >= threshold * 0.4 && localZCR > 0.15);
+    
+    if (isSpeech) {
+      consecutiveAbove++;
+      if (consecutiveAbove >= 2) {
+        newEndS = Math.min(endS, j + winSize + Math.floor(sr * 0.025));
+        break;
+      }
+    } else {
+      consecutiveAbove = 0;
+    }
+  }
+  
+  if (newEndS - newStartS < Math.floor(sr * 0.2)) {
+    return { startS, endS };
+  }
+  
+  return { startS: newStartS, endS: newEndS };
+}
+
 async function hybridSplit(
   audioUrl: string,
   surahNum: number,
+  recitationStyle: "interleaved" | "consecutive",
   onProgress?: (msg: string, pct?: number) => void,
 ): Promise<{
   segments: AudioSegment[];
@@ -313,17 +379,38 @@ async function hybridSplit(
 
   const sortE = [...Array.from(smoothE)].sort((a, b) => a - b);
   const noiseFloor = sortE[Math.floor(sortE.length * 0.05)];
-  const sigPeak = sortE[Math.floor(sortE.length * 0.95)];
+  const sigPeak = sortE[Math.floor(sortE.length * 0.90)]; // 90th percentile to ignore transient noise clicks
   const eRange = sigPeak - noiseFloor;
 
-  const thUp = noiseFloor + eRange * 0.08;
-  const thDown = noiseFloor + eRange * 0.035;
+  // Dynamic threshold scaling based on file SNR
+  const snrDB = 20 * Math.log10(sigPeak / (noiseFloor || 1e-10));
+  let upCoef = 0.08;
+  let downCoef = 0.035;
+  if (snrDB > 26) {
+    // High SNR (studio/clean room): very sensitive to catch soft sounds
+    upCoef = 0.05;
+    downCoef = 0.022;
+  } else if (snrDB < 16) {
+    // Low SNR (noisy/hissy mic): higher thresholds to filter background hum
+    upCoef = 0.12;
+    downCoef = 0.06;
+  }
+
+  const thUp = noiseFloor + eRange * upCoef;
+  const thDown = noiseFloor + eRange * downCoef;
 
   let inSp = false, spStart = 0;
   let regions: { s: number; e: number }[] = [];
   for (let i = 0; i < N; i++) {
-    if (!inSp && smoothE[i] > thUp) { inSp = true; spStart = i; }
-    else if (inSp && smoothE[i] < thDown) {
+    const threshold = inSp ? thDown : thUp;
+    // Schmitt trigger hysteresis + sibilant protector (high ZCR & Centroid) to capture soft Arabic letters (س, ش, ت, ف)
+    const isSpeechFrame = smoothE[i] > threshold || (smoothE[i] > thDown * 0.8 && zcrs[i] > 0.16 && centroids[i] > 2200);
+
+    if (!inSp && isSpeechFrame) {
+      inSp = true;
+      spStart = i;
+    }
+    else if (inSp && !isSpeechFrame) {
       inSp = false;
       regions.push({ s: spStart, e: i });
     }
@@ -496,6 +583,22 @@ async function hybridSplit(
     last.end = minIdx / sr;
   }
 
+  // ─── ⑤.٥ تشذيب حواف عالي الدقة لكل مقطع ───
+  onProgress?.("✨ تشذيب الحواف لإزالة الفراغات الفائضة...", 76);
+  const overallRMS = computeRMS(data, 0, data.length);
+  for (let i = 0; i < refined.length; i++) {
+    const isTeacher = i % 2 === 0;
+    const threshold = isTeacher
+      ? Math.max(0.0012, overallRMS * 0.07)
+      : Math.max(0.0016, overallRMS * 0.09);
+
+    const trimmed = refineSegmentEdges(refined[i].startS, refined[i].endS, data, sr, threshold);
+    refined[i].startS = trimmed.startS;
+    refined[i].start = Number((trimmed.startS / sr).toFixed(4));
+    refined[i].endS = trimmed.endS;
+    refined[i].end = Number((trimmed.endS / sr).toFixed(4));
+  }
+
   /* ─── ⑥ تعيين المتحدث وربط الآيات ─── */
   // النمط في تعليم القرآن للأطفال ثابت دائماً:
   // المعلم يتلو أولاً ← الطفل يكرر ← المعلم التالية ← الطفل يكرر...
@@ -508,10 +611,20 @@ async function hybridSplit(
   const segs: AudioSegment[] = [];
   const quals: SegmentQuality[] = [];
 
+  const halfCount = Math.ceil(refined.length / 2);
   for (let i = 0; i < refined.length; i++) {
     const r = refined[i];
-    const isTeacher = i % 2 === 0;       // 0,2,4... = معلم | 1,3,5... = طفل
-    const ayah = Math.floor(i / 2) + 1;  // كل زوج = آية واحدة
+    let isTeacher = true;
+    let ayah = 1;
+    
+    if (recitationStyle === "consecutive") {
+      isTeacher = i < halfCount;
+      ayah = isTeacher ? i + 1 : i - halfCount + 1;
+    } else {
+      isTeacher = i % 2 === 0;
+      ayah = Math.floor(i / 2) + 1;
+    }
+    
     const speaker: "teacher" | "kids" = isTeacher ? "teacher" : "kids";
 
     segs.push({
@@ -956,6 +1069,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
   const [aiProfiles, setAiProfiles] = useState<SpeakerProfile[]>([]);
   const [aiSplitting, setAiSplitting] = useState(false);
   const [waveform, setWaveform] = useState<Float32Array>(new Float32Array(0));
+  const [recitationStyle, setRecitationStyle] = useState<"interleaved" | "consecutive">("interleaved");
   const [boundaryScores, setBoundaryScores] = useState<Float32Array>(new Float32Array(0));
   const [qualities, setQualities] = useState<SegmentQuality[]>([]);
 
@@ -980,6 +1094,9 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
     setWaveform(new Float32Array(0));
     setBoundaryScores(new Float32Array(0));
     setQualities([]);
+
+    // Default Surah 1 (Al-Fatiha) to consecutive, others to interleaved
+    setRecitationStyle(surahNum === 1 ? "consecutive" : "interleaved");
 
     // Automatically load real waveform on surah change
     const url = audioPath(surahNum);
@@ -1074,7 +1191,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
     if (!a || !duration) { toast({ title: "⚠️ انتظر تحميل الصوت", variant: "destructive" }); return; }
     setSplitting(true); setProgress(""); setProgressPct(0);
     try {
-      const r = await hybridSplit(a.src, surahNum, (msg, pct) => {
+      const r = await hybridSplit(a.src, surahNum, recitationStyle, (msg, pct) => {
         setProgress(msg);
         if (pct !== undefined) setProgressPct(pct);
       });
@@ -1132,9 +1249,19 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
   const recalculateSegments = useCallback((segs: AudioSegment[]): AudioSegment[] => {
     const sorted = [...segs].sort((a, b) => a.start - b.start);
     const sn = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
+    const halfCount = Math.ceil(sorted.length / 2);
     return sorted.map((s, i) => {
-      const isT = i % 2 === 0;
-      const ayah = Math.floor(i / 2) + 1;
+      let isT = true;
+      let ayah = 1;
+      
+      if (recitationStyle === "consecutive") {
+        isT = i < halfCount;
+        ayah = isT ? i + 1 : i - halfCount + 1;
+      } else {
+        isT = i % 2 === 0;
+        ayah = Math.floor(i / 2) + 1;
+      }
+      
       return {
         ...s,
         speaker: isT ? "teacher" : "kids",
@@ -1142,7 +1269,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
         label: `${sn} - آية ${ayah} (${isT ? "معلم" : "طفل"})`
       };
     });
-  }, [surahNum]);
+  }, [surahNum, recitationStyle]);
 
   const setSegmentBoundary = useCallback((index: number, field: "start" | "end", newVal: number) => {
     setSegments(prev => {
@@ -1272,14 +1399,25 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
         </header>
 
         {/* اختيار السورة */}
-        <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-4">
-          <label className="text-sm font-bold text-slate-300 block mb-2">اختر السورة:</label>
-          <select value={surahNum} onChange={(e) => setSurahNum(parseInt(e.target.value, 10))}
-            className="w-full p-3 rounded-xl bg-slate-700 border border-slate-600 text-white font-amiri text-lg focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all">
-            {Object.entries(SURAH_NAMES).map(([n, name]) => (
-              <option key={n} value={n}>{n} — {name} ({AYAH_COUNTS[parseInt(n, 10)]} آيات)</option>
-            ))}
-          </select>
+        <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-4 space-y-4">
+          <div>
+            <label className="text-sm font-bold text-slate-300 block mb-2">اختر السورة:</label>
+            <select value={surahNum} onChange={(e) => setSurahNum(parseInt(e.target.value, 10))}
+              className="w-full p-3 rounded-xl bg-slate-700 border border-slate-600 text-white font-amiri text-lg focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all">
+              {Object.entries(SURAH_NAMES).map(([n, name]) => (
+                <option key={n} value={n}>{n} — {name} ({AYAH_COUNTS[parseInt(n, 10)]} آيات)</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-sm font-bold text-slate-300 block mb-2">بنية الصوت (ترتيب التلاوة):</label>
+            <select value={recitationStyle} onChange={(e) => setRecitationStyle(e.target.value as "interleaved" | "consecutive")}
+              className="w-full p-3 rounded-xl bg-slate-700 border border-slate-600 text-white text-sm focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all">
+              <option value="interleaved">🔄 متناوب آية بآية (معلم ← طفل ← معلم ← طفل)</option>
+              <option value="consecutive">➡️ متتالي (المعلم كامل السورة ثم الطفل كامل السورة)</option>
+            </select>
+          </div>
         </div>
 
         {/* صورة المصحف */}

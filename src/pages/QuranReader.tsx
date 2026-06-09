@@ -160,6 +160,16 @@ export default function QuranReader() {
   const [isShuffled, setIsShuffled] = useState(false);
   const [shuffledPageOrder, setShuffledPageOrder] = useState<number[]>([]);
 
+  // Get the actual page index (considering shuffle)
+  const getActualPageIndex = useCallback((displayIdx: number) => {
+    if (isShuffled && shuffledPageOrder.length > 0) {
+      return shuffledPageOrder[displayIdx] ?? displayIdx;
+    }
+    return displayIdx;
+  }, [isShuffled, shuffledPageOrder]);
+
+  const actualPage = getActualPageIndex(currentPage);
+
   // Page naming state
   const [editingPageName, setEditingPageName] = useState(false);
   const [tempPageName, setTempPageName] = useState("");
@@ -245,16 +255,6 @@ export default function QuranReader() {
       setCurrentPage(0);
     }
   }, [isShuffled]);
-
-  // Get the actual page index (considering shuffle)
-  const getActualPageIndex = useCallback((displayIdx: number) => {
-    if (isShuffled && shuffledPageOrder.length > 0) {
-      return shuffledPageOrder[displayIdx] ?? displayIdx;
-    }
-    return displayIdx;
-  }, [isShuffled, shuffledPageOrder]);
-
-  const actualPage = getActualPageIndex(currentPage);
 
   // Page name display helper (re-read on version change)
   const currentPageName = useMemo(() => {
@@ -732,6 +732,28 @@ export default function QuranReader() {
     }
   };
 
+  // Swipe page turning gestures
+  const touchStartXRef = useRef<number | null>(null);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0]?.clientX ?? null;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return;
+    const endX = e.changedTouches[0]?.clientX ?? null;
+    if (endX !== null) {
+      const diffX = endX - touchStartXRef.current;
+      const swipeThreshold = 50; // pixels
+      if (diffX > swipeThreshold) {
+        // Dragged finger to the right (RTL: Go to previous page)
+        goPrev();
+      } else if (diffX < -swipeThreshold) {
+        // Dragged finger to the left (RTL: Go to next page)
+        goNext();
+      }
+    }
+    touchStartXRef.current = null;
+  };
+
   const step = isDesktop ? 2 : 1;
   const totalDisplayPages = isShuffled ? shuffledPageOrder.length : pages.length;
   const goToPage = (i: number) => { if (i >= 0 && i < totalDisplayPages) setCurrentPage(i); };
@@ -764,7 +786,13 @@ export default function QuranReader() {
     <div className="fixed inset-0 w-screen h-screen z-50 bg-background overflow-hidden select-none">
       <audio ref={audioRef} onEnded={() => setIsPlaying(false)} onSeeked={() => { isSeekingRef.current = false; }} />
 
-      <div className="flex h-full w-full" dir="rtl" onClick={() => { }}>
+      <div 
+        className="flex h-full w-full" 
+        dir="rtl" 
+        onTouchStart={handleTouchStart} 
+        onTouchEnd={handleTouchEnd}
+        onClick={() => { }}
+      >
         {visiblePages.map((page, idx) => (
           <div key={`${page.src}-${idx}`} className="relative h-full flex-1 min-w-0 flex items-center justify-center bg-background overflow-hidden">
             <div className="relative h-full w-full">
@@ -892,7 +920,9 @@ export default function QuranReader() {
                     )}
                   </div>
                 )}
-                <Link to="/timings" className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground">إعداد التقسيم</Link>
+                {!isTauri() && (
+                  <Link to="/timings" className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground">إعداد التقسيم</Link>
+                )}
                 <button onClick={() => setControlsOpen(false)} className="w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center">
                   <X className="w-4 h-4" />
                 </button>
