@@ -586,7 +586,7 @@ const MushafPage = ({ onBack }: Props) => {
     if (!a.paused) {
       requestRef.current = requestAnimationFrame(trackAudio);
     }
-  }, [activeSurah, currentPage, handleAyahSegmentEnd, highlightAyah, clearAllHighlights]);
+  }, [activeSurah, currentPage, highlightAyah, clearAllHighlights]);
 
   useEffect(() => {
     if (isPlaying) {
