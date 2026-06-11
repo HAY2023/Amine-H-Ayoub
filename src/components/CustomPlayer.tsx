@@ -1,6 +1,7 @@
 import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
 import { X, Play, Pause, Music, Repeat, SkipForward, SkipBack } from "lucide-react";
 import { isTauri, checkOfflineStatus, getOfflineAudioUrl } from "../utils/tauriUtils";
+import { useAudioContext } from "@/contexts/audioContext";
 
 interface Props {
   surahName: string;
@@ -29,6 +30,7 @@ const formatTime = (s: number) => {
 
 const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
   ({ surahName, surahNumber, audioSrc, initialTime = 0, onClose, onTimeUpdate, onPlayNext, onPlayPrev, autoNext = false, onToggleAutoNext }, ref) => {
+    const { requestPlay, notifyStop, registerAudio, unregisterAudio } = useAudioContext();
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [duration, setDuration] = useState(0);
@@ -86,12 +88,37 @@ const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
       if (audioRef.current) audioRef.current.loop = loop;
     }, [loop]);
 
+    // Register with central AudioContext
+    useEffect(() => {
+      const a = audioRef.current;
+      if (a) {
+        registerAudio("audio-list", a);
+      }
+      return () => { unregisterAudio("audio-list"); };
+    }, [registerAudio, unregisterAudio]);
+
+    // Listen for external pause (from AudioContext mutual exclusion)
+    useEffect(() => {
+      const a = audioRef.current;
+      if (!a) return;
+      const handlePause = () => {
+        if (isPlaying) setIsPlaying(false);
+      };
+      a.addEventListener("pause", handlePause);
+      return () => a.removeEventListener("pause", handlePause);
+    }, [isPlaying]);
+
     const togglePlay = async () => {
       const audio = audioRef.current;
       if (!audio) return;
       try {
-        if (isPlaying) audio.pause();
-        else await audio.play();
+        if (isPlaying) {
+          audio.pause();
+          notifyStop("audio-list");
+        } else {
+          requestPlay("audio-list", audio);
+          await audio.play();
+        }
       } catch (e) {
         console.error("Audio play error:", e);
         setError(true);

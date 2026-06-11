@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
 import RecitationMethods from "./RecitationMethods";
-import { Shuffle, ListOrdered, Loader2 } from "lucide-react";
+import { Shuffle, ListOrdered, Loader2, SplitSquareHorizontal, BookOpen } from "lucide-react";
 import { isTauri, checkOfflineStatus, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
 import { checkForUpdates, UpdateInfo } from "../utils/updateChecker";
 
@@ -28,6 +28,21 @@ function shuffleArray<T>(arr: T[]): T[] {
   return a;
 }
 
+// Mushaf page data for split view mapping
+const MUSHAF_PAGES = [
+  { src: "/pages/fatiha.jpg", surahs: [1] },
+  { src: "/pages/600.jpg", surahs: [14] },
+  { src: "/pages/601.jpg", surahs: [13, 12, 11] },
+  { src: "/pages/602.jpg", surahs: [10, 9, 8] },
+  { src: "/pages/603.jpg", surahs: [7, 6, 5] },
+  { src: "/pages/604.jpg", surahs: [4, 3, 2] },
+];
+
+function getMushafPageForSurah(surahNumber: number): string | null {
+  const page = MUSHAF_PAGES.find(p => p.surahs.includes(surahNumber));
+  return page?.src ?? null;
+}
+
 const Index = () => {
   const navigate = useNavigate();
   const { surahs, loading, error, retry } = useSurahData();
@@ -41,6 +56,21 @@ const Index = () => {
   const [autoNext, setAutoNext] = useState(true);
   const [isShuffled, setIsShuffled] = useState(false);
   const [shuffledSurahs, setShuffledSurahs] = useState<SurahItem[]>([]);
+
+  // Desktop split view
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" ? window.innerWidth >= 1024 : false);
+  const [isSplitView, setIsSplitView] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const currentMushafPage = useMemo(() => {
+    if (!currentSurah) return null;
+    return getMushafPageForSurah(currentSurah.number);
+  }, [currentSurah]);
 
   // Tauri Offline States
   const [offlineStatus, setOfflineStatus] = useState<Record<number, boolean>>({});
@@ -254,12 +284,26 @@ const Index = () => {
           <PointsDisplay points={points} level={level} />
         </div>
 
-        <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+        <main className={`mx-auto px-4 py-4 space-y-4 transition-all duration-300 ${isSplitView && isDesktop ? 'max-w-7xl' : 'max-w-2xl'}`}>
           {/* Search + Shuffle */}
           <div className="flex gap-2 items-center">
             <div className="flex-1">
               <SearchBar value={search} onChange={setSearch} />
             </div>
+            {isDesktop && (
+              <button
+                onClick={() => setIsSplitView(v => !v)}
+                className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 border ${
+                  isSplitView
+                    ? "bg-sky-500/20 text-sky-700 border-sky-400/50 shadow-lg scale-105"
+                    : "bg-card border-border hover:border-sky-400/50 hover:shadow-md"
+                }`}
+                title={isSplitView ? "إغلاق التقسيم" : "عرض المصحف جانبياً"}
+                aria-label={isSplitView ? "إغلاق التقسيم" : "عرض المصحف جانبياً"}
+              >
+                <SplitSquareHorizontal className="w-5 h-5" />
+              </button>
+            )}
             <button
               onClick={handleShuffle}
               className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 border ${
@@ -378,17 +422,51 @@ const Index = () => {
             </div>
           )}
 
+          {/* Split view layout */}
           {!loading && !error && (
-            <SurahList
-              surahs={displaySurahs}
-              currentPlaying={currentSurah?.number ?? null}
-              onSelect={handleSelect}
-              isTauri={isTauri()}
-              offlineStatus={offlineStatus}
-              isDownloading={isDownloading}
-              downloadProgress={downloadProgress}
-              onDownload={handleDownload}
-            />
+            <div className={`${isSplitView && isDesktop ? 'flex gap-6' : ''}`}>
+              {/* Surah list */}
+              <div className={`${isSplitView && isDesktop ? 'w-1/2' : 'w-full'}`}>
+                <SurahList
+                  surahs={displaySurahs}
+                  currentPlaying={currentSurah?.number ?? null}
+                  onSelect={handleSelect}
+                  isTauri={isTauri()}
+                  offlineStatus={offlineStatus}
+                  isDownloading={isDownloading}
+                  downloadProgress={downloadProgress}
+                  onDownload={handleDownload}
+                />
+              </div>
+
+              {/* Mushaf page preview (split view only) */}
+              {isSplitView && isDesktop && (
+                <div className="w-1/2 sticky top-4 self-start">
+                  <div className="rounded-2xl overflow-hidden shadow-2xl border border-white/20 bg-background">
+                    {currentMushafPage ? (
+                      <div className="relative">
+                        <img
+                          src={currentMushafPage}
+                          alt="صفحة المصحف"
+                          className="w-full h-auto select-none animate-fade-in"
+                          draggable={false}
+                        />
+                        <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+                          <p className="text-white font-amiri font-bold text-sm text-center">
+                            {currentSurah?.name ? `سورة ${currentSurah.name}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/50">
+                        <BookOpen className="w-16 h-16 mb-3 opacity-30" />
+                        <p className="font-amiri text-base">اختر سورة لعرض صفحة المصحف</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </main>
       </div>
