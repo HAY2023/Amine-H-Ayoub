@@ -83,6 +83,57 @@
   animation: breathe 3s ease-in-out infinite;
 }
 
+/* ===== Ayah highlight styles ===== */
+@keyframes ayah-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.35));
+    opacity: 0.85;
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(250, 204, 21, 0.65));
+    opacity: 1;
+  }
+}
+
+@keyframes ayah-active-glow-teacher {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.5))
+           drop-shadow(0 0 16px rgba(250, 204, 21, 0.25));
+    opacity: 0.9;
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(250, 204, 21, 0.8))
+           drop-shadow(0 0 40px rgba(250, 204, 21, 0.35));
+    opacity: 1;
+  }
+}
+
+@keyframes ayah-active-glow-kids {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.5))
+           drop-shadow(0 0 16px rgba(56, 189, 248, 0.25));
+    opacity: 0.9;
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.8))
+           drop-shadow(0 0 40px rgba(56, 189, 248, 0.35));
+    opacity: 1;
+  }
+}
+
+.ayah-rect {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.1));
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ayah-rect.animate-pulse {
+  animation: ayah-active-glow-teacher 1.4s ease-in-out infinite !important;
+}
+
+.ayah-rect.animate-pulse.glow-kids {
+  animation: ayah-active-glow-kids 1.4s ease-in-out infinite !important;
+}
+
 /* Hide scrollbar for carousel */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
