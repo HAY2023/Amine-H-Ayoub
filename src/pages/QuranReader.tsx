@@ -287,15 +287,14 @@ export default function QuranReader() {
       el.style.fill = previewHighlight;
       el.style.stroke = previewStroke;
       el.style.strokeWidth = "1.5";
-      el.classList.remove('animate-pulse');
+      el.classList.remove('animate-pulse', 'glow-kids');
     });
   }, []);
 
   const highlightAyah = useCallback((surahNum: number, ayahNum: number, speaker: Speaker, boxIndex?: number) => {
     clearAllHighlights();
-    const selector = boxIndex !== undefined 
-      ? `.ayah-rect-idx-${boxIndex}` 
-      : `.ayah-rect-${surahNum}-${ayahNum}`;
+    // Use surah+ayah selector to match across all pages (works for dual-page)
+    const selector = `.ayah-rect-${surahNum}-${ayahNum}`;
     const boxes = document.querySelectorAll(selector);
     boxes.forEach(r => {
       const el = r as SVGRectElement;
@@ -303,6 +302,9 @@ export default function QuranReader() {
       el.style.stroke = speakerColors[speaker].glow;
       el.style.strokeWidth = "5";
       el.classList.add('animate-pulse');
+      if (speaker === 'kids') {
+        el.classList.add('glow-kids');
+      }
     });
   }, [clearAllHighlights]);
   const [activeMenuAyah, setActiveMenuAyah] = useState<{ surah: SurahAudio; ayah: number; label?: string; boxIndex?: number } | null>(null);
@@ -837,7 +839,7 @@ export default function QuranReader() {
     const h = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") goPrev();
       if (e.key === "ArrowLeft") goNext();
-      if (e.key === "Escape") { if (controlsOpen) setControlsOpen(false); else navigate("/"); }
+      if (e.key === "Escape") { if (controlsOpen) setControlsOpen(false); else navigate("/audio"); }
     };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, [controlsOpen, navigate, goPrev, goNext]);
@@ -971,16 +973,19 @@ export default function QuranReader() {
             <div className={`flex h-full w-full ${isDesktop ? 'shadow-2xl rounded-lg overflow-hidden ring-1 ring-black/5' : ''}`}>
           {visiblePages.map((page, idx) => (
             <div key={`${page.src}-${idx}`} className={`relative h-full flex-1 min-w-0 flex items-center justify-center bg-background overflow-hidden p-1 ${isDesktop && idx > 0 ? 'border-r border-black/8' : ''}`}>
-              <div className={`relative flex max-h-full max-w-full ${isDesktop ? 'shadow-none' : 'shadow-xl'}`}>
-                <img src={page.src} alt={page.name} className="block max-h-full max-w-full select-none animate-fade-in" style={{ objectFit: "contain", aspectRatio: `${PAGE_IMAGE_SIZE.width}/${PAGE_IMAGE_SIZE.height}` }} draggable={false} />
-                <svg className="absolute inset-0 h-full w-full pointer-events-none" viewBox={`0 0 ${PAGE_IMAGE_SIZE.width} ${PAGE_IMAGE_SIZE.height}`} preserveAspectRatio="none">
+              <div
+                className={`relative ${isDesktop ? 'shadow-none' : 'shadow-xl'}`}
+                style={{ aspectRatio: `${PAGE_IMAGE_SIZE.width}/${PAGE_IMAGE_SIZE.height}`, height: '100%', maxWidth: '100%' }}
+              >
+                <img src={page.src} alt={page.name} className="absolute inset-0 w-full h-full select-none animate-fade-in" draggable={false} />
+                <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${PAGE_IMAGE_SIZE.width} ${PAGE_IMAGE_SIZE.height}`} preserveAspectRatio="none">
                   {getPageAyahBoxes(page.src).map((box, i) => (
                     <rect
                       key={`ayah-rect-${box.surah}-${box.ayah}-${i}`}
-                      className={`ayah-rect ayah-rect-${box.surah}-${box.ayah} ayah-rect-idx-${i}`}
-                      x={box.x} y={box.y} width={box.width} height={box.height} rx="10"
+                      className={`ayah-rect ayah-rect-${box.surah}-${box.ayah}`}
+                      x={box.x} y={box.y} width={box.width} height={box.height} rx="18" ry="14"
                       fill={previewHighlight.replace(/rgb\(([^)]+)\)/, "rgba($1, 0.3)")} stroke={previewStroke} strokeWidth={1.5}
-                      style={{ transition: "all 0.1s linear" }}
+                      style={{ transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)" }}
                     />
                   ))}
                 </svg>
