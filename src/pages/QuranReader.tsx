@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, SplitSquareHorizontal, Volume2 } from "lucide-react";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
 import { Headphones } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { isTauri, checkOfflineStatus, getOfflineAudioUrl, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
+import { useAudioContext } from "@/contexts/audioContext";
+import SplitViewPanel from "@/components/SplitViewPanel";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 
@@ -111,6 +113,7 @@ const previewStroke = "rgba(250,204,21,0.80)";
 
 export default function QuranReader() {
   const navigate = useNavigate();
+  const { requestPlay, notifyStop, registerAudio, unregisterAudio, simultaneousMode, setSimultaneousMode } = useAudioContext();
   const [currentPage, setCurrentPage] = useState(() => {
     const s = parseInt(localStorage.getItem(STORAGE_KEY) || "0", 10);
     return isNaN(s) || s < 0 || s >= pages.length ? 0 : s;
@@ -159,6 +162,13 @@ export default function QuranReader() {
   // Shuffle state
   const [isShuffled, setIsShuffled] = useState(false);
   const [shuffledPageOrder, setShuffledPageOrder] = useState<number[]>([]);
+
+  // Split view state
+  const [isSplitView, setIsSplitView] = useState(false);
+
+  // Simultaneous playback (teacher + kids together)
+  const audioRef2 = useRef<HTMLAudioElement>(null);
+  const [isSimultaneousPlaying, setIsSimultaneousPlaying] = useState(false);
 
   // Get the actual page index (considering shuffle)
   const getActualPageIndex = useCallback((displayIdx: number) => {
@@ -242,6 +252,33 @@ export default function QuranReader() {
   const isHandlingSegmentEndRef = useRef(false);
   const isSeekingRef = useRef(false);
   const expectedStartTimeRef = useRef(0);
+  const internalPauseRef = useRef(false); // guards against external pause listener firing on internal pauses
+
+  // Register mushaf audio with central AudioContext
+  useEffect(() => {
+    const a = audioRef.current;
+    if (a) {
+      registerAudio("mushaf", a);
+    }
+    return () => { unregisterAudio("mushaf"); };
+  }, [registerAudio, unregisterAudio]);
+
+  // Listen for external pause only (from AudioContext mutual exclusion)
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    const handlePause = () => {
+      // Only react to external pauses (not internal segment-boundary pauses)
+      if (internalPauseRef.current) {
+        internalPauseRef.current = false;
+        return;
+      }
+      setIsPlaying(false);
+    };
+    a.addEventListener("pause", handlePause);
+    return () => a.removeEventListener("pause", handlePause);
+  }, []);
+
 
   const clearAllHighlights = useCallback(() => {
     const rects = document.querySelectorAll('.ayah-rect');
@@ -458,6 +495,7 @@ export default function QuranReader() {
       isSeekingRef.current = true;
       expectedStartTimeRef.current = startT;
       a.currentTime = startT;
+      requestPlay("mushaf", a);
       a.play().then(() => setIsPlaying(true)).catch(console.error);
     };
 
@@ -817,63 +855,175 @@ export default function QuranReader() {
   const selectedSurah = currentPageSurahs[selectedSurahIdx] || currentPageSurahs[0];
   const ayahCount = selectedSurah ? getActualAyahCount(selectedSurah.number, selectedSurah.ayahCount) : 0;
 
+  // ========== Simultaneous Play (Teacher + Kids at the same time) ==========
+  const playSimultaneous = useCallback(async (surah: SurahAudio) => {
+    const a1 = audioRef.current;
+    const a2 = audioRef2.current;
+    if (!a1 || !a2) return;
+
+    const targetSrc = await resolveAudioSrc(surah);
+    const timings = getSavedTimings()[surah.number];
+    if (!timings) return;
+
+    // Teacher plays from the start
+    const teacherStart = timings.teacher?.[0] ?? 0;
+    // Kids plays from kidsStart or kids[0]
+    const kidsStart = timings.kidsStart ?? timings.kids?.[0] ?? 0;
+
+    if (kidsStart === 0 && !timings.kids) return; // No kids section
+
+    // Set up both audios
+    a1.src = targetSrc;
+    a2.src = targetSrc;
+
+    setActiveSurah(surah);
+    requestPlay("mushaf", a1);
+
+    const startBoth = () => {
+      a1.currentTime = teacherStart;
+      a2.currentTime = kidsStart;
+      a1.play().catch(console.error);
+      a2.play().catch(console.error);
+      setIsPlaying(true);
+      setIsSimultaneousPlaying(true);
+    };
+
+    a1.load();
+    a2.load();
+
+    // Wait for both to load
+    let loaded = 0;
+    const onLoad = () => {
+      loaded++;
+      if (loaded >= 2) startBoth();
+    };
+    a1.addEventListener("loadedmetadata", onLoad, { once: true });
+    a2.addEventListener("loadedmetadata", onLoad, { once: true });
+  }, [resolveAudioSrc, requestPlay]);
+
+  const stopSimultaneous = useCallback(() => {
+    const a2 = audioRef2.current;
+    if (a2) { a2.pause(); a2.currentTime = 0; }
+    setIsSimultaneousPlaying(false);
+  }, []);
+
+  // ========== Split View Surah Data ==========
+  const allPageSurahs = useMemo(() => {
+    return pages.flatMap(p => p.surahs.map(s => ({
+      number: s.number,
+      name: s.name,
+      audioSrc: s.src,
+    })));
+  }, []);
+
+  const handleSplitViewSelect = useCallback((surah: { number: number; name: string; audioSrc: string }) => {
+    // Find which page this surah belongs to
+    const pageIdx = pages.findIndex(p => p.surahs.some(s => s.number === surah.number));
+    if (pageIdx !== -1) {
+      // Navigate to that page
+      if (isShuffled) {
+        const displayIdx = shuffledPageOrder.indexOf(pageIdx);
+        if (displayIdx !== -1) setCurrentPage(displayIdx);
+      } else {
+        setCurrentPage(pageIdx);
+      }
+      // Find the surah on that page and play it
+      const pageSurahs = pages[pageIdx].surahs;
+      const surahIdx = pageSurahs.findIndex(s => s.number === surah.number);
+      if (surahIdx !== -1) {
+        setTimeout(() => {
+          setSelectedSurahIdx(surahIdx);
+          const pageBoxes = getPageAyahBoxes(pages[pageIdx].src);
+          const surahBoxes = pageBoxes.filter(b => b.surah === surah.number).sort((a, b) => a.ayah - b.ayah);
+          const firstAyah = surahBoxes[0]?.ayah ?? 1;
+          setSelectedAyah(firstAyah);
+          playAyah(pageSurahs[surahIdx], firstAyah, playMode === "kids" ? "kids" : "teacher");
+        }, 100);
+      }
+    }
+  }, [isShuffled, shuffledPageOrder, playAyah, playMode]);
+
   return (
     <div className="fixed inset-0 w-screen h-screen z-50 bg-background overflow-hidden select-none">
       <audio ref={audioRef} onEnded={() => {
         setIsPlaying(false);
+        stopSimultaneous();
         if (segmentEndGuardRef.current) {
           segmentEndGuardRef.current = false;
           return;
         }
         handleAyahSegmentEndRef.current();
       }} onSeeked={() => { isSeekingRef.current = false; }} />
+      {/* Second audio for simultaneous teacher+kids playback */}
+      <audio ref={audioRef2} />
 
-      <div 
-        className="flex h-full w-full" 
-        dir="rtl" 
-        onTouchStart={handleTouchStart} 
-        onTouchEnd={handleTouchEnd}
-        onClick={() => { }}
-      >
-        {visiblePages.map((page, idx) => (
-          <div key={`${page.src}-${idx}`} className="relative h-full flex-1 min-w-0 flex items-center justify-center bg-background overflow-hidden p-1">
-            <div className="relative flex max-h-full max-w-full shadow-xl">
-              <img src={page.src} alt={page.name} className="block max-h-full max-w-full select-none animate-fade-in" style={{ objectFit: "contain", aspectRatio: `${PAGE_IMAGE_SIZE.width}/${PAGE_IMAGE_SIZE.height}` }} draggable={false} />
-              <svg className="absolute inset-0 h-full w-full pointer-events-none" viewBox={`0 0 ${PAGE_IMAGE_SIZE.width} ${PAGE_IMAGE_SIZE.height}`} preserveAspectRatio="none">
-                {getPageAyahBoxes(page.src).map((box, i) => (
-                  <rect
-                    key={`ayah-rect-${box.surah}-${box.ayah}-${i}`}
-                    className={`ayah-rect ayah-rect-${box.surah}-${box.ayah} ayah-rect-idx-${i}`}
-                    x={box.x} y={box.y} width={box.width} height={box.height} rx="10"
-                    fill={previewHighlight.replace(/rgb\(([^)]+)\)/, "rgba($1, 0.3)")} stroke={previewStroke} strokeWidth={1.5}
-                    style={{ transition: "all 0.1s linear" }}
-                  />
-                ))}
-              </svg>
-              <div className="absolute inset-0">
-                {getPageAyahBoxes(page.src).map((box, i) => {
-                  const surah = page.surahs.find((s) => s.number === box.surah);
-                  if (!surah) return null;
-                  return (
-                    <button
-                      key={`${box.surah}-${box.ayah}-tap-${i}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveMenuAyah({ surah, ayah: box.ayah, label: box.label, boxIndex: i });
-                      }}
-                      className="absolute rounded-md outline-none transition-colors hover:bg-accent/10 active:bg-accent/20"
-                      style={{
-                        left: `${(box.x / PAGE_IMAGE_SIZE.width) * 100}%`, top: `${(box.y / PAGE_IMAGE_SIZE.height) * 100}%`,
-                        width: `${(box.width / PAGE_IMAGE_SIZE.width) * 100}%`, height: `${(box.height / PAGE_IMAGE_SIZE.height) * 100}%`,
-                      }}
-                      aria-label={`${surah.name} - آية ${box.ayah}`}
+      {/* Main content area: mushaf + optional split panel */}
+      <div className="flex h-full w-full" dir="rtl">
+        {/* Mushaf pages area */}
+        <div 
+          className={`flex h-full transition-all duration-300 ${isSplitView ? 'w-[60%]' : 'w-full'}`}
+          onTouchStart={handleTouchStart} 
+          onTouchEnd={handleTouchEnd}
+          onClick={() => { }}
+        >
+          {/* Unified shadow wrapper for desktop dual-page view */}
+          <div className={`flex h-full w-full ${isDesktop ? 'px-4 py-2' : ''}`}>
+            <div className={`flex h-full w-full ${isDesktop ? 'shadow-2xl rounded-lg overflow-hidden ring-1 ring-black/5' : ''}`}>
+          {visiblePages.map((page, idx) => (
+            <div key={`${page.src}-${idx}`} className={`relative h-full flex-1 min-w-0 flex items-center justify-center bg-background overflow-hidden p-1 ${isDesktop && idx > 0 ? 'border-r border-black/8' : ''}`}>
+              <div className={`relative flex max-h-full max-w-full ${isDesktop ? 'shadow-none' : 'shadow-xl'}`}>
+                <img src={page.src} alt={page.name} className="block max-h-full max-w-full select-none animate-fade-in" style={{ objectFit: "contain", aspectRatio: `${PAGE_IMAGE_SIZE.width}/${PAGE_IMAGE_SIZE.height}` }} draggable={false} />
+                <svg className="absolute inset-0 h-full w-full pointer-events-none" viewBox={`0 0 ${PAGE_IMAGE_SIZE.width} ${PAGE_IMAGE_SIZE.height}`} preserveAspectRatio="none">
+                  {getPageAyahBoxes(page.src).map((box, i) => (
+                    <rect
+                      key={`ayah-rect-${box.surah}-${box.ayah}-${i}`}
+                      className={`ayah-rect ayah-rect-${box.surah}-${box.ayah} ayah-rect-idx-${i}`}
+                      x={box.x} y={box.y} width={box.width} height={box.height} rx="10"
+                      fill={previewHighlight.replace(/rgb\(([^)]+)\)/, "rgba($1, 0.3)")} stroke={previewStroke} strokeWidth={1.5}
+                      style={{ transition: "all 0.1s linear" }}
                     />
-                  );
-                })}
+                  ))}
+                </svg>
+                <div className="absolute inset-0">
+                  {getPageAyahBoxes(page.src).map((box, i) => {
+                    const surah = page.surahs.find((s) => s.number === box.surah);
+                    if (!surah) return null;
+                    return (
+                      <button
+                        key={`${box.surah}-${box.ayah}-tap-${i}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuAyah({ surah, ayah: box.ayah, label: box.label, boxIndex: i });
+                        }}
+                        className="absolute rounded-md outline-none transition-colors hover:bg-accent/10 active:bg-accent/20"
+                        style={{
+                          left: `${(box.x / PAGE_IMAGE_SIZE.width) * 100}%`, top: `${(box.y / PAGE_IMAGE_SIZE.height) * 100}%`,
+                          width: `${(box.width / PAGE_IMAGE_SIZE.width) * 100}%`, height: `${(box.height / PAGE_IMAGE_SIZE.height) * 100}%`,
+                        }}
+                        aria-label={`${surah.name} - آية ${box.ayah}`}
+                      />
+                    );
+                  })}
+                </div>
               </div>
             </div>
+          ))}
+            </div>
           </div>
-        ))}
+        </div>
+
+        {/* Split View Panel */}
+        {isSplitView && (
+          <div className="w-[40%] h-full border-r border-white/10 animate-fade-in">
+            <SplitViewPanel
+              surahs={allPageSurahs}
+              currentPlaying={activeSurah?.number ?? null}
+              isPlaying={isPlaying}
+              onSelect={handleSplitViewSelect}
+              onClose={() => setIsSplitView(false)}
+            />
+          </div>
+        )}
       </div>
 
       {!controlsOpen && (
@@ -904,6 +1054,9 @@ export default function QuranReader() {
         </button>
         <button onClick={handleShuffle} className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${isShuffled ? 'opacity-100' : 'opacity-35'}`} style={{ background: isShuffled ? "rgba(250,204,21,0.4)" : "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }} title={isShuffled ? "إلغاء العشوائي" : "ترتيب عشوائي"}>
           <Shuffle className="w-4 h-4" />
+        </button>
+        <button onClick={() => setIsSplitView(v => !v)} className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${isSplitView ? 'opacity-100' : 'opacity-35'}`} style={{ background: isSplitView ? "rgba(56,189,248,0.4)" : "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }} title={isSplitView ? "إغلاق التقسيم" : "طور التقسيم"}>
+          <SplitSquareHorizontal className="w-4 h-4" />
         </button>
       </div>
 
@@ -981,14 +1134,99 @@ export default function QuranReader() {
             )}
 
             <div className="mb-4 bg-white/40 p-3 rounded-xl border border-white/60">
-              <p className="text-xs font-bold mb-2 text-muted-foreground">وضع التشغيل (عالي الدقة)</p>
-              <div className="flex gap-1.5 mb-3">
-                {([{ mode: "both", label: "🎧 تصحيح" }, { mode: "teacher", label: "🎙️ معلم" }, { mode: "kids", label: "👦 أطفال" }]).map(({ mode, label }) => (
-                  <button key={mode} onClick={() => { setPlayMode(mode as PlayMode); bothPhaseRef.current = "teacher"; }} className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all border ${playMode === mode ? "bg-amber-400/20 border-amber-400/50 text-amber-800 shadow" : "bg-white/70 border-border/60 text-foreground/70"}`}>
-                    {label}
+              <p className="text-xs font-bold mb-2 text-muted-foreground">وضع التشغيل</p>
+              
+              {/* Play mode buttons - 2x2 grid for clarity */}
+              <div className="grid grid-cols-2 gap-1.5 mb-3">
+                {([
+                  { mode: "teacher" as PlayMode, label: "معلم فقط", emoji: "🎙️", desc: "تشغيل المعلم وحده", activeColor: "bg-amber-400/20 border-amber-400/50 text-amber-800" },
+                  { mode: "kids" as PlayMode, label: "طفل فقط", emoji: "👦", desc: "تشغيل الطفل وحده", activeColor: "bg-sky-400/20 border-sky-400/50 text-sky-800" },
+                  { mode: "both" as PlayMode, label: "تصحيح", emoji: "🎧", desc: "المعلم ثم الطفل", activeColor: "bg-violet-400/20 border-violet-400/50 text-violet-800" },
+                ]).map(({ mode, label, emoji, desc, activeColor }) => (
+                  <button
+                    key={mode}
+                    onClick={() => { 
+                      if (isSimultaneousPlaying) { stopSimultaneous(); const a = audioRef.current; if (a) { a.pause(); } setIsPlaying(false); }
+                      setPlayMode(mode); 
+                      bothPhaseRef.current = "teacher"; 
+                    }}
+                    className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all border flex flex-col items-center gap-0.5 ${
+                      playMode === mode && !isSimultaneousPlaying
+                        ? `${activeColor} shadow ring-1 ring-black/5`
+                        : "bg-white/70 border-border/60 text-foreground/70 hover:bg-white"
+                    }`}
+                    title={desc}
+                  >
+                    <span className="text-base leading-none">{emoji}</span>
+                    <span>{label}</span>
                   </button>
                 ))}
+
+                {/* Simultaneous (Together) mode */}
+                {selectedSurah && (() => {
+                  const timings = getSavedTimings()[selectedSurah.number];
+                  const hasKids = timings?.kidsStart !== undefined || (timings?.kids && timings.kids.length > 0);
+                  if (!hasKids) return (
+                    <div className="py-2.5 px-2 rounded-xl text-xs font-bold border border-dashed border-border/40 flex flex-col items-center gap-0.5 text-foreground/30 cursor-not-allowed" title="لا يتوفر صوت الطفل">
+                      <span className="text-base leading-none opacity-40">🔇</span>
+                      <span>معاً</span>
+                    </div>
+                  );
+                  return (
+                    <button
+                      onClick={() => {
+                        if (isSimultaneousPlaying) {
+                          stopSimultaneous();
+                          const a = audioRef.current;
+                          if (a) { a.pause(); }
+                          setIsPlaying(false);
+                        } else {
+                          playSimultaneous(selectedSurah);
+                        }
+                      }}
+                      className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all border flex flex-col items-center gap-0.5 ${
+                        isSimultaneousPlaying
+                          ? "bg-emerald-400/20 border-emerald-400/50 text-emerald-800 shadow ring-1 ring-emerald-400/20 animate-pulse"
+                          : "bg-gradient-to-br from-amber-50 to-sky-50 border-border/60 text-foreground/70 hover:border-amber-400/40"
+                      }`}
+                      title="تشغيل المعلم والطفل في نفس الوقت"
+                    >
+                      <span className="text-base leading-none">🔊</span>
+                      <span>معاً</span>
+                    </button>
+                  );
+                })()}
               </div>
+
+              {/* Now playing indicator */}
+              {isPlaying && activeSurah && !isSimultaneousPlaying && (
+                <div className={`flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg mb-3 text-xs font-bold animate-fade-in ${
+                  currentSpeakerRef.current === "kids" 
+                    ? "bg-sky-100/50 text-sky-700 border border-sky-200/50" 
+                    : "bg-amber-100/50 text-amber-700 border border-amber-200/50"
+                }`}>
+                  <span>{currentSpeakerRef.current === "kids" ? "👦" : "🎙️"}</span>
+                  <span>يتحدث الآن: {currentSpeakerRef.current === "kids" ? "الطفل" : "المعلم"}</span>
+                  <div className="flex items-center gap-[2px] h-3">
+                    {[0, 1, 2].map((i) => (
+                      <span key={i} className="w-[2px] bg-current rounded-full animate-wave" style={{ animationDelay: `${i * 0.12}s` }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {isSimultaneousPlaying && (
+                <div className="flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg mb-3 text-xs font-bold bg-emerald-100/50 text-emerald-700 border border-emerald-200/50 animate-fade-in">
+                  <span>🔊</span>
+                  <span>المعلم والطفل معاً</span>
+                  <div className="flex items-center gap-[2px] h-3">
+                    {[0, 1, 2].map((i) => (
+                      <span key={i} className="w-[2px] bg-current rounded-full animate-wave" style={{ animationDelay: `${i * 0.12}s` }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <label className="flex items-center gap-2 text-sm font-bold cursor-pointer text-foreground/80">
                 <input type="checkbox" checked={continuousPlay} onChange={(e) => setContinuousPlay(e.target.checked)} className="accent-accent w-4 h-4" />
                 تشغيل متواصل
