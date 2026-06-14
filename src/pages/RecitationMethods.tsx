@@ -1238,27 +1238,37 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
     } finally { setSplitting(false); setProgress(""); setProgressPct(0); }
   };
 
-  // ── تقسيم على السيرفر: السيرفر يجلب الصوت برابطه بنفسه ثم يقسّمه (دقة عالية) ──
+  // ── تقسيم على السيرفر (دقة عالية) ──
+  // السور السحابية: السيرفر يجلب الصوت برابطه العام بنفسه (أسرع، بلا رفع).
+  // السور المحلية: نرفع بايتات الصوت من المتصفّح — فيعمل على localhost أيضاً
+  // (لأن خدمة Hugging Face لا تستطيع الوصول إلى http://localhost).
   const handleServiceSplit = async () => {
     const base = serviceUrl.trim().replace(/\/$/, "");
     if (!base) { toast({ title: "⚠️ أدخل رابط الخدمة أولاً", description: "انشر الخدمة على Hugging Face والصق رابطها", variant: "destructive" }); return; }
 
-    // رابط الصوت العام الذي سيجلبه السيرفر بنفسه (السحابي مُفضّل لأنه عام)
-    const audioPublicUrl = hasCloudAudio(surahNum)
-      ? getSurahAudioUrl(surahNum)
-      : `${window.location.origin}/audio/surahs/${surahNum}.mp3`;
-
-    setSplitting(true); setProgress("🚀 السيرفر يجلب الصوت ويقسّمه..."); setProgressPct(40);
+    const label = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
+    setSplitting(true); setProgressPct(30);
     try {
-      const res = await fetch(`${base}/split-url`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          audioUrl: audioPublicUrl,
-          leading: leadingSegments,
-          surahLabel: SURAH_NAMES[surahNum] || `سورة ${surahNum}`,
-        }),
-      });
+      let res: Response;
+      if (hasCloudAudio(surahNum)) {
+        // صوت عام على السحابة → السيرفر يجلبه بنفسه
+        setProgress("🚀 السيرفر يجلب الصوت السحابي ويقسّمه...");
+        res = await fetch(`${base}/split-url`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ audioUrl: getSurahAudioUrl(surahNum), leading: leadingSegments, surahLabel: label }),
+        });
+      } else {
+        // صوت محلي (لا يصله السيرفر) → نرفع البايتات من المتصفّح
+        setProgress("🚀 رفع الصوت إلى الخدمة وتقسيمه...");
+        const audioSrc = audioRef.current?.src || audioPath(surahNum);
+        const blob = await (await fetch(audioSrc)).blob();
+        const form = new FormData();
+        form.append("file", blob, `${surahNum}.mp3`);
+        form.append("leading", String(leadingSegments));
+        form.append("surahLabel", label);
+        res = await fetch(`${base}/split`, { method: "POST", body: form });
+      }
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
         throw new Error(`الخدمة ردّت ${res.status} ${txt.slice(0, 120)}`);
