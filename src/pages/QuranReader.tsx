@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, SplitSquareHorizontal, Volume2, Menu, ListOrdered, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, SplitSquareHorizontal, Volume2, Menu } from "lucide-react";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
@@ -163,18 +163,18 @@ export default function QuranReader() {
   const [isShuffled, setIsShuffled] = useState(false);
   const [shuffledPageOrder, setShuffledPageOrder] = useState<number[]>([]);
 
-  // Custom page order (set by the user from the Arrange screen)
-  const PAGE_ORDER_KEY = "mushaf:pageOrder:v1";
-  const [customPageOrder, setCustomPageOrder] = useState<number[]>(() => {
+  // Custom page order (set by the user from the Calibration "arrange" screen).
+  // Stored as an array of page SRC strings; mapped here to indices in `pages`.
+  const [customPageOrder] = useState<number[]>(() => {
     try {
-      const raw = localStorage.getItem(PAGE_ORDER_KEY);
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
+      const raw = localStorage.getItem("mushaf:pageOrder:v1");
+      const srcs = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(srcs) || srcs.length === 0) return [];
+      const order = srcs.map((s: string) => pages.findIndex(p => p.src === s)).filter((i: number) => i >= 0);
+      pages.forEach((_, i) => { if (!order.includes(i)) order.push(i); });
+      return order;
     } catch { return []; }
   });
-  const [arrangeOpen, setArrangeOpen] = useState(false);
-  // Draft order while arranging
-  const [draftOrder, setDraftOrder] = useState<number[]>([]);
 
   // Split view state
   const [isSplitView, setIsSplitView] = useState(false);
@@ -1098,7 +1098,6 @@ export default function QuranReader() {
                 { icon: <ArrowRight className="w-5 h-5" />, name: "رجوع", desc: "العودة لقائمة السور", onClick: () => navigate("/audio"), active: false, tint: "bg-foreground/5 text-foreground" },
                 { icon: isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />, name: isFullscreen ? "تصغير الشاشة" : "ملء الشاشة", desc: "عرض المصحف بملء الشاشة", onClick: toggleFullscreen, active: isFullscreen, tint: "bg-emerald-400/20 text-emerald-700" },
                 { icon: <Shuffle className="w-5 h-5" />, name: "ترتيب عشوائي", desc: "خلط ترتيب الصفحات", onClick: handleShuffle, active: isShuffled, tint: "bg-amber-400/20 text-amber-700" },
-                { icon: <ListOrdered className="w-5 h-5" />, name: "ترتيب الصفحات", desc: "رتّب صفحات المصحف بنفسك", onClick: () => { setDraftOrder(pages.map((_, i) => customPageOrder[i] ?? i)); setArrangeOpen(true); }, active: customPageOrder.length > 0, tint: "bg-violet-400/20 text-violet-700" },
                 { icon: <SplitSquareHorizontal className="w-5 h-5" />, name: "وضع التقسيم", desc: "عرض جانبي لقائمة السور", onClick: () => setIsSplitView(v => !v), active: isSplitView, tint: "bg-sky-400/20 text-sky-700" },
               ]).map((item, i) => (
                 <button
@@ -1122,47 +1121,6 @@ export default function QuranReader() {
           </>
         )}
       </div>
-
-      {/* ── نافذة ترتيب الصفحات ── */}
-      {arrangeOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setArrangeOpen(false)}>
-          <div className="w-full max-w-md max-h-[85vh] flex flex-col rounded-3xl shadow-2xl border border-white/40 overflow-hidden" style={{ background: "rgba(255,255,255,0.88)", backdropFilter: "blur(24px) saturate(150%)" }} onClick={(e) => e.stopPropagation()} dir="rtl">
-            <div className="flex items-center justify-between p-4 border-b border-black/10">
-              <div className="flex items-center gap-2">
-                <ListOrdered className="w-5 h-5 text-violet-700" />
-                <div>
-                  <h3 className="font-amiri font-bold text-lg text-foreground">ترتيب الصفحات</h3>
-                  <p className="text-[11px] text-muted-foreground">رتّب صفحات المصحف بالأسهم ثم احفظ</p>
-                </div>
-              </div>
-              <button onClick={() => setArrangeOpen(false)} className="w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center" aria-label="إغلاق"><X className="w-4 h-4" /></button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {draftOrder.map((pageIdx, pos) => {
-                const page = pages[pageIdx];
-                if (!page) return null;
-                return (
-                  <div key={pageIdx} className="flex items-center gap-3 p-2 rounded-xl bg-white/70 border border-black/5">
-                    <span className="w-7 h-7 rounded-full bg-violet-500/15 text-violet-700 text-xs font-bold flex items-center justify-center shrink-0">{pos + 1}</span>
-                    <img src={page.src} alt={page.name} className="w-10 h-14 object-cover rounded-md border border-black/10 shrink-0" loading="lazy" />
-                    <span className="flex-1 min-w-0 font-amiri font-bold text-sm text-foreground truncate">{getPageDisplayName(page)}</span>
-                    <div className="flex flex-col gap-1 shrink-0">
-                      <button disabled={pos === 0} onClick={() => setDraftOrder(o => { const n = [...o]; [n[pos - 1], n[pos]] = [n[pos], n[pos - 1]]; return n; })} className="w-7 h-6 rounded bg-foreground/10 flex items-center justify-center disabled:opacity-30 active:scale-90" aria-label="أعلى"><ChevronUp className="w-4 h-4" /></button>
-                      <button disabled={pos === draftOrder.length - 1} onClick={() => setDraftOrder(o => { const n = [...o]; [n[pos + 1], n[pos]] = [n[pos], n[pos + 1]]; return n; })} className="w-7 h-6 rounded bg-foreground/10 flex items-center justify-center disabled:opacity-30 active:scale-90" aria-label="أسفل"><ChevronDown className="w-4 h-4" /></button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="p-3 border-t border-black/10 flex gap-2">
-              <button onClick={() => { localStorage.removeItem(PAGE_ORDER_KEY); setCustomPageOrder([]); setArrangeOpen(false); setCurrentPage(0); }} className="px-3 py-2.5 rounded-xl bg-foreground/10 hover:bg-foreground/15 text-foreground font-bold text-xs flex items-center gap-1 active:scale-95"><RotateCcw className="w-3.5 h-3.5" /> الترتيب الأصلي</button>
-              <button onClick={() => { localStorage.setItem(PAGE_ORDER_KEY, JSON.stringify(draftOrder)); setCustomPageOrder(draftOrder); setArrangeOpen(false); setCurrentPage(0); }} className="flex-1 px-3 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 text-white font-bold text-sm flex items-center justify-center gap-1 active:scale-95"><Check className="w-4 h-4" /> حفظ الترتيب</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {controlsOpen && (
         <div className="absolute inset-x-0 bottom-0 z-40 animate-fade-in" onClick={(e) => e.stopPropagation()}>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Pause, Play, Plus, RotateCcw, Save, Trash2, ZoomIn, ZoomOut, Link2, Copy } from "lucide-react";
+import { ArrowRight, Pause, Play, Plus, RotateCcw, Save, Trash2, ZoomIn, ZoomOut, Link2, Copy, ListOrdered, ChevronUp, ChevronDown, X, Check } from "lucide-react";
 import { AyahBox, AYAH_COORDINATES, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings, AudioSegment } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
@@ -36,6 +36,18 @@ const AyahCalibration = () => {
   const [duration, setDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [segmentsList, setSegmentsList] = useState<AudioSegment[]>([]);
+  // ترتيب الصفحات (يُحفظ بمعرّف المسار src ويقرؤه القارئ)
+  const PAGE_ORDER_KEY = "mushaf:pageOrder:v1";
+  const [arrangeOpen, setArrangeOpen] = useState(false);
+  const [draftSrcOrder, setDraftSrcOrder] = useState<string[]>([]);
+  const openArrange = useCallback(() => {
+    let saved: string[] = [];
+    try { const raw = localStorage.getItem(PAGE_ORDER_KEY); saved = raw ? JSON.parse(raw) : []; } catch { saved = []; }
+    const valid = (Array.isArray(saved) ? saved : []).filter(s => pageSources.includes(s));
+    pageSources.forEach(s => { if (!valid.includes(s)) valid.push(s); });
+    setDraftSrcOrder(valid);
+    setArrangeOpen(true);
+  }, [pageSources]);
   const [history, setHistory] = useState<AyahBox[][]>([]);
   const canvasRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -630,11 +642,18 @@ const AyahCalibration = () => {
           {/* Sidebar */}
           <aside className="space-y-3 max-h-[80vh] overflow-y-auto">
             {/* Page selector */}
-            <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3">
+            <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3 space-y-2">
               <label className="block text-xs font-bold text-slate-400 mb-1">الصفحة</label>
               <select value={pageSrc} onChange={(e) => loadPage(e.target.value)} className="w-full rounded-lg bg-slate-700 border-slate-600 p-2 text-sm text-white">
                 {pageSources.map(src => <option key={src} value={src}>{src.replace("/pages/", "")}</option>)}
               </select>
+              <button
+                onClick={openArrange}
+                className="w-full p-2 rounded-lg bg-violet-600/20 border border-violet-500/40 text-violet-300 font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-transform"
+                title="ترتيب صفحات المصحف كما تظهر في القارئ"
+              >
+                <ListOrdered className="h-3.5 w-3.5" /> ترتيب الصفحات في القارئ
+              </button>
             </div>
 
             {/* Ayah selector + editing */}
@@ -909,6 +928,49 @@ const AyahCalibration = () => {
           </aside>
         </section>
       </div>
+
+      {/* ── نافذة ترتيب الصفحات (يحفظ بالمسار src ويقرؤه القارئ) ── */}
+      {arrangeOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setArrangeOpen(false)}>
+          <div className="w-full max-w-md max-h-[85vh] flex flex-col rounded-2xl bg-slate-800 border border-slate-600 shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()} dir="rtl">
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <div className="flex items-center gap-2">
+                <ListOrdered className="w-5 h-5 text-violet-400" />
+                <div>
+                  <h3 className="font-bold text-base text-white">ترتيب الصفحات</h3>
+                  <p className="text-[11px] text-slate-400">رتّب الصفحات بالأسهم ثم احفظ — يظهر في القارئ</p>
+                </div>
+              </div>
+              <button onClick={() => setArrangeOpen(false)} className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300" aria-label="إغلاق"><X className="w-4 h-4" /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {draftSrcOrder.map((src, pos) => (
+                <div key={src} className="flex items-center gap-3 p-2 rounded-xl bg-slate-700/60 border border-slate-600/50">
+                  <span className="w-7 h-7 rounded-full bg-violet-500/25 text-violet-300 text-xs font-bold flex items-center justify-center shrink-0">{pos + 1}</span>
+                  <img src={src} alt={src} className="w-10 h-14 object-cover rounded-md border border-slate-600 shrink-0" loading="lazy" />
+                  <span className="flex-1 min-w-0 font-bold text-sm text-slate-200 truncate">{src.replace("/pages/", "")}</span>
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <button disabled={pos === 0} onClick={() => setDraftSrcOrder(o => { const n = [...o]; [n[pos - 1], n[pos]] = [n[pos], n[pos - 1]]; return n; })} className="w-7 h-6 rounded bg-slate-600 text-slate-200 flex items-center justify-center disabled:opacity-30 active:scale-90" aria-label="أعلى"><ChevronUp className="w-4 h-4" /></button>
+                    <button disabled={pos === draftSrcOrder.length - 1} onClick={() => setDraftSrcOrder(o => { const n = [...o]; [n[pos + 1], n[pos]] = [n[pos], n[pos + 1]]; return n; })} className="w-7 h-6 rounded bg-slate-600 text-slate-200 flex items-center justify-center disabled:opacity-30 active:scale-90" aria-label="أسفل"><ChevronDown className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-3 border-t border-slate-700 flex gap-2">
+              <button
+                onClick={() => { localStorage.removeItem(PAGE_ORDER_KEY); setArrangeOpen(false); toast({ title: "↩️ أُعيد الترتيب الأصلي" }); }}
+                className="px-3 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs flex items-center gap-1 active:scale-95"
+              ><RotateCcw className="w-3.5 h-3.5" /> الأصلي</button>
+              <button
+                onClick={() => { localStorage.setItem(PAGE_ORDER_KEY, JSON.stringify(draftSrcOrder)); setArrangeOpen(false); toast({ title: "✅ تم حفظ الترتيب", description: "افتح القارئ لرؤية الترتيب الجديد" }); }}
+                className="flex-1 px-3 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 text-white font-bold text-sm flex items-center justify-center gap-1 active:scale-95"
+              ><Check className="w-4 h-4" /> حفظ الترتيب</button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };

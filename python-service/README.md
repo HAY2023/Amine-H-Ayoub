@@ -1,3 +1,13 @@
+---
+title: Quran Audio Segmentation
+emoji: 🎙️
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # قرآن أطفال - خدمة معالجة الصوت
 
 خدمة Python FastAPI لتقسيم الملفات الصوتية القرآنية تلقائياً.

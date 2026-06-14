@@ -1099,6 +1099,11 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
   const [recitationStyle, setRecitationStyle] = useState<"interleaved" | "consecutive">("interleaved");
   // عدد المقاطع التمهيدية قبل الآية الأولى (1 = البسملة، 2 = استعاذة + بسملة، 0 = بلا)
   const [leadingSegments, setLeadingSegments] = useState<number>(1);
+  // رابط خدمة التقسيم (Python على Fly.io) — يُحفظ محلياً
+  const SERVICE_URL_KEY = "quran:splitServiceUrl";
+  const [serviceUrl, setServiceUrl] = useState<string>(() => {
+    try { return localStorage.getItem(SERVICE_URL_KEY) || ""; } catch { return ""; }
+  });
   const [boundaryScores, setBoundaryScores] = useState<Float32Array>(new Float32Array(0));
   const [qualities, setQualities] = useState<SegmentQuality[]>([]);
 
@@ -1230,6 +1235,44 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
       toast({ title: "✅ تم التقسيم!", description: `${r.segments.length} مقطع — المحرك الهجين` });
     } catch (e) {
       toast({ title: "❌ فشل", description: e instanceof Error ? e.message : "خطأ", variant: "destructive" });
+    } finally { setSplitting(false); setProgress(""); setProgressPct(0); }
+  };
+
+  // ── تقسيم على السيرفر: السيرفر يجلب الصوت برابطه بنفسه ثم يقسّمه (دقة عالية) ──
+  const handleServiceSplit = async () => {
+    const base = serviceUrl.trim().replace(/\/$/, "");
+    if (!base) { toast({ title: "⚠️ أدخل رابط الخدمة أولاً", description: "انشر الخدمة على Hugging Face والصق رابطها", variant: "destructive" }); return; }
+
+    // رابط الصوت العام الذي سيجلبه السيرفر بنفسه (السحابي مُفضّل لأنه عام)
+    const audioPublicUrl = hasCloudAudio(surahNum)
+      ? getSurahAudioUrl(surahNum)
+      : `${window.location.origin}/audio/surahs/${surahNum}.mp3`;
+
+    setSplitting(true); setProgress("🚀 السيرفر يجلب الصوت ويقسّمه..."); setProgressPct(40);
+    try {
+      const res = await fetch(`${base}/split-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          audioUrl: audioPublicUrl,
+          leading: leadingSegments,
+          surahLabel: SURAH_NAMES[surahNum] || `سورة ${surahNum}`,
+        }),
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(`الخدمة ردّت ${res.status} ${txt.slice(0, 120)}`);
+      }
+      const data = await res.json();
+      const segs: AudioSegment[] = (data.segments || []).map((s: AudioSegment) => ({ ...s }));
+      if (segs.length === 0) throw new Error("لم تُرجِع الخدمة أي مقاطع");
+
+      setSegments(segs);
+      persistSegments(surahNum, segs);
+      setProgressPct(100);
+      toast({ title: "✅ تم التقسيم على السيرفر!", description: `${segs.length} مقطع · ${data.processingTimeMs || 0}ms` });
+    } catch (e) {
+      toast({ title: "❌ فشل التقسيم", description: e instanceof Error ? e.message : "خطأ", variant: "destructive" });
     } finally { setSplitting(false); setProgress(""); setProgressPct(0); }
   };
 
@@ -1565,10 +1608,28 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
             </div>
           )}
 
+          {/* ── التقسيم عبر خدمة Python (أعلى دقة) ── */}
+          <div className="rounded-xl bg-gradient-to-br from-violet-950/40 to-fuchsia-950/30 border border-violet-500/30 p-3 space-y-2 mb-2">
+            <label className="text-xs font-bold text-violet-300 flex items-center gap-1">🚀 خدمة التقسيم (دقة عالية)</label>
+            <input
+              type="url"
+              dir="ltr"
+              placeholder="https://اسمك-quran-audio.hf.space"
+              value={serviceUrl}
+              onChange={(e) => { setServiceUrl(e.target.value); try { localStorage.setItem(SERVICE_URL_KEY, e.target.value); } catch { /* ignore */ } }}
+              className="w-full p-2 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs outline-none focus:border-violet-500"
+            />
+            <button onClick={handleServiceSplit} disabled={splitting || aiSplitting || !duration || !serviceUrl.trim()}
+              className="w-full p-3 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+              🚀 {splitting ? "جارٍ..." : "تقسيم بالخدمة (الأدق)"}
+            </button>
+            <p className="text-[10px] text-slate-500 leading-relaxed">استضِف <b>python-service</b> مجاناً على Hugging Face Spaces (بلا تثبيت) والصق الرابط. الإرشادات في <b>python-service/DEPLOY.md</b>.</p>
+          </div>
+
           <button onClick={handleSplit} disabled={splitting || aiSplitting || !duration}
             className="w-full p-4 rounded-xl bg-gradient-to-r from-emerald-600 via-violet-600 to-fuchsia-600 text-white font-bold text-lg disabled:opacity-40 flex items-center justify-center gap-3 shadow-xl shadow-violet-500/20 hover:shadow-violet-500/40 active:scale-[0.98] transition-all">
             <Wand2 className="w-6 h-6" />
-            {splitting ? "⏳ جاري التحليل الهجين..." : "⚡ تقسيم هجين — أعلى دقة"}
+            {splitting ? "⏳ جاري التحليل الهجين..." : "⚡ تقسيم هجين — في المتصفّح"}
           </button>
 
           <div className="flex items-center gap-3 mt-2">

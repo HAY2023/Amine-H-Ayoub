@@ -33,3 +33,6 @@ vite-log.txt
 # Supabase temporary files
 supabase/.temp/
 
+# Claude Code local files
+.claude/
+
