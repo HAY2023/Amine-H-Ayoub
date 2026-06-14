@@ -1099,10 +1099,11 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
   const [recitationStyle, setRecitationStyle] = useState<"interleaved" | "consecutive">("interleaved");
   // عدد المقاطع التمهيدية قبل الآية الأولى (1 = البسملة، 2 = استعاذة + بسملة، 0 = بلا)
   const [leadingSegments, setLeadingSegments] = useState<number>(1);
-  // رابط خدمة التقسيم (Python على Fly.io) — يُحفظ محلياً
+  // رابط خدمة التقسيم (Python على Hugging Face Spaces) — يُحفظ محلياً
   const SERVICE_URL_KEY = "quran:splitServiceUrl";
+  const DEFAULT_SERVICE_URL = "https://hammoualiyoucef20-quran-audio.hf.space";
   const [serviceUrl, setServiceUrl] = useState<string>(() => {
-    try { return localStorage.getItem(SERVICE_URL_KEY) || ""; } catch { return ""; }
+    try { return localStorage.getItem(SERVICE_URL_KEY) || DEFAULT_SERVICE_URL; } catch { return DEFAULT_SERVICE_URL; }
   });
   const [boundaryScores, setBoundaryScores] = useState<Float32Array>(new Float32Array(0));
   const [qualities, setQualities] = useState<SegmentQuality[]>([]);
@@ -1624,7 +1625,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
             <input
               type="url"
               dir="ltr"
-              placeholder="https://اسمك-quran-audio.hf.space"
+              placeholder="https://hammoualiyoucef20-quran-audio.hf.space"
               value={serviceUrl}
               onChange={(e) => { setServiceUrl(e.target.value); try { localStorage.setItem(SERVICE_URL_KEY, e.target.value); } catch { /* ignore */ } }}
               className="w-full p-2 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs outline-none focus:border-violet-500"
@@ -1633,7 +1634,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
               className="w-full p-3 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
               🚀 {splitting ? "جارٍ..." : "تقسيم بالخدمة (الأدق)"}
             </button>
-            <p className="text-[10px] text-slate-500 leading-relaxed">استضِف <b>python-service</b> مجاناً على Hugging Face Spaces (بلا تثبيت) والصق الرابط. الإرشادات في <b>python-service/DEPLOY.md</b>.</p>
+            <p className="text-[10px] text-slate-500 leading-relaxed">✅ الخدمة منشورة ومتصلة تلقائياً على Hugging Face. أول طلب بعد خمول الخدمة يستغرق ~٣٠ ثانية ثم يصبح سريعاً.</p>
           </div>
 
           <button onClick={handleSplit} disabled={splitting || aiSplitting || !duration}
