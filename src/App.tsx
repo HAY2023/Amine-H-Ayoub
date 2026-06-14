@@ -14,6 +14,7 @@ import TimingsRecorder from "./pages/TimingsRecorder.tsx";
 import AyahCalibration from "./pages/AyahCalibration.tsx";
 import RecitationMethods from "./pages/RecitationMethods.tsx";
 import QuranReader from "./pages/QuranReader.tsx";
+import AudioUploadPage from "./pages/AudioUploadPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<QuranReader />} />
               <Route path="/audio" element={<Index />} />
+              <Route path="/upload" element={<AudioUploadPage />} />
               <Route path="/timings" element={<TimingsRecorder />} />
               <Route path="/calibrate" element={<AyahCalibration />} />
               <Route path="/recitation-methods" element={<RecitationMethods />} />

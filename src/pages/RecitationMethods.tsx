@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings, AudioSegment } from "../data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
+import { getSurahName, getSurahAyahCount, getAllSurahs } from "../data/quranData";
 import { toast } from "../hooks/use-toast";
 import { loadProfiles, diarize, decodeAudioFromUrl, type SpeakerProfile } from "../ai/speakerRecognition";
 
@@ -15,11 +16,11 @@ import { loadProfiles, diarize, decodeAudioFromUrl, type SpeakerProfile } from "
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 
-const SURAH_NAMES: Record<number, string> = {
-  1: "الفاتحة", 2: "الناس", 3: "الفلق", 4: "الإخلاص", 5: "المسد",
-  6: "النصر", 7: "الكافرون", 8: "الكوثر", 9: "الماعون", 10: "قريش",
-  11: "الفيل", 12: "الهمزة", 13: "العصر", 14: "التكاثر",
-};
+// Fallback for backward compatibility
+const SURAH_NAMES: Record<number, string> = getAllSurahs().reduce((acc, s) => {
+  acc[s.number] = s.name;
+  return acc;
+}, {} as Record<number, string>);
 
 /** صور المصحف الموجودة محلياً */
 const SURAH_PAGE_IMAGES: Record<number, string> = {
@@ -319,6 +320,7 @@ async function hybridSplit(
   audioUrl: string,
   surahNum: number,
   recitationStyle: "interleaved" | "consecutive",
+  leadingSegments: number,
   onProgress?: (msg: string, pct?: number) => void,
 ): Promise<{
   segments: AudioSegment[];
@@ -444,8 +446,7 @@ async function hybridSplit(
     r.e = ee;
   });
 
-  const targetCount = (AYAH_COUNTS[surahNum] || 0) * 2;
-  onProgress?.(`🔍 كشف ${regions.length} منطقة صمت طبيعية (مرجع: ${targetCount})`, 35);
+  onProgress?.(`🔍 كشف ${regions.length} منطقة كلام طبيعية (تقسيم ذكي بلا عدد مُسبق)`, 35);
 
   /* ─── ③ Boundary Likelihood (للعرض البصري فقط) ─── */
   onProgress?.("🧠 حساب Boundary Likelihood...", 40);
@@ -492,22 +493,11 @@ async function hybridSplit(
   for (let i = 0; i < N; i++) if (smoothBL[i] > maxBL) maxBL = smoothBL[i];
   if (maxBL > 0) for (let i = 0; i < N; i++) smoothBL[i] /= maxBL;
 
-  /* ─── ④ مطابقة المقاطع للعدد المطلوب للآيات (دمج / تقسيم ذكي) ─── */
+  /* ─── ④ اعتماد المقاطع الطبيعية كما هي (بلا إجبار على عدد مخزّن) ─── */
+  // التقسيم لا يعتمد على AYAH_COUNTS — البنية تُكتشف لاحقاً بالطبقة والتكرار.
   let targetRegions = regions.map(r => ({ ...r }));
-  if (targetCount > 0) {
-    if (targetRegions.length === 0) {
-      targetRegions = [{ s: 0, e: N - 1 }];
-    }
-    
-    if (targetRegions.length > targetCount) {
-      onProgress?.(`⚖️ دمج المقاطع الزائدة: ${targetRegions.length} ← ${targetCount}...`, 45);
-      targetRegions = mergeRegionsToTarget(targetRegions, targetCount, hop, sr);
-    } else if (targetRegions.length < targetCount) {
-      onProgress?.(`✂️ تقسيم المقاطع الطويلة لتلبية الهدف: ${targetRegions.length} ← ${targetCount}...`, 45);
-      targetRegions = splitRegionsToTarget(targetRegions, targetCount, smoothE, hop, sr);
-    }
-  }
-  onProgress?.(`✅ ${targetRegions.length} مقطع (مطابق لـ ${targetCount} المطلوبة)`, 55);
+  if (targetRegions.length === 0) targetRegions = [{ s: 0, e: N - 1 }];
+  onProgress?.(`✅ ${targetRegions.length} مقطع طبيعي`, 55);
 
 
   /* ─── ⑤ ضبط الحواف في أعمق نقطة صمت (Perfect Snap) ─── */
@@ -599,62 +589,98 @@ async function hybridSplit(
     refined[i].end = Number((trimmed.endS / sr).toFixed(4));
   }
 
-  /* ─── ⑥ تعيين المتحدث وربط الآيات ─── */
-  // النمط في تعليم القرآن للأطفال ثابت دائماً:
-  // المعلم يتلو أولاً ← الطفل يكرر ← المعلم التالية ← الطفل يكرر...
-  onProgress?.("🎤 تعيين المعلم والطفل + ربط الآيات...", 80);
+  /* ─── ⑥ تمييز المتحدث بالذكاء (طبقة الصوت F0) + ربط الآيات بالتكرار ─── */
+  // لا يعتمد على عدد آيات مخزّن. المعلم نبرته منخفضة (~100-160Hz)،
+  // الطفل نبرته عالية (~250-400Hz). نصنّف بالطبقة، نكتشف النمط، ثم نرقّم بالتكرار.
+  onProgress?.("🎤 تمييز المعلم/الطفل بطبقة الصوت...", 80);
 
   const sortedE2 = [...Array.from(energies)].sort((a, b) => a - b);
   const noiseE = sortedE2[Math.floor(sortedE2.length * 0.1)] || 1e-6;
-
   const surahName = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
+
+  // طبقة صوت متوسطة (median F0) لكل مقطع من إطارات النغمة المحسوبة مسبقاً
+  const segPitch: number[] = refined.map(r => {
+    const fs = Math.floor(r.startS / hop);
+    const fe = Math.floor(r.endS / hop);
+    const vals: number[] = [];
+    for (let f = fs; f <= fe && f < N; f++) if (pitches[f] > 0) vals.push(pitches[f]);
+    if (vals.length === 0) return 0;
+    vals.sort((a, b) => a - b);
+    return vals[Math.floor(vals.length / 2)];
+  });
+
+  // عتبة تصنيف ديناميكية: أكبر فجوة بين قيم الطبقة المرتّبة تفصل المعلم عن الطفل
+  const validP = segPitch.filter(p => p > 0).sort((a, b) => a - b);
+  let pitchTh = 200; // افتراضي بين البالغ والطفل
+  if (validP.length >= 2) {
+    let maxGap = -1;
+    for (let i = 1; i < validP.length; i++) {
+      const gap = validP[i] - validP[i - 1];
+      if (gap > maxGap) { maxGap = gap; pitchTh = (validP[i] + validP[i - 1]) / 2; }
+    }
+    if (maxGap < 40) pitchTh = validP[Math.floor(validP.length / 2)] + 1; // متحدث واحد: لا تقسيم زائف
+  }
+
+  const spk: ("teacher" | "kids")[] = refined.map((_, i) =>
+    segPitch[i] <= 0 ? "teacher" : (segPitch[i] < pitchTh ? "teacher" : "kids")
+  );
+
+  // كشف النمط تلقائياً: متتابع (كل المعلم ثم كل الطفل) أم متناوب
+  const half = Math.floor(refined.length / 2);
+  const fhKids = spk.slice(0, half).filter(s => s === "kids").length / Math.max(1, half);
+  const shKids = spk.slice(half).filter(s => s === "kids").length / Math.max(1, refined.length - half);
+  let isConsecutive = fhKids < 0.3 && shKids > 0.7;
+  // إن كان التمييز غير حاسم، عُد لاختيار المستخدم
+  if (fhKids > 0.35 && fhKids < 0.65) isConsecutive = recitationStyle === "consecutive";
+
+  // وسم المقاطع التمهيدية (بسملة/استعاذة): أول leadingSegments وحدة ليست آية
+  const lead = Math.max(0, Math.floor(leadingSegments));
+  const leadLabel = (u: number) => (lead >= 2 && u === 1) ? "الاستعاذة" : "البسملة";
+
   const segs: AudioSegment[] = [];
   const quals: SegmentQuality[] = [];
+  let tU = 0, kU = 0, interU = 0;
 
-  const halfCount = Math.ceil(refined.length / 2);
   for (let i = 0; i < refined.length; i++) {
     const r = refined[i];
-    let isTeacher = true;
-    let ayah = 1;
-    
-    if (recitationStyle === "consecutive") {
-      isTeacher = i < halfCount;
-      ayah = isTeacher ? i + 1 : i - halfCount + 1;
+    const isTeacher = spk[i] === "teacher";
+
+    // رقم الوحدة (1-based) عبر التكرار
+    let unit: number;
+    if (isConsecutive) {
+      unit = isTeacher ? ++tU : ++kU;
     } else {
-      isTeacher = i % 2 === 0;
-      ayah = Math.floor(i / 2) + 1;
+      if (isTeacher) { interU++; unit = interU; }
+      else { unit = interU > 0 ? interU : 1; }
     }
-    
-    const speaker: "teacher" | "kids" = isTeacher ? "teacher" : "kids";
+
+    const ayahNum = unit - lead;            // ≤0 ⇒ تمهيد، ≥1 ⇒ آية حقيقية
+    const isLead = ayahNum < 1;
+    const ayah = isLead ? 0 : ayahNum;
+    const unitLabel = isLead ? leadLabel(unit) : `آية ${ayahNum}`;
 
     segs.push({
       id: `hyb-${Date.now()}-${i}`,
       start: Number(r.start.toFixed(4)),
       end: Number(r.end.toFixed(4)),
-      speaker,
+      speaker: isTeacher ? "teacher" : "kids",
       ayah,
-      label: `${surahName} - آية ${ayah} (${isTeacher ? "معلم" : "طفل"})`,
+      label: `${surahName} - ${unitLabel} (${isTeacher ? "معلم" : "طفل"})`,
     });
 
     const segE = computeRMS(data, r.startS, r.endS - r.startS);
     const snr = 20 * Math.log10(segE / noiseE);
-
     const bFrame = Math.floor(r.start * sr / hop);
     const bScore = bFrame > 0 && bFrame < N ? smoothBL[bFrame] : 1;
-
-    const mid = Math.floor((r.startS + r.endS) / 2);
-    const pLen = Math.min(pitchWin, r.endS - mid);
-    const pitch = pLen > sr * 0.02 ? detectPitch(data, mid, pLen, sr) : 0;
-
     quals.push({
       snr,
       boundaryScore: i === 0 ? 1 : bScore,
-      pitchValid: pitch > 0,
+      pitchValid: segPitch[i] > 0,
       edgeClean: Math.abs(data[r.startS] || 0) < 0.02 && Math.abs(data[Math.min(r.endS, data.length - 1)] || 0) < 0.02,
     });
   }
 
-  onProgress?.(`✅ ${segs.length} مقطع (${Math.ceil(segs.length / 2)} آية)`, 85);
+  onProgress?.(`✅ ${segs.length} مقطع (${isConsecutive ? "متتابع" : "متناوب"})`, 85);
 
   // Anomaly removal: مقاطع قصيرة جداً بـ SNR منخفض
   for (let i = segs.length - 1; i >= 0; i--) {
@@ -692,8 +718,9 @@ async function hybridSplit(
 
   ctx.close();
 
-  const acc = targetCount > 0 ? Math.round((Math.min(segs.length, targetCount) / targetCount) * 100) : 0;
-  onProgress?.(`✅ تم: ${segs.length} مقطع · دقة ${acc}%`, 100);
+  const teacherN = segs.filter(s => s.speaker === "teacher").length;
+  const kidsN = segs.filter(s => s.speaker === "kids").length;
+  onProgress?.(`✅ تم: ${segs.length} مقطع (معلم ${teacherN} · طفل ${kidsN})`, 100);
 
   return { segments: segs, duration: totalDur, waveform: wf, qualities: quals, boundaryScores: blViz };
 }
@@ -1070,6 +1097,8 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
   const [aiSplitting, setAiSplitting] = useState(false);
   const [waveform, setWaveform] = useState<Float32Array>(new Float32Array(0));
   const [recitationStyle, setRecitationStyle] = useState<"interleaved" | "consecutive">("interleaved");
+  // عدد المقاطع التمهيدية قبل الآية الأولى (1 = البسملة، 2 = استعاذة + بسملة، 0 = بلا)
+  const [leadingSegments, setLeadingSegments] = useState<number>(1);
   const [boundaryScores, setBoundaryScores] = useState<Float32Array>(new Float32Array(0));
   const [qualities, setQualities] = useState<SegmentQuality[]>([]);
 
@@ -1191,7 +1220,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
     if (!a || !duration) { toast({ title: "⚠️ انتظر تحميل الصوت", variant: "destructive" }); return; }
     setSplitting(true); setProgress(""); setProgressPct(0);
     try {
-      const r = await hybridSplit(a.src, surahNum, recitationStyle, (msg, pct) => {
+      const r = await hybridSplit(a.src, surahNum, recitationStyle, leadingSegments, (msg, pct) => {
         setProgress(msg);
         if (pct !== undefined) setProgressPct(pct);
       });
@@ -1249,27 +1278,29 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
   const recalculateSegments = useCallback((segs: AudioSegment[]): AudioSegment[] => {
     const sorted = [...segs].sort((a, b) => a.start - b.start);
     const sn = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
-    const halfCount = Math.ceil(sorted.length / 2);
-    return sorted.map((s, i) => {
-      let isT = true;
-      let ayah = 1;
-      
+    const lead = Math.max(0, Math.floor(leadingSegments));
+    const leadLabel = (u: number) => (lead >= 2 && u === 1) ? "الاستعاذة" : "البسملة";
+    // نحافظ على تصنيف المتحدث المكتشف بالطبقة (لا نعيد فرضه بالموضع)،
+    // ونرقّم الوحدات بالتكرار مع طرح المقاطع التمهيدية.
+    let tU = 0, kU = 0, interU = 0;
+    return sorted.map((s) => {
+      const isT = s.speaker === "teacher";
+      let unit: number;
       if (recitationStyle === "consecutive") {
-        isT = i < halfCount;
-        ayah = isT ? i + 1 : i - halfCount + 1;
+        unit = isT ? ++tU : ++kU;
       } else {
-        isT = i % 2 === 0;
-        ayah = Math.floor(i / 2) + 1;
+        if (isT) { interU++; unit = interU; } else { unit = interU > 0 ? interU : 1; }
       }
-      
+      const ayahNum = unit - lead;
+      const isLead = ayahNum < 1;
+      const unitLabel = isLead ? leadLabel(unit) : `آية ${ayahNum}`;
       return {
         ...s,
-        speaker: isT ? "teacher" : "kids",
-        ayah,
-        label: `${sn} - آية ${ayah} (${isT ? "معلم" : "طفل"})`
+        ayah: isLead ? 0 : ayahNum,
+        label: `${sn} - ${unitLabel} (${isT ? "معلم" : "طفل"})`
       };
     });
-  }, [surahNum, recitationStyle]);
+  }, [surahNum, recitationStyle, leadingSegments]);
 
   const setSegmentBoundary = useCallback((index: number, field: "start" | "end", newVal: number) => {
     setSegments(prev => {
@@ -1411,12 +1442,23 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
           </div>
 
           <div>
-            <label className="text-sm font-bold text-slate-300 block mb-2">بنية الصوت (ترتيب التلاوة):</label>
+            <label className="text-sm font-bold text-slate-300 block mb-2">بنية الصوت (يُكتشف تلقائياً — للتجاوز فقط):</label>
             <select value={recitationStyle} onChange={(e) => setRecitationStyle(e.target.value as "interleaved" | "consecutive")}
               className="w-full p-3 rounded-xl bg-slate-700 border border-slate-600 text-white text-sm focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all">
               <option value="interleaved">🔄 متناوب آية بآية (معلم ← طفل ← معلم ← طفل)</option>
               <option value="consecutive">➡️ متتالي (المعلم كامل السورة ثم الطفل كامل السورة)</option>
             </select>
+          </div>
+
+          <div>
+            <label className="text-sm font-bold text-slate-300 block mb-2">المقاطع التمهيدية قبل الآية الأولى:</label>
+            <select value={leadingSegments} onChange={(e) => setLeadingSegments(parseInt(e.target.value, 10))}
+              className="w-full p-3 rounded-xl bg-slate-700 border border-slate-600 text-white text-sm focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all">
+              <option value={1}>🕌 بسملة فقط (الافتراضي)</option>
+              <option value={2}>🤲 استعاذة + بسملة</option>
+              <option value={0}>🚫 بلا تمهيد (تبدأ بالآية مباشرة)</option>
+            </select>
+            <p className="text-[11px] text-slate-500 mt-1">تُحسَب البسملة/الاستعاذة كمقاطع تمهيدية فلا تُرقَّم كآيات.</p>
           </div>
         </div>
 

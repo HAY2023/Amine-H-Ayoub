@@ -119,6 +119,26 @@ const AyahCalibration = () => {
     });
   };
 
+  // جزء ثانٍ من نفس الآية مرتبط بنفس المقطع الصوتي (لآية تمتد على أكثر من سطر).
+  // يحتفظ برقم الآية + توقيت المعلم + توقيت الطفل + الاسم — وعند التشغيل يُظلَّل الجزآن معاً.
+  const addLinkedPart = () => {
+    if (!selected) return;
+    saveHistory(boxes);
+    const part: AyahBox = {
+      ...selected, // يحتفظ بـ surah/ayah/audioStart/audioEnd/kidsStart/kidsEnd/label
+      y: clamp(selected.y + selected.height + 8, 0, PAGE_IMAGE_SIZE.height - selected.height),
+    };
+    setBoxes(current => {
+      const next = [...current.slice(0, selectedIndex + 1), part, ...current.slice(selectedIndex + 1)];
+      setSelectedIndex(selectedIndex + 1);
+      return next;
+    });
+    toast({
+      title: "✅ تمت إضافة جزء مرتبط",
+      description: "نفس الآية ونفس المقطع — حرّكه إلى السطر الثاني. سيُظلَّل ويُشغَّل مع الجزء الأول.",
+    });
+  };
+
   const deleteSelected = () => {
     if (boxes.length <= 1) return;
     saveHistory(boxes);
@@ -687,8 +707,19 @@ const AyahCalibration = () => {
                 onClick={addNewBox}
                 className="w-full p-2 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-transform"
               >
-                <Plus className="h-3.5 w-3.5" /> إضافة تظليل جديد
+                <Plus className="h-3.5 w-3.5" /> إضافة تظليل جديد (آية جديدة)
               </button>
+
+              {/* Add linked part for a multi-line ayah */}
+              {selected && (
+                <button
+                  onClick={addLinkedPart}
+                  className="w-full p-2 rounded-lg bg-violet-600/20 border border-violet-500/40 text-violet-300 font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-transform"
+                  title="آية تمتد على سطرين: ينشئ جزءاً ثانياً بنفس الآية ونفس المقطع الصوتي"
+                >
+                  <Plus className="h-3.5 w-3.5" /> ➕ جزء بنفس المقطع (آية على سطرين)
+                </button>
+              )}
               
               <div className="flex gap-1">
                 <button

@@ -417,7 +417,12 @@ const MushafPage = ({ onBack }: Props) => {
       isSeekingRef.current = true;
       expectedStartTimeRef.current = startT;
       a.currentTime = startT;
-      a.play().then(() => setIsPlaying(true)).catch(console.error);
+      a.play().then(() => {
+        setIsPlaying(true);
+        // ضمان إعادة تشغيل حلقة التتبع لكل مقطع جديد (تكرار/طفل/آية تالية)
+        if (requestRef.current) cancelAnimationFrame(requestRef.current);
+        requestRef.current = requestAnimationFrame(trackAudio);
+      }).catch(console.error);
     };
 
     setControlsOpen(false);
@@ -670,7 +675,14 @@ const MushafPage = ({ onBack }: Props) => {
       }
     };
 
-    if (mode === "both" && hasKids) {
+    // كشف صوت الطفل من صناديق المعايرة (مصدر منفصل عن getSurahTimings)
+    const boxHasKids = pages
+      .flatMap(p => getPageAyahBoxes(p.src))
+      .some(b => b.surah === activeSurah.number && b.ayah === currentAyahRef.current
+        && b.kidsStart !== undefined && b.kidsEnd !== undefined);
+    const hasKidsEffective = hasKids || boxHasKids;
+
+    if (mode === "both" && hasKidsEffective) {
       if (bothPhaseRef.current === "teacher") {
         bothPhaseRef.current = "kids";
         playAyah(activeSurah, currentAyahRef.current, "kids");
@@ -714,6 +726,7 @@ const MushafPage = ({ onBack }: Props) => {
   }, [handleAyahSegmentEnd]);
 
   const handleEnded = () => {
+    if (isHandlingSegmentEndRef.current) return;
     handleAyahSegmentEnd();
   };
 
@@ -727,6 +740,8 @@ const MushafPage = ({ onBack }: Props) => {
         const pageBoxes = getPageAyahBoxes(pages[currentPage]?.src || "");
         const surahBoxes = pageBoxes.filter(b => b.surah === activeSurah.number).sort((a,b) => a.ayah - b.ayah);
         const firstAyah = surahBoxes[0]?.ayah ?? 1;
+        currentRepeatRef.current = 0;
+        bothPhaseRef.current = "teacher";
         playAyah(activeSurah, firstAyah, playMode === "kids" ? "kids" : "teacher");
       } else {
         a.play().then(() => setIsPlaying(true)).catch(() => { });
@@ -767,7 +782,12 @@ const MushafPage = ({ onBack }: Props) => {
         onEnded={handleEnded}
         onPause={() => setIsPlaying(false)}
         onPlay={() => setIsPlaying(true)}
-        onSeeked={() => { isSeekingRef.current = false; }}
+        onSeeked={() => {
+          const a = audioRef.current;
+          if (a && Math.abs(a.currentTime - expectedStartTimeRef.current) < 0.15) {
+            isSeekingRef.current = false;
+          }
+        }}
       />
 
       {/* Edge-to-edge image(s) with per-ayah tappable hotspots */}

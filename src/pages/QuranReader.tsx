@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, SplitSquareHorizontal, Volume2 } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, SplitSquareHorizontal, Volume2, Menu, ListOrdered, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
@@ -163,20 +163,37 @@ export default function QuranReader() {
   const [isShuffled, setIsShuffled] = useState(false);
   const [shuffledPageOrder, setShuffledPageOrder] = useState<number[]>([]);
 
+  // Custom page order (set by the user from the Arrange screen)
+  const PAGE_ORDER_KEY = "mushaf:pageOrder:v1";
+  const [customPageOrder, setCustomPageOrder] = useState<number[]>(() => {
+    try {
+      const raw = localStorage.getItem(PAGE_ORDER_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch { return []; }
+  });
+  const [arrangeOpen, setArrangeOpen] = useState(false);
+  // Draft order while arranging
+  const [draftOrder, setDraftOrder] = useState<number[]>([]);
+
   // Split view state
   const [isSplitView, setIsSplitView] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Simultaneous playback (teacher + kids together)
   const audioRef2 = useRef<HTMLAudioElement>(null);
   const [isSimultaneousPlaying, setIsSimultaneousPlaying] = useState(false);
 
-  // Get the actual page index (considering shuffle)
+  // Get the actual page index (shuffle > custom order > identity)
   const getActualPageIndex = useCallback((displayIdx: number) => {
     if (isShuffled && shuffledPageOrder.length > 0) {
       return shuffledPageOrder[displayIdx] ?? displayIdx;
     }
+    if (customPageOrder.length > 0) {
+      return customPageOrder[displayIdx] ?? displayIdx;
+    }
     return displayIdx;
-  }, [isShuffled, shuffledPageOrder]);
+  }, [isShuffled, shuffledPageOrder, customPageOrder]);
 
   const actualPage = getActualPageIndex(currentPage);
 
@@ -307,7 +324,6 @@ export default function QuranReader() {
       }
     });
   }, [clearAllHighlights]);
-  const [activeMenuAyah, setActiveMenuAyah] = useState<{ surah: SurahAudio; ayah: number; label?: string; boxIndex?: number } | null>(null);
 
   // Shuffle handlers
   const handleShuffle = useCallback(() => {
@@ -498,10 +514,13 @@ export default function QuranReader() {
       expectedStartTimeRef.current = startT;
       a.currentTime = startT;
       requestPlay("mushaf", a);
-      a.play().then(() => setIsPlaying(true)).catch(console.error);
+      a.play().then(() => {
+        setIsPlaying(true);
+        // ضمان إعادة تشغيل حلقة التتبع لكل مقطع جديد (تكرار/طفل/آية تالية)
+        if (requestRef.current) cancelAnimationFrame(requestRef.current);
+        requestRef.current = requestAnimationFrame(trackAudio);
+      }).catch(console.error);
     };
-
-    setControlsOpen(false);
 
     if (!sameSrc) {
       a.src = targetSrc;
@@ -545,7 +564,12 @@ export default function QuranReader() {
     const continuous = continuousPlayRef.current;
 
     const timings = getSavedTimings()[activeSurah.number];
-    const hasKids = timings?.segments?.some(s => s.speaker === "kids") || timings?.kidsStart !== undefined;
+    // كشف صوت الطفل من مصدرين: التوقيتات المحفوظة + صناديق المعايرة
+    const boxHasKids = pages
+      .flatMap(p => getPageAyahBoxes(p.src))
+      .some(b => b.surah === activeSurah.number && b.ayah === currentAyahRef.current
+        && b.kidsStart !== undefined && b.kidsEnd !== undefined);
+    const hasKids = boxHasKids || timings?.segments?.some(s => s.speaker === "kids") || timings?.kidsStart !== undefined;
 
     const advanceToNextSegment = (sp: Speaker) => {
       const pageBoxes = pages.flatMap(p => getPageAyahBoxes(p.src));
@@ -564,17 +588,10 @@ export default function QuranReader() {
 
       for (let i = currentIndex + 1; i < sortedBoxesWithIndex.length; i++) {
         const candidate = sortedBoxesWithIndex[i];
-        if (candidate.box.ayah === currentAyahRef.current) {
-          const hasTimings = (sp === "teacher" && candidate.box.audioStart !== undefined && candidate.box.audioEnd !== undefined) ||
-                             (sp === "kids" && candidate.box.kidsStart !== undefined && candidate.box.kidsEnd !== undefined);
-          if (hasTimings) {
-            nextItem = candidate;
-            break;
-          }
-        } else {
-          nextItem = candidate;
-          break;
-        }
+        // أجزاء الآية الواحدة (نفس رقم الآية) تُعدّ وحدة واحدة — تخطَّها وانتقل للآية التالية
+        if (candidate.box.ayah === currentAyahRef.current) continue;
+        nextItem = candidate;
+        break;
       }
 
       if (nextItem) {
@@ -829,7 +846,7 @@ export default function QuranReader() {
     touchStartXRef.current = null;
   };
 
-  const step = isDesktop ? 2 : 1;
+  const step = 1; // صفحة واحدة دائماً (حاسوب وجوال)
   const totalDisplayPages = isShuffled ? shuffledPageOrder.length : pages.length;
   const goToPage = useCallback((i: number) => { if (i >= 0 && i < totalDisplayPages) setCurrentPage(i); }, [totalDisplayPages]);
   const goPrev = useCallback(() => goToPage(Math.max(0, currentPage - step)), [currentPage, goToPage, step]);
@@ -845,13 +862,9 @@ export default function QuranReader() {
   }, [controlsOpen, navigate, goPrev, goNext]);
 
   const visiblePages = useMemo(() => {
-    const getPage = (displayIdx: number) => {
-      const idx = isShuffled && shuffledPageOrder.length > 0 ? shuffledPageOrder[displayIdx] : displayIdx;
-      return pages[idx];
-    };
-    if (isDesktop) return [getPage(currentPage), getPage(currentPage + 1)].filter(Boolean) as PageInfo[];
-    return [getPage(currentPage)].filter(Boolean) as PageInfo[];
-  }, [currentPage, isDesktop, isShuffled, shuffledPageOrder]);
+    // صفحة واحدة فقط دائماً (حتى على الحاسوب)
+    return [pages[getActualPageIndex(currentPage)]].filter(Boolean) as PageInfo[];
+  }, [currentPage, getActualPageIndex]);
 
   const currentPageSurahs = pages[actualPage]?.surahs || [];
   const selectedSurah = currentPageSurahs[selectedSurahIdx] || currentPageSurahs[0];
@@ -955,7 +968,12 @@ export default function QuranReader() {
           return;
         }
         handleAyahSegmentEndRef.current();
-      }} onSeeked={() => { isSeekingRef.current = false; }} />
+      }} onSeeked={() => {
+        const a = audioRef.current;
+        if (a && Math.abs(a.currentTime - expectedStartTimeRef.current) < 0.15) {
+          isSeekingRef.current = false;
+        }
+      }} />
       {/* Second audio for simultaneous teacher+kids playback */}
       <audio ref={audioRef2} />
 
@@ -968,11 +986,11 @@ export default function QuranReader() {
           onTouchEnd={handleTouchEnd}
           onClick={() => { }}
         >
-          {/* Unified shadow wrapper for desktop dual-page view */}
-          <div className={`flex h-full w-full ${isDesktop ? 'px-4 py-2' : ''}`}>
-            <div className={`flex h-full w-full ${isDesktop ? 'shadow-2xl rounded-lg overflow-hidden ring-1 ring-black/5' : ''}`}>
+          {/* Single page wrapper — centered & hugging the page on desktop */}
+          <div className={`flex h-full w-full ${isDesktop ? 'px-4 py-2 justify-center' : ''}`}>
+            <div className={`flex h-full ${isDesktop ? 'shadow-2xl rounded-lg overflow-hidden ring-1 ring-black/5' : 'w-full'}`}>
           {visiblePages.map((page, idx) => (
-            <div key={`${page.src}-${idx}`} className={`relative h-full flex-1 min-w-0 flex items-center justify-center bg-background overflow-hidden p-1 ${isDesktop && idx > 0 ? 'border-r border-black/8' : ''}`}>
+            <div key={`${page.src}-${idx}`} className={`relative h-full ${isDesktop ? '' : 'flex-1'} min-w-0 flex items-center justify-center bg-background overflow-hidden p-1`}>
               <div
                 className={`relative ${isDesktop ? 'shadow-none' : 'shadow-xl'}`}
                 style={{ aspectRatio: `${PAGE_IMAGE_SIZE.width}/${PAGE_IMAGE_SIZE.height}`, height: '100%', maxWidth: '100%' }}
@@ -998,7 +1016,15 @@ export default function QuranReader() {
                         key={`${box.surah}-${box.ayah}-tap-${i}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setActiveMenuAyah({ surah, ayah: box.ayah, label: box.label, boxIndex: i });
+                          const sIdx = currentPageSurahs.findIndex(s => s.number === surah.number);
+                          if (sIdx !== -1) setSelectedSurahIdx(sIdx);
+                          setSelectedAyah(box.ayah);
+                          currentRepeatRef.current = 0;
+                          bothPhaseRef.current = "teacher";
+                          setControlsOpen(true);
+                          if (isSimultaneousPlaying) { stopSimultaneous(); }
+                          // بلا فهرس صندوق: يجد الجزء الأول للآية بالرقم (يعالج الآيات متعددة الأجزاء)
+                          playAyah(surah, box.ayah, playModeRef.current === "kids" ? "kids" : "teacher");
                         }}
                         className="absolute rounded-md outline-none transition-colors hover:bg-accent/10 active:bg-accent/20"
                         style={{
@@ -1049,21 +1075,94 @@ export default function QuranReader() {
         </div>
       )}
 
-      <button onClick={() => navigate("/audio")} className="absolute top-2 right-2 w-9 h-9 rounded-full flex items-center justify-center z-30 transition-opacity" style={{ background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", opacity: 0.35 }}>
-        <ArrowRight className="w-4 h-4 text-foreground" />
-      </button>
+      {/* ── قائمة الخيارات الموحّدة (بستايل الموقع) ── */}
+      <div className="absolute top-2 right-2 z-40">
+        <button
+          onClick={() => setMenuOpen(v => !v)}
+          className="w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-md active:scale-95"
+          style={{ background: menuOpen ? "rgba(250,204,21,0.5)" : "rgba(255,255,255,0.55)", backdropFilter: "blur(12px) saturate(140%)" }}
+          aria-label="القائمة"
+        >
+          {menuOpen ? <X className="w-5 h-5 text-foreground" /> : <Menu className="w-5 h-5 text-foreground" />}
+        </button>
 
-      <div className="absolute top-2 left-2 z-30 flex gap-1.5">
-        <button onClick={toggleFullscreen} className="w-9 h-9 rounded-full flex items-center justify-center transition-opacity" style={{ background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", opacity: 0.35 }}>
-          {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-        </button>
-        <button onClick={handleShuffle} className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${isShuffled ? 'opacity-100' : 'opacity-35'}`} style={{ background: isShuffled ? "rgba(250,204,21,0.4)" : "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }} title={isShuffled ? "إلغاء العشوائي" : "ترتيب عشوائي"}>
-          <Shuffle className="w-4 h-4" />
-        </button>
-        <button onClick={() => setIsSplitView(v => !v)} className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${isSplitView ? 'opacity-100' : 'opacity-35'}`} style={{ background: isSplitView ? "rgba(56,189,248,0.4)" : "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }} title={isSplitView ? "إغلاق التقسيم" : "طور التقسيم"}>
-          <SplitSquareHorizontal className="w-4 h-4" />
-        </button>
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+            <div
+              className="absolute top-12 right-0 z-40 w-64 rounded-2xl p-2 shadow-2xl border border-white/40 animate-fade-in"
+              style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(24px) saturate(150%)" }}
+              dir="rtl"
+            >
+              {([
+                { icon: <ArrowRight className="w-5 h-5" />, name: "رجوع", desc: "العودة لقائمة السور", onClick: () => navigate("/audio"), active: false, tint: "bg-foreground/5 text-foreground" },
+                { icon: isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />, name: isFullscreen ? "تصغير الشاشة" : "ملء الشاشة", desc: "عرض المصحف بملء الشاشة", onClick: toggleFullscreen, active: isFullscreen, tint: "bg-emerald-400/20 text-emerald-700" },
+                { icon: <Shuffle className="w-5 h-5" />, name: "ترتيب عشوائي", desc: "خلط ترتيب الصفحات", onClick: handleShuffle, active: isShuffled, tint: "bg-amber-400/20 text-amber-700" },
+                { icon: <ListOrdered className="w-5 h-5" />, name: "ترتيب الصفحات", desc: "رتّب صفحات المصحف بنفسك", onClick: () => { setDraftOrder(pages.map((_, i) => customPageOrder[i] ?? i)); setArrangeOpen(true); }, active: customPageOrder.length > 0, tint: "bg-violet-400/20 text-violet-700" },
+                { icon: <SplitSquareHorizontal className="w-5 h-5" />, name: "وضع التقسيم", desc: "عرض جانبي لقائمة السور", onClick: () => setIsSplitView(v => !v), active: isSplitView, tint: "bg-sky-400/20 text-sky-700" },
+              ]).map((item, i) => (
+                <button
+                  key={i}
+                  onClick={() => { item.onClick(); setMenuOpen(false); }}
+                  className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-right hover:bg-white/80 active:scale-[0.98] ${item.active ? 'bg-amber-100/70 ring-1 ring-amber-300/60' : ''}`}
+                >
+                  <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${item.tint}`}>
+                    {item.icon}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="flex items-center gap-1 font-bold text-sm text-foreground">
+                      {item.name}
+                      {item.active && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                    </span>
+                    <span className="block text-[11px] text-muted-foreground truncate">{item.desc}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
+
+      {/* ── نافذة ترتيب الصفحات ── */}
+      {arrangeOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setArrangeOpen(false)}>
+          <div className="w-full max-w-md max-h-[85vh] flex flex-col rounded-3xl shadow-2xl border border-white/40 overflow-hidden" style={{ background: "rgba(255,255,255,0.88)", backdropFilter: "blur(24px) saturate(150%)" }} onClick={(e) => e.stopPropagation()} dir="rtl">
+            <div className="flex items-center justify-between p-4 border-b border-black/10">
+              <div className="flex items-center gap-2">
+                <ListOrdered className="w-5 h-5 text-violet-700" />
+                <div>
+                  <h3 className="font-amiri font-bold text-lg text-foreground">ترتيب الصفحات</h3>
+                  <p className="text-[11px] text-muted-foreground">رتّب صفحات المصحف بالأسهم ثم احفظ</p>
+                </div>
+              </div>
+              <button onClick={() => setArrangeOpen(false)} className="w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center" aria-label="إغلاق"><X className="w-4 h-4" /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {draftOrder.map((pageIdx, pos) => {
+                const page = pages[pageIdx];
+                if (!page) return null;
+                return (
+                  <div key={pageIdx} className="flex items-center gap-3 p-2 rounded-xl bg-white/70 border border-black/5">
+                    <span className="w-7 h-7 rounded-full bg-violet-500/15 text-violet-700 text-xs font-bold flex items-center justify-center shrink-0">{pos + 1}</span>
+                    <img src={page.src} alt={page.name} className="w-10 h-14 object-cover rounded-md border border-black/10 shrink-0" loading="lazy" />
+                    <span className="flex-1 min-w-0 font-amiri font-bold text-sm text-foreground truncate">{getPageDisplayName(page)}</span>
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <button disabled={pos === 0} onClick={() => setDraftOrder(o => { const n = [...o]; [n[pos - 1], n[pos]] = [n[pos], n[pos - 1]]; return n; })} className="w-7 h-6 rounded bg-foreground/10 flex items-center justify-center disabled:opacity-30 active:scale-90" aria-label="أعلى"><ChevronUp className="w-4 h-4" /></button>
+                      <button disabled={pos === draftOrder.length - 1} onClick={() => setDraftOrder(o => { const n = [...o]; [n[pos + 1], n[pos]] = [n[pos], n[pos + 1]]; return n; })} className="w-7 h-6 rounded bg-foreground/10 flex items-center justify-center disabled:opacity-30 active:scale-90" aria-label="أسفل"><ChevronDown className="w-4 h-4" /></button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-3 border-t border-black/10 flex gap-2">
+              <button onClick={() => { localStorage.removeItem(PAGE_ORDER_KEY); setCustomPageOrder([]); setArrangeOpen(false); setCurrentPage(0); }} className="px-3 py-2.5 rounded-xl bg-foreground/10 hover:bg-foreground/15 text-foreground font-bold text-xs flex items-center gap-1 active:scale-95"><RotateCcw className="w-3.5 h-3.5" /> الترتيب الأصلي</button>
+              <button onClick={() => { localStorage.setItem(PAGE_ORDER_KEY, JSON.stringify(draftOrder)); setCustomPageOrder(draftOrder); setArrangeOpen(false); setCurrentPage(0); }} className="flex-1 px-3 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 text-white font-bold text-sm flex items-center justify-center gap-1 active:scale-95"><Check className="w-4 h-4" /> حفظ الترتيب</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {controlsOpen && (
         <div className="absolute inset-x-0 bottom-0 z-40 animate-fade-in" onClick={(e) => e.stopPropagation()}>
@@ -1236,6 +1335,22 @@ export default function QuranReader() {
                 <input type="checkbox" checked={continuousPlay} onChange={(e) => setContinuousPlay(e.target.checked)} className="accent-accent w-4 h-4" />
                 تشغيل متواصل
               </label>
+
+              <div className="flex items-center gap-2 text-sm font-bold text-foreground/80 mt-2">
+                <span>🔁 تكرار الآية:</span>
+                <select
+                  value={repeatCount}
+                  onChange={(e) => setRepeatCount(Number(e.target.value))}
+                  className="bg-white border border-border rounded-md px-2 py-1 text-sm outline-none cursor-pointer"
+                >
+                  <option value={0}>بدون</option>
+                  <option value={1}>مرة</option>
+                  <option value={2}>مرتين</option>
+                  <option value={3}>3 مرات</option>
+                  <option value={5}>5 مرات</option>
+                  <option value={999}>مستمر</option>
+                </select>
+              </div>
             </div>
 
             {currentPageSurahs.length > 1 && (
@@ -1283,99 +1398,6 @@ export default function QuranReader() {
         </div>
       )}
 
-      {activeMenuAyah && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setActiveMenuAyah(null)}
-        >
-          <div 
-            className="w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-white/40 text-center space-y-4 animate-scale-up"
-            style={{
-              background: "rgba(255, 255, 255, 0.8)",
-              backdropFilter: "blur(20px) saturate(160%)",
-              WebkitBackdropFilter: "blur(20px) saturate(160%)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="space-y-1">
-              <h3 className="font-amiri font-bold text-2xl text-slate-800">
-                سورة {activeMenuAyah.surah.name}
-              </h3>
-              <p className="text-sm font-bold text-slate-500">
-                {activeMenuAyah.label ? activeMenuAyah.label : `الآية رقم ${activeMenuAyah.ayah}`}
-              </p>
-            </div>
-
-            <div className="w-16 h-1 bg-gradient-to-r from-amber-400 to-sky-400 mx-auto rounded-full my-2" />
-
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => {
-                  const sIdx = currentPageSurahs.findIndex(s => s.number === activeMenuAyah.surah.number);
-                  if (sIdx !== -1) setSelectedSurahIdx(sIdx);
-                  setSelectedAyah(activeMenuAyah.ayah);
-                  currentRepeatRef.current = 0;
-                  bothPhaseRef.current = "teacher";
-                  setPlayMode("teacher");
-                  playAyah(activeMenuAyah.surah, activeMenuAyah.ayah, "teacher", activeMenuAyah.boxIndex);
-                  setActiveMenuAyah(null);
-                }}
-                className="w-full py-3 px-4 rounded-2xl bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/50 text-amber-900 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-sm"
-              >
-                🎙️ تلاوة المعلم
-              </button>
-
-              <button
-                onClick={() => {
-                  const sIdx = currentPageSurahs.findIndex(s => s.number === activeMenuAyah.surah.number);
-                  if (sIdx !== -1) setSelectedSurahIdx(sIdx);
-                  setSelectedAyah(activeMenuAyah.ayah);
-                  currentRepeatRef.current = 0;
-                  bothPhaseRef.current = "teacher";
-                  setPlayMode("kids");
-                  playAyah(activeMenuAyah.surah, activeMenuAyah.ayah, "kids", activeMenuAyah.boxIndex);
-                  setActiveMenuAyah(null);
-                }}
-                className="w-full py-3 px-4 rounded-2xl bg-sky-400/20 hover:bg-sky-400/30 border border-sky-400/50 text-sky-900 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-sm"
-              >
-                👦 تكرار الأطفال
-              </button>
-
-              <button
-                onClick={() => {
-                  const sIdx = currentPageSurahs.findIndex(s => s.number === activeMenuAyah.surah.number);
-                  if (sIdx !== -1) setSelectedSurahIdx(sIdx);
-                  setSelectedAyah(activeMenuAyah.ayah);
-                  currentRepeatRef.current = 0;
-                  bothPhaseRef.current = "teacher";
-                  setPlayMode("both");
-                  playAyah(activeMenuAyah.surah, activeMenuAyah.ayah, "teacher", activeMenuAyah.boxIndex);
-                  setActiveMenuAyah(null);
-                }}
-                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-400/30 to-sky-400/30 hover:from-amber-400/40 hover:to-sky-400/40 border border-amber-400/40 text-slate-800 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-md"
-              >
-                🎧 تصحيح (المعلم ثم الطفل)
-              </button>
-
-              <div className="flex gap-2 mt-2 pt-2 border-t border-slate-200/50">
-                <Link
-                  to="/timings"
-                  onClick={() => setActiveMenuAyah(null)}
-                  className="flex-1 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold text-xs transition-all text-center flex items-center justify-center gap-1 active:scale-95"
-                >
-                  ⚙️ معايرة الموضع
-                </Link>
-                <button
-                  onClick={() => setActiveMenuAyah(null)}
-                  className="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition-all active:scale-95"
-                >
-                  إغلاق
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

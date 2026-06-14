@@ -60,7 +60,7 @@ const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
         setError(false);
         setIsPlaying(false);
         initialTimeApplied.current = false;
-        
+
         let finalSrc = audioSrc;
         if (isTauri()) {
           const offline = await checkOfflineStatus(surahNumber);
@@ -71,13 +71,19 @@ const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
             }
           }
         }
-        
+
         if (active && audioRef.current) {
           audioRef.current.src = finalSrc;
           audioRef.current.load();
+          // Auto-play after loading
+          setTimeout(() => {
+            if (active && audioRef.current) {
+              audioRef.current.play().catch(() => {});
+            }
+          }, 500);
         }
       };
-      
+
       getSrc();
       return () => {
         active = false;
