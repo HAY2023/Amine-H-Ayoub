@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Pause, Play, Plus, RotateCcw, Save, Trash2, ZoomIn, ZoomOut, Link2, Copy, ListOrdered, ChevronUp, ChevronDown, X, Check, Square } from "lucide-react";
+import { ArrowRight, Pause, Play, Plus, RotateCcw, Save, Trash2, ZoomIn, ZoomOut, Link2, Copy, ListOrdered, ChevronUp, ChevronDown, X, Check, Square, Upload } from "lucide-react";
 import { AyahBox, AYAH_COORDINATES, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings, AudioSegment } from "@/data/ayahTimings";
 import { getPageSurahRegions, savePageSurahRegions, SurahRegion } from "@/data/surahRegions";
+import { CustomPage, getCustomPages, addCustomPage, removeCustomPage, savePageImage, getAllPageImages, deletePageImage } from "@/data/customPages";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
@@ -26,7 +27,9 @@ const fmtTime = (s: number) => {
 };
 
 const AyahCalibration = () => {
-  const pageSources = useMemo(() => getAllPageSources(), []);
+  const [customPages, setCustomPages] = useState<CustomPage[]>(() => getCustomPages());
+  const [customImages, setCustomImages] = useState<Record<string, string>>({});
+  const pageSources = useMemo(() => [...getAllPageSources(), ...customPages.map(p => p.src)], [customPages]);
   const [pageSrc, setPageSrc] = useState(pageSources[0]);
   const [boxes, setBoxes] = useState<AyahBox[]>(() => getPageAyahBoxes(pageSources[0]));
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -41,6 +44,12 @@ const AyahCalibration = () => {
   const [regions, setRegions] = useState<SurahRegion[]>(() => getPageSurahRegions(pageSources[0]));
   const [selectedRegion, setSelectedRegion] = useState(0);
   const [showRegions, setShowRegions] = useState(false);
+  // إضافة سورة جديدة برفع صورة
+  const [newSurahOpen, setNewSurahOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newNumber, setNewNumber] = useState<string>("");
+  const [newFile, setNewFile] = useState<File | null>(null);
+  const [creating, setCreating] = useState(false);
   // ترتيب الصفحات (يُحفظ بمعرّف المسار src ويقرؤه القارئ)
   const PAGE_ORDER_KEY = "mushaf:pageOrder:v1";
   const [arrangeOpen, setArrangeOpen] = useState(false);
@@ -67,6 +76,19 @@ const AyahCalibration = () => {
       setSegmentsList(all[selected.surah]?.segments || []);
     }
   }, [selected]);
+
+  // تحميل صور الصفحات المرفوعة من IndexedDB
+  useEffect(() => {
+    getAllPageImages().then(setCustomImages).catch(() => {});
+  }, []);
+
+  // مصدر الصورة الفعلي (الصفحات المرفوعة تُحلّ من IndexedDB)
+  const imgSrcFor = (src: string) => customImages[src] || src;
+  // اسم معروض للصفحة (اسم السورة للصفحات المرفوعة)
+  const pageLabel = (src: string) => {
+    const cp = customPages.find(p => p.src === src);
+    return cp ? `🟢 ${cp.name} (${cp.surah})` : src.replace("/pages/", "");
+  };
 
   const saveHistory = useCallback((currentBoxes: AyahBox[]) => {
     setHistory(prev => {
@@ -269,6 +291,57 @@ const AyahCalibration = () => {
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp, { once: true });
+  };
+
+  // ─────────── إضافة سورة جديدة برفع صورة ───────────
+  const readFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+
+  const createSurahPage = async () => {
+    const num = parseInt(newNumber, 10);
+    if (!newFile) { toast({ title: "⚠️ اختر صورة الصفحة أولاً", variant: "destructive" }); return; }
+    if (!newName.trim()) { toast({ title: "⚠️ اكتب اسم السورة", variant: "destructive" }); return; }
+    if (!num || num < 1) { toast({ title: "⚠️ اكتب رقم السورة", variant: "destructive" }); return; }
+    setCreating(true);
+    try {
+      const dataUrl = await readFileAsDataUrl(newFile);
+      const uniqueSrc = `custom:${num}:${Date.now()}`;
+      await savePageImage(uniqueSrc, dataUrl);
+      setCustomPages(addCustomPage({ src: uniqueSrc, name: newName.trim(), surah: num }));
+      setCustomImages(prev => ({ ...prev, [uniqueSrc]: dataUrl }));
+      // مربع أولي يحمل رقم السورة واسمها (تُحفظ المعلومات مباشرةً)
+      const seed: AyahBox = { surah: num, ayah: 1, label: newName.trim(), x: 140, y: 300, width: 980, height: 120 };
+      setPageSrc(uniqueSrc);
+      setBoxes([seed]);
+      setRegions(getPageSurahRegions(uniqueSrc));
+      setSelectedIndex(0); setSelectedRegion(0); setHistory([]);
+      await savePageAyahBoxes(uniqueSrc, [seed]);
+      setNewSurahOpen(false); setNewName(""); setNewNumber(""); setNewFile(null);
+      toast({ title: "✅ أُضيفت السورة", description: `${newName.trim()} (${num}) — ارسم الآيات أو مناطق السور ثم احفظ.` });
+    } catch (e) {
+      toast({ title: "❌ فشل رفع الصورة", description: e instanceof Error ? e.message : "خطأ", variant: "destructive" });
+    } finally { setCreating(false); }
+  };
+
+  const deleteCustomPage = async (src: string) => {
+    setCustomPages(removeCustomPage(src));
+    await deletePageImage(src).catch(() => {});
+    setCustomImages(prev => { const n = { ...prev }; delete n[src]; return n; });
+    await resetPageAyahBoxes(src);
+    loadPage(getAllPageSources()[0]);
+    toast({ title: "🗑️ حُذفت السورة المخصّصة" });
+  };
+
+  // تعديل رقم السورة يغيّر رقم كل مربعات نفس السورة على الصفحة
+  const setSurahForGroup = (newSurah: number) => {
+    if (!selected) return;
+    const old = selected.surah;
+    setBoxes(cur => cur.map(b => b.surah === old ? { ...b, surah: newSurah } : b));
   };
 
   const dragStart = (index: number, e: React.PointerEvent<HTMLButtonElement>) => {
@@ -678,7 +751,7 @@ const AyahCalibration = () => {
           {/* Canvas */}
           <div className="max-h-[80vh] overflow-auto rounded-2xl bg-slate-800/60 backdrop-blur border border-slate-700 p-2 touch-none">
             <div ref={canvasRef} className="relative mx-auto origin-top" style={{ width: PAGE_IMAGE_SIZE.width * scale, height: PAGE_IMAGE_SIZE.height * scale }}>
-              <img src={pageSrc} alt="صفحة المصحف" className="absolute inset-0 h-full w-full select-none object-fill" draggable={false} />
+              <img src={imgSrcFor(pageSrc)} alt="صفحة المصحف" className="absolute inset-0 h-full w-full select-none object-fill" draggable={false} />
               {boxes.map((box, index) => {
                 const isSelected = index === selectedIndex;
                 const bound = box.audioStart !== undefined && box.audioEnd !== undefined;
@@ -735,7 +808,7 @@ const AyahCalibration = () => {
             <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3 space-y-2">
               <label className="block text-xs font-bold text-slate-400 mb-1">الصفحة</label>
               <select value={pageSrc} onChange={(e) => loadPage(e.target.value)} className="w-full rounded-lg bg-slate-700 border-slate-600 p-2 text-sm text-white">
-                {pageSources.map(src => <option key={src} value={src}>{src.replace("/pages/", "")}</option>)}
+                {pageSources.map(src => <option key={src} value={src}>{pageLabel(src)}</option>)}
               </select>
               <button
                 onClick={openArrange}
@@ -744,6 +817,48 @@ const AyahCalibration = () => {
               >
                 <ListOrdered className="h-3.5 w-3.5" /> ترتيب الصفحات في القارئ
               </button>
+              <button
+                onClick={() => setNewSurahOpen(v => !v)}
+                className="w-full p-2 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-transform"
+                title="رفع صورة صفحة وإنشاء تظليل لسورة جديدة"
+              >
+                <Upload className="h-3.5 w-3.5" /> سورة جديدة (رفع صورة)
+              </button>
+              {customPages.some(p => p.src === pageSrc) && (
+                <button
+                  onClick={() => deleteCustomPage(pageSrc)}
+                  className="w-full p-2 rounded-lg bg-red-600/20 border border-red-500/40 text-red-300 font-bold text-xs flex items-center justify-center gap-1 active:scale-95"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> حذف هذه السورة المرفوعة
+                </button>
+              )}
+              {newSurahOpen && (
+                <div className="rounded-lg bg-slate-900/60 border border-emerald-500/30 p-2 space-y-2">
+                  <p className="text-[10px] text-slate-400 leading-relaxed">ارفع صورة الصفحة، واكتب اسم السورة ورقمها — ثم ارسم الآيات أو مناطق السور.</p>
+                  <input
+                    type="file" accept="image/*"
+                    onChange={(e) => setNewFile(e.target.files?.[0] || null)}
+                    className="w-full text-[11px] text-slate-300 file:mr-2 file:rounded-md file:border-0 file:bg-emerald-600 file:text-white file:px-2 file:py-1 file:text-xs"
+                  />
+                  <input
+                    value={newName} onChange={(e) => setNewName(e.target.value)}
+                    placeholder="اسم السورة (مثل: النبأ)"
+                    className="w-full rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-emerald-500"
+                  />
+                  <input
+                    type="number" min={1} max={114} value={newNumber}
+                    onChange={(e) => setNewNumber(e.target.value)}
+                    placeholder="رقم السورة (مثل: 78)"
+                    className="w-full rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-emerald-500"
+                  />
+                  <button
+                    onClick={createSurahPage} disabled={creating}
+                    className="w-full p-2 rounded-md bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1 active:scale-95 disabled:opacity-50"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> {creating ? "جارٍ الإنشاء..." : "إنشاء تظليل للسورة"}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* مناطق السور (تعريف فقط، بلا نقر) */}
@@ -816,11 +931,11 @@ const AyahCalibration = () => {
               {selected && (
                 <div className="grid grid-cols-2 gap-2">
                   <label className="block">
-                    <span className="text-[10px] text-slate-500">رقم السورة</span>
+                    <span className="text-[10px] text-slate-500">رقم السورة (يغيّر كل آيات السورة)</span>
                     <input
                       type="number" min={1} max={114}
                       value={selected.surah}
-                      onChange={(e) => updateSelected({ surah: parseInt(e.target.value) || 1 })}
+                      onChange={(e) => setSurahForGroup(parseInt(e.target.value) || 1)}
                       className="w-full rounded-lg bg-slate-700 border-slate-600 p-1.5 text-sm text-white"
                     />
                   </label>
@@ -1089,8 +1204,8 @@ const AyahCalibration = () => {
               {draftSrcOrder.map((src, pos) => (
                 <div key={src} className="flex items-center gap-3 p-2 rounded-xl bg-slate-700/60 border border-slate-600/50">
                   <span className="w-7 h-7 rounded-full bg-violet-500/25 text-violet-300 text-xs font-bold flex items-center justify-center shrink-0">{pos + 1}</span>
-                  <img src={src} alt={src} className="w-10 h-14 object-cover rounded-md border border-slate-600 shrink-0" loading="lazy" />
-                  <span className="flex-1 min-w-0 font-bold text-sm text-slate-200 truncate">{src.replace("/pages/", "")}</span>
+                  <img src={imgSrcFor(src)} alt={src} className="w-10 h-14 object-cover rounded-md border border-slate-600 shrink-0" loading="lazy" />
+                  <span className="flex-1 min-w-0 font-bold text-sm text-slate-200 truncate">{pageLabel(src)}</span>
                   <div className="flex flex-col gap-1 shrink-0">
                     <button disabled={pos === 0} onClick={() => setDraftSrcOrder(o => { const n = [...o]; [n[pos - 1], n[pos]] = [n[pos], n[pos - 1]]; return n; })} className="w-7 h-6 rounded bg-slate-600 text-slate-200 flex items-center justify-center disabled:opacity-30 active:scale-90" aria-label="أعلى"><ChevronUp className="w-4 h-4" /></button>
                     <button disabled={pos === draftSrcOrder.length - 1} onClick={() => setDraftSrcOrder(o => { const n = [...o]; [n[pos + 1], n[pos]] = [n[pos], n[pos + 1]]; return n; })} className="w-7 h-6 rounded bg-slate-600 text-slate-200 flex items-center justify-center disabled:opacity-30 active:scale-90" aria-label="أسفل"><ChevronDown className="w-4 h-4" /></button>
