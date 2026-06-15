@@ -263,6 +263,17 @@ async def split_url(req: UrlRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/")
+def root():
+    return {
+        "service": "quran-audio-segmentation",
+        "version": "2.1",
+        "status": "ok",
+        "note": "هذه واجهة برمجية (API) وليست صفحة ويب — استخدمها من الموقع.",
+        "endpoints": ["/health", "POST /split (multipart)", "POST /split-url (json)"],
+    }
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "quran-audio-segmentation", "version": "2.1"}

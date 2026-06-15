@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Pause, Play, Plus, RotateCcw, Save, Trash2, ZoomIn, ZoomOut, Link2, Copy, ListOrdered, ChevronUp, ChevronDown, X, Check } from "lucide-react";
+import { ArrowRight, Pause, Play, Plus, RotateCcw, Save, Trash2, ZoomIn, ZoomOut, Link2, Copy, ListOrdered, ChevronUp, ChevronDown, X, Check, Square } from "lucide-react";
 import { AyahBox, AYAH_COORDINATES, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings, AudioSegment } from "@/data/ayahTimings";
+import { getPageSurahRegions, savePageSurahRegions, SurahRegion } from "@/data/surahRegions";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
@@ -36,6 +37,10 @@ const AyahCalibration = () => {
   const [duration, setDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [segmentsList, setSegmentsList] = useState<AudioSegment[]>([]);
+  // مناطق السور (تعريف فقط، بلا نقر) لكل صفحة
+  const [regions, setRegions] = useState<SurahRegion[]>(() => getPageSurahRegions(pageSources[0]));
+  const [selectedRegion, setSelectedRegion] = useState(0);
+  const [showRegions, setShowRegions] = useState(false);
   // ترتيب الصفحات (يُحفظ بمعرّف المسار src ويقرؤه القارئ)
   const PAGE_ORDER_KEY = "mushaf:pageOrder:v1";
   const [arrangeOpen, setArrangeOpen] = useState(false);
@@ -86,6 +91,8 @@ const AyahCalibration = () => {
   const loadPage = (src: string) => {
     setPageSrc(src);
     setBoxes(getPageAyahBoxes(src));
+    setRegions(getPageSurahRegions(src));
+    setSelectedRegion(0);
     setHistory([]);
     setSelectedIndex(0);
     stopAudio();
@@ -201,6 +208,67 @@ const AyahCalibration = () => {
         return [...current, newBox];
       }
     });
+  };
+
+  // ─────────── مناطق السور (تعريف فقط) ───────────
+  const updateRegion = (patch: Partial<SurahRegion>) =>
+    setRegions(cur => cur.map((r, i) => i === selectedRegion ? { ...r, ...patch } : r));
+
+  const addRegion = () => {
+    const r: SurahRegion = { name: "", x: 180, y: 220, width: 900, height: 320 };
+    setRegions(cur => { const next = [...cur, r]; setSelectedRegion(next.length - 1); return next; });
+    setShowRegions(true);
+  };
+
+  const deleteRegion = (i: number) => {
+    setRegions(cur => cur.filter((_, idx) => idx !== i));
+    setSelectedRegion(s => Math.max(0, s - (i <= s ? 1 : 0)));
+  };
+
+  const regionMove = (dx: number, dy: number) => {
+    const r = regions[selectedRegion]; if (!r) return;
+    updateRegion({
+      x: clamp(r.x + dx, 0, PAGE_IMAGE_SIZE.width - r.width),
+      y: clamp(r.y + dy, 0, PAGE_IMAGE_SIZE.height - r.height),
+    });
+  };
+
+  const regionResize = (dw: number, dh: number) => {
+    const r = regions[selectedRegion]; if (!r) return;
+    updateRegion({
+      width: clamp(r.width + dw, 40, PAGE_IMAGE_SIZE.width - r.x),
+      height: clamp(r.height + dh, 30, PAGE_IMAGE_SIZE.height - r.y),
+    });
+  };
+
+  const saveRegions = async () => {
+    await savePageSurahRegions(pageSrc, regions);
+    toast({ title: "✅ حُفظت مناطق السور", description: `${regions.length} منطقة على ${pageSrc.replace("/pages/", "")}` });
+  };
+
+  const regionDragStart = (index: number, e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setSelectedRegion(index);
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
+    if (!canvasRect) return;
+    const startX = e.clientX, startY = e.clientY;
+    const startR = regions[index];
+    const onMove = (event: PointerEvent) => {
+      const ratioX = PAGE_IMAGE_SIZE.width / canvasRect.width;
+      const ratioY = PAGE_IMAGE_SIZE.height / canvasRect.height;
+      setRegions(cur => cur.map((r, i) => i === index ? {
+        ...r,
+        x: clamp(startR.x + (event.clientX - startX) * ratioX, 0, PAGE_IMAGE_SIZE.width - startR.width),
+        y: clamp(startR.y + (event.clientY - startY) * ratioY, 0, PAGE_IMAGE_SIZE.height - startR.height),
+      } : r));
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
   };
 
   const dragStart = (index: number, e: React.PointerEvent<HTMLButtonElement>) => {
@@ -636,6 +704,28 @@ const AyahCalibration = () => {
                   </button>
                 );
               })}
+              {/* طبقة مناطق السور (تعريف فقط) */}
+              {showRegions && regions.map((r, index) => {
+                const isSel = index === selectedRegion;
+                return (
+                  <div
+                    key={`region-${index}`}
+                    onPointerDown={(e) => regionDragStart(index, e)}
+                    className="absolute rounded-lg border-2 touch-none cursor-move"
+                    style={{
+                      left: r.x * scale, top: r.y * scale,
+                      width: r.width * scale, height: r.height * scale,
+                      background: isSel ? "rgba(34,197,94,0.28)" : "rgba(34,197,94,0.12)",
+                      borderColor: isSel ? "rgba(34,197,94,0.95)" : "rgba(34,197,94,0.6)",
+                      borderStyle: "dashed",
+                    }}
+                  >
+                    <span className="absolute right-1 top-1 rounded-full bg-emerald-900/85 px-2 py-0.5 text-[11px] font-bold text-emerald-100">
+                      🟩 {r.name || "سورة بلا اسم"}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -654,6 +744,57 @@ const AyahCalibration = () => {
               >
                 <ListOrdered className="h-3.5 w-3.5" /> ترتيب الصفحات في القارئ
               </button>
+            </div>
+
+            {/* مناطق السور (تعريف فقط، بلا نقر) */}
+            <div className="rounded-xl bg-emerald-950/30 border border-emerald-500/30 p-3 space-y-2">
+              <button onClick={() => setShowRegions(v => !v)} className="w-full flex items-center justify-between text-emerald-300 font-bold text-sm">
+                <span className="flex items-center gap-1.5"><Square className="h-4 w-4" /> مناطق السور ({regions.length})</span>
+                <span className="text-xs">{showRegions ? "▲ إخفاء" : "▼ عرض"}</span>
+              </button>
+              {showRegions && (
+                <div className="space-y-2">
+                  <button onClick={addRegion} className="w-full p-2 rounded-lg bg-emerald-600/30 border border-emerald-500/50 text-emerald-200 font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-transform">
+                    <Plus className="h-3.5 w-3.5" /> أضف منطقة سورة
+                  </button>
+                  {regions.length === 0 && (
+                    <p className="text-[11px] text-slate-500 text-center leading-relaxed">لا مناطق بعد. اضغط «أضف منطقة»، اكتب اسم السورة، وحرّك المستطيل الأخضر فوق السورة على الصفحة.</p>
+                  )}
+                  {regions.map((r, i) => (
+                    <div key={i} className={`rounded-lg p-2 border ${i === selectedRegion ? "border-emerald-400 bg-emerald-900/30" : "border-slate-700 bg-slate-800/60"}`}>
+                      <div className="flex items-center gap-1">
+                        <input
+                          value={r.name}
+                          onChange={(e) => { setSelectedRegion(i); updateRegion({ name: e.target.value }); }}
+                          onFocus={() => setSelectedRegion(i)}
+                          placeholder="اسم السورة (مثل: النبأ)"
+                          className="flex-1 rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-emerald-500"
+                        />
+                        <button onClick={() => deleteRegion(i)} className="p-1.5 rounded-md bg-red-600/30 text-red-300 active:scale-95" title="حذف المنطقة"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                      {i === selectedRegion && (
+                        <div className="mt-2 space-y-1">
+                          <div className="grid grid-cols-4 gap-1 text-sm">
+                            <button onClick={() => regionMove(-step, 0)} className="p-1.5 rounded bg-slate-700 text-white active:scale-95" title="يسار">←</button>
+                            <button onClick={() => regionMove(step, 0)} className="p-1.5 rounded bg-slate-700 text-white active:scale-95" title="يمين">→</button>
+                            <button onClick={() => regionMove(0, -step)} className="p-1.5 rounded bg-slate-700 text-white active:scale-95" title="أعلى">↑</button>
+                            <button onClick={() => regionMove(0, step)} className="p-1.5 rounded bg-slate-700 text-white active:scale-95" title="أسفل">↓</button>
+                            <button onClick={() => regionResize(-step, 0)} className="p-1.5 rounded bg-slate-600 text-white active:scale-95" title="أضيق">◀▶−</button>
+                            <button onClick={() => regionResize(step, 0)} className="p-1.5 rounded bg-slate-600 text-white active:scale-95" title="أعرض">◀▶+</button>
+                            <button onClick={() => regionResize(0, -step)} className="p-1.5 rounded bg-slate-600 text-white active:scale-95" title="أقصر">▲▼−</button>
+                            <button onClick={() => regionResize(0, step)} className="p-1.5 rounded bg-slate-600 text-white active:scale-95" title="أطول">▲▼+</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {regions.length > 0 && (
+                    <button onClick={saveRegions} className="w-full p-2 rounded-lg bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-transform">
+                      <Save className="h-3.5 w-3.5" /> حفظ مناطق السور
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Ayah selector + editing */}

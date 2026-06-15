@@ -85,6 +85,14 @@ export const AYAH_COORDINATES: Record<string, AyahBox[]> = {
   ],
 };
 
+// صفحات المصحف الإضافية (جزء عمّ: النبأ → العاديات) — تظهر في المعايرة لتعريف مناطق السور.
+// ضع ملفات الصور في public/pages/ بنفس الأسماء (مثل 582.jpg، 586.jpg ...).
+const EXTRA_PAGES = [582, 586, 587, 588, 589, 590, 591, 592, 593, 594, 595, 596, 597, 598, 599];
+for (const p of EXTRA_PAGES) {
+  const key = `/pages/${p}.jpg`;
+  if (!(key in AYAH_COORDINATES)) AYAH_COORDINATES[key] = [];
+}
+
 const cloneBoxes = (boxes: AyahBox[]) => boxes.map((box) => ({ ...box }));
 
 
