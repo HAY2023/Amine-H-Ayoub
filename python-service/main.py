@@ -17,7 +17,7 @@ import os
 import time
 import requests
 
-app = FastAPI(title="Quran Audio Segmentation", version="2.0")
+app = FastAPI(title="Quran Audio Segmentation", version="2.1")
 
 app.add_middleware(
     CORSMiddleware,
@@ -105,9 +105,15 @@ def _flags_to_regions(flags, frame_dur, min_speech=0.20, max_silence=0.15):
 # ─────────────────────── Pitch & classification ───────────────────────
 
 def _median_pitch(seg: np.ndarray, sr: int) -> float:
-    """طبقة الصوت المتوسطة (F0) للمقطع — 0 إن لم تُكشف نغمة."""
+    """طبقة الصوت المتوسطة (F0) للمقطع — 0 إن لم تُكشف نغمة.
+    تُحلَّل نافذة ~1.5ث من منتصف المقطع فقط لتسريع pyin بشكل كبير
+    (تكفي تماماً لتقدير طبقة الصوت/المتحدث)."""
     if len(seg) < int(sr * 0.05):
         return 0.0
+    win = int(sr * 1.5)
+    if len(seg) > win:
+        mid = len(seg) // 2
+        seg = seg[mid - win // 2: mid + win // 2]
     try:
         f0, voiced, _ = librosa.pyin(
             seg, fmin=80, fmax=500, sr=sr, frame_length=1024
@@ -147,6 +153,18 @@ def segment_audio(y: np.ndarray, sr: int, leading: int = 1, surah_label: str = "
     pitches = [_median_pitch(y[int(s * sr):int(e * sr)], sr) for s, e in regions]
     thr = _classify(pitches)
     speakers = ["teacher" if (p <= 0 or p < thr) else "kids" for p in pitches]
+
+    # دمج المقاطع المتجاورة لنفس المتحدث المفصولة بصمت قصير (نَفَس داخل الآية).
+    # آمن: لا يدمج معلم↔طفل أبداً لأنه يشترط تطابق المتحدث — فيُزيل التقسيم الزائد.
+    MERGE_GAP = 0.5
+    m_regions, m_speakers = [], []
+    for (s, e), spk in zip(regions, speakers):
+        if m_regions and m_speakers[-1] == spk and s - m_regions[-1][1] < MERGE_GAP:
+            m_regions[-1] = (m_regions[-1][0], e)
+        else:
+            m_regions.append((s, e))
+            m_speakers.append(spk)
+    regions, speakers = m_regions, m_speakers
 
     # كشف النمط: متتابع (معلم ثم طفل) أم متناوب
     half = len(regions) // 2
@@ -247,7 +265,7 @@ async def split_url(req: UrlRequest):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "quran-audio-segmentation", "version": "2.0"}
+    return {"status": "ok", "service": "quran-audio-segmentation", "version": "2.1"}
 
 
 if __name__ == "__main__":

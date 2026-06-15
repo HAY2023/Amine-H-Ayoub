@@ -1453,15 +1453,14 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
     const tC = segments.filter(s => s.speaker === "teacher").length;
     const kC = segments.filter(s => s.speaker === "kids").length;
     const durs = segments.map(s => s.end - s.start);
-    const avg = durs.reduce((a, b) => a + b, 0) / durs.length;
-    const exp = (AYAH_COUNTS[surahNum] || 0) * 2;
-    const acc = exp > 0 ? Math.round((Math.min(segments.length, exp) / exp) * 100) : 0;
-    const avgSNR = qualities.length > 0 ? qualities.reduce((s, q) => s + q.snr, 0) / qualities.length : 0;
+    const total = durs.reduce((a, b) => a + b, 0);
+    const avg = total / durs.length;
+    // مقاييس الجودة تُحسب فقط في التقسيم داخل المتصفّح (qualities)؛ التقسيم بالخدمة لا يُرجعها.
     const avgBnd = qualities.length > 0 ? qualities.reduce((s, q) => s + q.boundaryScore, 0) / qualities.length : 0;
     const pValid = qualities.filter(q => q.pitchValid).length;
     const eClean = qualities.filter(q => q.edgeClean).length;
-    return { tC, kC, avg, min: Math.min(...durs), max: Math.max(...durs), exp, acc, avgSNR, avgBnd, pValid, eClean };
-  }, [segments, surahNum, qualities]);
+    return { tC, kC, avg, total, min: Math.min(...durs), max: Math.max(...durs), avgBnd, pValid, eClean };
+  }, [segments, qualities]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white pb-8" dir="rtl">
@@ -1691,29 +1690,25 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
               <div className="bg-slate-700/50 rounded-xl p-3 text-center">
                 <div className="text-2xl font-bold text-white">{segments.length}</div>
                 <div className="text-slate-400 mt-0.5">مقطع</div>
-                <div className="text-slate-500 text-[10px]">متوقع: {stats.exp}</div>
               </div>
-              <div className="bg-slate-700/50 rounded-xl p-3 text-center">
-                <div className={`text-2xl font-bold ${stats.acc >= 90 ? "text-emerald-400" : stats.acc >= 70 ? "text-amber-400" : "text-red-400"}`}>{stats.acc}%</div>
-                <div className="text-slate-400 mt-0.5">دقة</div>
+              <div className="bg-amber-950/20 border border-amber-500/10 rounded-xl p-3 text-center">
+                <div className="text-2xl font-bold text-amber-400">{stats.tC}</div>
+                <div className="text-slate-400 mt-0.5">🎙️ معلم</div>
               </div>
-              <div className="bg-slate-700/50 rounded-xl p-3 text-center">
-                <div className={`text-2xl font-bold ${stats.avgSNR >= 15 ? "text-emerald-400" : stats.avgSNR >= 8 ? "text-amber-400" : "text-red-400"}`}>{stats.avgSNR.toFixed(0)}</div>
-                <div className="text-slate-400 mt-0.5">SNR</div>
+              <div className="bg-sky-950/20 border border-sky-500/10 rounded-xl p-3 text-center">
+                <div className="text-2xl font-bold text-sky-400">{stats.kC}</div>
+                <div className="text-slate-400 mt-0.5">👦 طفل</div>
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-2 text-xs">
-              <div className="bg-amber-950/20 border border-amber-500/10 rounded-xl p-2.5 text-center">
-                <div className="text-xl font-bold text-amber-400">{stats.tC}</div><div className="text-slate-500">🎙️ معلم</div>
-              </div>
-              <div className="bg-sky-950/20 border border-sky-500/10 rounded-xl p-2.5 text-center">
-                <div className="text-xl font-bold text-sky-400">{stats.kC}</div><div className="text-slate-500">👦 طفل</div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="bg-slate-700/30 rounded-xl p-2.5 text-center">
+                <div className="text-xl font-bold text-violet-400">{stats.avg.toFixed(1)}ث</div><div className="text-slate-500">متوسط المقطع</div>
               </div>
               <div className="bg-slate-700/30 rounded-xl p-2.5 text-center">
-                <div className="text-xl font-bold text-violet-400">{stats.avg.toFixed(1)}ث</div><div className="text-slate-500">متوسط</div>
+                <div className="text-xl font-bold text-fuchsia-400">{stats.min.toFixed(1)}-{stats.max.toFixed(1)}ث</div><div className="text-slate-500">نطاق المدة</div>
               </div>
               <div className="bg-slate-700/30 rounded-xl p-2.5 text-center">
-                <div className="text-xl font-bold text-fuchsia-400">{stats.min.toFixed(1)}-{stats.max.toFixed(1)}</div><div className="text-slate-500">نطاق</div>
+                <div className="text-xl font-bold text-emerald-400">{stats.total.toFixed(0)}ث</div><div className="text-slate-500">إجمالي</div>
               </div>
             </div>
             {qualities.length > 0 && (
