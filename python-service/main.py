@@ -17,7 +17,7 @@ import os
 import time
 import requests
 
-app = FastAPI(title="Quran Audio Segmentation", version="2.1")
+app = FastAPI(title="Quran Audio Segmentation", version="2.2")
 
 app.add_middleware(
     CORSMiddleware,
@@ -203,6 +203,73 @@ def segment_audio(y: np.ndarray, sr: int, leading: int = 1, surah_label: str = "
     return segs
 
 
+# ─────────────────────── Gemini segmentation ───────────────────────
+
+def _gemini_segment(audio_bytes: bytes, surah_label: str = ""):
+    """تقسيم ذكي عبر Gemini (يفهم المعلم/الطفل ويُرجع التوقيت)."""
+    key = os.getenv("GEMINI_API_KEY")
+    if not key:
+        raise ValueError("GEMINI_API_KEY غير مضبوط على الخدمة")
+    import base64
+    import json as _json
+    b64 = base64.b64encode(audio_bytes).decode()
+    prompt = (
+        "هذا تسجيل قرآني (رواية ورش) يكرّر فيه معلمٌ بالغ آيةً ثم يعيدها طفل أو أطفال "
+        "(صوت أعلى طبقةً). قسّم التسجيل إلى مقاطع متتابعة تغطّيه كاملاً. لكل مقطع حدّد: "
+        "start و end بالثواني، و speaker = \"teacher\" للمعلم البالغ أو \"kids\" للطفل، "
+        "و ayah = رقم الآية (0 للبسملة أو الاستعاذة). أعد JSON فقط."
+    )
+    body = {
+        "contents": [{
+            "parts": [
+                {"text": prompt},
+                {"inline_data": {"mime_type": "audio/mpeg", "data": b64}},
+            ]
+        }],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseSchema": {
+                "type": "ARRAY",
+                "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "start": {"type": "NUMBER"},
+                        "end": {"type": "NUMBER"},
+                        "speaker": {"type": "STRING", "enum": ["teacher", "kids"]},
+                        "ayah": {"type": "INTEGER"},
+                    },
+                    "required": ["start", "end", "speaker"],
+                },
+            },
+        },
+    }
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        "gemini-2.5-flash:generateContent?key=" + key
+    )
+    resp = requests.post(url, json=body, timeout=240)
+    resp.raise_for_status()
+    data = resp.json()
+    text = data["candidates"][0]["content"]["parts"][0]["text"]
+    raw = _json.loads(text)
+    segs = []
+    for i, s in enumerate(raw):
+        spk = "kids" if s.get("speaker") == "kids" else "teacher"
+        ayah = int(s.get("ayah") or 0)
+        name = f"آية {ayah}" if ayah >= 1 else "البسملة"
+        segs.append({
+            "id": f"gem-{int(time.time() * 1000)}-{i}",
+            "start": round(float(s.get("start", 0)), 3),
+            "end": round(float(s.get("end", 0)), 3),
+            "speaker": spk,
+            "ayah": ayah,
+            "label": f"{surah_label} - {name} ({'معلم' if spk == 'teacher' else 'طفل'})".strip(" -"),
+        })
+    if not segs:
+        raise ValueError("لم يُرجِع Gemini أي مقاطع")
+    return segs
+
+
 # ─────────────────────── API ───────────────────────
 
 class UrlRequest(BaseModel):
@@ -263,11 +330,37 @@ async def split_url(req: UrlRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/split-gemini")
+async def split_gemini(file: UploadFile = File(...), leading: int = Form(1), surahLabel: str = Form("")):
+    """تقسيم ذكي عبر Gemini لملف مرفوع."""
+    try:
+        t0 = time.time()
+        segs = _gemini_segment(await file.read(), surahLabel)
+        return {"success": True, "segments": segs, "engine": "gemini",
+                "processingTimeMs": int((time.time() - t0) * 1000)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/split-gemini-url")
+async def split_gemini_url(req: UrlRequest):
+    """تقسيم ذكي عبر Gemini لصوت من رابط (السيرفر يجلبه)."""
+    try:
+        t0 = time.time()
+        resp = requests.get(req.audioUrl, timeout=60)
+        resp.raise_for_status()
+        segs = _gemini_segment(resp.content, req.surahLabel or "")
+        return {"success": True, "segments": segs, "engine": "gemini",
+                "processingTimeMs": int((time.time() - t0) * 1000)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/")
 def root():
     return {
         "service": "quran-audio-segmentation",
-        "version": "2.1",
+        "version": "2.2",
         "status": "ok",
         "note": "هذه واجهة برمجية (API) وليست صفحة ويب — استخدمها من الموقع.",
         "endpoints": ["/health", "POST /split (multipart)", "POST /split-url (json)"],
@@ -276,7 +369,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "quran-audio-segmentation", "version": "2.1"}
+    return {"status": "ok", "service": "quran-audio-segmentation", "version": "2.2"}
 
 
 if __name__ == "__main__":

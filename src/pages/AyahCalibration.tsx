@@ -303,26 +303,23 @@ const AyahCalibration = () => {
     });
 
   const createSurahPage = async () => {
-    const num = parseInt(newNumber, 10);
     if (!newFile) { toast({ title: "⚠️ اختر صورة الصفحة أولاً", variant: "destructive" }); return; }
-    if (!newName.trim()) { toast({ title: "⚠️ اكتب اسم السورة", variant: "destructive" }); return; }
-    if (!num || num < 1) { toast({ title: "⚠️ اكتب رقم السورة", variant: "destructive" }); return; }
+    if (!newName.trim()) { toast({ title: "⚠️ اكتب اسم/رقم الصفحة", variant: "destructive" }); return; }
     setCreating(true);
     try {
       const dataUrl = await readFileAsDataUrl(newFile);
-      const uniqueSrc = `custom:${num}:${Date.now()}`;
+      const uniqueSrc = `custom:${Date.now()}`;
       await savePageImage(uniqueSrc, dataUrl);
-      setCustomPages(addCustomPage({ src: uniqueSrc, name: newName.trim(), surah: num }));
+      setCustomPages(addCustomPage({ src: uniqueSrc, name: newName.trim() }));
       setCustomImages(prev => ({ ...prev, [uniqueSrc]: dataUrl }));
-      // مربع أولي يحمل رقم السورة واسمها (تُحفظ المعلومات مباشرةً)
-      const seed: AyahBox = { surah: num, ayah: 1, label: newName.trim(), x: 140, y: 300, width: 980, height: 120 };
+      // الصفحة تبدأ فارغة — تُعرَّف السور عليها بأداة «مناطق السور» (اسم + رقم لكل سورة)
       setPageSrc(uniqueSrc);
-      setBoxes([seed]);
+      setBoxes([]);
       setRegions(getPageSurahRegions(uniqueSrc));
       setSelectedIndex(0); setSelectedRegion(0); setHistory([]);
-      await savePageAyahBoxes(uniqueSrc, [seed]);
+      setShowRegions(true);
       setNewSurahOpen(false); setNewName(""); setNewNumber(""); setNewFile(null);
-      toast({ title: "✅ أُضيفت السورة", description: `${newName.trim()} (${num}) — ارسم الآيات أو مناطق السور ثم احفظ.` });
+      toast({ title: "✅ أُضيفت الصفحة", description: `${newName.trim()} — أضف منطقة لكل سورة (اسم + رقم).` });
     } catch (e) {
       toast({ title: "❌ فشل رفع الصورة", description: e instanceof Error ? e.message : "خطأ", variant: "destructive" });
     } finally { setCreating(false); }
@@ -794,7 +791,7 @@ const AyahCalibration = () => {
                     }}
                   >
                     <span className="absolute right-1 top-1 rounded-full bg-emerald-900/85 px-2 py-0.5 text-[11px] font-bold text-emerald-100">
-                      🟩 {r.name || "سورة بلا اسم"}
+                      🟩 {r.name || "سورة"}{r.surah ? ` (${r.surah})` : ""}
                     </span>
                   </div>
                 );
@@ -820,9 +817,9 @@ const AyahCalibration = () => {
               <button
                 onClick={() => setNewSurahOpen(v => !v)}
                 className="w-full p-2 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-transform"
-                title="رفع صورة صفحة وإنشاء تظليل لسورة جديدة"
+                title="رفع صورة صفحة (قد تحوي أكثر من سورة)"
               >
-                <Upload className="h-3.5 w-3.5" /> سورة جديدة (رفع صورة)
+                <Upload className="h-3.5 w-3.5" /> صفحة جديدة (رفع صورة)
               </button>
               {customPages.some(p => p.src === pageSrc) && (
                 <button
@@ -834,7 +831,7 @@ const AyahCalibration = () => {
               )}
               {newSurahOpen && (
                 <div className="rounded-lg bg-slate-900/60 border border-emerald-500/30 p-2 space-y-2">
-                  <p className="text-[10px] text-slate-400 leading-relaxed">ارفع صورة الصفحة، واكتب اسم السورة ورقمها — ثم ارسم الآيات أو مناطق السور.</p>
+                  <p className="text-[10px] text-slate-400 leading-relaxed">ارفع صورة الصفحة واكتب اسمها/رقمها. الصفحة قد تحوي أكثر من سورة — تُعرَّف كل سورة بأداة «مناطق السور» (اسم + رقم).</p>
                   <input
                     type="file" accept="image/*"
                     onChange={(e) => setNewFile(e.target.files?.[0] || null)}
@@ -842,20 +839,14 @@ const AyahCalibration = () => {
                   />
                   <input
                     value={newName} onChange={(e) => setNewName(e.target.value)}
-                    placeholder="اسم السورة (مثل: النبأ)"
-                    className="w-full rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-emerald-500"
-                  />
-                  <input
-                    type="number" min={1} max={114} value={newNumber}
-                    onChange={(e) => setNewNumber(e.target.value)}
-                    placeholder="رقم السورة (مثل: 78)"
+                    placeholder="اسم/رقم الصفحة (مثل: 587)"
                     className="w-full rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-emerald-500"
                   />
                   <button
                     onClick={createSurahPage} disabled={creating}
                     className="w-full p-2 rounded-md bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1 active:scale-95 disabled:opacity-50"
                   >
-                    <Plus className="h-3.5 w-3.5" /> {creating ? "جارٍ الإنشاء..." : "إنشاء تظليل للسورة"}
+                    <Plus className="h-3.5 w-3.5" /> {creating ? "جارٍ الإنشاء..." : "إنشاء الصفحة"}
                   </button>
                 </div>
               )}
@@ -882,10 +873,18 @@ const AyahCalibration = () => {
                           value={r.name}
                           onChange={(e) => { setSelectedRegion(i); updateRegion({ name: e.target.value }); }}
                           onFocus={() => setSelectedRegion(i)}
-                          placeholder="اسم السورة (مثل: النبأ)"
-                          className="flex-1 rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-emerald-500"
+                          placeholder="اسم السورة"
+                          className="flex-1 min-w-0 rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-emerald-500"
                         />
-                        <button onClick={() => deleteRegion(i)} className="p-1.5 rounded-md bg-red-600/30 text-red-300 active:scale-95" title="حذف المنطقة"><Trash2 className="h-4 w-4" /></button>
+                        <input
+                          type="number" min={1} max={114}
+                          value={r.surah ?? ""}
+                          onChange={(e) => { setSelectedRegion(i); updateRegion({ surah: parseInt(e.target.value, 10) || undefined }); }}
+                          onFocus={() => setSelectedRegion(i)}
+                          placeholder="رقم"
+                          className="w-14 shrink-0 rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-emerald-500"
+                        />
+                        <button onClick={() => deleteRegion(i)} className="p-1.5 rounded-md bg-red-600/30 text-red-300 active:scale-95 shrink-0" title="حذف المنطقة"><Trash2 className="h-4 w-4" /></button>
                       </div>
                       {i === selectedRegion && (
                         <div className="mt-2 space-y-1">

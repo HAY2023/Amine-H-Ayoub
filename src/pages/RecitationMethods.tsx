@@ -1243,32 +1243,35 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
   // السور السحابية: السيرفر يجلب الصوت برابطه العام بنفسه (أسرع، بلا رفع).
   // السور المحلية: نرفع بايتات الصوت من المتصفّح — فيعمل على localhost أيضاً
   // (لأن خدمة Hugging Face لا تستطيع الوصول إلى http://localhost).
-  const handleServiceSplit = async () => {
+  const runServiceSplit = async (engine: "vad" | "gemini") => {
     const base = serviceUrl.trim().replace(/\/$/, "");
     if (!base) { toast({ title: "⚠️ أدخل رابط الخدمة أولاً", description: "انشر الخدمة على Hugging Face والصق رابطها", variant: "destructive" }); return; }
 
     const label = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
+    const urlPath = engine === "gemini" ? "/split-gemini-url" : "/split-url";
+    const filePath = engine === "gemini" ? "/split-gemini" : "/split";
+    const engName = engine === "gemini" ? "Gemini" : "الخدمة";
     setSplitting(true); setProgressPct(30);
     try {
       let res: Response;
       if (hasCloudAudio(surahNum)) {
         // صوت عام على السحابة → السيرفر يجلبه بنفسه
-        setProgress("🚀 السيرفر يجلب الصوت السحابي ويقسّمه...");
-        res = await fetch(`${base}/split-url`, {
+        setProgress(`🚀 ${engName}: جلب الصوت السحابي وتقسيمه...`);
+        res = await fetch(`${base}${urlPath}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ audioUrl: getSurahAudioUrl(surahNum), leading: leadingSegments, surahLabel: label }),
         });
       } else {
         // صوت محلي (لا يصله السيرفر) → نرفع البايتات من المتصفّح
-        setProgress("🚀 رفع الصوت إلى الخدمة وتقسيمه...");
+        setProgress(`🚀 ${engName}: رفع الصوت وتقسيمه...`);
         const audioSrc = audioRef.current?.src || audioPath(surahNum);
         const blob = await (await fetch(audioSrc)).blob();
         const form = new FormData();
         form.append("file", blob, `${surahNum}.mp3`);
         form.append("leading", String(leadingSegments));
         form.append("surahLabel", label);
-        res = await fetch(`${base}/split`, { method: "POST", body: form });
+        res = await fetch(`${base}${filePath}`, { method: "POST", body: form });
       }
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
@@ -1281,11 +1284,13 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
       setSegments(segs);
       persistSegments(surahNum, segs);
       setProgressPct(100);
-      toast({ title: "✅ تم التقسيم على السيرفر!", description: `${segs.length} مقطع · ${data.processingTimeMs || 0}ms` });
+      toast({ title: `✅ تم التقسيم (${engName})!`, description: `${segs.length} مقطع · ${data.processingTimeMs || 0}ms` });
     } catch (e) {
       toast({ title: "❌ فشل التقسيم", description: e instanceof Error ? e.message : "خطأ", variant: "destructive" });
     } finally { setSplitting(false); setProgress(""); setProgressPct(0); }
   };
+  const handleServiceSplit = () => runServiceSplit("vad");
+  const handleGeminiSplit = () => runServiceSplit("gemini");
 
   const togglePlay = () => {
     const a = audioRef.current; if (!a) return;
@@ -1629,11 +1634,17 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
               onChange={(e) => { setServiceUrl(e.target.value); try { localStorage.setItem(SERVICE_URL_KEY, e.target.value); } catch { /* ignore */ } }}
               className="w-full p-2 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs outline-none focus:border-violet-500"
             />
-            <button onClick={handleServiceSplit} disabled={splitting || aiSplitting || !duration || !serviceUrl.trim()}
-              className="w-full p-3 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
-              🚀 {splitting ? "جارٍ..." : "تقسيم بالخدمة (الأدق)"}
-            </button>
-            <p className="text-[10px] text-slate-500 leading-relaxed">✅ الخدمة منشورة ومتصلة تلقائياً على Hugging Face. أول طلب بعد خمول الخدمة يستغرق ~٣٠ ثانية ثم يصبح سريعاً.</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={handleServiceSplit} disabled={splitting || aiSplitting || !duration || !serviceUrl.trim()}
+                className="p-3 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-1 active:scale-[0.98] transition-all">
+                🚀 {splitting ? "جارٍ..." : "بالخدمة"}
+              </button>
+              <button onClick={handleGeminiSplit} disabled={splitting || aiSplitting || !duration || !serviceUrl.trim()}
+                className="p-3 rounded-xl bg-gradient-to-r from-sky-600 to-emerald-600 text-white font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-1 active:scale-[0.98] transition-all">
+                ✨ {splitting ? "جارٍ..." : "بـ Gemini"}
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-500 leading-relaxed">✅ متصلة تلقائياً على Hugging Face. <b>بالخدمة</b>: تحليل صوتي سريع. <b>Gemini</b>: ذكاء يفهم المعلم/الطفل (و٣ أصوات) — أبطأ قليلاً. أول طلب بعد الخمول ~٣٠ ثانية.</p>
           </div>
 
           <button onClick={handleSplit} disabled={splitting || aiSplitting || !duration}

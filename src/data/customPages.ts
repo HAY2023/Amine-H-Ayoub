@@ -5,9 +5,9 @@
  */
 
 export interface CustomPage {
-  src: string;     // معرّف فريد مثل "custom:78:1700000000000"
-  name: string;    // اسم السورة
-  surah: number;   // رقم السورة
+  src: string;     // معرّف فريد مثل "custom:1700000000000"
+  name: string;    // اسم/رقم الصفحة (قد تحوي أكثر من سورة)
+  surah?: number;  // رقم سورة اختياري (للتوافق)
 }
 
 const META_KEY = "mushaf:customPages:v1";
