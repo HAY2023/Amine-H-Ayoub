@@ -31,6 +31,12 @@ const AyahCalibration = () => {
   const [newFile, setNewFile] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
 
+  // إنشاء تظليل سورة جديدة (اسم + رقم + عدد آيات)
+  const [csOpen, setCsOpen] = useState(false);
+  const [csName, setCsName] = useState("");
+  const [csNumber, setCsNumber] = useState("");
+  const [csCount, setCsCount] = useState("");
+
   // ترتيب الصفحات (يُحفظ بمعرّف المسار src ويقرؤه القارئ)
   const PAGE_ORDER_KEY = "mushaf:pageOrder:v1";
   const [arrangeOpen, setArrangeOpen] = useState(false);
@@ -253,6 +259,29 @@ const AyahCalibration = () => {
     toast({ title: "🗑️ حُذفت الصفحة المرفوعة" });
   };
 
+  // إنشاء تظليل سورة جديدة: يسجّل اسمها ورقمها (منطقة) ويولّد مربعات آياتها للتظليل
+  const createSurahCalibration = () => {
+    const num = parseInt(csNumber, 10);
+    if (!csName.trim()) { toast({ title: "⚠️ اكتب اسم السورة", variant: "destructive" }); return; }
+    if (!num || num < 1) { toast({ title: "⚠️ اكتب رقم السورة", variant: "destructive" }); return; }
+    const count = parseInt(csCount, 10) || 0;
+    // ① منطقة سورة تحمل الاسم والرقم
+    setRegions(cur => { const next = [...cur, { name: csName.trim(), surah: num, x: 160, y: 200, width: 940, height: 340 }]; setSelectedRegion(next.length - 1); return next; });
+    setShowRegions(true);
+    // ② مربعات الآيات (إن حُدّد العدد) — مكدّسة جاهزة للتحريك على الأسطر
+    if (count >= 1) {
+      saveHistory(boxes);
+      const h = 110, gap = 8, startY = 300;
+      const generated: AyahBox[] = Array.from({ length: count }, (_, i) => ({
+        surah: num, ayah: i + 1, x: 140, width: 980, height: h,
+        y: clamp(startY + i * (h + gap), 0, PAGE_IMAGE_SIZE.height - h),
+      }));
+      setBoxes(cur => { const next = [...cur, ...generated]; setSelectedIndex(cur.length); return next; });
+    }
+    setCsOpen(false); setCsName(""); setCsNumber(""); setCsCount("");
+    toast({ title: "✅ أُنشئ تظليل السورة", description: `${csName.trim()} (${num})${count ? ` · ${count} آية` : ""} — حرّك المربعات/المنطقة فوق السورة ثم احفظ.` });
+  };
+
   // ─────────── ترتيب الصفحات ───────────
   const openArrange = useCallback(() => {
     let saved: string[] = [];
@@ -406,6 +435,31 @@ const AyahCalibration = () => {
                   <button onClick={() => setScale(s => clamp(s + 0.1, 0.25, 2))} className="p-1.5 rounded-md bg-slate-700 text-white active:scale-95"><ZoomIn className="h-4 w-4" /></button>
                 </div>
               </div>
+            </div>
+
+            {/* ➕ إنشاء تظليل سورة جديدة */}
+            <div className="rounded-2xl bg-amber-950/30 border border-amber-500/40 p-3 space-y-2">
+              <button onClick={() => setCsOpen(v => !v)} className="w-full flex items-center justify-between text-amber-300 font-bold text-sm">
+                <span className="flex items-center gap-1.5"><Plus className="h-4 w-4" /> إنشاء تظليل سورة جديدة</span>
+                <span className="text-xs">{csOpen ? "▲" : "▼"}</span>
+              </button>
+              {csOpen && (
+                <div className="space-y-2">
+                  <p className="text-[10px] text-slate-400 leading-relaxed">اكتب اسم السورة ورقمها وعدد آياتها — يُنشأ تظليلها (منطقة باسمها + مربعات آياتها) جاهزاً للتحريك فوق الصفحة.</p>
+                  <input value={csName} onChange={(e) => setCsName(e.target.value)} placeholder="اسم السورة (مثل: النبأ)"
+                    className="w-full rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-amber-500" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="number" min={1} max={114} value={csNumber} onChange={(e) => setCsNumber(e.target.value)} placeholder="رقم السورة"
+                      className="rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-amber-500" />
+                    <input type="number" min={0} value={csCount} onChange={(e) => setCsCount(e.target.value)} placeholder="عدد الآيات"
+                      className="rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-amber-500" />
+                  </div>
+                  <button onClick={createSurahCalibration}
+                    className="w-full p-2 rounded-md bg-amber-500 text-black font-bold text-xs flex items-center justify-center gap-1 active:scale-95">
+                    <Plus className="h-3.5 w-3.5" /> إنشاء التظليل
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* ② مناطق السور */}
