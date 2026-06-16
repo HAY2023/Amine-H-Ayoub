@@ -4,6 +4,8 @@ import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
+import { getCustomPages, getAllPageImages } from "@/data/customPages";
+import { getPageSurahRegions } from "@/data/surahRegions";
 import { Headphones } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { isTauri, checkOfflineStatus, getOfflineAudioUrl, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
@@ -62,7 +64,7 @@ const MUSHAF_LAST_TIME = "mushaf:lastTime";
 interface SurahAudio { name: string; number: number; src: string; ayahCount: number; }
 interface PageInfo { name: string; src: string; surahs: SurahAudio[]; }
 
-const pages: PageInfo[] = [
+const BASE_PAGES: PageInfo[] = [
   {
     name: "الفاتحة", src: "/pages/fatiha.jpg", surahs: [
       { name: "الفاتحة", number: 1, src: audioPath(1), ayahCount: 7 },
@@ -114,6 +116,29 @@ const previewStroke = "rgba(250,204,21,0.80)";
 export default function QuranReader() {
   const navigate = useNavigate();
   const { requestPlay, notifyStop, registerAudio, unregisterAudio, simultaneousMode, setSimultaneousMode } = useAudioContext();
+
+  // الصفحات المرفوعة من المعايرة تظهر في المصحف هنا (صورة + تظليل + سور من المناطق)
+  const [customPageList] = useState(() => getCustomPages());
+  const [customImgs, setCustomImgs] = useState<Record<string, string>>({});
+  useEffect(() => { getAllPageImages().then(setCustomImgs).catch(() => {}); }, []);
+  const imgSrcFor = (src: string) => customImgs[src] || src;
+  const pages = useMemo<PageInfo[]>(() => {
+    const extra: PageInfo[] = customPageList.map(cp => {
+      const regions = getPageSurahRegions(cp.src);
+      const boxes = getPageAyahBoxes(cp.src);
+      const surahs: SurahAudio[] = regions
+        .filter(r => r.surah)
+        .map(r => ({
+          name: r.name || `سورة ${r.surah}`,
+          number: r.surah as number,
+          src: audioPath(r.surah as number),
+          ayahCount: boxes.filter(b => b.surah === r.surah).length || 0,
+        }));
+      return { name: cp.name, src: cp.src, surahs };
+    });
+    return [...BASE_PAGES, ...extra];
+  }, [customPageList]);
+
   const [currentPage, setCurrentPage] = useState(() => {
     const s = parseInt(localStorage.getItem(STORAGE_KEY) || "0", 10);
     return isNaN(s) || s < 0 || s >= pages.length ? 0 : s;
@@ -995,7 +1020,7 @@ export default function QuranReader() {
                 className={`relative ${isDesktop ? 'shadow-none' : 'shadow-xl'}`}
                 style={{ aspectRatio: `${PAGE_IMAGE_SIZE.width}/${PAGE_IMAGE_SIZE.height}`, height: '100%', maxWidth: '100%' }}
               >
-                <img src={page.src} alt={page.name} className="absolute inset-0 w-full h-full select-none animate-fade-in" draggable={false} />
+                <img src={imgSrcFor(page.src)} alt={page.name} className="absolute inset-0 w-full h-full select-none animate-fade-in" draggable={false} />
                 <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${PAGE_IMAGE_SIZE.width} ${PAGE_IMAGE_SIZE.height}`} preserveAspectRatio="none">
                   {getPageAyahBoxes(page.src).map((box, i) => (
                     <rect
