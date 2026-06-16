@@ -118,9 +118,16 @@ export default function QuranReader() {
   const { requestPlay, notifyStop, registerAudio, unregisterAudio, simultaneousMode, setSimultaneousMode } = useAudioContext();
 
   // الصفحات المرفوعة من المعايرة تظهر في المصحف هنا (صورة + تظليل + سور من المناطق)
-  const [customPageList] = useState(() => getCustomPages());
+  const [customPageList, setCustomPageList] = useState(() => getCustomPages());
   const [customImgs, setCustomImgs] = useState<Record<string, string>>({});
-  useEffect(() => { getAllPageImages().then(setCustomImgs).catch(() => {}); }, []);
+  // يُعيد القراءة عند العودة للقارئ (بلا حاجة لتحديث الصفحة يدوياً)
+  useEffect(() => {
+    const refresh = () => { setCustomPageList(getCustomPages()); getAllPageImages().then(setCustomImgs).catch(() => {}); };
+    refresh();
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
+  }, []);
   const imgSrcFor = (src: string) => customImgs[src] || src;
   const pages = useMemo<PageInfo[]>(() => {
     const extra: PageInfo[] = customPageList.map(cp => {
