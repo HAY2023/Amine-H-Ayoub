@@ -37,6 +37,9 @@ const AyahCalibration = () => {
   const [csNumber, setCsNumber] = useState("");
   const [csCount, setCsCount] = useState("");
 
+  // نقل التظليل إلى صفحة أخرى
+  const [copyTarget, setCopyTarget] = useState("");
+
   // ترتيب الصفحات (يُحفظ على السيرفر بمعرّف المسار src ويقرؤه القارئ)
   const [arrangeOpen, setArrangeOpen] = useState(false);
   const [draftSrcOrder, setDraftSrcOrder] = useState<string[]>([]);
@@ -147,6 +150,14 @@ const AyahCalibration = () => {
     saveHistory(boxes);
     setBoxes(current => current.map(b => ({ ...b, x: selected.x, width: selected.width })));
     toast({ title: "✅ محاذاة العرض والمكان" });
+  };
+
+  // نقل (نسخ) تظليل الصفحة الحالية إلى صفحة أخرى — مفيد لصورة فيها صفحتان أو لصفحات متشابهة
+  const copyShadingTo = async (targetSrc: string) => {
+    if (!targetSrc || targetSrc === pageSrc) return;
+    await savePageAyahBoxes(targetSrc, boxes.map(b => ({ ...b })));
+    await savePageSurahRegions(targetSrc, regions.map(r => ({ ...r })));
+    toast({ title: "✅ نُقل التظليل", description: `${boxes.length} مربع + ${regions.length} منطقة → ${pageLabel(targetSrc)}` });
   };
 
   // تعديل رقم السورة يغيّر رقم كل مربعات نفس السورة على الصفحة
@@ -406,6 +417,19 @@ const AyahCalibration = () => {
                   <ListOrdered className="h-3.5 w-3.5" /> ترتيب
                 </button>
               </div>
+              {/* نقل التظليل إلى صفحة أخرى */}
+              {pageSources.length > 1 && (
+                <div className="flex items-center gap-1">
+                  <select value={copyTarget} onChange={(e) => setCopyTarget(e.target.value)} className="flex-1 min-w-0 rounded-lg bg-slate-700 border-slate-600 p-1.5 text-xs text-white">
+                    <option value="">📋 نقل التظليل إلى…</option>
+                    {pageSources.filter(s => s !== pageSrc).map(s => <option key={s} value={s}>{pageLabel(s)}</option>)}
+                  </select>
+                  <button onClick={() => { if (copyTarget) { copyShadingTo(copyTarget); setCopyTarget(""); } }} disabled={!copyTarget}
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-sky-600/30 border border-sky-500/40 text-sky-200 font-bold text-xs disabled:opacity-40 active:scale-95">
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
               {isCustom && (
                 <button onClick={() => deleteCustomPage(pageSrc)} className="w-full p-2 rounded-lg bg-red-600/20 border border-red-500/40 text-red-300 font-bold text-xs flex items-center justify-center gap-1 active:scale-95">
                   <Trash2 className="h-3.5 w-3.5" /> حذف هذه الصفحة المرفوعة
