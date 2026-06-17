@@ -76,13 +76,30 @@ export default defineConfig(({ mode }) => ({
             handler: "CacheFirst",
             options: {
               cacheName: "audio-cache",
-              expiration: {
-                maxEntries: 500,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
+              rangeRequests: true,
+              expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // صوت السور السحابي (Supabase) — يُحفظ بعد أول تشغيل للعمل دون إنترنت
+            urlPattern: ({ url }) => url.href.includes("/storage/v1/object/public/quran-audio/"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "cloud-audio-cache",
+              rangeRequests: true,
+              expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // صور صفحات المصحف
+            urlPattern: /\/pages\/.*\.(?:jpg|jpeg|png)$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "pages-cache",
+              expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
         ],
