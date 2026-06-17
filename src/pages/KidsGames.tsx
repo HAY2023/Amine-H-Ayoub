@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Clock, Check } from "lucide-react";
+import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Clock, Check, Hash, Grid3x3 } from "lucide-react";
 import { getAllSurahs } from "../data/quranData";
 import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
 import { getProfile, saveProfile, getProgress, addPlayMinutes, grantMorePlay, KidsProfile } from "../data/kidsProfile";
@@ -70,8 +70,8 @@ function OrderAyahs() {
 }
 
 // ─────────── ٣) لعبة الذاكرة ───────────
-function MemoryGame() {
-  const build = () => { const four = shuffle(SURAHS).slice(0, 4); return shuffle([...four, ...four].map((s, i) => ({ id: i, num: s.number, name: s.name }))); };
+function MemoryGame({ pairs = 4 }: { pairs?: number }) {
+  const build = () => { const picked = shuffle(SURAHS).slice(0, pairs); return shuffle([...picked, ...picked].map((s, i) => ({ id: i, num: s.number, name: s.name }))); };
   const [cards, setCards] = useState(build);
   const [flipped, setFlipped] = useState<number[]>([]);
   const [matched, setMatched] = useState<number[]>([]);
@@ -84,7 +84,7 @@ function MemoryGame() {
       else setTimeout(() => setFlipped([]), 800);
     }
   };
-  const won = matched.length === 4;
+  const won = matched.length === pairs;
   return (
     <div className="space-y-3 text-center">
       <p className="text-slate-300 text-sm">اقلب البطاقات وطابق السور المتشابهة</p>
@@ -150,11 +150,42 @@ function Quiz() {
   );
 }
 
+// ─────────── ٦) عدّ الآيات (اختر السورة بعدد آياتها) ───────────
+function CountMatch() {
+  const make = () => {
+    const s = SURAHS[Math.floor(Math.random() * SURAHS.length)];
+    const wrong = shuffle(SURAHS.filter(x => x.number !== s.number)).slice(0, 2);
+    return { s, opts: shuffle([s, ...wrong]) };
+  };
+  const [q, setQ] = useState(make);
+  const [score, setScore] = useState(0);
+  const choose = (n: number) => {
+    if (n === q.s.number) { setScore(x => x + 1); toast({ title: "إجابة صحيحة" }); }
+    else toast({ title: `الصحيح: ${q.s.name}`, variant: "destructive" });
+    setQ(make());
+  };
+  return (
+    <div className="space-y-4 text-center">
+      <p className="text-white text-lg font-bold">أي سورة عدد آياتها <span className="text-amber-300">{q.s.ayahCount}</span>؟</p>
+      <div className="grid gap-2">
+        {q.opts.map(s => (
+          <button key={s.number} onClick={() => choose(s.number)} className="p-4 rounded-xl bg-slate-700/70 border border-slate-600 hover:border-amber-500/50 text-white font-bold text-lg active:scale-95">{s.name}</button>
+        ))}
+      </div>
+      <ScoreBar score={score} />
+    </div>
+  );
+}
+
+const MemoryHard = () => <MemoryGame pairs={6} />;
+
 const GAMES = [
   { key: "listen", name: "استمع واختر", age: "٤-٦", ageMin: 4, Icon: Headphones, tint: "bg-emerald-500/20 text-emerald-300", Comp: ListenPick },
   { key: "order", name: "رتّب الآيات", age: "٥-٧", ageMin: 5, Icon: ListOrdered, tint: "bg-sky-500/20 text-sky-300", Comp: OrderAyahs },
   { key: "memory", name: "لعبة الذاكرة", age: "٦-٩", ageMin: 6, Icon: LayoutGrid, tint: "bg-violet-500/20 text-violet-300", Comp: MemoryGame },
   { key: "more", name: "أيّهما أكثر", age: "٩-١٢", ageMin: 9, Icon: Scale, tint: "bg-amber-500/20 text-amber-300", Comp: WhichMore },
+  { key: "count", name: "عدّ الآيات", age: "٩-١٢", ageMin: 9, Icon: Hash, tint: "bg-teal-500/20 text-teal-300", Comp: CountMatch },
+  { key: "memhard", name: "ذاكرة متقدّمة", age: "١٠-١٣", ageMin: 10, Icon: Grid3x3, tint: "bg-indigo-500/20 text-indigo-300", Comp: MemoryHard },
   { key: "quiz", name: "اختبار قرآني", age: "١٢-١٥", ageMin: 12, Icon: Trophy, tint: "bg-rose-500/20 text-rose-300", Comp: Quiz },
 ];
 
