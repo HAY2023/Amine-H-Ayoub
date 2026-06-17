@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, SplitSquareHorizontal, Volume2, Menu, Eye, EyeOff } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, SplitSquareHorizontal, Volume2, Menu, Eye, EyeOff, List, Lock, Baby } from "lucide-react";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
@@ -211,6 +211,12 @@ export default function QuranReader() {
   // Split view state
   const [isSplitView, setIsSplitView] = useState(false);
   const [hideShading, setHideShading] = useState(false);
+  // ركن الأطفال (قفل بكلمة مرور) + قائمة السور
+  const [kidsMode, setKidsMode] = useState(() => { try { return localStorage.getItem("mushaf:kidsMode") === "1"; } catch { return false; } });
+  const [pinModal, setPinModal] = useState<null | "set" | "verify">(null);
+  const [pinInput, setPinInput] = useState("");
+  const [surahListOpen, setSurahListOpen] = useState(false);
+  useEffect(() => { try { localStorage.setItem("mushaf:kidsMode", kidsMode ? "1" : "0"); } catch { /* ignore */ } }, [kidsMode]);
 
   // Simultaneous playback (teacher + kids together)
   const audioRef2 = useRef<HTMLAudioElement>(null);
@@ -228,6 +234,39 @@ export default function QuranReader() {
   }, [isShuffled, shuffledPageOrder, customPageOrder]);
 
   const actualPage = getActualPageIndex(currentPage);
+
+  // ── ركن الأطفال: دخول بزر، خروج بكلمة مرور ──
+  const KIDS_PIN_KEY = "mushaf:kidsPin";
+  const enterKidsMode = () => {
+    const pin = (() => { try { return localStorage.getItem(KIDS_PIN_KEY) || ""; } catch { return ""; } })();
+    if (!pin) { setPinInput(""); setPinModal("set"); } else { setKidsMode(true); }
+  };
+  const requestExitKids = () => { setPinInput(""); setPinModal("verify"); };
+  const confirmPin = () => {
+    if (pinModal === "set") {
+      if (pinInput.trim().length < 3) return;
+      try { localStorage.setItem(KIDS_PIN_KEY, pinInput.trim()); } catch { /* ignore */ }
+      setKidsMode(true); setPinModal(null); setPinInput("");
+    } else if (pinModal === "verify") {
+      const pin = (() => { try { return localStorage.getItem(KIDS_PIN_KEY) || ""; } catch { return ""; } })();
+      if (pinInput.trim() === pin) { setKidsMode(false); setPinModal(null); setPinInput(""); }
+      else { setPinInput(""); }
+    }
+  };
+
+  // ── قائمة كل السور للانتقال المباشر ──
+  const allSurahsList = useMemo(() => {
+    const out: { number: number; name: string; pageIdx: number; surahIdx: number }[] = [];
+    pages.forEach((p, pi) => p.surahs.forEach((s, si) => out.push({ number: s.number, name: s.name, pageIdx: pi, surahIdx: si })));
+    return out;
+  }, [pages]);
+  const jumpToSurah = (pageIdx: number, surahIdx: number) => {
+    let display = pageIdx;
+    if (customPageOrder.length > 0) { const d = customPageOrder.indexOf(pageIdx); if (d >= 0) display = d; }
+    setCurrentPage(display);
+    setSelectedSurahIdx(surahIdx);
+    setSurahListOpen(false);
+  };
 
   // Page naming state
   const [editingPageName, setEditingPageName] = useState(false);
@@ -1113,9 +1152,13 @@ export default function QuranReader() {
       {!controlsOpen && (
         <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3" dir="rtl">
           {([
-            { key: "back", icon: <ArrowRight className="w-6 h-6 text-foreground" />, label: "رجوع", onClick: () => navigate("/audio"), active: false },
+            !kidsMode && { key: "back", icon: <ArrowRight className="w-6 h-6 text-foreground" />, label: "رجوع", onClick: () => navigate("/audio"), active: false },
             { key: "hide", icon: hideShading ? <Eye className="w-6 h-6 text-foreground" /> : <EyeOff className="w-6 h-6 text-foreground" />, label: hideShading ? "إظهار التظليل" : "إخفاء التظليل", onClick: () => setHideShading(v => !v), active: hideShading },
-          ]).map(b => (
+            { key: "surahs", icon: <List className="w-6 h-6 text-foreground" />, label: "قائمة السور", onClick: () => setSurahListOpen(true), active: surahListOpen },
+            kidsMode
+              ? { key: "lock", icon: <Lock className="w-6 h-6 text-foreground" />, label: "خروج من ركن الأطفال", onClick: requestExitKids, active: true }
+              : { key: "kids", icon: <Baby className="w-6 h-6 text-foreground" />, label: "ركن الأطفال", onClick: enterKidsMode, active: false },
+          ].filter(Boolean) as { key: string; icon: JSX.Element; label: string; onClick: () => void; active: boolean }[]).map(b => (
             <button
               key={b.key}
               onClick={b.onClick}
@@ -1127,6 +1170,47 @@ export default function QuranReader() {
               {b.icon}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* قائمة السور — اختر سورة تذهب إليها مباشرةً */}
+      {surahListOpen && (
+        <div className="absolute inset-0 z-[55] flex items-end justify-center bg-black/50 animate-fade-in" onClick={() => setSurahListOpen(false)}>
+          <div className="w-full max-w-md max-h-[72vh] overflow-y-auto rounded-t-3xl p-3 shadow-2xl border-t border-white/40"
+            style={{ background: "rgba(255,255,255,0.96)", backdropFilter: "blur(20px)" }} onClick={e => e.stopPropagation()} dir="rtl">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-extrabold text-foreground">📖 قائمة السور</h3>
+              <button onClick={() => setSurahListOpen(false)} className="w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {allSurahsList.map((s, i) => (
+                <button key={`${s.number}-${i}`} onClick={() => jumpToSurah(s.pageIdx, s.surahIdx)}
+                  className="p-2.5 rounded-xl bg-foreground/5 hover:bg-amber-200/70 text-right font-bold text-sm flex items-center justify-between gap-2 active:scale-[0.98] transition-all">
+                  <span className="truncate">{s.name}</span>
+                  <span className="text-[11px] text-muted-foreground shrink-0">{s.number}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* رمز ركن الأطفال */}
+      {pinModal && (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 animate-fade-in" dir="rtl">
+          <div className="w-full max-w-xs rounded-2xl bg-white p-5 space-y-3 shadow-2xl">
+            <h3 className="font-extrabold text-center text-foreground">{pinModal === "set" ? "🧒 اختر رمز ركن الأطفال" : "🔒 أدخل الرمز للخروج"}</h3>
+            <input type="password" inputMode="numeric" value={pinInput} autoFocus
+              onChange={e => setPinInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") confirmPin(); }}
+              placeholder="••••"
+              className="w-full text-center text-2xl tracking-[0.4em] rounded-xl border border-slate-300 p-3 outline-none focus:ring-2 focus:ring-amber-400" />
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => { setPinModal(null); setPinInput(""); }} className="p-2.5 rounded-xl bg-slate-200 font-bold text-foreground">إلغاء</button>
+              <button onClick={confirmPin} className="p-2.5 rounded-xl bg-amber-500 text-black font-bold">{pinModal === "set" ? "حفظ ودخول" : "خروج"}</button>
+            </div>
+            {pinModal === "set" && <p className="text-[11px] text-center text-muted-foreground">احفظ الرمز جيداً — ستحتاجه للخروج من ركن الأطفال.</p>}
+          </div>
         </div>
       )}
 
