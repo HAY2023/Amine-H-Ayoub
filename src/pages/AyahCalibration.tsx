@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Plus, RotateCcw, Save, Trash2, ZoomIn, ZoomOut, Copy, Link2, ListOrdered, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, X, Check, Square, Upload } from "lucide-react";
 import { AyahBox, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
 import { getPageSurahRegions, savePageSurahRegions, SurahRegion } from "@/data/surahRegions";
-import { CustomPage, getCustomPages, addCustomPage, removeCustomPage, savePageImage, getAllPageImages, deletePageImage } from "@/data/customPages";
+import { CustomPage, getCustomPages, addCustomPage, removeCustomPage, savePageImage, getAllPageImages, deletePageImage, getPageOrder, savePageOrder, clearPageOrder } from "@/data/customPages";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 
@@ -37,8 +37,7 @@ const AyahCalibration = () => {
   const [csNumber, setCsNumber] = useState("");
   const [csCount, setCsCount] = useState("");
 
-  // ترتيب الصفحات (يُحفظ بمعرّف المسار src ويقرؤه القارئ)
-  const PAGE_ORDER_KEY = "mushaf:pageOrder:v1";
+  // ترتيب الصفحات (يُحفظ على السيرفر بمعرّف المسار src ويقرؤه القارئ)
   const [arrangeOpen, setArrangeOpen] = useState(false);
   const [draftSrcOrder, setDraftSrcOrder] = useState<string[]>([]);
 
@@ -284,9 +283,8 @@ const AyahCalibration = () => {
 
   // ─────────── ترتيب الصفحات ───────────
   const openArrange = useCallback(() => {
-    let saved: string[] = [];
-    try { const raw = localStorage.getItem(PAGE_ORDER_KEY); saved = raw ? JSON.parse(raw) : []; } catch { saved = []; }
-    const valid = (Array.isArray(saved) ? saved : []).filter(s => pageSources.includes(s));
+    const saved = getPageOrder();
+    const valid = saved.filter(s => pageSources.includes(s));
     pageSources.forEach(s => { if (!valid.includes(s)) valid.push(s); });
     setDraftSrcOrder(valid);
     setArrangeOpen(true);
@@ -586,9 +584,9 @@ const AyahCalibration = () => {
               </div>
             ))}
             <div className="grid grid-cols-2 gap-2 pt-1">
-              <button onClick={() => { localStorage.removeItem(PAGE_ORDER_KEY); setArrangeOpen(false); toast({ title: "↩️ أُعيد الترتيب الأصلي" }); }}
+              <button onClick={() => { clearPageOrder(); setArrangeOpen(false); toast({ title: "↩️ أُعيد الترتيب الأصلي" }); }}
                 className="p-2 rounded-lg bg-slate-700 text-white font-bold text-sm active:scale-95">إعادة الأصل</button>
-              <button onClick={() => { localStorage.setItem(PAGE_ORDER_KEY, JSON.stringify(draftSrcOrder)); setArrangeOpen(false); toast({ title: "✅ تم حفظ الترتيب", description: "افتح القارئ لرؤيته" }); }}
+              <button onClick={() => { savePageOrder(draftSrcOrder); setArrangeOpen(false); toast({ title: "✅ تم حفظ الترتيب على السيرفر", description: "افتح القارئ لرؤيته" }); }}
                 className="p-2 rounded-lg bg-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-1 active:scale-95"><Check className="h-4 w-4" /> حفظ الترتيب</button>
             </div>
           </div>

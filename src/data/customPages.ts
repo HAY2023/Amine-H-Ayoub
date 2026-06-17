@@ -1,8 +1,11 @@
 /**
  * صفحات/سور مخصّصة يضيفها المستخدم برفع صورة في المعايرة.
- * - بيانات الصفحة (المعرّف، الاسم، الرقم) تُحفظ في localStorage (صغيرة).
- * - صور الصفحات تُحفظ في IndexedDB (تتحمّل الصور الكبيرة، عكس localStorage).
+ * كل شيء يُحفظ على السيرفر (Supabase store) + نسخة محلية للسرعة:
+ *  - بيانات الصفحات (الاسم/الرقم)            → localStorage + store[META_KEY]
+ *  - ترتيب الصفحات في القارئ                  → localStorage + store[ORDER_KEY]
+ *  - صور الصفحات (base64)                     → IndexedDB (محلي) + store["mushaf:pageImg:<id>"]
  */
+import { supabase, hasValidSupabaseKey } from "../lib/supabase";
 
 export interface CustomPage {
   src: string;     // معرّف فريد مثل "custom:1700000000000"
@@ -11,20 +14,25 @@ export interface CustomPage {
 }
 
 const META_KEY = "mushaf:customPages:v1";
+const ORDER_KEY = "mushaf:pageOrder:v1";
+const imgKey = (id: string) => `mushaf:pageImg:${id}`;
+
+const upsert = (key: string, value: unknown) => {
+  if (!hasValidSupabaseKey()) return;
+  supabase.from("store").upsert({ key, value }).then(() => {}, () => {});
+};
+
+// ─────────────── بيانات الصفحات ───────────────
 
 export const getCustomPages = (): CustomPage[] => {
   if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(META_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  try { const raw = localStorage.getItem(META_KEY); return raw ? JSON.parse(raw) : []; } catch { return []; }
 };
 
 export const saveCustomPages = (pages: CustomPage[]) => {
   if (typeof window === "undefined") return;
   localStorage.setItem(META_KEY, JSON.stringify(pages));
+  upsert(META_KEY, pages);
 };
 
 export const addCustomPage = (page: CustomPage): CustomPage[] => {
@@ -40,7 +48,26 @@ export const removeCustomPage = (src: string): CustomPage[] => {
   return all;
 };
 
-// ─────────────── صور الصفحات (IndexedDB) ───────────────
+// ─────────────── ترتيب الصفحات ───────────────
+
+export const getPageOrder = (): string[] => {
+  if (typeof window === "undefined") return [];
+  try { const raw = localStorage.getItem(ORDER_KEY); const v = raw ? JSON.parse(raw) : []; return Array.isArray(v) ? v : []; } catch { return []; }
+};
+
+export const savePageOrder = (srcs: string[]) => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(ORDER_KEY, JSON.stringify(srcs));
+  upsert(ORDER_KEY, srcs);
+};
+
+export const clearPageOrder = () => {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(ORDER_KEY);
+  upsert(ORDER_KEY, []);
+};
+
+// ─────────────── صور الصفحات (IndexedDB + سيرفر) ───────────────
 
 const DB_NAME = "mushaf";
 const STORE = "pageImages";
@@ -57,14 +84,19 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-export async function savePageImage(id: string, dataUrl: string): Promise<void> {
+const idbPut = async (id: string, dataUrl: string) => {
   const db = await openDB();
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE, "readwrite");
     tx.objectStore(STORE).put(dataUrl, id);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+};
+
+export async function savePageImage(id: string, dataUrl: string): Promise<void> {
+  await idbPut(id, dataUrl);
+  upsert(imgKey(id), { d: dataUrl }); // حفظ على السيرفر أيضاً
 }
 
 export async function getAllPageImages(): Promise<Record<string, string>> {
@@ -87,10 +119,39 @@ export async function getAllPageImages(): Promise<Record<string, string>> {
 
 export async function deletePageImage(id: string): Promise<void> {
   const db = await openDB();
-  return new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE, "readwrite");
     tx.objectStore(STORE).delete(id);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+  // ملاحظة: لا نكتب tombstone على السيرفر (قيمة null يرفضها العمود).
+  // الصف اليتيم غير ضارّ: المزامنة تجلب صور الصفحات الموجودة في القائمة فقط،
+  // وحذف الصفحة يُزيلها من القائمة (saveCustomPages) فلا تُجلب صورتها أصلاً.
 }
+
+// ─────────────── المزامنة من السيرفر ───────────────
+
+export const syncCustomPagesFromServer = async () => {
+  if (typeof window === "undefined" || !hasValidSupabaseKey()) return;
+  try {
+    const { data: meta } = await supabase.from("store").select("value").eq("key", META_KEY).maybeSingle();
+    const pages: CustomPage[] = (meta && Array.isArray(meta.value)) ? meta.value as CustomPage[] : getCustomPages();
+    if (meta && Array.isArray(meta.value)) localStorage.setItem(META_KEY, JSON.stringify(meta.value));
+
+    const { data: ord } = await supabase.from("store").select("value").eq("key", ORDER_KEY).maybeSingle();
+    if (ord && Array.isArray(ord.value) && ord.value.length > 0) localStorage.setItem(ORDER_KEY, JSON.stringify(ord.value));
+
+    // صور الصفحات: اجلب الناقص محلياً بالمفتاح المباشر (مشتقّ من قائمة الصفحات)
+    const local = await getAllPageImages().catch(() => ({} as Record<string, string>));
+    for (const p of pages) {
+      if (local[p.src]) continue;
+      const { data: img } = await supabase.from("store").select("value").eq("key", imgKey(p.src)).maybeSingle();
+      const d = (img?.value as { d?: string } | null)?.d;
+      if (d) await idbPut(p.src, d).catch(() => {});
+    }
+    window.dispatchEvent(new Event("mushaf:sync_complete"));
+  } catch (e) {
+    console.debug("Supabase sync custom pages info:", e);
+  }
+};

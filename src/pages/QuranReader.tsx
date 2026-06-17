@@ -4,7 +4,7 @@ import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
-import { getCustomPages, getAllPageImages } from "@/data/customPages";
+import { getCustomPages, getAllPageImages, getPageOrder } from "@/data/customPages";
 import { getPageSurahRegions } from "@/data/surahRegions";
 import { Headphones } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -120,13 +120,15 @@ export default function QuranReader() {
   // الصفحات المرفوعة من المعايرة تظهر في المصحف هنا (صورة + تظليل + سور من المناطق)
   const [customPageList, setCustomPageList] = useState(() => getCustomPages());
   const [customImgs, setCustomImgs] = useState<Record<string, string>>({});
-  // يُعيد القراءة عند العودة للقارئ (بلا حاجة لتحديث الصفحة يدوياً)
+  const [orderVersion, setOrderVersion] = useState(0);
+  // يُعيد القراءة عند العودة للقارئ / عند اكتمال المزامنة من السيرفر (بلا تحديث يدوي)
   useEffect(() => {
-    const refresh = () => { setCustomPageList(getCustomPages()); getAllPageImages().then(setCustomImgs).catch(() => {}); };
+    const refresh = () => { setCustomPageList(getCustomPages()); getAllPageImages().then(setCustomImgs).catch(() => {}); setOrderVersion(v => v + 1); };
     refresh();
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refresh);
-    return () => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
+    window.addEventListener("mushaf:sync_complete", refresh);
+    return () => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); window.removeEventListener("mushaf:sync_complete", refresh); };
   }, []);
   const imgSrcFor = (src: string) => customImgs[src] || src;
   const pages = useMemo<PageInfo[]>(() => {
@@ -195,18 +197,16 @@ export default function QuranReader() {
   const [isShuffled, setIsShuffled] = useState(false);
   const [shuffledPageOrder, setShuffledPageOrder] = useState<number[]>([]);
 
-  // Custom page order (set by the user from the Calibration "arrange" screen).
-  // Stored as an array of page SRC strings; mapped here to indices in `pages`.
-  const [customPageOrder] = useState<number[]>(() => {
-    try {
-      const raw = localStorage.getItem("mushaf:pageOrder:v1");
-      const srcs = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(srcs) || srcs.length === 0) return [];
-      const order = srcs.map((s: string) => pages.findIndex(p => p.src === s)).filter((i: number) => i >= 0);
-      pages.forEach((_, i) => { if (!order.includes(i)) order.push(i); });
-      return order;
-    } catch { return []; }
-  });
+  // ترتيب الصفحات (من شاشة «ترتيب» في المعايرة، مُخزَّن على السيرفر كقائمة src).
+  // يُعاد حسابه عند تغيّر الصفحات أو اكتمال المزامنة (orderVersion).
+  const customPageOrder = useMemo<number[]>(() => {
+    const srcs = getPageOrder();
+    if (srcs.length === 0) return [];
+    const order = srcs.map((s: string) => pages.findIndex(p => p.src === s)).filter((i: number) => i >= 0);
+    pages.forEach((_, i) => { if (!order.includes(i)) order.push(i); });
+    return order;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pages, orderVersion]);
 
   // Split view state
   const [isSplitView, setIsSplitView] = useState(false);
