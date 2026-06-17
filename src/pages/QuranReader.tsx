@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, SplitSquareHorizontal, Volume2, Menu, Eye, EyeOff, List, Lock, Baby } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, SplitSquareHorizontal, Volume2, Menu, Eye, EyeOff, List, Lock, Baby, Bookmark as BookmarkIcon, Trash2, Plus } from "lucide-react";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
 import { getCustomPages, getAllPageImages, getPageOrder } from "@/data/customPages";
 import { getPageSurahRegions } from "@/data/surahRegions";
 import { addReadingMinutes } from "@/data/kidsProfile";
+import { getBookmarks, addBookmark, removeBookmark, Bookmark } from "@/data/bookmarks";
 import { toast } from "@/hooks/use-toast";
 import { Headphones } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -125,7 +126,7 @@ export default function QuranReader() {
   const [orderVersion, setOrderVersion] = useState(0);
   // يُعيد القراءة عند العودة للقارئ / عند اكتمال المزامنة من السيرفر (بلا تحديث يدوي)
   useEffect(() => {
-    const refresh = () => { setCustomPageList(getCustomPages()); getAllPageImages().then(setCustomImgs).catch(() => {}); setOrderVersion(v => v + 1); };
+    const refresh = () => { setCustomPageList(getCustomPages()); getAllPageImages().then(setCustomImgs).catch(() => {}); setOrderVersion(v => v + 1); setBookmarks(getBookmarks()); };
     refresh();
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refresh);
@@ -228,6 +229,8 @@ export default function QuranReader() {
   const [pinModal, setPinModal] = useState<null | "set" | "verify">(null);
   const [pinInput, setPinInput] = useState("");
   const [surahListOpen, setSurahListOpen] = useState(false);
+  const [navTab, setNavTab] = useState<"surahs" | "bookmarks">("surahs");
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>(getBookmarks);
   useEffect(() => { try { localStorage.setItem("mushaf:kidsMode", kidsMode ? "1" : "0"); } catch { /* ignore */ } }, [kidsMode]);
 
   // Simultaneous playback (teacher + kids together)
@@ -275,6 +278,25 @@ export default function QuranReader() {
     setSelectedSurahIdx(surahIdx);
     setSurahListOpen(false);
   };
+
+  // ── العلامات المرجعية ──
+  const addCurrentBookmark = () => {
+    const page = pages[actualPage];
+    if (!page) return;
+    const sName = currentPageSurahs[selectedSurahIdx]?.name || currentPageSurahs[0]?.name;
+    const bm: Bookmark = { id: `bm-${Date.now()}`, src: page.src, name: getPageDisplayName(page), surah: sName, createdAt: Date.now() };
+    setBookmarks(addBookmark(bm));
+    toast({ title: "تم حفظ العلامة", description: getPageDisplayName(page) });
+  };
+  const jumpToBookmark = (bm: Bookmark) => {
+    const idx = pages.findIndex(p => p.src === bm.src);
+    if (idx < 0) { toast({ title: "الصفحة غير متوفرة", variant: "destructive" }); return; }
+    let display = idx;
+    if (customPageOrder.length > 0) { const d = customPageOrder.indexOf(idx); if (d >= 0) display = d; }
+    setCurrentPage(display);
+    setSurahListOpen(false);
+  };
+  const delBookmark = (id: string) => setBookmarks(removeBookmark(id));
 
   // Page naming state
   const [editingPageName, setEditingPageName] = useState(false);
@@ -1182,24 +1204,44 @@ export default function QuranReader() {
         </div>
       )}
 
-      {/* قائمة السور — اختر سورة تذهب إليها مباشرةً */}
+      {/* لوحة التنقّل — السور والعلامات المرجعية */}
       {surahListOpen && (
         <div className="absolute inset-0 z-[55] flex items-end justify-center bg-black/50 animate-fade-in" onClick={() => setSurahListOpen(false)}>
           <div className="w-full max-w-md max-h-[72vh] overflow-y-auto rounded-t-3xl p-3 shadow-2xl border-t border-white/40"
             style={{ background: "rgba(255,255,255,0.96)", backdropFilter: "blur(20px)" }} onClick={e => e.stopPropagation()} dir="rtl">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-extrabold text-foreground">📖 قائمة السور</h3>
+              <div className="flex gap-1 bg-foreground/5 rounded-xl p-1">
+                <button onClick={() => setNavTab("surahs")} className={`px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 ${navTab === "surahs" ? "bg-amber-400 text-black" : "text-foreground/70"}`}><List className="w-4 h-4" /> السور</button>
+                <button onClick={() => setNavTab("bookmarks")} className={`px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 ${navTab === "bookmarks" ? "bg-amber-400 text-black" : "text-foreground/70"}`}><BookmarkIcon className="w-4 h-4" /> العلامات</button>
+              </div>
               <button onClick={() => setSurahListOpen(false)} className="w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center"><X className="w-4 h-4" /></button>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {allSurahsList.map((s, i) => (
-                <button key={`${s.number}-${i}`} onClick={() => jumpToSurah(s.pageIdx, s.surahIdx)}
-                  className="p-2.5 rounded-xl bg-foreground/5 hover:bg-amber-200/70 text-right font-bold text-sm flex items-center justify-between gap-2 active:scale-[0.98] transition-all">
-                  <span className="truncate">{s.name}</span>
-                  <span className="text-[11px] text-muted-foreground shrink-0">{s.number}</span>
-                </button>
-              ))}
-            </div>
+
+            {navTab === "surahs" ? (
+              <div className="grid grid-cols-2 gap-2">
+                {allSurahsList.map((s, i) => (
+                  <button key={`${s.number}-${i}`} onClick={() => jumpToSurah(s.pageIdx, s.surahIdx)}
+                    className="p-2.5 rounded-xl bg-foreground/5 hover:bg-amber-200/70 text-right font-bold text-sm flex items-center justify-between gap-2 active:scale-[0.98] transition-all">
+                    <span className="truncate">{s.name}</span>
+                    <span className="text-[11px] text-muted-foreground shrink-0">{s.number}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <button onClick={addCurrentBookmark} className="w-full p-2.5 rounded-xl bg-amber-500 text-black font-bold flex items-center justify-center gap-1 active:scale-95"><Plus className="w-4 h-4" /> أضف علامة للموضع الحالي</button>
+                {bookmarks.length === 0 && <p className="text-[12px] text-muted-foreground text-center py-3">لا توجد علامات بعد — احفظ موضعك الحالي.</p>}
+                {bookmarks.map(b => (
+                  <div key={b.id} className="flex items-center gap-2 rounded-xl bg-foreground/5 p-2">
+                    <button onClick={() => jumpToBookmark(b)} className="flex-1 min-w-0 text-right active:scale-[0.98]">
+                      <span className="block font-bold text-sm text-foreground truncate">{b.surah || b.name}</span>
+                      <span className="block text-[11px] text-muted-foreground truncate">{b.name}</span>
+                    </button>
+                    <button onClick={() => delBookmark(b.id)} aria-label="حذف العلامة" className="w-8 h-8 rounded-lg bg-red-500/15 text-red-600 flex items-center justify-center shrink-0"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
