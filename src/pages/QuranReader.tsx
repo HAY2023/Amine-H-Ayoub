@@ -237,10 +237,6 @@ export default function QuranReader() {
 
   // ── ركن الأطفال: دخول بزر، خروج بكلمة مرور ──
   const KIDS_PIN_KEY = "mushaf:kidsPin";
-  const enterKidsMode = () => {
-    const pin = (() => { try { return localStorage.getItem(KIDS_PIN_KEY) || ""; } catch { return ""; } })();
-    if (!pin) { setPinInput(""); setPinModal("set"); } else { setKidsMode(true); }
-  };
   const requestExitKids = () => { setPinInput(""); setPinModal("verify"); };
   const confirmPin = () => {
     if (pinModal === "set") {
@@ -1157,7 +1153,7 @@ export default function QuranReader() {
             { key: "surahs", icon: <List className="w-5 h-5 text-foreground" />, label: "قائمة السور", onClick: () => setSurahListOpen(true), active: surahListOpen },
             kidsMode
               ? { key: "lock", icon: <Lock className="w-5 h-5 text-foreground" />, label: "خروج من ركن الأطفال", onClick: requestExitKids, active: true }
-              : { key: "kids", icon: <Baby className="w-5 h-5 text-foreground" />, label: "ركن الأطفال", onClick: enterKidsMode, active: false },
+              : { key: "kids", icon: <Baby className="w-5 h-5 text-foreground" />, label: "ركن الأطفال", onClick: () => navigate("/games"), active: false },
           ].filter(Boolean) as { key: string; icon: JSX.Element; label: string; onClick: () => void; active: boolean }[]).map(b => (
             <button
               key={b.key}

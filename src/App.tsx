@@ -18,6 +18,7 @@ import RecitationMethods from "./pages/RecitationMethods.tsx";
 import QuranReader from "./pages/QuranReader.tsx";
 import AudioUploadPage from "./pages/AudioUploadPage.tsx";
 import LinkAudioPage from "./pages/LinkAudioPage.tsx";
+import KidsGames from "./pages/KidsGames.tsx";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,7 @@ const App = () => {
               <Route path="/calibrate" element={<AyahCalibration />} />
               <Route path="/recitation-methods" element={<RecitationMethods />} />
               <Route path="/link" element={<LinkAudioPage />} />
+              <Route path="/games" element={<KidsGames />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
