@@ -1107,22 +1107,23 @@ export default function QuranReader() {
         </div>
       )}
 
-      {/* ── قائمة الخيارات الموحّدة (بستايل الموقع) ── */}
-      <div className="absolute top-2 right-2 z-40">
+      {/* ── قائمة الخيارات (أيقونة واحدة أسفل وسط الشاشة) ── */}
+      {!controlsOpen && (
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-50">
         <button
           onClick={() => setMenuOpen(v => !v)}
-          className="w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-md active:scale-95"
-          style={{ background: menuOpen ? "rgba(250,204,21,0.5)" : "rgba(255,255,255,0.55)", backdropFilter: "blur(12px) saturate(140%)" }}
-          aria-label="القائمة"
+          className="w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-95"
+          style={{ background: menuOpen ? "rgba(250,204,21,0.6)" : "rgba(255,255,255,0.7)", backdropFilter: "blur(12px) saturate(140%)" }}
+          aria-label="قائمة الخيارات"
         >
-          {menuOpen ? <X className="w-5 h-5 text-foreground" /> : <Menu className="w-5 h-5 text-foreground" />}
+          {menuOpen ? <X className="w-6 h-6 text-foreground" /> : <Menu className="w-6 h-6 text-foreground" />}
         </button>
 
         {menuOpen && (
           <>
             <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
             <div
-              className="absolute top-12 right-0 z-40 w-64 rounded-2xl p-2 shadow-2xl border border-white/40 animate-fade-in"
+              className="absolute bottom-14 left-1/2 -translate-x-1/2 z-40 w-64 rounded-2xl p-2 shadow-2xl border border-white/40 animate-fade-in"
               style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(24px) saturate(150%)" }}
               dir="rtl"
             >
@@ -1131,6 +1132,7 @@ export default function QuranReader() {
                 { icon: isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />, name: isFullscreen ? "تصغير الشاشة" : "ملء الشاشة", desc: "عرض المصحف بملء الشاشة", onClick: toggleFullscreen, active: isFullscreen, tint: "bg-emerald-400/20 text-emerald-700" },
                 { icon: <Shuffle className="w-5 h-5" />, name: "ترتيب عشوائي", desc: "خلط ترتيب الصفحات", onClick: handleShuffle, active: isShuffled, tint: "bg-amber-400/20 text-amber-700" },
                 { icon: <SplitSquareHorizontal className="w-5 h-5" />, name: "وضع التقسيم", desc: "عرض جانبي لقائمة السور", onClick: () => setIsSplitView(v => !v), active: isSplitView, tint: "bg-sky-400/20 text-sky-700" },
+                { icon: <Pencil className="w-5 h-5" />, name: "المعايرة (التظليل)", desc: "ضبط مواضع الآيات والسور ورفع الصفحات", onClick: () => navigate("/calibrate"), active: false, tint: "bg-violet-400/20 text-violet-700" },
               ]).map((item, i) => (
                 <button
                   key={i}
@@ -1153,6 +1155,7 @@ export default function QuranReader() {
           </>
         )}
       </div>
+      )}
 
       {controlsOpen && (
         <div className="absolute inset-x-0 bottom-0 z-40 animate-fade-in" onClick={(e) => e.stopPropagation()}>
