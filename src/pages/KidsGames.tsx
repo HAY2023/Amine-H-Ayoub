@@ -4,6 +4,8 @@ import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Headphones, List
 import { getAllSurahs } from "../data/quranData";
 import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
 import { getProfile, saveProfile, getProgress, addPlayMinutes, grantMorePlay, KidsProfile } from "../data/kidsProfile";
+import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
+import PinModal from "../components/PinModal";
 import { toast } from "../hooks/use-toast";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
@@ -196,6 +198,7 @@ export default function KidsGames() {
   const [progress, setProgress] = useState(getProgress);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [draft, setDraft] = useState<KidsProfile>(profile);
+  const [pinAction, setPinAction] = useState<null | "settings" | "continue" | "exit" | "setread">(null);
 
   useEffect(() => {
     const refresh = () => { setProfile(getProfile()); setProgress(getProgress()); };
@@ -226,23 +229,22 @@ export default function KidsGames() {
   const matched = GAMES.filter(g => g.ageMin <= profile.age);
   const shownGames = matched.length ? matched : [GAMES[0]];
 
-  const askPin = (msg: string): boolean => {
-    let pin = ""; try { pin = localStorage.getItem("mushaf:kidsPin") || ""; } catch { /* ignore */ }
-    if (!pin) return true;
-    const p = (window.prompt(msg) || "").trim();
-    if (p !== pin) { toast({ title: "رمز خاطئ", variant: "destructive" }); return false; }
-    return true;
+  const kidsMode = isKidsMode();
+
+  // الرمز الرقمي يحكم: الإعدادات، متابعة اللعب، الخروج من القفل، وتعيين الرمز عند القراءة المقفلة
+  const onPinSuccess = () => {
+    if (pinAction === "settings") { setDraft(getProfile()); setSettingsOpen(true); }
+    else if (pinAction === "continue") { grantMorePlay(); setProgress(getProgress()); }
+    else if (pinAction === "exit") { setKidsLocked(false); setPinAction(null); navigate("/"); return; }
+    else if (pinAction === "setread") { setKidsLocked(true); setPinAction(null); navigate("/"); return; }
+    setPinAction(null);
   };
 
-  const lockAndRead = () => {
-    let pin = ""; try { pin = localStorage.getItem("mushaf:kidsPin") || ""; } catch { /* ignore */ }
-    if (!pin) { const p = (window.prompt("اختر رمز الخروج (٣ خانات على الأقل):") || "").trim(); if (p.length < 3) return; try { localStorage.setItem("mushaf:kidsPin", p); } catch { /* ignore */ } }
-    try { localStorage.setItem("mushaf:kidsMode", "1"); } catch { /* ignore */ }
-    navigate("/");
-  };
-  const openSettings = () => { if (!askPin("رمز ولي الأمر:")) return; setDraft(getProfile()); setSettingsOpen(true); };
+  const lockAndRead = () => { if (hasKidsPin()) { setKidsLocked(true); navigate("/"); } else setPinAction("setread"); };
+  const openSettings = () => { if (hasKidsPin()) setPinAction("settings"); else { setDraft(getProfile()); setSettingsOpen(true); } };
   const saveSettings = () => { saveProfile(draft); setProfile(draft); setSettingsOpen(false); toast({ title: "حُفظت الإعدادات" }); };
-  const continuePlay = () => { if (!askPin("رمز ولي الأمر للسماح بمزيد من اللعب:")) return; grantMorePlay(); setProgress(getProgress()); };
+  const continuePlay = () => { if (hasKidsPin()) setPinAction("continue"); else { grantMorePlay(); setProgress(getProgress()); } };
+  const headerBack = () => { if (active) setActive(null); else if (kidsMode) setPinAction("exit"); else navigate("/"); };
 
   const pct = Math.min(100, (progress.minutes / Math.max(1, profile.goalMinutes)) * 100);
 
@@ -250,8 +252,8 @@ export default function KidsGames() {
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white" dir="rtl">
       <div className="mx-auto max-w-md px-4 py-4 space-y-4">
         <header className="flex items-center justify-between">
-          <button onClick={() => (active ? setActive(null) : navigate("/"))} className="flex h-10 items-center gap-1 rounded-full bg-slate-700 px-4 text-sm font-bold hover:bg-slate-600 active:scale-95">
-            <ArrowRight className="h-4 w-4" /> {active ? "الألعاب" : "رجوع"}
+          <button onClick={headerBack} className="flex h-10 items-center gap-1 rounded-full bg-slate-700 px-4 text-sm font-bold hover:bg-slate-600 active:scale-95">
+            <ArrowRight className="h-4 w-4" /> {active ? "الألعاب" : kidsMode ? "خروج" : "رجوع"}
           </button>
           <h1 className="font-extrabold text-lg text-amber-300">ركن الأطفال</h1>
           {!active ? (
@@ -336,6 +338,15 @@ export default function KidsGames() {
             </div>
           </div>
         </div>
+      )}
+
+      {pinAction && (
+        <PinModal
+          mode={pinAction === "setread" ? "set" : "verify"}
+          title={pinAction === "setread" ? "اختر رمز ولي الأمر (٤ أرقام)" : pinAction === "exit" ? "أدخل الرمز للخروج" : "رمز ولي الأمر"}
+          onSuccess={onPinSuccess}
+          onCancel={() => setPinAction(null)}
+        />
       )}
     </div>
   );
