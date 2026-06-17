@@ -6,6 +6,7 @@
  *  - صور الصفحات (base64)                     → IndexedDB (محلي) + store["mushaf:pageImg:<id>"]
  */
 import { supabase, hasValidSupabaseKey } from "../lib/supabase";
+import { getPageSurahRegions } from "./surahRegions";
 
 export interface CustomPage {
   src: string;     // معرّف فريد مثل "custom:1700000000000"
@@ -133,22 +134,43 @@ export async function deletePageImage(id: string): Promise<void> {
 // ─────────────── المزامنة من السيرفر ───────────────
 
 export const syncCustomPagesFromServer = async () => {
-  if (typeof window === "undefined" || !hasValidSupabaseKey()) return;
+  if (typeof window === "undefined") return;
   try {
-    const { data: meta } = await supabase.from("store").select("value").eq("key", META_KEY).maybeSingle();
-    const pages: CustomPage[] = (meta && Array.isArray(meta.value)) ? meta.value as CustomPage[] : getCustomPages();
-    if (meta && Array.isArray(meta.value)) localStorage.setItem(META_KEY, JSON.stringify(meta.value));
+    const localPages = getCustomPages();
+    let serverPages: CustomPage[] = [];
+    if (hasValidSupabaseKey()) {
+      const { data: meta } = await supabase.from("store").select("value").eq("key", META_KEY).maybeSingle();
+      if (meta && Array.isArray(meta.value)) serverPages = meta.value as CustomPage[];
+    }
 
-    const { data: ord } = await supabase.from("store").select("value").eq("key", ORDER_KEY).maybeSingle();
-    if (ord && Array.isArray(ord.value) && ord.value.length > 0) localStorage.setItem(ORDER_KEY, JSON.stringify(ord.value));
+    // دمج آمن: السيرفر + المحلي — لا نمسح المحلي أبداً بقائمة فارغة
+    const bySrc = new Map<string, CustomPage>();
+    [...serverPages, ...localPages].forEach(p => { if (p && p.src) bySrc.set(p.src, { ...bySrc.get(p.src), ...p }); });
 
-    // صور الصفحات: اجلب الناقص محلياً بالمفتاح المباشر (مشتقّ من قائمة الصفحات)
-    const local = await getAllPageImages().catch(() => ({} as Record<string, string>));
-    for (const p of pages) {
-      if (local[p.src]) continue;
-      const { data: img } = await supabase.from("store").select("value").eq("key", imgKey(p.src)).maybeSingle();
-      const d = (img?.value as { d?: string } | null)?.d;
-      if (d) await idbPut(p.src, d).catch(() => {});
+    // استرجاع: أي صورة في IndexedDB لصفحة مفقودة من القائمة تُعاد (الاسم من منطقة سورتها)
+    const imgs = await getAllPageImages().catch(() => ({} as Record<string, string>));
+    Object.keys(imgs).forEach(src => {
+      if (src.startsWith("custom:") && !bySrc.has(src)) {
+        const regs = getPageSurahRegions(src);
+        bySrc.set(src, { src, name: regs[0]?.name || "صفحة مستعادة" });
+      }
+    });
+
+    const merged = Array.from(bySrc.values());
+    localStorage.setItem(META_KEY, JSON.stringify(merged));
+    if (merged.length > 0) upsert(META_KEY, merged); // أعِد رفع القائمة المدموجة كمصدر للحقيقة
+
+    if (hasValidSupabaseKey()) {
+      const { data: ord } = await supabase.from("store").select("value").eq("key", ORDER_KEY).maybeSingle();
+      if (ord && Array.isArray(ord.value) && ord.value.length > 0) localStorage.setItem(ORDER_KEY, JSON.stringify(ord.value));
+
+      // اجلب صور الصفحات الناقصة محلياً بالمفتاح المباشر
+      for (const p of merged) {
+        if (imgs[p.src]) continue;
+        const { data: img } = await supabase.from("store").select("value").eq("key", imgKey(p.src)).maybeSingle();
+        const d = (img?.value as { d?: string } | null)?.d;
+        if (d) await idbPut(p.src, d).catch(() => {});
+      }
     }
     window.dispatchEvent(new Event("mushaf:sync_complete"));
   } catch (e) {
