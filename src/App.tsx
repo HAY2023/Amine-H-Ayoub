@@ -22,6 +22,9 @@ import AudioUploadPage from "./pages/AudioUploadPage.tsx";
 import LinkAudioPage from "./pages/LinkAudioPage.tsx";
 import KidsGames from "./pages/KidsGames.tsx";
 import SettingsPage, { applyTheme, getTheme } from "./pages/SettingsPage.tsx";
+import ParentDashboard from "./pages/ParentDashboard.tsx";
+import { getProfile } from "./data/kidsProfile";
+import { toast } from "./hooks/use-toast";
 import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
 
 const queryClient = new QueryClient();
@@ -44,6 +47,24 @@ const App = () => {
     if (data) {
       fetch('/api/save-boxes', { method: 'POST', body: data }).catch(() => {});
     }
+  }, []);
+
+  // تذكير الدرس اليومي (أثناء فتح التطبيق)
+  useEffect(() => {
+    const id = setInterval(() => {
+      const t = getProfile().lessonTime;
+      if (!t) return;
+      const now = new Date();
+      const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      const todayStr = now.toDateString();
+      let last = ""; try { last = localStorage.getItem("mushaf:lessonNotified") || ""; } catch { /* ignore */ }
+      if (hhmm >= t && last !== todayStr) {
+        try { localStorage.setItem("mushaf:lessonNotified", todayStr); } catch { /* ignore */ }
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") { try { new Notification("حان وقت درس القرآن"); } catch { /* ignore */ } }
+        toast({ title: "حان وقت درس القرآن", description: "وقت القراءة اليومي" });
+      }
+    }, 60000);
+    return () => clearInterval(id);
   }, []);
 
   // Ctrl+5 shortcut to toggle site links overlay
@@ -75,6 +96,7 @@ const App = () => {
               <Route path="/link" element={<LinkAudioPage />} />
               <Route path="/games" element={<KidsGames />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/parent" element={<ParentDashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

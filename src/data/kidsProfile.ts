@@ -10,7 +10,10 @@ export interface KidsProfile {
   goalMinutes: number;   // دقائق القراءة المطلوبة لفتح الألعاب
   playMinutes: number;   // دقائق اللعب المسموحة بعد الفتح (٠ = بلا حد)
   reward: string;        // نص المكافأة عند الإنجاز
+  lessonTime: string;    // وقت تذكير الدرس "HH:MM" (فارغ = بلا تذكير)
 }
+
+export interface DayLog { date: string; minutes: number; played: number; }
 
 export interface KidsProgress {
   date: string;          // يوم التتبّع (يُعاد ضبطه يومياً)
@@ -22,8 +25,9 @@ export interface KidsProgress {
 
 const PROFILE_KEY = "mushaf:kidsProfile:v1";
 const PROGRESS_KEY = "mushaf:kidsProgress:v1";
+const HISTORY_KEY = "mushaf:kidsHistory:v1";
 
-const DEFAULT_PROFILE: KidsProfile = { name: "", age: 6, goalMinutes: 5, playMinutes: 15, reward: "أحسنت، لقد فتحت الألعاب" };
+const DEFAULT_PROFILE: KidsProfile = { name: "", age: 6, goalMinutes: 5, playMinutes: 15, reward: "أحسنت، لقد فتحت الألعاب", lessonTime: "" };
 
 const today = () => new Date().toDateString();
 
@@ -40,11 +44,26 @@ export const saveProfile = (p: KidsProfile) => {
 
 const freshProgress = (): KidsProgress => ({ date: today(), minutes: 0, unlocked: false, played: 0, playExpired: false });
 
+export const getHistory = (): DayLog[] => {
+  if (typeof window === "undefined") return [];
+  try { const r = localStorage.getItem(HISTORY_KEY); const v = r ? JSON.parse(r) : []; return Array.isArray(v) ? v : []; } catch { return []; }
+};
+
+const archive = (p: KidsProgress) => {
+  if ((p.minutes || 0) <= 0 && (p.played || 0) <= 0) return;
+  const h = getHistory().filter(d => d.date !== p.date);
+  h.unshift({ date: p.date, minutes: p.minutes || 0, played: p.played || 0 });
+  const trimmed = h.slice(0, 30);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
+  if (hasValidSupabaseKey()) supabase.from("store").upsert({ key: HISTORY_KEY, value: trimmed }).then(() => {}, () => {});
+};
+
 export const getProgress = (): KidsProgress => {
   if (typeof window === "undefined") return freshProgress();
   try {
     const r = localStorage.getItem(PROGRESS_KEY); const p = r ? JSON.parse(r) : null;
     if (p && p.date === today()) return { ...freshProgress(), ...p };
+    if (p && p.date && p.date !== today()) archive({ ...freshProgress(), ...p }); // أرشف يوم أمس
   } catch { /* ignore */ }
   return freshProgress();
 };

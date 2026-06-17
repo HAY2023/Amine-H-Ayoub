@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X } from "lucide-react";
+import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X, BarChart3 } from "lucide-react";
 import { syncCoordinatesFromServer } from "../data/ayahCoordinates";
 import { syncTimingsFromServer } from "../data/ayahTimings";
 import { syncSurahRegionsFromServer } from "../data/surahRegions";
@@ -52,6 +52,12 @@ export default function SettingsPage() {
     } finally { setSyncing(false); }
   };
 
+  const openParent = () => {
+    let pin = ""; try { pin = localStorage.getItem("mushaf:kidsPin") || ""; } catch { /* ignore */ }
+    if (pin) { const p = (window.prompt("رمز ولي الأمر:") || "").trim(); if (p !== pin) { toast({ title: "رمز خاطئ", variant: "destructive" }); return; } }
+    navigate("/parent");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white" dir="rtl">
       <div className="mx-auto max-w-md px-4 py-4 space-y-3">
@@ -73,6 +79,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        <Row icon={<BarChart3 className="w-5 h-5" />} title="لوحة ولي الأمر" desc="متابعة التقدّم، تذكير الدرس، منح وقت لعب" onClick={openParent} />
         <Row icon={<Baby className="w-5 h-5" />} title="ركن الأطفال وإعداداته" desc="الألعاب، وقت القراءة واللعب، كلمة المرور" onClick={() => navigate("/games")} />
         <Row icon={<RefreshCw className="w-5 h-5" />} title="تحقق من التحديث" desc="جلب أحدث نسخة من التطبيق" onClick={checkUpdate} />
         <Row icon={<CloudDownload className={`w-5 h-5 ${syncing ? "animate-pulse" : ""}`} />} title="مزامنة المحتوى من السيرفر" desc="السور والصوت والصفحات والتظليل (تُحفظ محلياً للعمل دون إنترنت)" onClick={syncNow} />
