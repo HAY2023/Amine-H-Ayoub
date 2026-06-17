@@ -5,6 +5,7 @@ import { syncCoordinatesFromServer } from "../data/ayahCoordinates";
 import { syncTimingsFromServer } from "../data/ayahTimings";
 import { syncSurahRegionsFromServer } from "../data/surahRegions";
 import { syncCustomPagesFromServer } from "../data/customPages";
+import { downloadEverything } from "../data/offlineDownload";
 import { toast } from "../hooks/use-toast";
 
 const THEME_KEY = "mushaf:theme";
@@ -34,7 +35,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const [theme, setTheme] = useState<"dark" | "light">(getTheme);
   const [termsOpen, setTermsOpen] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  const [dlPct, setDlPct] = useState<number | null>(null);
 
   useEffect(() => { applyTheme(theme); try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ } }, [theme]);
 
@@ -44,12 +45,14 @@ export default function SettingsPage() {
     setTimeout(() => window.location.reload(), 600);
   };
 
-  const syncNow = async () => {
-    setSyncing(true);
-    try {
-      await Promise.allSettled([syncCoordinatesFromServer(), syncTimingsFromServer(), syncSurahRegionsFromServer(), syncCustomPagesFromServer()]);
-      toast({ title: "تمت المزامنة من السيرفر", description: "السور والصفحات والتظليل محدّثة محلياً." });
-    } finally { setSyncing(false); }
+  const downloadAll = async () => {
+    if (dlPct !== null) return;
+    setDlPct(0);
+    await Promise.allSettled([syncCoordinatesFromServer(), syncTimingsFromServer(), syncSurahRegionsFromServer(), syncCustomPagesFromServer()]);
+    const res = await downloadEverything((d, t) => setDlPct(t ? Math.round((d / t) * 100) : 0));
+    setDlPct(100);
+    toast({ title: "اكتمل التحميل للعمل دون إنترنت", description: `${res.ok} ملف محفوظ على الجهاز` });
+    setTimeout(() => setDlPct(null), 1500);
   };
 
   const openParent = () => {
@@ -82,7 +85,7 @@ export default function SettingsPage() {
         <Row icon={<BarChart3 className="w-5 h-5" />} title="لوحة ولي الأمر" desc="متابعة التقدّم، تذكير الدرس، منح وقت لعب" onClick={openParent} />
         <Row icon={<Baby className="w-5 h-5" />} title="ركن الأطفال وإعداداته" desc="الألعاب، وقت القراءة واللعب، كلمة المرور" onClick={() => navigate("/games")} />
         <Row icon={<RefreshCw className="w-5 h-5" />} title="تحقق من التحديث" desc="جلب أحدث نسخة من التطبيق" onClick={checkUpdate} />
-        <Row icon={<CloudDownload className={`w-5 h-5 ${syncing ? "animate-pulse" : ""}`} />} title="مزامنة المحتوى من السيرفر" desc="السور والصوت والصفحات والتظليل (تُحفظ محلياً للعمل دون إنترنت)" onClick={syncNow} />
+        <Row icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل كل المحتوى للعمل دون إنترنت" desc="السور والصوت والصفحات إلى جهازك" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-emerald-300 w-12 text-center">{dlPct}%</span> : undefined} />
 
         {/* الاشتراك بالقارئ */}
         <a href={RECITER_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-2xl bg-gradient-to-l from-red-600/30 to-slate-800/80 border border-red-500/40 p-3 hover:border-red-400 active:scale-[0.99] transition-all">
