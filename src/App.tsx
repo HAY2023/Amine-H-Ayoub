@@ -20,13 +20,17 @@ import QuranReader from "./pages/QuranReader.tsx";
 import AudioUploadPage from "./pages/AudioUploadPage.tsx";
 import LinkAudioPage from "./pages/LinkAudioPage.tsx";
 import KidsGames from "./pages/KidsGames.tsx";
+import SettingsPage, { applyTheme, getTheme } from "./pages/SettingsPage.tsx";
+import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [showSiteLinks, setShowSiteLinks] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => !isOnboarded());
 
   useEffect(() => {
+    applyTheme(getTheme());
     syncCoordinatesFromServer();
     syncTimingsFromServer();
     syncSurahRegionsFromServer();
@@ -68,10 +72,12 @@ const App = () => {
               <Route path="/recitation-methods" element={<RecitationMethods />} />
               <Route path="/link" element={<LinkAudioPage />} />
               <Route path="/games" element={<KidsGames />} />
+              <Route path="/settings" element={<SettingsPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
             <SiteLinksOverlay open={showSiteLinks} onClose={() => setShowSiteLinks(false)} />
+            {showWelcome && <WelcomeOverlay onDone={() => setShowWelcome(false)} />}
           </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>
