@@ -1,20 +1,18 @@
-name: Compile Desktop App
+name: Build Apps (Desktop + Android)
 
+# يُشغَّل يدوياً من تبويب Actions، أو عند دفع وسم إصدار (مثل v1.0.0).
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
+  push:
+    tags: ['v*']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-tauri:
+  # ───────────── تطبيق الحاسوب: ويندوز + ماك + لينكس ─────────────
+  desktop:
     permissions:
       contents: write
     strategy:
@@ -22,41 +20,97 @@ jobs:
       matrix:
         include:
           - platform: 'windows-latest'
-            args: ''
-
+          - platform: 'macos-latest'
+          - platform: 'ubuntu-22.04'
     runs-on: ${{ matrix.platform }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Linux build deps
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Build frontend assets
-        run: npm run build
-
-      - name: Setup Tauri Action
+      - name: Build desktop app (Tauri)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload desktop installers
+        uses: actions/upload-artifact@v4
         with:
-          tagName: app-v__VERSION__
-          releaseName: "learn-quran-kids v__VERSION__"
-          releaseBody: "تطبيق الحاسوب قرآن أطفال - نسخة الويندوز أوفلاين"
-          releaseDraft: false
-          prerelease: false
-          args: ${{ matrix.args }}
+          name: desktop-${{ matrix.platform }}
+          if-no-files-found: ignore
+          path: |
+            src-tauri/target/release/bundle/**/*.msi
+            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.dmg
+            src-tauri/target/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/**/*.deb
+
+  # ───────────── تطبيق الهاتف: أندرويد (APK قابل للتثبيت المباشر) ─────────────
+  android:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager "ndk;26.1.10909125"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - run: npm ci
+
+      - name: Install Tauri CLI
+        run: npm install -D @tauri-apps/cli@^2
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Initialize Android project
+        run: npx tauri android init || true
+
+      - name: Build Android APK (debug — قابل للتثبيت بالتحميل المباشر)
+        run: npx tauri android build --apk --debug
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          if-no-files-found: warn
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
