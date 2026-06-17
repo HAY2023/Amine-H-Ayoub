@@ -1150,21 +1150,21 @@ export default function QuranReader() {
 
       {/* ── أيقونات الخيارات (منفصلة، أسفل وسط الشاشة) ── */}
       {!controlsOpen && (
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3" dir="rtl">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2" dir="rtl">
           {([
-            !kidsMode && { key: "back", icon: <ArrowRight className="w-6 h-6 text-foreground" />, label: "رجوع", onClick: () => navigate("/audio"), active: false },
-            { key: "hide", icon: hideShading ? <Eye className="w-6 h-6 text-foreground" /> : <EyeOff className="w-6 h-6 text-foreground" />, label: hideShading ? "إظهار التظليل" : "إخفاء التظليل", onClick: () => setHideShading(v => !v), active: hideShading },
-            { key: "surahs", icon: <List className="w-6 h-6 text-foreground" />, label: "قائمة السور", onClick: () => setSurahListOpen(true), active: surahListOpen },
+            !kidsMode && { key: "back", icon: <ArrowRight className="w-5 h-5 text-foreground" />, label: "رجوع", onClick: () => navigate("/audio"), active: false },
+            { key: "hide", icon: hideShading ? <Eye className="w-5 h-5 text-foreground" /> : <EyeOff className="w-5 h-5 text-foreground" />, label: hideShading ? "إظهار التظليل" : "إخفاء التظليل", onClick: () => setHideShading(v => !v), active: hideShading },
+            { key: "surahs", icon: <List className="w-5 h-5 text-foreground" />, label: "قائمة السور", onClick: () => setSurahListOpen(true), active: surahListOpen },
             kidsMode
-              ? { key: "lock", icon: <Lock className="w-6 h-6 text-foreground" />, label: "خروج من ركن الأطفال", onClick: requestExitKids, active: true }
-              : { key: "kids", icon: <Baby className="w-6 h-6 text-foreground" />, label: "ركن الأطفال", onClick: enterKidsMode, active: false },
+              ? { key: "lock", icon: <Lock className="w-5 h-5 text-foreground" />, label: "خروج من ركن الأطفال", onClick: requestExitKids, active: true }
+              : { key: "kids", icon: <Baby className="w-5 h-5 text-foreground" />, label: "ركن الأطفال", onClick: enterKidsMode, active: false },
           ].filter(Boolean) as { key: string; icon: JSX.Element; label: string; onClick: () => void; active: boolean }[]).map(b => (
             <button
               key={b.key}
               onClick={b.onClick}
               aria-label={b.label}
               title={b.label}
-              className="w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-95"
+              className="w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-md active:scale-95"
               style={{ background: b.active ? "rgba(250,204,21,0.7)" : "rgba(255,255,255,0.72)", backdropFilter: "blur(12px) saturate(140%)" }}
             >
               {b.icon}
