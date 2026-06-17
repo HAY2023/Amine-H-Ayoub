@@ -6,6 +6,8 @@ import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
 import { getCustomPages, getAllPageImages, getPageOrder } from "@/data/customPages";
 import { getPageSurahRegions } from "@/data/surahRegions";
+import { addReadingMinutes } from "@/data/kidsProfile";
+import { toast } from "@/hooks/use-toast";
 import { Headphones } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { isTauri, checkOfflineStatus, getOfflineAudioUrl, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
@@ -131,6 +133,16 @@ export default function QuranReader() {
     return () => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); window.removeEventListener("mushaf:sync_complete", refresh); };
   }, []);
   const imgSrcFor = (src: string) => customImgs[src] || src;
+
+  // تتبّع وقت القراءة: تُفتح ألعاب ركن الأطفال بعد بلوغ الهدف اليومي
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      const { justUnlocked } = addReadingMinutes(1);
+      if (justUnlocked) toast({ title: "🎉 أحسنت! فتحت ألعاب ركن الأطفال", description: "اذهب إلى ركن الأطفال 🧒" });
+    }, 60000);
+    return () => clearInterval(id);
+  }, []);
   const pages = useMemo<PageInfo[]>(() => {
     const extra: PageInfo[] = customPageList.map(cp => {
       const regions = getPageSurahRegions(cp.src);

@@ -9,6 +9,7 @@ import { syncCoordinatesFromServer } from "./data/ayahCoordinates";
 import { syncTimingsFromServer } from "./data/ayahTimings";
 import { syncSurahRegionsFromServer } from "./data/surahRegions";
 import { syncCustomPagesFromServer } from "./data/customPages";
+import { syncKidsProfileFromServer } from "./data/kidsProfile";
 import { AudioContextProvider } from "./contexts/audioContext";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -30,6 +31,7 @@ const App = () => {
     syncTimingsFromServer();
     syncSurahRegionsFromServer();
     syncCustomPagesFromServer();
+    syncKidsProfileFromServer();
 
     // Send localStorage data to Vite plugin (dev-only, silent fail)
     const data = localStorage.getItem("mushaf:ayahCoordinates:v1");
