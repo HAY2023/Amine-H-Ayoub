@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, SplitSquareHorizontal, Volume2, Menu } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, SplitSquareHorizontal, Volume2, Menu, Eye, EyeOff } from "lucide-react";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
@@ -210,7 +210,7 @@ export default function QuranReader() {
 
   // Split view state
   const [isSplitView, setIsSplitView] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [hideShading, setHideShading] = useState(false);
 
   // Simultaneous playback (teacher + kids together)
   const audioRef2 = useRef<HTMLAudioElement>(null);
@@ -1028,6 +1028,7 @@ export default function QuranReader() {
                 style={{ aspectRatio: `${PAGE_IMAGE_SIZE.width}/${PAGE_IMAGE_SIZE.height}`, height: '100%', maxWidth: '100%' }}
               >
                 <img src={imgSrcFor(page.src)} alt={page.name} className="absolute inset-0 w-full h-full select-none animate-fade-in" draggable={false} />
+                {!hideShading && (
                 <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${PAGE_IMAGE_SIZE.width} ${PAGE_IMAGE_SIZE.height}`} preserveAspectRatio="none">
                   {getPageAyahBoxes(page.src).map((box, i) => (
                     <rect
@@ -1039,6 +1040,7 @@ export default function QuranReader() {
                     />
                   ))}
                 </svg>
+                )}
                 <div className="absolute inset-0">
                   {getPageAyahBoxes(page.src).map((box, i) => {
                     const surah = page.surahs.find((s) => s.number === box.surah);
@@ -1107,54 +1109,27 @@ export default function QuranReader() {
         </div>
       )}
 
-      {/* ── قائمة الخيارات (أيقونة واحدة أسفل وسط الشاشة) ── */}
+      {/* ── أيقونات الخيارات (منفصلة، أسفل وسط الشاشة) ── */}
       {!controlsOpen && (
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-50">
-        <button
-          onClick={() => setMenuOpen(v => !v)}
-          className="w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-95"
-          style={{ background: menuOpen ? "rgba(250,204,21,0.6)" : "rgba(255,255,255,0.7)", backdropFilter: "blur(12px) saturate(140%)" }}
-          aria-label="قائمة الخيارات"
-        >
-          {menuOpen ? <X className="w-6 h-6 text-foreground" /> : <Menu className="w-6 h-6 text-foreground" />}
-        </button>
-
-        {menuOpen && (
-          <>
-            <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-            <div
-              className="absolute bottom-14 left-1/2 -translate-x-1/2 z-40 w-64 rounded-2xl p-2 shadow-2xl border border-white/40 animate-fade-in"
-              style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(24px) saturate(150%)" }}
-              dir="rtl"
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3" dir="rtl">
+          {([
+            { key: "back", icon: <ArrowRight className="w-6 h-6 text-foreground" />, label: "رجوع", onClick: () => navigate("/audio"), active: false },
+            { key: "hide", icon: hideShading ? <Eye className="w-6 h-6 text-foreground" /> : <EyeOff className="w-6 h-6 text-foreground" />, label: hideShading ? "إظهار التظليل" : "إخفاء التظليل", onClick: () => setHideShading(v => !v), active: hideShading },
+            { key: "shuffle", icon: <Shuffle className="w-6 h-6 text-foreground" />, label: "ترتيب عشوائي", onClick: handleShuffle, active: isShuffled },
+            { key: "full", icon: isFullscreen ? <Minimize2 className="w-6 h-6 text-foreground" /> : <Maximize2 className="w-6 h-6 text-foreground" />, label: isFullscreen ? "تصغير الشاشة" : "ملء الشاشة", onClick: toggleFullscreen, active: isFullscreen },
+          ]).map(b => (
+            <button
+              key={b.key}
+              onClick={b.onClick}
+              aria-label={b.label}
+              title={b.label}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-95"
+              style={{ background: b.active ? "rgba(250,204,21,0.7)" : "rgba(255,255,255,0.72)", backdropFilter: "blur(12px) saturate(140%)" }}
             >
-              {([
-                { icon: <ArrowRight className="w-5 h-5" />, name: "رجوع", desc: "العودة لقائمة السور", onClick: () => navigate("/audio"), active: false, tint: "bg-foreground/5 text-foreground" },
-                { icon: isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />, name: isFullscreen ? "تصغير الشاشة" : "ملء الشاشة", desc: "عرض المصحف بملء الشاشة", onClick: toggleFullscreen, active: isFullscreen, tint: "bg-emerald-400/20 text-emerald-700" },
-                { icon: <Shuffle className="w-5 h-5" />, name: "ترتيب عشوائي", desc: "خلط ترتيب الصفحات", onClick: handleShuffle, active: isShuffled, tint: "bg-amber-400/20 text-amber-700" },
-                { icon: <SplitSquareHorizontal className="w-5 h-5" />, name: "وضع التقسيم", desc: "عرض جانبي لقائمة السور", onClick: () => setIsSplitView(v => !v), active: isSplitView, tint: "bg-sky-400/20 text-sky-700" },
-                { icon: <Pencil className="w-5 h-5" />, name: "المعايرة (التظليل)", desc: "ضبط مواضع الآيات والسور ورفع الصفحات", onClick: () => navigate("/calibrate"), active: false, tint: "bg-violet-400/20 text-violet-700" },
-              ]).map((item, i) => (
-                <button
-                  key={i}
-                  onClick={() => { item.onClick(); setMenuOpen(false); }}
-                  className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-right hover:bg-white/80 active:scale-[0.98] ${item.active ? 'bg-amber-100/70 ring-1 ring-amber-300/60' : ''}`}
-                >
-                  <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${item.tint}`}>
-                    {item.icon}
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="flex items-center gap-1 font-bold text-sm text-foreground">
-                      {item.name}
-                      {item.active && <Check className="w-3.5 h-3.5 text-emerald-600" />}
-                    </span>
-                    <span className="block text-[11px] text-muted-foreground truncate">{item.desc}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+              {b.icon}
+            </button>
+          ))}
+        </div>
       )}
 
       {controlsOpen && (
