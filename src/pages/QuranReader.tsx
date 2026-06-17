@@ -1115,8 +1115,6 @@ export default function QuranReader() {
           {([
             { key: "back", icon: <ArrowRight className="w-6 h-6 text-foreground" />, label: "رجوع", onClick: () => navigate("/audio"), active: false },
             { key: "hide", icon: hideShading ? <Eye className="w-6 h-6 text-foreground" /> : <EyeOff className="w-6 h-6 text-foreground" />, label: hideShading ? "إظهار التظليل" : "إخفاء التظليل", onClick: () => setHideShading(v => !v), active: hideShading },
-            { key: "shuffle", icon: <Shuffle className="w-6 h-6 text-foreground" />, label: "ترتيب عشوائي", onClick: handleShuffle, active: isShuffled },
-            { key: "full", icon: isFullscreen ? <Minimize2 className="w-6 h-6 text-foreground" /> : <Maximize2 className="w-6 h-6 text-foreground" />, label: isFullscreen ? "تصغير الشاشة" : "ملء الشاشة", onClick: toggleFullscreen, active: isFullscreen },
           ]).map(b => (
             <button
               key={b.key}

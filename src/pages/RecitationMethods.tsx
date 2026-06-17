@@ -7,6 +7,8 @@ import {
   Undo2, Redo2
 } from "lucide-react";
 import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings, AudioSegment } from "../data/ayahTimings";
+import { getPageAyahBoxes, savePageAyahBoxes, getAllPageSources } from "../data/ayahCoordinates";
+import { getCustomPages } from "../data/customPages";
 import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
 import { getSurahName, getSurahAyahCount, getAllSurahs } from "../data/quranData";
 import { toast } from "../hooks/use-toast";
@@ -1292,6 +1294,44 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
   const handleServiceSplit = () => runServiceSplit("vad");
   const handleGeminiSplit = () => runServiceSplit("gemini");
 
+  // ربط المقاطع المقسّمة بمربعات التظليل: يكتب وقت كل آية (معلم/طفل) داخل مربعها فتظهر في المصحف
+  const linkToShading = useCallback(async () => {
+    if (segments.length === 0) { toast({ title: "⚠️ لا توجد مقاطع — قسّم الصوت أولاً", variant: "destructive" }); return; }
+    const tByAyah = new Map<number, AudioSegment>();
+    const kByAyah = new Map<number, AudioSegment>();
+    segments.forEach(s => {
+      if (!s.ayah || s.ayah < 1) return;
+      if (s.speaker === "kids") { if (!kByAyah.has(s.ayah)) kByAyah.set(s.ayah, s); }
+      else { if (!tByAyah.has(s.ayah)) tByAyah.set(s.ayah, s); }
+    });
+    const allSrcs = [...getAllPageSources(), ...getCustomPages().map(p => p.src)];
+    let linked = 0, pagesTouched = 0;
+    for (const src of allSrcs) {
+      const boxes = getPageAyahBoxes(src);
+      if (!boxes.some(b => b.surah === surahNum)) continue;
+      let changed = false;
+      const next = boxes.map(b => {
+        if (b.surah !== surahNum) return b;
+        const t = tByAyah.get(b.ayah), k = kByAyah.get(b.ayah);
+        if (!t && !k) return b;
+        changed = true; linked++;
+        return {
+          ...b,
+          audioStart: t ? t.start : b.audioStart,
+          audioEnd: t ? t.end : b.audioEnd,
+          kidsStart: k ? k.start : b.kidsStart,
+          kidsEnd: k ? k.end : b.kidsEnd,
+        };
+      });
+      if (changed) { await savePageAyahBoxes(src, next); pagesTouched++; }
+    }
+    if (linked === 0) {
+      toast({ title: "ℹ️ لا توجد مربعات لهذه السورة", description: "أنشئ تظليل السورة في المعايرة أولاً، ثم اربط.", variant: "destructive" });
+    } else {
+      toast({ title: "✅ تم الربط بالتظليل", description: `${linked} آية على ${pagesTouched} صفحة — يظهر التوقيت في المصحف.` });
+    }
+  }, [segments, surahNum]);
+
   const togglePlay = () => {
     const a = audioRef.current; if (!a) return;
     if (isPlaying) { a.pause(); setPlayingSegId(null); stopAtRef.current = null; }
@@ -1646,6 +1686,13 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
             </div>
             <p className="text-[10px] text-slate-500 leading-relaxed">✅ متصلة تلقائياً على Hugging Face. <b>بالخدمة</b>: تحليل صوتي سريع. <b>Gemini</b>: ذكاء يفهم المعلم/الطفل (و٣ أصوات) — أبطأ قليلاً. أول طلب بعد الخمول ~٣٠ ثانية.</p>
           </div>
+
+          {segments.length > 0 && (
+            <button onClick={linkToShading}
+              className="w-full p-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] mb-2 shadow-lg">
+              🔗 ربط المقاطع بالتظليل (تظهر في المصحف)
+            </button>
+          )}
 
           <button onClick={handleSplit} disabled={splitting || aiSplitting || !duration}
             className="w-full p-4 rounded-xl bg-gradient-to-r from-emerald-600 via-violet-600 to-fuchsia-600 text-white font-bold text-lg disabled:opacity-40 flex items-center justify-center gap-3 shadow-xl shadow-violet-500/20 hover:shadow-violet-500/40 active:scale-[0.98] transition-all">
