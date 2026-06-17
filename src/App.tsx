@@ -17,6 +17,7 @@ import AyahCalibration from "./pages/AyahCalibration.tsx";
 import RecitationMethods from "./pages/RecitationMethods.tsx";
 import QuranReader from "./pages/QuranReader.tsx";
 import AudioUploadPage from "./pages/AudioUploadPage.tsx";
+import LinkAudioPage from "./pages/LinkAudioPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const App = () => {
               <Route path="/timings" element={<TimingsRecorder />} />
               <Route path="/calibrate" element={<AyahCalibration />} />
               <Route path="/recitation-methods" element={<RecitationMethods />} />
+              <Route path="/link" element={<LinkAudioPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
