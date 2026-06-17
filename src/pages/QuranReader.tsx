@@ -8,6 +8,8 @@ import { getCustomPages, getAllPageImages, getPageOrder } from "@/data/customPag
 import { getPageSurahRegions } from "@/data/surahRegions";
 import { addReadingMinutes } from "@/data/kidsProfile";
 import { getBookmarks, addBookmark, removeBookmark, Bookmark } from "@/data/bookmarks";
+import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
+import PinModal from "@/components/PinModal";
 import { toast } from "@/hooks/use-toast";
 import { Headphones } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -224,14 +226,13 @@ export default function QuranReader() {
   // Split view state
   const [isSplitView, setIsSplitView] = useState(false);
   const [hideShading, setHideShading] = useState(false);
-  // ركن الأطفال (قفل بكلمة مرور) + قائمة السور
-  const [kidsMode, setKidsMode] = useState(() => { try { return localStorage.getItem("mushaf:kidsMode") === "1"; } catch { return false; } });
-  const [pinModal, setPinModal] = useState<null | "set" | "verify">(null);
-  const [pinInput, setPinInput] = useState("");
+  // ركن الأطفال (قفل برمز) + لوحة التنقّل
+  const [kidsMode, setKidsModeState] = useState(isKidsMode);
+  const [pinAction, setPinAction] = useState<null | "enter" | "exit">(null);
   const [surahListOpen, setSurahListOpen] = useState(false);
   const [navTab, setNavTab] = useState<"surahs" | "bookmarks">("surahs");
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(getBookmarks);
-  useEffect(() => { try { localStorage.setItem("mushaf:kidsMode", kidsMode ? "1" : "0"); } catch { /* ignore */ } }, [kidsMode]);
+  useEffect(() => { const h = () => setKidsModeState(isKidsMode()); window.addEventListener("mushaf:kidsmode", h); return () => window.removeEventListener("mushaf:kidsmode", h); }, []);
 
   // Simultaneous playback (teacher + kids together)
   const audioRef2 = useRef<HTMLAudioElement>(null);
@@ -250,20 +251,9 @@ export default function QuranReader() {
 
   const actualPage = getActualPageIndex(currentPage);
 
-  // ── ركن الأطفال: دخول بزر، خروج بكلمة مرور ──
-  const KIDS_PIN_KEY = "mushaf:kidsPin";
-  const requestExitKids = () => { setPinInput(""); setPinModal("verify"); };
-  const confirmPin = () => {
-    if (pinModal === "set") {
-      if (pinInput.trim().length < 3) return;
-      try { localStorage.setItem(KIDS_PIN_KEY, pinInput.trim()); } catch { /* ignore */ }
-      setKidsMode(true); setPinModal(null); setPinInput("");
-    } else if (pinModal === "verify") {
-      const pin = (() => { try { return localStorage.getItem(KIDS_PIN_KEY) || ""; } catch { return ""; } })();
-      if (pinInput.trim() === pin) { setKidsMode(false); setPinModal(null); setPinInput(""); }
-      else { setPinInput(""); }
-    }
-  };
+  // ── ركن الأطفال: الدخول يقفل التطبيق، والخروج يتطلّب الرمز ──
+  const enterKids = () => { if (hasKidsPin()) { setKidsLocked(true); navigate("/games"); } else setPinAction("enter"); };
+  const requestExitKids = () => setPinAction("exit");
 
   // ── قائمة كل السور للانتقال المباشر ──
   const allSurahsList = useMemo(() => {
@@ -1185,9 +1175,10 @@ export default function QuranReader() {
             !kidsMode && { key: "back", icon: <ArrowRight className="w-5 h-5 text-foreground" />, label: "رجوع", onClick: () => navigate("/audio"), active: false },
             { key: "hide", icon: hideShading ? <Eye className="w-5 h-5 text-foreground" /> : <EyeOff className="w-5 h-5 text-foreground" />, label: hideShading ? "إظهار التظليل" : "إخفاء التظليل", onClick: () => setHideShading(v => !v), active: hideShading },
             { key: "surahs", icon: <List className="w-5 h-5 text-foreground" />, label: "قائمة السور", onClick: () => setSurahListOpen(true), active: surahListOpen },
+            kidsMode && { key: "games", icon: <Baby className="w-5 h-5 text-foreground" />, label: "الألعاب", onClick: () => navigate("/games"), active: false },
             kidsMode
               ? { key: "lock", icon: <Lock className="w-5 h-5 text-foreground" />, label: "خروج من ركن الأطفال", onClick: requestExitKids, active: true }
-              : { key: "kids", icon: <Baby className="w-5 h-5 text-foreground" />, label: "ركن الأطفال", onClick: () => navigate("/games"), active: false },
+              : { key: "kids", icon: <Baby className="w-5 h-5 text-foreground" />, label: "ركن الأطفال", onClick: enterKids, active: false },
             !kidsMode && { key: "settings", icon: <Settings className="w-5 h-5 text-foreground" />, label: "الإعدادات", onClick: () => navigate("/settings"), active: false },
           ].filter(Boolean) as { key: string; icon: JSX.Element; label: string; onClick: () => void; active: boolean }[]).map(b => (
             <button
@@ -1246,23 +1237,14 @@ export default function QuranReader() {
         </div>
       )}
 
-      {/* رمز ركن الأطفال */}
-      {pinModal && (
-        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 animate-fade-in" dir="rtl">
-          <div className="w-full max-w-xs rounded-2xl bg-white p-5 space-y-3 shadow-2xl">
-            <h3 className="font-extrabold text-center text-foreground">{pinModal === "set" ? "🧒 اختر رمز ركن الأطفال" : "🔒 أدخل الرمز للخروج"}</h3>
-            <input type="password" inputMode="numeric" value={pinInput} autoFocus
-              onChange={e => setPinInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") confirmPin(); }}
-              placeholder="••••"
-              className="w-full text-center text-2xl tracking-[0.4em] rounded-xl border border-slate-300 p-3 outline-none focus:ring-2 focus:ring-amber-400" />
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => { setPinModal(null); setPinInput(""); }} className="p-2.5 rounded-xl bg-slate-200 font-bold text-foreground">إلغاء</button>
-              <button onClick={confirmPin} className="p-2.5 rounded-xl bg-amber-500 text-black font-bold">{pinModal === "set" ? "حفظ ودخول" : "خروج"}</button>
-            </div>
-            {pinModal === "set" && <p className="text-[11px] text-center text-muted-foreground">احفظ الرمز جيداً — ستحتاجه للخروج من ركن الأطفال.</p>}
-          </div>
-        </div>
+      {/* رمز ركن الأطفال (لوحة رقمية) */}
+      {pinAction && (
+        <PinModal
+          mode={pinAction === "enter" ? "set" : "verify"}
+          title={pinAction === "enter" ? "اختر رمز ولي الأمر (٤ أرقام)" : "أدخل الرمز للخروج من ركن الأطفال"}
+          onSuccess={() => { if (pinAction === "enter") { setKidsLocked(true); navigate("/games"); } else { setKidsLocked(false); } setPinAction(null); }}
+          onCancel={() => setPinAction(null)}
+        />
       )}
 
       {controlsOpen && (

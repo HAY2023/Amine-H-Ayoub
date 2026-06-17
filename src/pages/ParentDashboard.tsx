@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, BookOpen, Clock, Bell, Baby, Check, Gift, Gamepad2 } from "lucide-react";
 import { getProfile, saveProfile, getProgress, getHistory, grantMorePlay, KidsProfile } from "../data/kidsProfile";
+import { isKidsMode } from "../data/kidsLock";
 import { toast } from "../hooks/use-toast";
 
 const Bar = ({ value, max, color }: { value: number; max: number; color: string }) => (
@@ -12,6 +13,7 @@ export default function ParentDashboard() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<KidsProfile>(getProfile);
   const [progress] = useState(getProgress);
+  useEffect(() => { if (isKidsMode()) navigate("/games"); }, [navigate]);
   const history = getHistory().slice(0, 7).reverse();
   const maxHist = Math.max(profile.goalMinutes, ...history.map(h => h.minutes), 1);
 

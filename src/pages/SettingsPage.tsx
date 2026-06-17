@@ -6,6 +6,7 @@ import { syncTimingsFromServer } from "../data/ayahTimings";
 import { syncSurahRegionsFromServer } from "../data/surahRegions";
 import { syncCustomPagesFromServer } from "../data/customPages";
 import { downloadEverything } from "../data/offlineDownload";
+import { isKidsMode } from "../data/kidsLock";
 import { toast } from "../hooks/use-toast";
 
 const THEME_KEY = "mushaf:theme";
@@ -38,6 +39,8 @@ export default function SettingsPage() {
   const [dlPct, setDlPct] = useState<number | null>(null);
 
   useEffect(() => { applyTheme(theme); try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ } }, [theme]);
+  // حماية: لا يدخل الإعدادات أثناء قفل ركن الأطفال
+  useEffect(() => { if (isKidsMode()) navigate("/games"); }, [navigate]);
 
   const checkUpdate = async () => {
     toast({ title: "يجري البحث عن تحديث..." });
