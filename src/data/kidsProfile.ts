@@ -8,6 +8,7 @@ export interface KidsProfile {
   name: string;
   age: number;
   goalMinutes: number;   // دقائق القراءة المطلوبة لفتح الألعاب
+  playMinutes: number;   // دقائق اللعب المسموحة بعد الفتح (٠ = بلا حد)
   reward: string;        // نص المكافأة عند الإنجاز
 }
 
@@ -15,12 +16,14 @@ export interface KidsProgress {
   date: string;          // يوم التتبّع (يُعاد ضبطه يومياً)
   minutes: number;       // دقائق قُرئت اليوم
   unlocked: boolean;     // هل فُتحت الألعاب اليوم
+  played: number;        // دقائق لُعبت اليوم
+  playExpired: boolean;  // هل انتهى وقت اللعب
 }
 
 const PROFILE_KEY = "mushaf:kidsProfile:v1";
 const PROGRESS_KEY = "mushaf:kidsProgress:v1";
 
-const DEFAULT_PROFILE: KidsProfile = { name: "", age: 6, goalMinutes: 5, reward: "أحسنت! 🎁 افتحت الألعاب" };
+const DEFAULT_PROFILE: KidsProfile = { name: "", age: 6, goalMinutes: 5, playMinutes: 15, reward: "أحسنت، لقد فتحت الألعاب" };
 
 const today = () => new Date().toDateString();
 
@@ -35,10 +38,15 @@ export const saveProfile = (p: KidsProfile) => {
   if (hasValidSupabaseKey()) supabase.from("store").upsert({ key: PROFILE_KEY, value: p }).then(() => {}, () => {});
 };
 
+const freshProgress = (): KidsProgress => ({ date: today(), minutes: 0, unlocked: false, played: 0, playExpired: false });
+
 export const getProgress = (): KidsProgress => {
-  if (typeof window === "undefined") return { date: today(), minutes: 0, unlocked: false };
-  try { const r = localStorage.getItem(PROGRESS_KEY); const p = r ? JSON.parse(r) : null; if (p && p.date === today()) return p; } catch { /* ignore */ }
-  return { date: today(), minutes: 0, unlocked: false };
+  if (typeof window === "undefined") return freshProgress();
+  try {
+    const r = localStorage.getItem(PROGRESS_KEY); const p = r ? JSON.parse(r) : null;
+    if (p && p.date === today()) return { ...freshProgress(), ...p };
+  } catch { /* ignore */ }
+  return freshProgress();
 };
 
 const saveProgress = (p: KidsProgress) => {
@@ -54,10 +62,29 @@ export const addReadingMinutes = (mins: number): { progress: KidsProgress; justU
   const minutes = Math.round((cur.minutes + mins) * 10) / 10;
   const unlocked = cur.unlocked || minutes >= goal;
   const justUnlocked = unlocked && !cur.unlocked;
-  const progress: KidsProgress = { date: today(), minutes, unlocked };
+  const progress: KidsProgress = { ...cur, minutes, unlocked };
   saveProgress(progress);
   if (justUnlocked && typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:games_unlocked"));
   return { progress, justUnlocked };
+};
+
+/** يضيف دقائق لعب؛ عند بلوغ الحدّ يُقفل اللعب حتى يأذن ولي الأمر. */
+export const addPlayMinutes = (mins: number): { progress: KidsProgress; justExpired: boolean } => {
+  const cur = getProgress();
+  const limit = getProfile().playMinutes;
+  const played = Math.round((cur.played + mins) * 10) / 10;
+  const playExpired = cur.playExpired || (limit > 0 && played >= limit);
+  const justExpired = playExpired && !cur.playExpired;
+  const progress: KidsProgress = { ...cur, played, playExpired };
+  saveProgress(progress);
+  if (justExpired && typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:play_expired"));
+  return { progress, justExpired };
+};
+
+/** يأذن ولي الأمر بمزيد من اللعب (يُصفّر عدّاد اللعب). */
+export const grantMorePlay = () => {
+  const cur = getProgress();
+  saveProgress({ ...cur, played: 0, playExpired: false });
 };
 
 export const syncKidsProfileFromServer = async () => {
