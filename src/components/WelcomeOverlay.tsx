@@ -26,7 +26,8 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
   const pct = dl.total ? Math.round((dl.done / dl.total) * 100) : 0;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white overflow-y-auto" dir="rtl">
+    <div className="fixed inset-0 z-[100] text-white overflow-y-auto" dir="rtl"
+      style={{ background: "linear-gradient(to bottom, rgba(15,23,42,0.90), rgba(15,23,42,0.96)), url('/background-kids.jpg') center/cover no-repeat", backgroundAttachment: "fixed" }}>
       <div className="mx-auto max-w-md px-5 py-8 min-h-full flex flex-col">
         {/* مؤشّر الخطوات */}
         <div className="flex items-center justify-center gap-2 mb-6">
@@ -35,10 +36,13 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
 
         <div className="flex-1">
           {step === 0 && (
-            <div className="text-center space-y-3">
-              <div className="mx-auto w-20 h-20 rounded-3xl bg-amber-500 text-black flex items-center justify-center"><BookOpen className="w-11 h-11" /></div>
-              <h1 className="text-2xl font-extrabold text-amber-300">مرحباً بك</h1>
-              <p className="text-slate-300 leading-relaxed">تطبيق تعليم القرآن للأطفال — يقرأ المعلّم وتُكرّر معه، مع ألعاب تعليمية وركن أطفال آمن، ويعمل دون إنترنت بعد التحميل.</p>
+            <div className="text-center space-y-4 pt-6">
+              <img src="/my-photo.png" alt="القارئ حاج أيوب أمين" className="mx-auto w-32 h-32 rounded-full object-cover ring-4 ring-amber-400/70 shadow-2xl" />
+              <div>
+                <h1 className="text-3xl font-extrabold text-amber-300">مرحباً بك</h1>
+                <p className="text-amber-200/80 text-sm mt-1">بصوت القارئ حاج أيوب أمين</p>
+              </div>
+              <p className="text-slate-200 leading-relaxed">تطبيق تعليم القرآن للأطفال — يقرأ المعلّم وتُكرّر معه، مع ألعاب تعليمية وركن أطفال آمن، ويعمل دون إنترنت بعد التحميل.</p>
             </div>
           )}
 
