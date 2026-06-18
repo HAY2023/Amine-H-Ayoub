@@ -954,9 +954,6 @@ const MushafPage = ({ onBack }: Props) => {
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <Link to="/calibrate" className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground">
-                  معايرة
-                </Link>
                 <button
                   onClick={() => setControlsOpen(false)}
                   className="w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center"
@@ -1178,13 +1175,6 @@ const MushafPage = ({ onBack }: Props) => {
               </button>
 
               <div className="flex gap-2 mt-2 pt-2 border-t border-slate-200/50">
-                <Link
-                  to="/calibrate"
-                  onClick={() => setActiveMenuAyah(null)}
-                  className="flex-1 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold text-xs transition-all text-center flex items-center justify-center gap-1 active:scale-95"
-                >
-                  ⚙️ معايرة الموضع
-                </Link>
                 <button
                   onClick={() => setActiveMenuAyah(null)}
                   className="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all active:scale-95"

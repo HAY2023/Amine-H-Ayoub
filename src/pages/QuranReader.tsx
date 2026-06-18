@@ -228,7 +228,7 @@ export default function QuranReader() {
   const [hideShading, setHideShading] = useState(false);
   // ركن الأطفال (قفل برمز) + لوحة التنقّل
   const [kidsMode, setKidsModeState] = useState(isKidsMode);
-  const [pinAction, setPinAction] = useState<null | "enter" | "exit">(null);
+  const [pinAction, setPinAction] = useState<null | "enter" | "exit" | "settings">(null);
   const [surahListOpen, setSurahListOpen] = useState(false);
   const [navTab, setNavTab] = useState<"surahs" | "bookmarks">("surahs");
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(getBookmarks);
@@ -254,6 +254,8 @@ export default function QuranReader() {
   // ── ركن الأطفال: الدخول يقفل التطبيق، والخروج يتطلّب الرمز ──
   const enterKids = () => { if (hasKidsPin()) { setKidsLocked(true); navigate("/games"); } else setPinAction("enter"); };
   const requestExitKids = () => setPinAction("exit");
+  // الإعدادات محميّة: تتطلّب رمز ولي الأمر إن كان مضبوطاً
+  const openSettings = () => { if (hasKidsPin()) setPinAction("settings"); else navigate("/settings"); };
 
   // ── قائمة كل السور للانتقال المباشر ──
   const allSurahsList = useMemo(() => {
@@ -1179,7 +1181,7 @@ export default function QuranReader() {
             kidsMode
               ? { key: "lock", icon: <Lock className="w-5 h-5 text-foreground" />, label: "خروج من ركن الأطفال", onClick: requestExitKids, active: true }
               : { key: "kids", icon: <Baby className="w-5 h-5 text-foreground" />, label: "ركن الأطفال", onClick: enterKids, active: false },
-            !kidsMode && { key: "settings", icon: <Settings className="w-5 h-5 text-foreground" />, label: "الإعدادات", onClick: () => navigate("/settings"), active: false },
+            !kidsMode && { key: "settings", icon: <Settings className="w-5 h-5 text-foreground" />, label: "الإعدادات", onClick: openSettings, active: false },
           ].filter(Boolean) as { key: string; icon: JSX.Element; label: string; onClick: () => void; active: boolean }[]).map(b => (
             <button
               key={b.key}
@@ -1241,8 +1243,8 @@ export default function QuranReader() {
       {pinAction && (
         <PinModal
           mode={pinAction === "enter" ? "set" : "verify"}
-          title={pinAction === "enter" ? "اختر رمز ولي الأمر (٤ أرقام)" : "أدخل الرمز للخروج من ركن الأطفال"}
-          onSuccess={() => { if (pinAction === "enter") { setKidsLocked(true); navigate("/games"); } else { setKidsLocked(false); } setPinAction(null); }}
+          title={pinAction === "enter" ? "اختر رمز ولي الأمر (٤ أرقام)" : pinAction === "settings" ? "أدخل الرمز للإعدادات" : "أدخل الرمز للخروج من ركن الأطفال"}
+          onSuccess={() => { if (pinAction === "enter") { setKidsLocked(true); navigate("/games"); } else if (pinAction === "settings") { navigate("/settings"); } else { setKidsLocked(false); } setPinAction(null); }}
           onCancel={() => setPinAction(null)}
         />
       )}
@@ -1301,9 +1303,6 @@ export default function QuranReader() {
                       </button>
                     )}
                   </div>
-                )}
-                {!isTauri() && (
-                  <Link to="/timings" className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground">إعداد التقسيم</Link>
                 )}
                 <button onClick={() => setControlsOpen(false)} className="w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center">
                   <X className="w-4 h-4" />
