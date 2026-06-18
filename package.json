@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://nedjmamine2-code.github.io/learn-quran-kids",
+  "homepage": "https://8a2e8529.learn-quran-kids.pages.dev/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

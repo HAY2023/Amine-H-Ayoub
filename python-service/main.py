@@ -143,34 +143,47 @@ def _classify(pitches):
 
 # ─────────────────────── Core segmentation ───────────────────────
 
-def segment_audio(y: np.ndarray, sr: int, leading: int = 1, surah_label: str = ""):
+def segment_audio(y: np.ndarray, sr: int, leading: int = 1, surah_label: str = "", style: str = "auto"):
     y = y / (np.max(np.abs(y)) + 1e-7)
 
     regions = _vad_webrtc(y, sr) or _vad_energy(y, sr)
     if not regions:
         raise ValueError("لم يُكشف أي كلام في الملف")
 
-    pitches = [_median_pitch(y[int(s * sr):int(e * sr)], sr) for s, e in regions]
-    thr = _classify(pitches)
-    speakers = ["teacher" if (p <= 0 or p < thr) else "kids" for p in pitches]
-
-    # دمج المقاطع المتجاورة لنفس المتحدث المفصولة بصمت قصير (نَفَس داخل الآية).
-    # آمن: لا يدمج معلم↔طفل أبداً لأنه يشترط تطابق المتحدث — فيُزيل التقسيم الزائد.
-    MERGE_GAP = 0.5
-    m_regions, m_speakers = [], []
-    for (s, e), spk in zip(regions, speakers):
-        if m_regions and m_speakers[-1] == spk and s - m_regions[-1][1] < MERGE_GAP:
-            m_regions[-1] = (m_regions[-1][0], e)
-        else:
-            m_regions.append((s, e))
-            m_speakers.append(spk)
-    regions, speakers = m_regions, m_speakers
-
-    # كشف النمط: متتابع (معلم ثم طفل) أم متناوب
-    half = len(regions) // 2
-    fh_kids = sum(1 for s in speakers[:half] if s == "kids") / max(1, half)
-    sh_kids = sum(1 for s in speakers[half:] if s == "kids") / max(1, len(regions) - half)
-    consecutive = fh_kids < 0.3 and sh_kids > 0.7
+    if style in ("interleaved", "consecutive"):
+        # ── الوضع السريع: بلا تحليل طبقة الصوت (pyin) — تعيين المتحدث حسب النمط ──
+        merged = []
+        for (s, e) in regions:
+            if merged and s - merged[-1][1] < 0.35:   # دمج نَفَس داخل الآية
+                merged[-1] = (merged[-1][0], e)
+            else:
+                merged.append((s, e))
+        regions = merged
+        if style == "consecutive":
+            half = len(regions) // 2
+            speakers = ["teacher"] * half + ["kids"] * (len(regions) - half)
+            consecutive = True
+        else:  # interleaved: معلم ثم طفل بالتناوب
+            speakers = ["teacher" if i % 2 == 0 else "kids" for i in range(len(regions))]
+            consecutive = False
+    else:
+        # ── الوضع التلقائي: تصنيف بطبقة الصوت (أدق، أبطأ) ──
+        pitches = [_median_pitch(y[int(s * sr):int(e * sr)], sr) for s, e in regions]
+        thr = _classify(pitches)
+        speakers = ["teacher" if (p <= 0 or p < thr) else "kids" for p in pitches]
+        MERGE_GAP = 0.5
+        m_regions, m_speakers = [], []
+        for (s, e), spk in zip(regions, speakers):
+            if m_regions and m_speakers[-1] == spk and s - m_regions[-1][1] < MERGE_GAP:
+                m_regions[-1] = (m_regions[-1][0], e)
+            else:
+                m_regions.append((s, e))
+                m_speakers.append(spk)
+        regions, speakers = m_regions, m_speakers
+        half = len(regions) // 2
+        fh_kids = sum(1 for s in speakers[:half] if s == "kids") / max(1, half)
+        sh_kids = sum(1 for s in speakers[half:] if s == "kids") / max(1, len(regions) - half)
+        consecutive = fh_kids < 0.3 and sh_kids > 0.7
 
     lead = max(0, int(leading))
 
