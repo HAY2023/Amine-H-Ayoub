@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Youtube, Check, BookOpen, CloudDownload, Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Youtube, Check, BookOpen, CloudDownload, Loader2, Wrench } from "lucide-react";
 import { TermsText, RECITER_URL } from "../pages/SettingsPage";
 import { downloadEverything } from "../data/offlineDownload";
 
@@ -10,11 +11,13 @@ export const isOnboarded = (): boolean => {
 };
 
 export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [agreed, setAgreed] = useState(false);
   const [dl, setDl] = useState<{ busy: boolean; done: number; total: number; finished: boolean }>({ busy: false, done: 0, total: 0, finished: false });
 
   const finish = () => { try { localStorage.setItem(ONBOARD_KEY, "1"); } catch { /* ignore */ } onDone(); };
+  const finishToTools = () => { finish(); navigate("/tools"); };
 
   const startDownload = async () => {
     setDl(d => ({ ...d, busy: true, done: 0, total: 0, finished: false }));
@@ -80,6 +83,9 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
                 <button onClick={startDownload} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 text-white font-bold px-5 py-3 active:scale-95"><CloudDownload className="w-5 h-5" /> حمّل كل شيء الآن</button>
               )}
               <p className="text-[11px] text-slate-500">يمكنك التحميل لاحقاً من الإعدادات.</p>
+              <button onClick={finishToTools} className="mx-auto inline-flex items-center justify-center gap-2 rounded-xl bg-slate-700/80 border border-slate-600 text-amber-200 font-bold px-4 py-2.5 text-sm active:scale-95">
+                <Wrench className="w-4 h-4" /> أنا المعلّم — إعداد المحتوى الآن
+              </button>
             </div>
           )}
         </div>

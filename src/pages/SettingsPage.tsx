@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X, BarChart3 } from "lucide-react";
+import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X, BarChart3, Wrench } from "lucide-react";
 import { syncCoordinatesFromServer } from "../data/ayahCoordinates";
 import { syncTimingsFromServer } from "../data/ayahTimings";
 import { syncSurahRegionsFromServer } from "../data/surahRegions";
@@ -87,6 +87,7 @@ export default function SettingsPage() {
 
         <Row icon={<BarChart3 className="w-5 h-5" />} title="لوحة ولي الأمر" desc="متابعة التقدّم، تذكير الدرس، منح وقت لعب" onClick={openParent} />
         <Row icon={<Baby className="w-5 h-5" />} title="ركن الأطفال وإعداداته" desc="الألعاب، وقت القراءة واللعب، كلمة المرور" onClick={() => navigate("/games")} />
+        <Row icon={<Wrench className="w-5 h-5" />} title="أدوات المعلّم" desc="المعايرة · تقسيم الصوت · ربط الصوت بالتظليل" onClick={() => navigate("/tools")} />
         <Row icon={<RefreshCw className="w-5 h-5" />} title="تحقق من التحديث" desc="جلب أحدث نسخة من التطبيق" onClick={checkUpdate} />
         <Row icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل كل المحتوى للعمل دون إنترنت" desc="السور والصوت والصفحات إلى جهازك" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-emerald-300 w-12 text-center">{dlPct}%</span> : undefined} />
 

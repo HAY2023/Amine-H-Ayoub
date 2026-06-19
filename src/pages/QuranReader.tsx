@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, SplitSquareHorizontal, Volume2, Menu, Eye, EyeOff, List, Lock, Baby, Bookmark as BookmarkIcon, Trash2, Plus } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, SplitSquareHorizontal, Volume2, Menu, Eye, EyeOff, List, Lock, Baby, Bookmark as BookmarkIcon, Trash2, Plus, Wrench } from "lucide-react";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
@@ -228,7 +228,7 @@ export default function QuranReader() {
   const [hideShading, setHideShading] = useState(false);
   // ركن الأطفال (قفل برمز) + لوحة التنقّل
   const [kidsMode, setKidsModeState] = useState(isKidsMode);
-  const [pinAction, setPinAction] = useState<null | "enter" | "exit" | "settings">(null);
+  const [pinAction, setPinAction] = useState<null | "enter" | "exit" | "settings" | "tools">(null);
   const [surahListOpen, setSurahListOpen] = useState(false);
   const [navTab, setNavTab] = useState<"surahs" | "bookmarks">("surahs");
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(getBookmarks);
@@ -256,6 +256,7 @@ export default function QuranReader() {
   const requestExitKids = () => setPinAction("exit");
   // الإعدادات محميّة: تتطلّب رمز ولي الأمر إن كان مضبوطاً
   const openSettings = () => { if (hasKidsPin()) setPinAction("settings"); else navigate("/settings"); };
+  const openTools = () => { if (hasKidsPin()) setPinAction("tools"); else navigate("/tools"); };
 
   // ── قائمة كل السور للانتقال المباشر ──
   const allSurahsList = useMemo(() => {
@@ -1181,6 +1182,7 @@ export default function QuranReader() {
             kidsMode
               ? { key: "lock", icon: <Lock className="w-5 h-5 text-foreground" />, label: "خروج من ركن الأطفال", onClick: requestExitKids, active: true }
               : { key: "kids", icon: <Baby className="w-5 h-5 text-foreground" />, label: "ركن الأطفال", onClick: enterKids, active: false },
+            !kidsMode && { key: "tools", icon: <Wrench className="w-5 h-5 text-foreground" />, label: "أدوات المعلّم", onClick: openTools, active: false },
             !kidsMode && { key: "settings", icon: <Settings className="w-5 h-5 text-foreground" />, label: "الإعدادات", onClick: openSettings, active: false },
           ].filter(Boolean) as { key: string; icon: JSX.Element; label: string; onClick: () => void; active: boolean }[]).map(b => (
             <button
@@ -1243,8 +1245,8 @@ export default function QuranReader() {
       {pinAction && (
         <PinModal
           mode={pinAction === "enter" ? "set" : "verify"}
-          title={pinAction === "enter" ? "اختر رمز ولي الأمر (٤ أرقام)" : pinAction === "settings" ? "أدخل الرمز للإعدادات" : "أدخل الرمز للخروج من ركن الأطفال"}
-          onSuccess={() => { if (pinAction === "enter") { setKidsLocked(true); navigate("/games"); } else if (pinAction === "settings") { navigate("/settings"); } else { setKidsLocked(false); } setPinAction(null); }}
+          title={pinAction === "enter" ? "اختر رمز ولي الأمر (٤ أرقام)" : pinAction === "settings" ? "أدخل الرمز للإعدادات" : pinAction === "tools" ? "أدخل الرمز لأدوات المعلّم" : "أدخل الرمز للخروج من ركن الأطفال"}
+          onSuccess={() => { if (pinAction === "enter") { setKidsLocked(true); navigate("/games"); } else if (pinAction === "settings") { navigate("/settings"); } else if (pinAction === "tools") { navigate("/tools"); } else { setKidsLocked(false); } setPinAction(null); }}
           onCancel={() => setPinAction(null)}
         />
       )}

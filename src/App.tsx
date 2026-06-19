@@ -23,6 +23,7 @@ import LinkAudioPage from "./pages/LinkAudioPage.tsx";
 import KidsGames from "./pages/KidsGames.tsx";
 import SettingsPage, { applyTheme, getTheme } from "./pages/SettingsPage.tsx";
 import ParentDashboard from "./pages/ParentDashboard.tsx";
+import TeacherTools from "./pages/TeacherTools.tsx";
 import { getProfile } from "./data/kidsProfile";
 import { toast } from "./hooks/use-toast";
 import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
@@ -97,6 +98,7 @@ const App = () => {
               <Route path="/games" element={<KidsGames />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/parent" element={<ParentDashboard />} />
+              <Route path="/tools" element={<TeacherTools />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
