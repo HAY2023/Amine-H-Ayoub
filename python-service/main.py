@@ -17,7 +17,7 @@ import os
 import time
 import requests
 
-app = FastAPI(title="Quran Audio Segmentation", version="2.2")
+app = FastAPI(title="Quran Audio Segmentation", version="2.3")
 
 app.add_middleware(
     CORSMiddleware,
@@ -289,6 +289,7 @@ class UrlRequest(BaseModel):
     audioUrl: str
     leading: Optional[int] = 1
     surahLabel: Optional[str] = ""
+    style: Optional[str] = "auto"  # auto | interleaved | consecutive
 
 
 def _load_bytes(data: bytes):
@@ -308,12 +309,12 @@ def _load_bytes(data: bytes):
 
 
 @app.post("/split")
-async def split_upload(file: UploadFile = File(...), leading: int = Form(1), surahLabel: str = Form("")):
+async def split_upload(file: UploadFile = File(...), leading: int = Form(1), surahLabel: str = Form(""), style: str = Form("auto")):
     """تقسيم ملف صوتي مرفوع مباشرةً (يعمل مع أي مصدر صوت)."""
     try:
         t0 = time.time()
         y = _load_bytes(await file.read())
-        segs = segment_audio(y, SR, leading, surahLabel)
+        segs = segment_audio(y, SR, leading, surahLabel, style)
         return {
             "success": True,
             "segments": segs,
@@ -332,7 +333,7 @@ async def split_url(req: UrlRequest):
         resp = requests.get(req.audioUrl, timeout=60)
         resp.raise_for_status()
         y = _load_bytes(resp.content)
-        segs = segment_audio(y, SR, req.leading or 1, req.surahLabel or "")
+        segs = segment_audio(y, SR, req.leading or 1, req.surahLabel or "", req.style or "auto")
         return {
             "success": True,
             "segments": segs,
@@ -373,7 +374,7 @@ async def split_gemini_url(req: UrlRequest):
 def root():
     return {
         "service": "quran-audio-segmentation",
-        "version": "2.2",
+        "version": "2.3",
         "status": "ok",
         "note": "هذه واجهة برمجية (API) وليست صفحة ويب — استخدمها من الموقع.",
         "endpoints": ["/health", "POST /split (multipart)", "POST /split-url (json)"],
@@ -382,7 +383,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "quran-audio-segmentation", "version": "2.2"}
+    return {"status": "ok", "service": "quran-audio-segmentation", "version": "2.3"}
 
 
 if __name__ == "__main__":

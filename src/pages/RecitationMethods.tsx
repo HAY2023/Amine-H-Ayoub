@@ -1262,7 +1262,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
         res = await fetch(`${base}${urlPath}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ audioUrl: getSurahAudioUrl(surahNum), leading: leadingSegments, surahLabel: label }),
+          body: JSON.stringify({ audioUrl: getSurahAudioUrl(surahNum), leading: leadingSegments, surahLabel: label, style: recitationStyle }),
         });
       } else {
         // صوت محلي (لا يصله السيرفر) → نرفع البايتات من المتصفّح
@@ -1273,6 +1273,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
         form.append("file", blob, `${surahNum}.mp3`);
         form.append("leading", String(leadingSegments));
         form.append("surahLabel", label);
+        form.append("style", recitationStyle);
         res = await fetch(`${base}${filePath}`, { method: "POST", body: form });
       }
       if (!res.ok) {
