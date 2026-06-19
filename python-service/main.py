@@ -17,7 +17,7 @@ import os
 import time
 import requests
 
-app = FastAPI(title="Quran Audio Segmentation", version="2.3")
+app = FastAPI(title="Quran Audio Segmentation", version="2.4")
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,7 +39,7 @@ def _vad_webrtc(y: np.ndarray, sr: int):
     except Exception:
         return None
 
-    vad = webrtcvad.Vad(2)  # 0..3 (3 = أكثر صرامة)
+    vad = webrtcvad.Vad(3)  # 0..3 (3 = أكثر صرامة → يكشف صمتاً أكثر فيفصل المقاطع جيداً)
     pcm16 = (np.clip(y, -1, 1) * 32767).astype(np.int16).tobytes()
     frame_ms = 30
     frame_len = int(sr * frame_ms / 1000)          # عيّنات لكل إطار
@@ -141,24 +141,64 @@ def _classify(pitches):
     return thr
 
 
+# ─────────────────────── Smart count-guided split ───────────────────────
+
+def _energy_envelope(y: np.ndarray, sr: int):
+    """مغلّف الطاقة بإطارات ١٠ms (سريع، متجهي)."""
+    h = max(1, int(sr * 0.01))
+    n = len(y) // h
+    if n < 1:
+        return np.array([0.0]), h
+    frames = y[:n * h].reshape(n, h)
+    e = np.sqrt((frames ** 2).mean(axis=1) + 1e-9)
+    return e, h
+
+
+def _smart_segments(y: np.ndarray, sr: int, n: int):
+    """يقسّم الصوت إلى n مقطعاً: حدود عند القسمة المتساوية ثم تُسحب لأقرب نقطة صمت
+    (أهدأ إطار ضمن نافذة) — عدد مقاطع مضبوط + محاذاة لسكتات الآيات الحقيقية."""
+    dur = len(y) / sr
+    if n <= 1:
+        return [(0.0, round(dur, 3))]
+    e, h = _energy_envelope(y, sr)
+    if len(e) < n:
+        return [(round(k * dur / n, 3), round((k + 1) * dur / n, 3)) for k in range(n)]
+    win = max(1, len(e) // (n * 2))  # نافذة البحث = نصف طول المقطع
+    bounds = [0]
+    for k in range(1, n):
+        prior = int((k / n) * len(e))
+        a, b = max(0, prior - win), min(len(e), prior + win)
+        m = a + int(np.argmin(e[a:b])) if b > a else prior
+        bounds.append(m * h)
+    bounds.append(len(y))
+    bounds = sorted(set(bounds))
+    return [(round(bounds[k] / sr, 3), round(bounds[k + 1] / sr, 3)) for k in range(len(bounds) - 1)]
+
+
 # ─────────────────────── Core segmentation ───────────────────────
 
-def segment_audio(y: np.ndarray, sr: int, leading: int = 1, surah_label: str = "", style: str = "auto"):
+def segment_audio(y: np.ndarray, sr: int, leading: int = 1, surah_label: str = "", style: str = "auto", ayah_count: int = 0):
     y = y / (np.max(np.abs(y)) + 1e-7)
-
-    regions = _vad_webrtc(y, sr) or _vad_energy(y, sr)
-    if not regions:
-        raise ValueError("لم يُكشف أي كلام في الملف")
+    lead = max(0, int(leading))
 
     if style in ("interleaved", "consecutive"):
-        # ── الوضع السريع: بلا تحليل طبقة الصوت (pyin) — تعيين المتحدث حسب النمط ──
-        merged = []
-        for (s, e) in regions:
-            if merged and s - merged[-1][1] < 0.35:   # دمج نَفَس داخل الآية
-                merged[-1] = (merged[-1][0], e)
-            else:
-                merged.append((s, e))
-        regions = merged
+        # ── الوضع الذكي السريع: بلا pyin ──
+        if ayah_count and ayah_count > 0:
+            # عدد المقاطع معروف = (آيات + التمهيدية) × (معلم + طفل) → تقسيم موجّه دقيق
+            n = max(2, (int(ayah_count) + lead) * 2)
+            regions = _smart_segments(y, sr, n)
+        else:
+            # لا عدد آيات: اعتمد على كشف الكلام مع دمج نَفَس قصير
+            regions = _vad_webrtc(y, sr) or _vad_energy(y, sr)
+            if not regions:
+                raise ValueError("لم يُكشف أي كلام في الملف")
+            merged = []
+            for (s, e) in regions:
+                if merged and s - merged[-1][1] < 0.18:
+                    merged[-1] = (merged[-1][0], e)
+                else:
+                    merged.append((s, e))
+            regions = merged
         if style == "consecutive":
             half = len(regions) // 2
             speakers = ["teacher"] * half + ["kids"] * (len(regions) - half)
@@ -167,6 +207,9 @@ def segment_audio(y: np.ndarray, sr: int, leading: int = 1, surah_label: str = "
             speakers = ["teacher" if i % 2 == 0 else "kids" for i in range(len(regions))]
             consecutive = False
     else:
+        regions = _vad_webrtc(y, sr) or _vad_energy(y, sr)
+        if not regions:
+            raise ValueError("لم يُكشف أي كلام في الملف")
         # ── الوضع التلقائي: تصنيف بطبقة الصوت (أدق، أبطأ) ──
         pitches = [_median_pitch(y[int(s * sr):int(e * sr)], sr) for s, e in regions]
         thr = _classify(pitches)
@@ -184,8 +227,6 @@ def segment_audio(y: np.ndarray, sr: int, leading: int = 1, surah_label: str = "
         fh_kids = sum(1 for s in speakers[:half] if s == "kids") / max(1, half)
         sh_kids = sum(1 for s in speakers[half:] if s == "kids") / max(1, len(regions) - half)
         consecutive = fh_kids < 0.3 and sh_kids > 0.7
-
-    lead = max(0, int(leading))
 
     def lead_label(u):
         return "الاستعاذة" if (lead >= 2 and u == 1) else "البسملة"
@@ -289,7 +330,8 @@ class UrlRequest(BaseModel):
     audioUrl: str
     leading: Optional[int] = 1
     surahLabel: Optional[str] = ""
-    style: Optional[str] = "auto"  # auto | interleaved | consecutive
+    style: Optional[str] = "auto"   # auto | interleaved | consecutive
+    ayahCount: Optional[int] = 0    # عدد آيات السورة (للتقسيم الذكي الدقيق)
 
 
 def _load_bytes(data: bytes):
@@ -309,12 +351,12 @@ def _load_bytes(data: bytes):
 
 
 @app.post("/split")
-async def split_upload(file: UploadFile = File(...), leading: int = Form(1), surahLabel: str = Form(""), style: str = Form("auto")):
+async def split_upload(file: UploadFile = File(...), leading: int = Form(1), surahLabel: str = Form(""), style: str = Form("auto"), ayahCount: int = Form(0)):
     """تقسيم ملف صوتي مرفوع مباشرةً (يعمل مع أي مصدر صوت)."""
     try:
         t0 = time.time()
         y = _load_bytes(await file.read())
-        segs = segment_audio(y, SR, leading, surahLabel, style)
+        segs = segment_audio(y, SR, leading, surahLabel, style, ayahCount)
         return {
             "success": True,
             "segments": segs,
@@ -333,7 +375,7 @@ async def split_url(req: UrlRequest):
         resp = requests.get(req.audioUrl, timeout=60)
         resp.raise_for_status()
         y = _load_bytes(resp.content)
-        segs = segment_audio(y, SR, req.leading or 1, req.surahLabel or "", req.style or "auto")
+        segs = segment_audio(y, SR, req.leading or 1, req.surahLabel or "", req.style or "auto", req.ayahCount or 0)
         return {
             "success": True,
             "segments": segs,
@@ -374,7 +416,7 @@ async def split_gemini_url(req: UrlRequest):
 def root():
     return {
         "service": "quran-audio-segmentation",
-        "version": "2.3",
+        "version": "2.4",
         "status": "ok",
         "note": "هذه واجهة برمجية (API) وليست صفحة ويب — استخدمها من الموقع.",
         "endpoints": ["/health", "POST /split (multipart)", "POST /split-url (json)"],
@@ -383,7 +425,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "quran-audio-segmentation", "version": "2.3"}
+    return {"status": "ok", "service": "quran-audio-segmentation", "version": "2.4"}
 
 
 if __name__ == "__main__":
