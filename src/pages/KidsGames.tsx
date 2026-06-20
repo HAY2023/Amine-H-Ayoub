@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Clock, Check, Hash, Grid3x3 } from "lucide-react";
 import { getAllSurahs } from "../data/quranData";
 import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
-import { getProfile, saveProfile, getProgress, addPlayMinutes, grantMorePlay, KidsProfile } from "../data/kidsProfile";
+import { getProfile, saveProfile, getProgress, addPlayMinutes, grantMorePlay, getProfiles, KidsProfile } from "../data/kidsProfile";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
 import PinModal from "../components/PinModal";
 import { toast } from "../hooks/use-toast";
@@ -270,7 +270,13 @@ export default function KidsGames() {
           <>
             {/* حالة القراءة / اللعب */}
             <div className="rounded-2xl bg-slate-800/80 border border-slate-700 p-4 text-center space-y-2">
-              <p className="font-bold">{profile.name ? `مرحباً ${profile.name}` : "مرحباً بك"}</p>
+              <div className="flex flex-col items-center gap-1">
+                <span className={`w-16 h-16 rounded-3xl bg-gradient-to-br ${profile.color} flex items-center justify-center text-3xl shadow-lg`}>{profile.avatar}</span>
+                <p className="font-bold">{profile.name ? `مرحباً ${profile.name}` : "مرحباً بك"}</p>
+                {getProfiles().length > 1 && (
+                  <button onClick={() => navigate("/profiles")} className="text-xs font-bold text-amber-300 underline-offset-2 hover:underline">تبديل الطفل</button>
+                )}
+              </div>
               {!unlocked ? (
                 <>
                   <p className="text-sm text-slate-300 flex items-center justify-center gap-1"><Lock className="w-4 h-4" /> اقرأ {profile.goalMinutes} دقيقة لفتح الألعاب</p>

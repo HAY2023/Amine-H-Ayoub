@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, BookOpen, Clock, Bell, Baby, Check, Gift, Gamepad2 } from "lucide-react";
-import { getProfile, saveProfile, getProgress, getHistory, grantMorePlay, KidsProfile } from "../data/kidsProfile";
+import { ArrowRight, BookOpen, Clock, Bell, Baby, Check, Gift, Gamepad2, Plus, Trash2 } from "lucide-react";
+import { getProfile, saveProfile, getProgress, getHistory, grantMorePlay, getProfiles, getActiveId, setActiveProfile, addProfile, removeProfile, getAppMode, setAppMode, KidsProfile, KidsProgress, DayLog } from "../data/kidsProfile";
 import { isKidsMode } from "../data/kidsLock";
 import { toast } from "../hooks/use-toast";
 
@@ -11,11 +11,39 @@ const Bar = ({ value, max, color }: { value: number; max: number; color: string 
 
 export default function ParentDashboard() {
   const navigate = useNavigate();
+  const [profiles, setProfiles] = useState<KidsProfile[]>(getProfiles);
+  const [activeId, setActiveId] = useState<string>(getActiveId);
   const [profile, setProfile] = useState<KidsProfile>(getProfile);
-  const [progress] = useState(getProgress);
+  const [progress, setProgress] = useState<KidsProgress>(getProgress);
+  const [history, setHistory] = useState<DayLog[]>(() => getHistory().slice(0, 7).reverse());
   useEffect(() => { if (isKidsMode()) navigate("/games"); }, [navigate]);
-  const history = getHistory().slice(0, 7).reverse();
+
+  const refresh = () => {
+    setProfiles(getProfiles());
+    setActiveId(getActiveId());
+    setProfile(getProfile());
+    setProgress(getProgress());
+    setHistory(getHistory().slice(0, 7).reverse());
+  };
+
   const maxHist = Math.max(profile.goalMinutes, ...history.map(h => h.minutes), 1);
+
+  const switchTo = (id: string) => { setActiveProfile(id); refresh(); };
+  const addChild = () => {
+    const name = (window.prompt("اسم الطفل الجديد:") || "").trim();
+    if (!name) return;
+    const p = addProfile({ name });
+    setActiveProfile(p.id);
+    if (getAppMode() === "parent") setAppMode("both");   // تفعيل ركن الأطفال عند إضافة أوّل طفل
+    refresh();
+    toast({ title: `أُضيف ${name}` });
+  };
+  const delChild = (id: string, name: string) => {
+    if (!window.confirm(`حذف ملفّ ${name || "الطفل"} وكل تقدّمه؟`)) return;
+    removeProfile(id);
+    refresh();
+    toast({ title: "حُذف الملفّ" });
+  };
 
   const saveLesson = (t: string) => {
     const p = { ...profile, lessonTime: t };
@@ -23,7 +51,7 @@ export default function ParentDashboard() {
     if (t && typeof Notification !== "undefined" && Notification.permission === "default") { Notification.requestPermission().catch(() => {}); }
     toast({ title: t ? `تذكير الدرس الساعة ${t}` : "أُلغي تذكير الدرس" });
   };
-  const grant = () => { grantMorePlay(); toast({ title: "مُنح وقت لعب إضافي" }); };
+  const grant = () => { grantMorePlay(); setProgress(getProgress()); toast({ title: "مُنح وقت لعب إضافي" }); };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white" dir="rtl">
@@ -34,9 +62,32 @@ export default function ParentDashboard() {
           <span className="w-16" />
         </header>
 
-        {/* الطفل */}
+        {/* الأطفال — اختر طفلاً لعرض تقدّمه، أو أضِف/احذف */}
+        <div className="rounded-2xl bg-slate-800/80 border border-slate-700 p-3 space-y-2">
+          <p className="font-bold text-amber-300 text-sm">الأطفال</p>
+          <div className="flex items-stretch gap-2 overflow-x-auto pb-1">
+            {profiles.map(p => (
+              <div key={p.id} className="relative shrink-0">
+                <button onClick={() => switchTo(p.id)}
+                  className={`w-20 flex flex-col items-center gap-1 rounded-xl p-2 border transition-all ${p.id === activeId ? "border-amber-400 bg-amber-500/15" : "border-slate-700 bg-slate-900/50"}`}>
+                  <span className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${p.color} flex items-center justify-center text-2xl`}>{p.avatar}</span>
+                  <span className="text-[11px] font-bold truncate w-full text-center">{p.name || "طفلي"}</span>
+                </button>
+                {profiles.length > 1 && (
+                  <button onClick={() => delChild(p.id, p.name)} className="absolute -top-1 -left-1 w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center shadow active:scale-90"><Trash2 className="w-3 h-3" /></button>
+                )}
+              </div>
+            ))}
+            <button onClick={addChild} className="w-20 shrink-0 flex flex-col items-center justify-center gap-1 rounded-xl p-2 border border-dashed border-slate-600 bg-slate-900/40 active:scale-95">
+              <span className="w-12 h-12 rounded-2xl bg-slate-700/70 flex items-center justify-center"><Plus className="w-6 h-6 text-slate-300" /></span>
+              <span className="text-[11px] font-bold text-slate-300">إضافة</span>
+            </button>
+          </div>
+        </div>
+
+        {/* الطفل النشِط */}
         <div className="rounded-2xl bg-slate-800/80 border border-slate-700 p-4 flex items-center gap-3">
-          <span className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center"><Baby className="w-6 h-6" /></span>
+          <span className={`w-12 h-12 rounded-xl bg-gradient-to-br ${profile.color} flex items-center justify-center text-2xl`}>{profile.avatar}</span>
           <div><p className="font-bold text-lg">{profile.name || "الطفل"}</p><p className="text-xs text-slate-400">العمر {profile.age} سنة</p></div>
         </div>
 

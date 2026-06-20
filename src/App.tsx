@@ -24,15 +24,28 @@ import KidsGames from "./pages/KidsGames.tsx";
 import SettingsPage, { applyTheme, getTheme } from "./pages/SettingsPage.tsx";
 import ParentDashboard from "./pages/ParentDashboard.tsx";
 import TeacherTools from "./pages/TeacherTools.tsx";
-import { getProfile } from "./data/kidsProfile";
+import { getProfile, getAppMode, getProfiles } from "./data/kidsProfile";
 import { toast } from "./hooks/use-toast";
 import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
+import ProfilePicker, { isPicked, markPicked } from "./components/ProfilePicker.tsx";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [showSiteLinks, setShowSiteLinks] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !isOnboarded());
+  // بوابة "من يتعلّم الآن؟" عند فتح التطبيق
+  // وضع "معاً": تظهر دائماً للاختيار بين الأطفال ووليّ الأمر. وضع "الأطفال": فقط إن كان هناك أكثر من طفل.
+  const shouldGate = () => {
+    try {
+      if (!isOnboarded() || isPicked()) return false;
+      const mode = getAppMode();
+      if (mode === "parent") return false;
+      const n = getProfiles().length;
+      return mode === "both" ? n >= 1 : n > 1;
+    } catch { return false; }
+  };
+  const [showPicker, setShowPicker] = useState(shouldGate);
 
   useEffect(() => {
     applyTheme(getTheme());
@@ -99,11 +112,13 @@ const App = () => {
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/parent" element={<ParentDashboard />} />
               <Route path="/tools" element={<TeacherTools />} />
+              <Route path="/profiles" element={<ProfilePicker />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
             <SiteLinksOverlay open={showSiteLinks} onClose={() => setShowSiteLinks(false)} />
-            {showWelcome && <WelcomeOverlay onDone={() => setShowWelcome(false)} />}
+            {showWelcome && <WelcomeOverlay onDone={() => { markPicked(); setShowWelcome(false); setShowPicker(false); }} />}
+            {!showWelcome && showPicker && <ProfilePicker onPicked={() => setShowPicker(false)} />}
           </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>

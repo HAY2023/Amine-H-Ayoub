@@ -6,7 +6,7 @@ import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
 import { getCustomPages, getAllPageImages, getPageOrder } from "@/data/customPages";
 import { getPageSurahRegions } from "@/data/surahRegions";
-import { addReadingMinutes } from "@/data/kidsProfile";
+import { addReadingMinutes, kidsEnabled as getKidsEnabled } from "@/data/kidsProfile";
 import { getBookmarks, addBookmark, removeBookmark, Bookmark } from "@/data/bookmarks";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
 import PinModal from "@/components/PinModal";
@@ -141,6 +141,7 @@ export default function QuranReader() {
   useEffect(() => {
     const id = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      if (!getKidsEnabled()) return;   // وضع وليّ الأمر فقط: لا تتبّع لركن الأطفال
       const { justUnlocked } = addReadingMinutes(1);
       if (justUnlocked) toast({ title: "🎉 أحسنت! فتحت ألعاب ركن الأطفال", description: "اذهب إلى ركن الأطفال 🧒" });
     }, 60000);
@@ -228,11 +229,13 @@ export default function QuranReader() {
   const [hideShading, setHideShading] = useState(false);
   // ركن الأطفال (قفل برمز) + لوحة التنقّل
   const [kidsMode, setKidsModeState] = useState(isKidsMode);
+  const [kidsCorner, setKidsCorner] = useState(getKidsEnabled);   // ركن الأطفال مُفعَّل؟ (ليس وضع وليّ الأمر فقط)
   const [pinAction, setPinAction] = useState<null | "enter" | "exit" | "settings" | "tools">(null);
   const [surahListOpen, setSurahListOpen] = useState(false);
   const [navTab, setNavTab] = useState<"surahs" | "bookmarks">("surahs");
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(getBookmarks);
   useEffect(() => { const h = () => setKidsModeState(isKidsMode()); window.addEventListener("mushaf:kidsmode", h); return () => window.removeEventListener("mushaf:kidsmode", h); }, []);
+  useEffect(() => { const h = () => setKidsCorner(getKidsEnabled()); window.addEventListener("mushaf:appmode", h); return () => window.removeEventListener("mushaf:appmode", h); }, []);
 
   // Simultaneous playback (teacher + kids together)
   const audioRef2 = useRef<HTMLAudioElement>(null);
@@ -1181,7 +1184,7 @@ export default function QuranReader() {
             kidsMode && { key: "games", icon: <Baby className="w-5 h-5 text-foreground" />, label: "الألعاب", onClick: () => navigate("/games"), active: false },
             kidsMode
               ? { key: "lock", icon: <Lock className="w-5 h-5 text-foreground" />, label: "خروج من ركن الأطفال", onClick: requestExitKids, active: true }
-              : { key: "kids", icon: <Baby className="w-5 h-5 text-foreground" />, label: "ركن الأطفال", onClick: enterKids, active: false },
+              : (kidsCorner && { key: "kids", icon: <Baby className="w-5 h-5 text-foreground" />, label: "ركن الأطفال", onClick: enterKids, active: false }),
             !kidsMode && { key: "tools", icon: <Wrench className="w-5 h-5 text-foreground" />, label: "أدوات المعلّم", onClick: openTools, active: false },
             !kidsMode && { key: "settings", icon: <Settings className="w-5 h-5 text-foreground" />, label: "الإعدادات", onClick: openSettings, active: false },
           ].filter(Boolean) as { key: string; icon: JSX.Element; label: string; onClick: () => void; active: boolean }[]).map(b => (

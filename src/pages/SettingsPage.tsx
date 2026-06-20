@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X, BarChart3, Wrench } from "lucide-react";
+import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X, BarChart3, Wrench, User, Users } from "lucide-react";
+import { getAppMode, setAppMode, getProfiles, addProfile, type AppMode } from "../data/kidsProfile";
 import { syncCoordinatesFromServer } from "../data/ayahCoordinates";
 import { syncTimingsFromServer } from "../data/ayahTimings";
 import { syncSurahRegionsFromServer } from "../data/surahRegions";
@@ -35,8 +36,15 @@ const Row = ({ icon, title, desc, onClick, right }: { icon: React.ReactNode; tit
 export default function SettingsPage() {
   const navigate = useNavigate();
   const [theme, setTheme] = useState<"dark" | "light">(getTheme);
+  const [appMode, setMode] = useState<AppMode>(getAppMode);
   const [termsOpen, setTermsOpen] = useState(false);
   const [dlPct, setDlPct] = useState<number | null>(null);
+
+  const changeMode = (m: AppMode) => {
+    setMode(m); setAppMode(m);
+    if (m !== "parent" && getProfiles().length === 0) addProfile({ name: "طفلي" });   // ضمان وجود طفل واحد على الأقل
+    toast({ title: m === "parent" ? "وضع وليّ الأمر — بلا ركن أطفال" : m === "kids" ? "وضع الأطفال" : "وضع وليّ الأمر والأطفال معاً" });
+  };
 
   useEffect(() => { applyTheme(theme); try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ } }, [theme]);
   // حماية: لا يدخل الإعدادات أثناء قفل ركن الأطفال
@@ -83,6 +91,24 @@ export default function SettingsPage() {
             <button onClick={() => setTheme("dark")} className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 ${theme === "dark" ? "bg-slate-900 text-amber-300" : "text-slate-300"}`}><Moon className="w-3.5 h-3.5" /> ليل</button>
             <button onClick={() => setTheme("light")} className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 ${theme === "light" ? "bg-white text-slate-900" : "text-slate-300"}`}><Sun className="w-3.5 h-3.5" /> نهار</button>
           </div>
+        </div>
+
+        {/* لِمَن التطبيق؟ */}
+        <div className="rounded-2xl bg-slate-800/80 border border-slate-700 p-3 space-y-2">
+          <span className="block font-bold">لِمَن هذا التطبيق؟</span>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { m: "parent" as AppMode, Icon: User, label: "لي" },
+              { m: "kids" as AppMode, Icon: Baby, label: "لأطفالي" },
+              { m: "both" as AppMode, Icon: Users, label: "معاً" },
+            ]).map(o => (
+              <button key={o.m} onClick={() => changeMode(o.m)}
+                className={`flex flex-col items-center gap-1 rounded-xl py-2.5 text-xs font-bold border transition-all ${appMode === o.m ? "border-amber-400 bg-amber-500/20 text-amber-200" : "border-slate-700 bg-slate-900/50 text-slate-300"}`}>
+                <o.Icon className="w-5 h-5" /> {o.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-400 leading-relaxed">«لي»: بلا ركن أطفال. «لأطفالي»: ركن أطفال آمن. «معاً»: تختار من يستخدم التطبيق عند كل فتح.</p>
         </div>
 
         <Row icon={<BarChart3 className="w-5 h-5" />} title="لوحة ولي الأمر" desc="متابعة التقدّم، تذكير الدرس، منح وقت لعب" onClick={openParent} />
