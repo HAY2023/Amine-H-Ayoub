@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, BookOpen, Clock, Bell, Baby, Check, Gift, Gamepad2, Plus, Trash2 } from "lucide-react";
-import { getProfile, saveProfile, getProgress, getHistory, grantMorePlay, getProfiles, getActiveId, setActiveProfile, addProfile, removeProfile, getAppMode, setAppMode, KidsProfile, KidsProgress, DayLog } from "../data/kidsProfile";
+import { ArrowRight, BookOpen, Clock, Bell, Baby, Check, Gift, Gamepad2, Plus, Trash2, Minus, Star } from "lucide-react";
+import { getProfile, updateProfile, getProgress, getHistory, grantMorePlay, getProfiles, getActiveId, setActiveProfile, addProfile, removeProfile, getAppMode, setAppMode, KID_AVATARS, KidsProfile, KidsProgress, DayLog } from "../data/kidsProfile";
 import { isKidsMode } from "../data/kidsLock";
 import { toast } from "../hooks/use-toast";
 
@@ -16,14 +16,23 @@ export default function ParentDashboard() {
   const [profile, setProfile] = useState<KidsProfile>(getProfile);
   const [progress, setProgress] = useState<KidsProgress>(getProgress);
   const [history, setHistory] = useState<DayLog[]>(() => getHistory().slice(0, 7).reverse());
+  const [draft, setDraft] = useState<KidsProfile>(getProfile);
   useEffect(() => { if (isKidsMode()) navigate("/games"); }, [navigate]);
 
   const refresh = () => {
     setProfiles(getProfiles());
     setActiveId(getActiveId());
     setProfile(getProfile());
+    setDraft(getProfile());
     setProgress(getProgress());
     setHistory(getHistory().slice(0, 7).reverse());
+  };
+
+  // يحفظ الحقول القابلة للتحرير فقط (دمج فوق التخزين الحيّ) حتى لا تُمحى النجوم/المخزون/وقت الدرس
+  const saveChild = () => {
+    updateProfile(draft.id, { name: draft.name, avatar: draft.avatar, color: draft.color, age: draft.age, goalMinutes: draft.goalMinutes, playMinutes: draft.playMinutes, reward: draft.reward });
+    const np = getProfile(); setProfile(np); setDraft(np); setProfiles(getProfiles());
+    toast({ title: "حُفظت إعدادات الطفل" });
   };
 
   const maxHist = Math.max(profile.goalMinutes, ...history.map(h => h.minutes), 1);
@@ -46,8 +55,8 @@ export default function ParentDashboard() {
   };
 
   const saveLesson = (t: string) => {
-    const p = { ...profile, lessonTime: t };
-    setProfile(p); saveProfile(p);
+    updateProfile(profile.id, { lessonTime: t });
+    const np = getProfile(); setProfile(np); setDraft(np);
     if (t && typeof Notification !== "undefined" && Notification.permission === "default") { Notification.requestPermission().catch(() => {}); }
     toast({ title: t ? `تذكير الدرس الساعة ${t}` : "أُلغي تذكير الدرس" });
   };
@@ -85,10 +94,48 @@ export default function ParentDashboard() {
           </div>
         </div>
 
-        {/* الطفل النشِط */}
-        <div className="rounded-2xl bg-slate-800/80 border border-slate-700 p-4 flex items-center gap-3">
-          <span className={`w-12 h-12 rounded-xl bg-gradient-to-br ${profile.color} flex items-center justify-center text-2xl`}>{profile.avatar}</span>
-          <div><p className="font-bold text-lg">{profile.name || "الطفل"}</p><p className="text-xs text-slate-400">العمر {profile.age} سنة</p></div>
+        {/* إعدادات الطفل النشِط — المكان الوحيد لضبط إعدادات الطفل */}
+        <div className="rounded-2xl bg-slate-800/80 border border-slate-700 p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <span className={`w-12 h-12 rounded-xl bg-gradient-to-br ${draft.color} flex items-center justify-center text-2xl`}>{draft.avatar}</span>
+            <p className="font-bold text-amber-300">إعدادات {draft.name || "الطفل"}</p>
+            {(draft.coins ?? 0) > 0 && <span className="ml-auto inline-flex items-center gap-1 text-amber-300 font-bold text-sm"><Star className="w-4 h-4 fill-amber-300" /> {draft.coins}</span>}
+          </div>
+
+          <label className="block text-sm font-bold text-slate-300">الاسم
+            <input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} className="w-full mt-1 rounded-lg bg-slate-700 border border-slate-600 p-2 text-white font-normal" />
+          </label>
+
+          <div className="flex flex-wrap gap-1.5">
+            {KID_AVATARS.map(a => (
+              <button key={a} onClick={() => setDraft({ ...draft, avatar: a })} className={`w-9 h-9 rounded-xl text-xl flex items-center justify-center transition-all ${draft.avatar === a ? "bg-amber-500/30 ring-2 ring-amber-400" : "bg-slate-900/70"}`}>{a}</button>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm text-slate-300">العمر (يحدّد الألعاب المناسبة)</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setDraft({ ...draft, age: Math.max(3, draft.age - 1) })} className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center active:scale-95"><Minus className="w-4 h-4" /></button>
+              <span className="w-8 text-center font-extrabold text-lg text-amber-300">{draft.age}</span>
+              <button onClick={() => setDraft({ ...draft, age: Math.min(15, draft.age + 1) })} className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center active:scale-95"><Plus className="w-4 h-4" /></button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block text-xs font-bold text-slate-300">دقائق القراءة لفتح الألعاب
+              <input type="number" min={0} max={120} value={draft.goalMinutes} onChange={e => setDraft({ ...draft, goalMinutes: parseInt(e.target.value, 10) || 0 })} className="w-full mt-1 rounded-lg bg-slate-700 border border-slate-600 p-2 text-white font-normal" />
+            </label>
+            <label className="block text-xs font-bold text-slate-300">دقائق اللعب المسموحة
+              <input type="number" min={0} max={120} value={draft.playMinutes} onChange={e => setDraft({ ...draft, playMinutes: parseInt(e.target.value, 10) || 0 })} className="w-full mt-1 rounded-lg bg-slate-700 border border-slate-600 p-2 text-white font-normal" />
+            </label>
+          </div>
+
+          <label className="block text-sm font-bold text-slate-300">المكافأة (تظهر عند فتح الألعاب)
+            <input value={draft.reward} onChange={e => setDraft({ ...draft, reward: e.target.value })} className="w-full mt-1 rounded-lg bg-slate-700 border border-slate-600 p-2 text-white font-normal" />
+          </label>
+          <p className="text-[11px] text-slate-500 leading-relaxed">دقائق القراءة = هدف يومي لفتح الألعاب (٠ = مفتوحة دائماً) · دقائق اللعب = المدة ثم يُقفل (٠ = بلا حد).</p>
+
+          <button onClick={saveChild} className="w-full p-2.5 rounded-xl bg-amber-500 text-black font-bold flex items-center justify-center gap-1 active:scale-95"><Check className="w-4 h-4" /> حفظ إعدادات الطفل</button>
         </div>
 
         {/* اليوم */}
@@ -139,7 +186,7 @@ export default function ParentDashboard() {
           <p className="text-[11px] text-slate-500 leading-relaxed flex items-center gap-1"><Clock className="w-3 h-3" /> يظهر تنبيه عند الوقت المحدّد أثناء فتح التطبيق.</p>
         </div>
 
-        <button onClick={() => navigate("/games")} className="w-full p-3 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold flex items-center justify-center gap-2 active:scale-95"><Baby className="w-5 h-5" /> إعدادات ركن الأطفال</button>
+        <button onClick={() => navigate("/games")} className="w-full p-3 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold flex items-center justify-center gap-2 active:scale-95"><Baby className="w-5 h-5" /> فتح ركن الأطفال (الألعاب)</button>
       </div>
     </div>
   );

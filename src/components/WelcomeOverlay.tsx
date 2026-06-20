@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Youtube, Check, CloudDownload, Wrench, User, Baby, Users, Plus, Trash2, Minus } from "lucide-react";
+import { Youtube, Check, CloudDownload, Wrench, User, Baby, Users, Plus, Trash2, Minus, KeyRound, Shield } from "lucide-react";
 import { TermsText, RECITER_URL } from "../pages/SettingsPage";
 import { downloadEverything } from "../data/offlineDownload";
 import { setAppMode, addProfile, setActiveProfile, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
+import { setKidsPin } from "../data/kidsLock";
 
 const ONBOARD_KEY = "mushaf:onboarded:v1";
 
@@ -11,32 +12,36 @@ export const isOnboarded = (): boolean => {
   try { return localStorage.getItem(ONBOARD_KEY) === "1"; } catch { return true; }
 };
 
-interface NewKid { name: string; age: number; avatar: string; }
+interface NewKid { name: string; age: number; avatar: string; color: string; }
 
 export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [agreed, setAgreed] = useState(false);
   const [mode, setMode] = useState<AppMode | null>(null);
-  const [kids, setKids] = useState<NewKid[]>([{ name: "", age: 6, avatar: KID_AVATARS[0] }]);
+  const [kids, setKids] = useState<NewKid[]>([{ name: "", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0] }]);
+  const [pin, setPin] = useState("");
+  const [pin2, setPin2] = useState("");
   const [dl, setDl] = useState<{ busy: boolean; done: number; total: number; finished: boolean }>({ busy: false, done: 0, total: 0, finished: false });
 
   const effMode: AppMode = mode ?? "both";
-  // مفاتيح الخطوات تتغيّر حسب الاختيار: وضع وليّ الأمر لا يحتاج خطوة إنشاء ملفّات الأطفال
+  // مفاتيح الخطوات: وضع وليّ الأمر لا يحتاج ملفّات أطفال ولا رمزاً؛ وضع الأطفال يتطلّب رمزاً (إجباري)
   const stepKeys = effMode === "parent"
     ? ["welcome", "terms", "who", "subscribe", "download"]
-    : ["welcome", "terms", "who", "kids", "subscribe", "download"];
+    : ["welcome", "terms", "who", "kids", "pin", "subscribe", "download"];
   const cur = stepKeys[step];
   const lastIdx = stepKeys.length - 1;
+  const pinValid = /^\d{4}$/.test(pin) && pin === pin2;
 
   const finalize = () => {
     setAppMode(effMode);
     if (effMode !== "parent") {
+      if (pinValid) setKidsPin(pin);
       const valid = kids.filter(k => k.name.trim());
-      const list = valid.length ? valid : [{ name: "طفلي", age: 6, avatar: KID_AVATARS[0] }];
+      const list = valid.length ? valid : [{ name: "طفلي", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0] }];
       let firstId = "";
       list.forEach((k, i) => {
-        const p = addProfile({ name: k.name.trim() || `طفل ${i + 1}`, age: k.age, avatar: k.avatar, color: KID_COLORS[i % KID_COLORS.length] });
+        const p = addProfile({ name: k.name.trim() || `طفل ${i + 1}`, age: k.age, avatar: k.avatar, color: k.color || KID_COLORS[i % KID_COLORS.length] });
         if (i === 0) firstId = p.id;
       });
       if (firstId) setActiveProfile(firstId);
@@ -53,7 +58,7 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
   };
 
   const pick = (m: AppMode) => { setMode(m); setStep(3); };
-  const addKid = () => setKids(k => [...k, { name: "", age: 6, avatar: KID_AVATARS[k.length % KID_AVATARS.length] }]);
+  const addKid = () => setKids(k => [...k, { name: "", age: 6, avatar: KID_AVATARS[k.length % KID_AVATARS.length], color: KID_COLORS[k.length % KID_COLORS.length] }]);
   const delKid = (i: number) => setKids(k => (k.length > 1 ? k.filter((_, j) => j !== i) : k));
   const setKid = (i: number, patch: Partial<NewKid>) => setKids(k => k.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
@@ -127,12 +132,15 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
               <div className="space-y-3">
                 {kids.map((k, i) => (
                   <div key={i} className="rounded-2xl bg-slate-800/80 border border-slate-700 p-3 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-amber-200">الطفل {i + 1}</span>
-                      {kids.length > 1 && <button onClick={() => delKid(i)} className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-rose-300 active:scale-95"><Trash2 className="w-4 h-4" /></button>}
+                    <div className="flex items-center gap-3">
+                      <span className={`w-16 h-16 rounded-3xl bg-gradient-to-br ${k.color} flex items-center justify-center text-3xl shadow-lg shrink-0`}>{k.avatar}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[11px] font-bold text-amber-200">الطفل {i + 1}</span>
+                        <input value={k.name} onChange={e => setKid(i, { name: e.target.value })} placeholder="اسم الطفل"
+                          className="w-full mt-1 rounded-xl bg-slate-900/70 border border-slate-700 px-3 py-2 text-white placeholder-slate-500 focus:border-amber-500 outline-none" />
+                      </div>
+                      {kids.length > 1 && <button onClick={() => delKid(i)} className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-rose-300 active:scale-95 shrink-0"><Trash2 className="w-4 h-4" /></button>}
                     </div>
-                    <input value={k.name} onChange={e => setKid(i, { name: e.target.value })} placeholder="اسم الطفل"
-                      className="w-full rounded-xl bg-slate-900/70 border border-slate-700 px-3 py-2.5 text-white placeholder-slate-500 focus:border-amber-500 outline-none" />
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm text-slate-300">العمر</span>
                       <div className="flex items-center gap-2">
@@ -141,11 +149,23 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
                         <button onClick={() => setKid(i, { age: Math.min(15, k.age + 1) })} className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center active:scale-95"><Plus className="w-4 h-4" /></button>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {KID_AVATARS.map(a => (
-                        <button key={a} onClick={() => setKid(i, { avatar: a })}
-                          className={`w-9 h-9 rounded-xl text-xl flex items-center justify-center transition-all ${k.avatar === a ? "bg-amber-500/30 ring-2 ring-amber-400 scale-105" : "bg-slate-900/70"}`}>{a}</button>
-                      ))}
+                    <div>
+                      <span className="block text-[11px] text-slate-400 mb-1">اختر وجهاً</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {KID_AVATARS.map(a => (
+                          <button key={a} onClick={() => setKid(i, { avatar: a })}
+                            className={`w-9 h-9 rounded-xl text-xl flex items-center justify-center transition-all ${k.avatar === a ? "bg-amber-500/30 ring-2 ring-amber-400 scale-105" : "bg-slate-900/70"}`}>{a}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-slate-400 mb-1">اختر لوناً</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {KID_COLORS.map(c => (
+                          <button key={c} onClick={() => setKid(i, { color: c })}
+                            className={`w-8 h-8 rounded-xl bg-gradient-to-br ${c} transition-all ${k.color === c ? "ring-2 ring-white scale-110" : ""}`} />
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -153,6 +173,22 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
                   <Plus className="w-5 h-5" /> إضافة طفل آخر
                 </button>
               </div>
+            </div>
+          )}
+
+          {cur === "pin" && (
+            <div className="space-y-4 text-center">
+              <div className="mx-auto w-20 h-20 rounded-3xl bg-slate-700 text-amber-300 flex items-center justify-center"><Shield className="w-11 h-11" /></div>
+              <h2 className="text-xl font-extrabold text-amber-300">رمز وليّ الأمر</h2>
+              <p className="text-slate-300 leading-relaxed text-sm">اختر رمزاً من ٤ أرقام يحمي الإعدادات والخروج من ركن الأطفال. <b className="text-amber-200">مطلوب</b> في وضع الأطفال.</p>
+              <div className="space-y-2 max-w-[220px] mx-auto">
+                <input value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" type="password" placeholder="••••"
+                  className="w-full text-center tracking-[0.6em] text-2xl font-extrabold rounded-xl bg-slate-900/70 border border-slate-700 px-3 py-3 text-white focus:border-amber-500 outline-none" />
+                <input value={pin2} onChange={e => setPin2(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" type="password" placeholder="تأكيد الرمز"
+                  className="w-full text-center tracking-[0.6em] text-2xl font-extrabold rounded-xl bg-slate-900/70 border border-slate-700 px-3 py-3 text-white focus:border-amber-500 outline-none" />
+              </div>
+              {pin && pin2 && pin !== pin2 && <p className="text-xs text-rose-300">الرمزان غير متطابقين</p>}
+              {pinValid && <p className="text-xs text-emerald-300 flex items-center justify-center gap-1"><KeyRound className="w-3.5 h-3.5" /> الرمز جاهز</p>}
             </div>
           )}
 
@@ -193,7 +229,7 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
           {step > 0 && <button onClick={() => setStep(s => s - 1)} className="px-5 py-3 rounded-xl bg-slate-700 font-bold active:scale-95">السابق</button>}
           {step < lastIdx ? (
             cur === "who" ? null : (
-              <button onClick={() => setStep(s => s + 1)} disabled={(cur === "terms" && !agreed) || (cur === "kids" && !kidsValid)}
+              <button onClick={() => setStep(s => s + 1)} disabled={(cur === "terms" && !agreed) || (cur === "kids" && !kidsValid) || (cur === "pin" && !pinValid)}
                 className="flex-1 px-5 py-3 rounded-xl bg-amber-500 text-black font-extrabold disabled:opacity-40 active:scale-95">التالي</button>
             )
           ) : (

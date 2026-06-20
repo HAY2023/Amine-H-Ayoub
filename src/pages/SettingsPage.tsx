@@ -111,8 +111,8 @@ export default function SettingsPage() {
           <p className="text-[11px] text-slate-400 leading-relaxed">«لي»: بلا ركن أطفال. «لأطفالي»: ركن أطفال آمن. «معاً»: تختار من يستخدم التطبيق عند كل فتح.</p>
         </div>
 
-        <Row icon={<BarChart3 className="w-5 h-5" />} title="لوحة ولي الأمر" desc="متابعة التقدّم، تذكير الدرس، منح وقت لعب" onClick={openParent} />
-        <Row icon={<Baby className="w-5 h-5" />} title="ركن الأطفال وإعداداته" desc="الألعاب، وقت القراءة واللعب، كلمة المرور" onClick={() => navigate("/games")} />
+        <Row icon={<BarChart3 className="w-5 h-5" />} title="لوحة ولي الأمر (إعدادات الطفل)" desc="إعدادات كل طفل، التقدّم والسجلّ، تذكير الدرس، منح وقت لعب" onClick={openParent} />
+        <Row icon={<Baby className="w-5 h-5" />} title="ركن الأطفال (الألعاب)" desc="دخول الألعاب والمتجر" onClick={() => navigate("/games")} />
         <Row icon={<Wrench className="w-5 h-5" />} title="أدوات المعلّم" desc="المعايرة · تقسيم الصوت · ربط الصوت بالتظليل" onClick={() => navigate("/tools")} />
         <Row icon={<RefreshCw className="w-5 h-5" />} title="تحقق من التحديث" desc="جلب أحدث نسخة من التطبيق" onClick={checkUpdate} />
         <Row icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل كل المحتوى للعمل دون إنترنت" desc="السور والصوت والصفحات إلى جهازك" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-emerald-300 w-12 text-center">{dlPct}%</span> : undefined} />

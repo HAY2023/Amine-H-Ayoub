@@ -24,7 +24,9 @@ import KidsGames from "./pages/KidsGames.tsx";
 import SettingsPage, { applyTheme, getTheme } from "./pages/SettingsPage.tsx";
 import ParentDashboard from "./pages/ParentDashboard.tsx";
 import TeacherTools from "./pages/TeacherTools.tsx";
+import KidsShop from "./pages/KidsShop.tsx";
 import { getProfile, getAppMode, getProfiles } from "./data/kidsProfile";
+import { syncGameCatalogFromServer } from "./data/gameCatalog";
 import { toast } from "./hooks/use-toast";
 import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
 import ProfilePicker, { isPicked, markPicked } from "./components/ProfilePicker.tsx";
@@ -55,6 +57,7 @@ const App = () => {
     syncCustomPagesFromServer();
     syncKidsProfileFromServer();
     syncBookmarksFromServer();
+    syncGameCatalogFromServer();
 
     // Send localStorage data to Vite plugin (dev-only, silent fail)
     const data = localStorage.getItem("mushaf:ayahCoordinates:v1");
@@ -74,8 +77,8 @@ const App = () => {
       let last = ""; try { last = localStorage.getItem("mushaf:lessonNotified") || ""; } catch { /* ignore */ }
       if (hhmm >= t && last !== todayStr) {
         try { localStorage.setItem("mushaf:lessonNotified", todayStr); } catch { /* ignore */ }
-        if (typeof Notification !== "undefined" && Notification.permission === "granted") { try { new Notification("حان وقت درس القرآن"); } catch { /* ignore */ } }
-        toast({ title: "حان وقت درس القرآن", description: "وقت القراءة اليومي" });
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") { try { new Notification("حان وقت درس القرآن", { body: "اقرأ لتُفتح الألعاب" }); } catch { /* ignore */ } }
+        toast({ title: "🔔 حان وقت درس القرآن", description: "الألعاب مقفلة حتى تُكمل قراءتك اليوم" });
       }
     }, 60000);
     return () => clearInterval(id);
@@ -113,6 +116,7 @@ const App = () => {
               <Route path="/parent" element={<ParentDashboard />} />
               <Route path="/tools" element={<TeacherTools />} />
               <Route path="/profiles" element={<ProfilePicker />} />
+              <Route path="/shop" element={<KidsShop />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

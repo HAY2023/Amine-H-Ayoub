@@ -14,13 +14,18 @@ export interface KidsProfile {
   id: string;
   name: string;
   age: number;
-  avatar: string;        // رمز تعبيري للوجه (من KID_AVATARS)
-  color: string;         // تدرّج لون البطاقة (من KID_COLORS)
+  avatar: string;        // رمز تعبيري للوجه (من KID_AVATARS أو متجر المكافآت)
+  color: string;         // تدرّج لون البطاقة (من KID_COLORS أو المتجر)
   goalMinutes: number;   // دقائق القراءة المطلوبة لفتح الألعاب
   playMinutes: number;   // دقائق اللعب المسموحة بعد الفتح (٠ = بلا حد)
   reward: string;        // نص المكافأة عند الإنجاز
   lessonTime: string;    // وقت تذكير الدرس "HH:MM" (فارغ = بلا تذكير)
+  coins: number;         // النقاط (النجوم) المكتسبة من الألعاب
+  inventory: string[];   // معرّفات عناصر المتجر المملوكة
 }
+
+/** عنصر في متجر المكافآت — يُشترى بالنقاط. */
+export interface ShopItem { id: string; type: "avatar" | "color"; label: string; value: string; cost: number; }
 
 export interface DayLog { date: string; minutes: number; played: number; }
 
@@ -59,8 +64,31 @@ const LEGACY_HISTORY_KEY = "mushaf:kidsHistory:v1";
 const progKey = (id: string) => `${PROGRESS_BASE}:${id}`;
 const histKey = (id: string) => `${HISTORY_BASE}:${id}`;
 
-const DEFAULT_FIELDS = { goalMinutes: 5, playMinutes: 15, reward: "أحسنت، لقد فتحت الألعاب", lessonTime: "" };
+const DEFAULT_FIELDS = { goalMinutes: 5, playMinutes: 15, reward: "أحسنت، لقد فتحت الألعاب", lessonTime: "", coins: 0, inventory: [] as string[] };
 const DEFAULT_PROFILE: KidsProfile = { id: "default", name: "", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0], ...DEFAULT_FIELDS };
+
+/** متجر المكافآت — وجوه وألوان تُفتح بالنقاط (محتوى داخلي، بلا أي ملفات خارجية). */
+export const SHOP_AVATARS: ShopItem[] = [
+  { id: "av-dragon", type: "avatar", label: "تنّين", value: "🐲", cost: 20 },
+  { id: "av-trex", type: "avatar", label: "ديناصور", value: "🦖", cost: 25 },
+  { id: "av-eagle", type: "avatar", label: "نسر", value: "🦅", cost: 25 },
+  { id: "av-dolphin", type: "avatar", label: "دلفين", value: "🐬", cost: 30 },
+  { id: "av-peacock", type: "avatar", label: "طاووس", value: "🦚", cost: 35 },
+  { id: "av-butterfly", type: "avatar", label: "فراشة", value: "🦋", cost: 35 },
+  { id: "av-octopus", type: "avatar", label: "أخطبوط", value: "🐙", cost: 40 },
+  { id: "av-rocket", type: "avatar", label: "صاروخ", value: "🚀", cost: 50 },
+  { id: "av-star", type: "avatar", label: "نجمة", value: "🌟", cost: 50 },
+  { id: "av-crown", type: "avatar", label: "تاج", value: "👑", cost: 80 },
+];
+export const SHOP_COLORS: ShopItem[] = [
+  { id: "col-sunset", type: "color", label: "غروب", value: "from-pink-500 to-orange-400", cost: 20 },
+  { id: "col-ocean", type: "color", label: "محيط", value: "from-cyan-400 to-indigo-500", cost: 20 },
+  { id: "col-candy", type: "color", label: "حلوى", value: "from-fuchsia-500 to-rose-400", cost: 25 },
+  { id: "col-forest", type: "color", label: "غابة", value: "from-lime-400 to-emerald-600", cost: 25 },
+  { id: "col-gold", type: "color", label: "ذهب", value: "from-yellow-300 to-amber-500", cost: 40 },
+  { id: "col-galaxy", type: "color", label: "مجرّة", value: "from-indigo-500 to-purple-700", cost: 50 },
+];
+export const SHOP_ITEMS: ShopItem[] = [...SHOP_AVATARS, ...SHOP_COLORS];
 
 const today = () => new Date().toDateString();
 const newId = (): string => {
@@ -78,6 +106,8 @@ const normalize = (p: Partial<KidsProfile>, i = 0): KidsProfile => ({
   id: p.id || newId(),
   avatar: p.avatar || KID_AVATARS[i % KID_AVATARS.length],
   color: p.color || KID_COLORS[i % KID_COLORS.length],
+  coins: typeof p.coins === "number" ? p.coins : 0,
+  inventory: Array.isArray(p.inventory) ? p.inventory : [],
 });
 
 /* ---------------- الترقية من النسخة القديمة (ملف واحد) ---------------- */
@@ -260,6 +290,44 @@ export const grantMorePlay = () => {
   const cur = getProgress();
   saveProgress({ ...cur, played: 0, playExpired: false });
 };
+
+/* ---------------- النقاط (النجوم) والمتجر ---------------- */
+export const getCoins = (): number => getProfile().coins || 0;
+
+/** يضيف نقاطاً للملف النشِط (تُكتسب من الألعاب). */
+export const addCoins = (n: number) => {
+  const id = getActiveId(); if (!id || !n) return;
+  updateProfile(id, { coins: Math.max(0, (getProfile().coins || 0) + n) });
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:coins"));
+};
+
+/** يخصم نقاطاً إن توفّرت؛ يُرجع نجاح العملية. */
+export const spendCoins = (n: number): boolean => {
+  const id = getActiveId(); const cur = getProfile().coins || 0;
+  if (!id || cur < n) return false;
+  updateProfile(id, { coins: cur - n });
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:coins"));
+  return true;
+};
+
+export const getInventory = (): string[] => getProfile().inventory || [];
+export const ownItem = (itemId: string): boolean => getInventory().includes(itemId);
+
+/** يفتح عنصراً بالمعرّف (زينة أو لعبة) إن لم يكن مملوكاً وتوفّرت نقاط كافية. */
+export const unlockItem = (itemId: string, cost: number): boolean => {
+  const id = getActiveId(); if (!id) return false;
+  if (ownItem(itemId)) return true;
+  if (cost > 0 && !spendCoins(cost)) return false;
+  updateProfile(id, { inventory: [...getInventory(), itemId] });
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:coins"));
+  return true;
+};
+
+/** يشتري عنصر متجر (زينة). */
+export const buyItem = (item: ShopItem): boolean => unlockItem(item.id, item.cost);
+
+export const equipAvatar = (avatar: string) => { const id = getActiveId(); if (id) { updateProfile(id, { avatar }); if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:activeprofile")); } };
+export const equipColor = (color: string) => { const id = getActiveId(); if (id) { updateProfile(id, { color }); if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:activeprofile")); } };
 
 /* ---------------- المزامنة من السيرفر ---------------- */
 export const syncKidsProfileFromServer = async () => {
