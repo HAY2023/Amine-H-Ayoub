@@ -1586,7 +1586,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
         <QuranPageViewer surahNum={surahNum} />
 
         {/* اسم السورة */}
-        <div className="bg-gradient-to-br from-amber-950/40 to-orange-950/30 border border-accent/20 rounded-2xl p-5 text-center shadow-soft">
+        <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-accent/30 rounded-2xl p-5 text-center shadow-soft">
           <p className="text-xs text-accent mb-1">السورة المختارة</p>
           <h2 className="text-4xl font-bold font-amiri bg-gradient-to-r from-amber-200 via-amber-300 to-orange-300 bg-clip-text text-transparent">
             سورة {SURAH_NAMES[surahNum]}
@@ -1662,7 +1662,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
         </div>
 
         {/* زر التقسيم */}
-        <div className="bg-gradient-to-br from-violet-950/60 via-fuchsia-950/40 to-purple-950/60 border border-violet-500/30 rounded-2xl p-5 space-y-4">
+        <div className="bg-gradient-to-br from-violet-500/10 via-fuchsia-500/10 to-purple-500/10 border border-violet-500/30 rounded-2xl p-5 space-y-4">
           <div className="text-center space-y-2">
             <div className="flex items-center justify-center gap-2">
               <Zap className="w-5 h-5 text-accent" />
@@ -1686,7 +1686,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
           )}
 
           {/* ── التقسيم عبر خدمة Python (أعلى دقة) ── */}
-          <div className="rounded-xl bg-gradient-to-br from-violet-950/40 to-fuchsia-950/30 border border-violet-500/30 p-3 space-y-2 mb-2">
+          <div className="rounded-xl bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 border border-violet-500/30 p-3 space-y-2 mb-2">
             <label className="text-xs font-bold text-violet-300 flex items-center gap-1">خدمة التقسيم (دقة عالية)</label>
             <input
               type="url"
@@ -1788,12 +1788,12 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
                 <div className="text-2xl font-bold text-foreground">{segments.length}</div>
                 <div className="text-muted-foreground mt-0.5">مقطع</div>
               </div>
-              <div className="bg-amber-950/20 border border-amber-500/10 rounded-xl p-3 text-center">
-                <div className="text-2xl font-bold text-amber-400">{stats.tC}</div>
+              <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-3 text-center">
+                <div className="text-2xl font-bold text-amber-600">{stats.tC}</div>
                 <div className="text-muted-foreground mt-0.5">معلم</div>
               </div>
-              <div className="bg-sky-950/20 border border-sky-500/10 rounded-xl p-3 text-center">
-                <div className="text-2xl font-bold text-sky-400">{stats.kC}</div>
+              <div className="bg-sky-500/10 border border-sky-500/25 rounded-xl p-3 text-center">
+                <div className="text-2xl font-bold text-sky-600">{stats.kC}</div>
                 <div className="text-muted-foreground mt-0.5">طفل</div>
               </div>
             </div>
@@ -1837,7 +1837,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
         {segments.length > 0 && (
           <div className="card-nour backdrop-blur p-4">
             <p className="font-bold mb-1 text-sm text-muted-foreground">المقاطع ({segments.length}):</p>
-            <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">صحّح يدوياً: اضغط زرّ <b className="text-amber-400">معلم/طفل</b> للتبديل، وعدّل <b className="text-white">رقم الآية</b> بالأسهم لكل مقطع — ثم اضغط «ربط المقاطع بالتظليل» في الأعلى.</p>
+            <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">صحّح يدوياً: اضغط زرّ <b className="text-amber-600">معلم/طفل</b> للتبديل، وعدّل <b className="text-foreground">رقم الآية</b> بالأسهم لكل مقطع — ثم اضغط «ربط المقاطع بالتظليل» في الأعلى.</p>
             <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
               {segments.map((seg, i) => {
                 const isAct = i === activeSegIndex;
@@ -1845,10 +1845,10 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
                 const q = qualities[i];
                 return (
                   <div key={seg.id} className={`rounded-xl p-3.5 transition-all border ${
-                    isAct ? "bg-emerald-950/40 border-emerald-500/40 shadow-lg shadow-emerald-500/10"
-                      : isSegP ? "bg-violet-950/40 border-violet-500/40"
-                      : seg.speaker === "teacher" ? "bg-amber-950/10 border-amber-500/10 hover:border-amber-500/20"
-                      : "bg-sky-950/10 border-sky-500/10 hover:border-sky-500/20"
+                    isAct ? "bg-emerald-500/15 border-emerald-500/50 shadow-lg shadow-emerald-500/10"
+                      : isSegP ? "bg-violet-500/15 border-violet-500/50"
+                      : seg.speaker === "teacher" ? "bg-amber-500/10 border-amber-500/25 hover:border-amber-500/50"
+                      : "bg-sky-500/10 border-sky-500/25 hover:border-sky-500/50"
                   }`}>
                     <div className="flex items-center gap-3">
                       <button onClick={() => playSegment(seg)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0 ${
@@ -1861,36 +1861,36 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className={seg.speaker === "teacher" ? "text-amber-400" : "text-sky-400"}>{seg.speaker === "teacher" ? <Mic className="w-4 h-4" /> : <Baby className="w-4 h-4" />}</span>
-                          <span className="text-sm font-bold text-white truncate block">{seg.label || `مقطع ${i + 1}`}</span>
+                          <span className="text-sm font-bold text-foreground truncate block">{seg.label || `مقطع ${i + 1}`}</span>
                         </div>
-                        <div className="text-xs font-mono mt-2 flex items-center gap-2 text-slate-400">
+                        <div className="text-xs font-mono mt-2 flex items-center gap-2 text-muted-foreground">
                           {/* Start Controls */}
-                          <div className="flex items-center bg-slate-900/60 rounded border border-slate-700/50 overflow-hidden">
+                          <div className="flex items-center bg-muted rounded border border-border overflow-hidden">
                             <button onClick={() => updateSegmentBoundaries(i, "start", -0.05)} className="px-1.5 py-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="-50ms"><Minus className="w-3 h-3" /></button>
                             <span className="px-2 py-0.5 text-emerald-400 font-bold min-w-[50px] text-center">{fmt(seg.start)}</span>
                             <button onClick={() => updateSegmentBoundaries(i, "start", 0.05)} className="px-1.5 py-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="+50ms"><Plus className="w-3 h-3" /></button>
                           </div>
                           
-                          <span className="text-slate-600">→</span>
+                          <span className="text-muted-foreground">→</span>
                           
                           {/* End Controls */}
-                          <div className="flex items-center bg-slate-900/60 rounded border border-slate-700/50 overflow-hidden">
+                          <div className="flex items-center bg-muted rounded border border-border overflow-hidden">
                             <button onClick={() => updateSegmentBoundaries(i, "end", -0.05)} className="px-1.5 py-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="-50ms"><Minus className="w-3 h-3" /></button>
                             <span className="px-2 py-0.5 text-rose-400 font-bold min-w-[50px] text-center">{fmt(seg.end)}</span>
                             <button onClick={() => updateSegmentBoundaries(i, "end", 0.05)} className="px-1.5 py-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="+50ms"><Plus className="w-3 h-3" /></button>
                           </div>
                           
-                          <span className="text-[10px] text-slate-500 ml-1">({(seg.end - seg.start).toFixed(2)}ث)</span>
+                          <span className="text-[10px] text-muted-foreground ml-1">({(seg.end - seg.start).toFixed(2)}ث)</span>
                         </div>
                         {q && (
                           <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                             <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${
-                              q.snr >= 15 ? "bg-emerald-950/30 border-emerald-500/20 text-emerald-400"
-                                : q.snr >= 8 ? "bg-amber-950/30 border-amber-500/20 text-amber-400"
-                                : "bg-red-950/30 border-red-500/20 text-red-400"
+                              q.snr >= 15 ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700"
+                                : q.snr >= 8 ? "bg-amber-500/10 border-amber-500/30 text-amber-700"
+                                : "bg-red-500/10 border-red-500/30 text-red-700"
                             }`}>SNR {q.snr.toFixed(0)}dB</span>
-                            {q.pitchValid && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-950/30 border border-violet-500/20 text-violet-400">F0 ✓</span>}
-                            {q.edgeClean && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-sky-950/30 border border-sky-500/20 text-sky-400">ZC ✓</span>}
+                            {q.pitchValid && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-700">F0 ✓</span>}
+                            {q.edgeClean && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-700">ZC ✓</span>}
                           </div>
                         )}
                       </div>
@@ -1898,17 +1898,17 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
                         {/* المتحدّث — اضغط للتبديل يدوياً */}
                         <button onClick={() => setSegmentSpeaker(i, seg.speaker === "teacher" ? "kids" : "teacher")} title="تبديل المتحدّث (معلم/طفل)"
                           className={`rounded-lg px-2.5 py-1.5 text-xs font-bold text-center border active:scale-95 flex items-center justify-center gap-1 ${
-                            seg.speaker === "teacher" ? "bg-amber-950/40 border-amber-500/30 text-amber-400 hover:bg-amber-900/40"
-                              : "bg-sky-950/40 border-sky-500/30 text-sky-400 hover:bg-sky-900/40"
+                            seg.speaker === "teacher" ? "bg-amber-500/15 border-amber-500/40 text-amber-700 hover:bg-amber-500/25"
+                              : "bg-sky-500/15 border-sky-500/40 text-sky-700 hover:bg-sky-500/25"
                           }`}>
                           {seg.speaker === "teacher" ? <Mic className="w-3 h-3" /> : <Baby className="w-3 h-3" />}
                           {seg.speaker === "teacher" ? "معلم" : "طفل"}
                         </button>
                         {/* رقم الآية — يدوي */}
-                        <div className="flex items-center justify-center bg-slate-900/60 rounded border border-slate-700/50 overflow-hidden">
-                          <button onClick={() => setSegmentAyah(i, (seg.ayah ?? 0) - 1)} className="px-1.5 py-1 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="آية أقل"><Minus className="w-3 h-3" /></button>
-                          <span className="px-1 text-[11px] font-bold text-white min-w-[44px] text-center">{(seg.ayah ?? 0) < 1 ? "تمهيد" : `آية ${seg.ayah}`}</span>
-                          <button onClick={() => setSegmentAyah(i, (seg.ayah ?? 0) + 1)} className="px-1.5 py-1 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="آية أكثر"><Plus className="w-3 h-3" /></button>
+                        <div className="flex items-center justify-center bg-muted rounded border border-border overflow-hidden">
+                          <button onClick={() => setSegmentAyah(i, (seg.ayah ?? 0) - 1)} className="px-1.5 py-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="آية أقل"><Minus className="w-3 h-3" /></button>
+                          <span className="px-1 text-[11px] font-bold text-foreground min-w-[44px] text-center">{(seg.ayah ?? 0) < 1 ? "تمهيد" : `آية ${seg.ayah}`}</span>
+                          <button onClick={() => setSegmentAyah(i, (seg.ayah ?? 0) + 1)} className="px-1.5 py-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="آية أكثر"><Plus className="w-3 h-3" /></button>
                         </div>
                       </div>
                     </div>
@@ -1919,27 +1919,27 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
           </div>
         )}
 
-        <button onClick={clearAll} className="w-full p-3 rounded-xl bg-slate-800/50 border border-slate-700 text-slate-400 font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform">
+        <button onClick={clearAll} className="w-full p-3 rounded-xl bg-secondary border border-border text-muted-foreground font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform">
           <RotateCcw className="w-4 h-4" /> إعادة من الصفر
         </button>
 
         {/* شرح */}
-        <div className="bg-slate-800/40 border border-slate-700/40 rounded-2xl p-4 space-y-3">
+        <div className="card-nour p-4 space-y-3">
           <h3 className="text-sm font-bold text-violet-300 flex items-center gap-2">
             <Wand2 className="w-4 h-4" /> كيف يعمل المحرك الهجين؟
           </h3>
-          <div className="space-y-2 text-xs text-slate-400 leading-relaxed">
+          <div className="space-y-2 text-xs text-muted-foreground leading-relaxed">
             <div className="flex gap-2">
               <span className="text-emerald-400 font-bold shrink-0">①</span>
-              <span><b className="text-slate-300">كشف الصمت</b> — Schmitt Trigger بعتبات ديناميكية + ZCR + توسيع حواف (الطريقة المجرّبة التي تعمل ممتاز عند وجود فواصل)</span>
+              <span><b className="text-foreground">كشف الصمت</b> — Schmitt Trigger بعتبات ديناميكية + ZCR + توسيع حواف (الطريقة المجرّبة التي تعمل ممتاز عند وجود فواصل)</span>
             </div>
             <div className="flex gap-2">
               <span className="text-violet-400 font-bold shrink-0">②</span>
-              <span><b className="text-slate-300">Boundary Likelihood</b> — لتقسيم المناطق الطويلة عند تغيّرات الطيف والنغمة (يعمل حتى بدون صمت)</span>
+              <span><b className="text-foreground">Boundary Likelihood</b> — لتقسيم المناطق الطويلة عند تغيّرات الطيف والنغمة (يعمل حتى بدون صمت)</span>
             </div>
             <div className="flex gap-2">
               <span className="text-amber-400 font-bold shrink-0">③</span>
-              <span><b className="text-slate-300">ضبط دقيق</b> — Zero-Crossing + SNR + F0 + تصحيح تلقائي</span>
+              <span><b className="text-foreground">ضبط دقيق</b> — Zero-Crossing + SNR + F0 + تصحيح تلقائي</span>
             </div>
           </div>
         </div>
