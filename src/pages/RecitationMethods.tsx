@@ -4,7 +4,7 @@ import {
   ArrowRight, ArrowLeft, Play, Pause, Volume2, StopCircle,
   Wand2, RotateCcw, Zap, Link2, Brain, BarChart3, AlertTriangle,
   CheckCircle2, Info, ImagePlus, ZoomIn, ZoomOut, X, Plus, Minus, Trash2, Scissors, UserPlus, Maximize,
-  Undo2, Redo2
+  Undo2, Redo2, BookOpen, Mic, Baby
 } from "lucide-react";
 import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings, AudioSegment } from "../data/ayahTimings";
 import { getPageAyahBoxes, savePageAyahBoxes, getAllPageSources } from "../data/ayahCoordinates";
@@ -332,7 +332,7 @@ async function hybridSplit(
   boundaryScores: Float32Array;
 }> {
   /* ─── ① تحميل واستخراج الميزات ─── */
-  onProgress?.("📥 تحميل الصوت...", 3);
+  onProgress?.("تحميل الصوت...", 3);
   const res = await fetch(audioUrl);
   const buf = await res.arrayBuffer();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -347,7 +347,7 @@ async function hybridSplit(
   const pitchWin = Math.floor(sr * 0.04);
   const N = Math.floor((data.length - win) / hop);
 
-  onProgress?.("🔬 استخراج الميزات (طاقة + ZCR + طيف + نغمة)...", 8);
+  onProgress?.("استخراج الميزات (طاقة + ZCR + طيف + نغمة)...", 8);
 
   const energies = new Float32Array(N);
   const zcrs = new Float32Array(N);
@@ -361,14 +361,14 @@ async function hybridSplit(
     centroids[i] = computeSpectralCentroid(data, off, win, sr);
   }
 
-  onProgress?.("🎵 كشف النغمة (F0)...", 15);
+  onProgress?.("كشف النغمة (F0)...", 15);
   for (let i = 0; i < N; i += 4) {
     const p = detectPitch(data, i * hop, pitchWin, sr);
     for (let j = 0; j < 4 && i + j < N; j++) pitches[i + j] = p;
   }
 
   /* ─── ② كشف الصمت (Schmitt Trigger مُحسَّن) ─── */
-  onProgress?.("⚡ كشف مناطق الكلام (Schmitt Trigger مُحسَّن)...", 22);
+  onProgress?.("كشف مناطق الكلام (Schmitt Trigger مُحسَّن)...", 22);
 
   // ─── تنعيم خفيف للطاقة (120ms) ───
   const smR = Math.floor(0.06 / (hop / sr));
@@ -448,10 +448,10 @@ async function hybridSplit(
     r.e = ee;
   });
 
-  onProgress?.(`🔍 كشف ${regions.length} منطقة كلام طبيعية (تقسيم ذكي بلا عدد مُسبق)`, 35);
+  onProgress?.(`كشف ${regions.length} منطقة كلام طبيعية (تقسيم ذكي بلا عدد مُسبق)`, 35);
 
   /* ─── ③ Boundary Likelihood (للعرض البصري فقط) ─── */
-  onProgress?.("🧠 حساب Boundary Likelihood...", 40);
+  onProgress?.("حساب Boundary Likelihood...", 40);
 
   const compR = Math.floor(0.12 / (hop / sr));
   const halfC = Math.floor(compR / 2);
@@ -499,11 +499,11 @@ async function hybridSplit(
   // التقسيم لا يعتمد على AYAH_COUNTS — البنية تُكتشف لاحقاً بالطبقة والتكرار.
   let targetRegions = regions.map(r => ({ ...r }));
   if (targetRegions.length === 0) targetRegions = [{ s: 0, e: N - 1 }];
-  onProgress?.(`✅ ${targetRegions.length} مقطع طبيعي`, 55);
+  onProgress?.(`${targetRegions.length} مقطع طبيعي`, 55);
 
 
   /* ─── ⑤ ضبط الحواف في أعمق نقطة صمت (Perfect Snap) ─── */
-  onProgress?.("✨ ضبط الحواف في أعمق نقطة صمت...", 72);
+  onProgress?.("ضبط الحواف في أعمق نقطة صمت...", 72);
 
   interface Refined { start: number; end: number; startS: number; endS: number; }
   const refined: Refined[] = targetRegions.map(r => ({
@@ -541,7 +541,7 @@ async function hybridSplit(
       }
     }
 
-    // 🎯 تثبيت الحد الفاصل بالضبط في المنتصف المرئي للصمت
+    // تثبيت الحد الفاصل بالضبط في المنتصف المرئي للصمت
     current.endS = minIdx;
     current.end = minIdx / sr;
     next.startS = minIdx;
@@ -576,7 +576,7 @@ async function hybridSplit(
   }
 
   // ─── ⑤.٥ تشذيب حواف عالي الدقة لكل مقطع ───
-  onProgress?.("✨ تشذيب الحواف لإزالة الفراغات الفائضة...", 76);
+  onProgress?.("تشذيب الحواف لإزالة الفراغات الفائضة...", 76);
   const overallRMS = computeRMS(data, 0, data.length);
   for (let i = 0; i < refined.length; i++) {
     const isTeacher = i % 2 === 0;
@@ -594,7 +594,7 @@ async function hybridSplit(
   /* ─── ⑥ تمييز المتحدث بالذكاء (طبقة الصوت F0) + ربط الآيات بالتكرار ─── */
   // لا يعتمد على عدد آيات مخزّن. المعلم نبرته منخفضة (~100-160Hz)،
   // الطفل نبرته عالية (~250-400Hz). نصنّف بالطبقة، نكتشف النمط، ثم نرقّم بالتكرار.
-  onProgress?.("🎤 تمييز المعلم/الطفل بطبقة الصوت...", 80);
+  onProgress?.("تمييز المعلم/الطفل بطبقة الصوت...", 80);
 
   const sortedE2 = [...Array.from(energies)].sort((a, b) => a - b);
   const noiseE = sortedE2[Math.floor(sortedE2.length * 0.1)] || 1e-6;
@@ -682,7 +682,7 @@ async function hybridSplit(
     });
   }
 
-  onProgress?.(`✅ ${segs.length} مقطع (${isConsecutive ? "متتابع" : "متناوب"})`, 85);
+  onProgress?.(`${segs.length} مقطع (${isConsecutive ? "متتابع" : "متناوب"})`, 85);
 
   // Anomaly removal: مقاطع قصيرة جداً بـ SNR منخفض
   for (let i = segs.length - 1; i >= 0; i--) {
@@ -694,7 +694,7 @@ async function hybridSplit(
   }
 
   /* ─── Waveform ─── */
-  onProgress?.("📊 توليد الرسم البياني...", 93);
+  onProgress?.("توليد الرسم البياني...", 93);
   // Dynamic resolution: 50 points per second, clamped [800, 16000]
   const wfSize = Math.max(800, Math.min(16000, Math.ceil(totalDur * 50)));
   const wf = new Float32Array(wfSize);
@@ -722,7 +722,7 @@ async function hybridSplit(
 
   const teacherN = segs.filter(s => s.speaker === "teacher").length;
   const kidsN = segs.filter(s => s.speaker === "kids").length;
-  onProgress?.(`✅ تم: ${segs.length} مقطع (معلم ${teacherN} · طفل ${kidsN})`, 100);
+  onProgress?.(`تم: ${segs.length} مقطع (معلم ${teacherN} · طفل ${kidsN})`, 100);
 
   return { segments: segs, duration: totalDur, waveform: wf, qualities: quals, boundaryScores: blViz };
 }
@@ -916,8 +916,8 @@ function WaveformDisplay({
   }, [currentTime, duration, zoomLevel]);
 
   return (
-    <div ref={wrapperRef} className="relative rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl shadow-black/50 bg-slate-900 group/fs flex flex-col justify-center">
-      <button onClick={toggleFullscreen} className="absolute top-2 right-2 z-50 p-2 bg-slate-800/80 rounded-lg hover:bg-slate-700 text-slate-300 opacity-0 group-hover/fs:opacity-100 transition-opacity border border-slate-600 shadow-xl" title="وضع ملء الشاشة">
+    <div ref={wrapperRef} className="relative rounded-2xl overflow-hidden border border-border shadow-soft bg-background group/fs flex flex-col justify-center">
+      <button onClick={toggleFullscreen} className="absolute top-2 right-2 z-50 p-2 bg-card rounded-lg hover:brightness-95 text-muted-foreground opacity-0 group-hover/fs:opacity-100 transition-opacity border border-border shadow-xl" title="وضع ملء الشاشة">
         <Maximize className="w-4 h-4" />
       </button>
       <div ref={scrollRef} className="overflow-x-auto overflow-y-hidden custom-scrollbar h-full w-full relative" dir="ltr">
@@ -966,7 +966,7 @@ function WaveformDisplay({
         ))}
       </div>
 
-        <div className="flex justify-between px-3 py-1 text-[10px] font-bold text-slate-400 bg-slate-950/90 border-t border-slate-800 relative z-0 sticky left-0 bottom-0 w-full" dir="rtl">
+        <div className="flex justify-between px-3 py-1 text-[10px] font-bold text-muted-foreground bg-background/90 border-t border-border relative z-0 sticky left-0 bottom-0 w-full" dir="rtl">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_#ff9800]"></span> المعلم (المريخ)</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-500 shadow-[0_0_8px_#00b0ff]"></span> الطفل (الفضاء)</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_#e040fb]"></span> Boundary Likelihood</span>
@@ -1002,7 +1002,7 @@ function QuranPageViewer({ surahNum }: { surahNum: number }) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "⚠️ حجم الصورة كبير جداً", description: "الحد الأقصى 5 ميجا", variant: "destructive" });
+      toast({ title: "حجم الصورة كبير جداً", description: "الحد الأقصى 5 ميجا", variant: "destructive" });
       return;
     }
     const reader = new FileReader();
@@ -1010,7 +1010,7 @@ function QuranPageViewer({ surahNum }: { surahNum: number }) {
       const base64 = reader.result as string;
       localStorage.setItem(CUSTOM_IMAGE_KEY + surahNum, base64);
       setCustomImage(base64);
-      toast({ title: "✅ تم رفع الصورة بنجاح!" });
+      toast({ title: "تم رفع الصورة بنجاح!" });
     };
     reader.readAsDataURL(file);
     e.target.value = "";
@@ -1024,12 +1024,12 @@ function QuranPageViewer({ surahNum }: { surahNum: number }) {
   if (!displayImage) return null;
 
   return (
-    <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700/30">
-        <span className="text-xs font-bold text-amber-400/80">📖 صفحة المصحف</span>
+    <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+        <span className="text-xs font-bold text-accent"><BookOpen className="w-3.5 h-3.5 inline-block" /> صفحة المصحف</span>
         <div className="flex items-center gap-2">
           {customImage && (
-            <button onClick={clearCustom} className="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-1">
+            <button onClick={clearCustom} className="text-[10px] text-destructive hover:brightness-110 flex items-center gap-1">
               <X className="w-3 h-3" /> حذف المخصصة
             </button>
           )}
@@ -1038,7 +1038,7 @@ function QuranPageViewer({ surahNum }: { surahNum: number }) {
           </button>
           <button
             onClick={() => fileRef.current?.click()}
-            className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+            className="text-[10px] text-success hover:brightness-110 flex items-center gap-1"
           >
             <ImagePlus className="w-3 h-3" /> رفع صورة
           </button>
@@ -1084,6 +1084,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [zoomLevel, setZoomLevel] = useState<number>(3);
   const [segments, setSegments] = useState<AudioSegment[]>([]);
+  const [linkResult, setLinkResult] = useState<{ linked: number; pages: number } | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -1192,7 +1193,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
       setSegments(prevSegs);
       setHistoryIndex(prevIndex);
       lastSavedSegmentsRef.current = prevSegs;
-      toast({ title: "↩️ تم التراجع" });
+      toast({ title: "تم التراجع" });
     }
   }, [history, historyIndex]);
 
@@ -1204,7 +1205,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
       setSegments(nextSegs);
       setHistoryIndex(nextIndex);
       lastSavedSegmentsRef.current = nextSegs;
-      toast({ title: "↪️ تم الإعادة" });
+      toast({ title: "تم الإعادة" });
     }
   }, [history, historyIndex]);
 
@@ -1225,7 +1226,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
 
   const handleSplit = async () => {
     const a = audioRef.current;
-    if (!a || !duration) { toast({ title: "⚠️ انتظر تحميل الصوت", variant: "destructive" }); return; }
+    if (!a || !duration) { toast({ title: "انتظر تحميل الصوت", variant: "destructive" }); return; }
     setSplitting(true); setProgress(""); setProgressPct(0);
     try {
       const r = await hybridSplit(a.src, surahNum, recitationStyle, leadingSegments, (msg, pct) => {
@@ -1235,9 +1236,10 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
       setSegments(r.segments); setWaveform(r.waveform);
       setBoundaryScores(r.boundaryScores); setQualities(r.qualities);
       persistSegments(surahNum, r.segments);
-      toast({ title: "✅ تم التقسيم!", description: `${r.segments.length} مقطع — المحرك الهجين` });
+      toast({ title: "تم التقسيم!", description: `${r.segments.length} مقطع — المحرك الهجين` });
+      await linkSegsToShading(r.segments);   // ربط تلقائي بالآيات بعد التقسيم
     } catch (e) {
-      toast({ title: "❌ فشل", description: e instanceof Error ? e.message : "خطأ", variant: "destructive" });
+      toast({ title: "فشل", description: e instanceof Error ? e.message : "خطأ", variant: "destructive" });
     } finally { setSplitting(false); setProgress(""); setProgressPct(0); }
   };
 
@@ -1247,7 +1249,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
   // (لأن خدمة Hugging Face لا تستطيع الوصول إلى http://localhost).
   const runServiceSplit = async (engine: "vad" | "gemini") => {
     const base = serviceUrl.trim().replace(/\/$/, "");
-    if (!base) { toast({ title: "⚠️ أدخل رابط الخدمة أولاً", description: "انشر الخدمة على Hugging Face والصق رابطها", variant: "destructive" }); return; }
+    if (!base) { toast({ title: "أدخل رابط الخدمة أولاً", description: "انشر الخدمة على Hugging Face والصق رابطها", variant: "destructive" }); return; }
 
     const label = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
     const urlPath = engine === "gemini" ? "/split-gemini-url" : "/split-url";
@@ -1258,7 +1260,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
       let res: Response;
       if (hasCloudAudio(surahNum)) {
         // صوت عام على السحابة → السيرفر يجلبه بنفسه
-        setProgress(`🚀 ${engName}: جلب الصوت السحابي وتقسيمه...`);
+        setProgress(`${engName}: جلب الصوت السحابي وتقسيمه...`);
         res = await fetch(`${base}${urlPath}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1266,7 +1268,7 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
         });
       } else {
         // صوت محلي (لا يصله السيرفر) → نرفع البايتات من المتصفّح
-        setProgress(`🚀 ${engName}: رفع الصوت وتقسيمه...`);
+        setProgress(`${engName}: رفع الصوت وتقسيمه...`);
         const audioSrc = audioRef.current?.src || audioPath(surahNum);
         const blob = await (await fetch(audioSrc)).blob();
         const form = new FormData();
@@ -1288,20 +1290,21 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
       setSegments(segs);
       persistSegments(surahNum, segs);
       setProgressPct(100);
-      toast({ title: `✅ تم التقسيم (${engName})!`, description: `${segs.length} مقطع · ${data.processingTimeMs || 0}ms` });
+      toast({ title: `تم التقسيم (${engName})!`, description: `${segs.length} مقطع · ${data.processingTimeMs || 0}ms` });
+      await linkSegsToShading(segs);   // ربط تلقائي بالآيات بعد التقسيم
     } catch (e) {
-      toast({ title: "❌ فشل التقسيم", description: e instanceof Error ? e.message : "خطأ", variant: "destructive" });
+      toast({ title: "فشل التقسيم", description: e instanceof Error ? e.message : "خطأ", variant: "destructive" });
     } finally { setSplitting(false); setProgress(""); setProgressPct(0); }
   };
   const handleServiceSplit = () => runServiceSplit("vad");
   const handleGeminiSplit = () => runServiceSplit("gemini");
 
   // ربط المقاطع المقسّمة بمربعات التظليل: يكتب وقت كل آية (معلم/طفل) داخل مربعها فتظهر في المصحف
-  const linkToShading = useCallback(async () => {
-    if (segments.length === 0) { toast({ title: "⚠️ لا توجد مقاطع — قسّم الصوت أولاً", variant: "destructive" }); return; }
+  const linkSegsToShading = useCallback(async (segs: AudioSegment[]) => {
+    if (segs.length === 0) { toast({ title: "لا توجد مقاطع — قسّم الصوت أولاً", variant: "destructive" }); return; }
     const tByAyah = new Map<number, AudioSegment>();
     const kByAyah = new Map<number, AudioSegment>();
-    segments.forEach(s => {
+    segs.forEach(s => {
       if (!s.ayah || s.ayah < 1) return;
       if (s.speaker === "kids") { if (!kByAyah.has(s.ayah)) kByAyah.set(s.ayah, s); }
       else { if (!tByAyah.has(s.ayah)) tByAyah.set(s.ayah, s); }
@@ -1327,12 +1330,15 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
       });
       if (changed) { await savePageAyahBoxes(src, next); pagesTouched++; }
     }
+    setLinkResult({ linked, pages: pagesTouched });
     if (linked === 0) {
-      toast({ title: "ℹ️ لا توجد مربعات لهذه السورة", description: "أنشئ تظليل السورة في المعايرة أولاً، ثم اربط.", variant: "destructive" });
+      toast({ title: "لا توجد مربعات لهذه السورة", description: "أنشئ تظليل السورة في المعايرة أولاً، ثم اربط.", variant: "destructive" });
     } else {
-      toast({ title: "✅ تم الربط بالتظليل", description: `${linked} آية على ${pagesTouched} صفحة — يظهر التوقيت في المصحف.` });
+      toast({ title: "تم الربط بالتظليل", description: `${linked} آية على ${pagesTouched} صفحة — يظهر التوقيت في المصحف.` });
     }
-  }, [segments, surahNum]);
+  }, [surahNum]);
+  // غلاف للزرّ اليدوي (يستعمل المقاطع من الحالة)
+  const linkToShading = useCallback(() => linkSegsToShading(segments), [segments, linkSegsToShading]);
 
   const togglePlay = () => {
     const a = audioRef.current; if (!a) return;
@@ -1430,6 +1436,20 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
     if (s) setSegmentBoundary(index, field, s[field] + delta);
   };
 
+  // ── إسناد يدوي: تعيين المتحدّث ورقم الآية لكل مقطع بنفسك (يتجاوز الكشف التلقائي) ──
+  const segLabel = useCallback((speaker: "teacher" | "kids", ayah: number) => {
+    const sn = SURAH_NAMES[surahNum] || `سورة ${surahNum}`;
+    const spk = speaker === "teacher" ? "معلم" : "طفل";
+    return ayah >= 1 ? `${sn} - آية ${ayah} (${spk})` : `${sn} - تمهيد (${spk})`;
+  }, [surahNum]);
+  const setSegmentSpeaker = useCallback((index: number, speaker: "teacher" | "kids") => {
+    setSegments(prev => prev.map((s, i) => i === index ? { ...s, speaker, label: segLabel(speaker, s.ayah ?? 0) } : s));
+  }, [segLabel]);
+  const setSegmentAyah = useCallback((index: number, ayah: number) => {
+    const a = Math.max(0, Math.floor(ayah) || 0);
+    setSegments(prev => prev.map((s, i) => i === index ? { ...s, ayah: a, label: segLabel(s.speaker, a) } : s));
+  }, [segLabel]);
+
   const deleteSegment = useCallback((index: number) => {
     setSegments(prev => {
       const newSegs = [...prev];
@@ -1510,31 +1530,31 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
   }, [segments, qualities]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white pb-8" dir="rtl">
+    <div className="min-h-screen page-nour text-foreground pb-8" dir="rtl">
       <div className="max-w-2xl mx-auto px-4 space-y-4">
 
         {/* Header */}
         <header className="pt-5 pb-2">
           <div className="flex items-center gap-3 mb-4">
-            <Link to="/" className="w-10 h-10 rounded-full bg-slate-800/80 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:border-slate-500 transition-all active:scale-95">
+            <Link to="/" className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-accent/50 transition-all active:scale-95">
               <ArrowRight className="w-5 h-5" />
             </Link>
             <div className="flex-1 text-center">
-              <h1 className="text-2xl font-bold font-amiri bg-gradient-to-r from-amber-300 via-emerald-300 to-cyan-300 bg-clip-text text-transparent">
-                ⚡ تقسيم ذكي هجين
+              <h1 className="text-2xl font-bold font-amiri text-gradient-gold">
+                تقسيم ذكي هجين
               </h1>
-              <p className="text-xs text-slate-500 mt-1">كشف الصمت + Boundary Likelihood = أعلى دقة</p>
+              <p className="text-xs text-muted-foreground mt-1">كشف الصمت + Boundary Likelihood = أعلى دقة</p>
             </div>
             <div className="w-10" />
           </div>
         </header>
 
         {/* اختيار السورة */}
-        <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-4 space-y-4">
+        <div className="card-nour backdrop-blur p-4 space-y-4 animate-fade-up shadow-soft">
           <div>
-            <label className="text-sm font-bold text-slate-300 block mb-2">اختر السورة:</label>
+            <label className="text-sm font-bold text-muted-foreground block mb-2">اختر السورة:</label>
             <select value={surahNum} onChange={(e) => setSurahNum(parseInt(e.target.value, 10))}
-              className="w-full p-3 rounded-xl bg-slate-700 border border-slate-600 text-white font-amiri text-lg focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all">
+              className="w-full p-3 rounded-xl bg-secondary border border-border text-secondary-foreground font-amiri text-lg focus:border-accent/50 focus:ring-2 focus:ring-accent/20 outline-none transition-all">
               {Object.entries(SURAH_NAMES).map(([n, name]) => (
                 <option key={n} value={n}>{n} — {name} ({AYAH_COUNTS[parseInt(n, 10)]} آيات)</option>
               ))}
@@ -1542,23 +1562,23 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
           </div>
 
           <div>
-            <label className="text-sm font-bold text-slate-300 block mb-2">بنية الصوت (يُكتشف تلقائياً — للتجاوز فقط):</label>
+            <label className="text-sm font-bold text-muted-foreground block mb-2">بنية الصوت (يُكتشف تلقائياً — للتجاوز فقط):</label>
             <select value={recitationStyle} onChange={(e) => setRecitationStyle(e.target.value as "interleaved" | "consecutive")}
-              className="w-full p-3 rounded-xl bg-slate-700 border border-slate-600 text-white text-sm focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all">
-              <option value="interleaved">🔄 متناوب آية بآية (معلم ← طفل ← معلم ← طفل)</option>
-              <option value="consecutive">➡️ متتالي (المعلم كامل السورة ثم الطفل كامل السورة)</option>
+              className="w-full p-3 rounded-xl bg-secondary border border-border text-secondary-foreground text-sm focus:border-accent/50 focus:ring-2 focus:ring-accent/20 outline-none transition-all">
+              <option value="interleaved">متناوب آية بآية (معلم ← طفل ← معلم ← طفل)</option>
+              <option value="consecutive">متتالي (المعلم كامل السورة ثم الطفل كامل السورة)</option>
             </select>
           </div>
 
           <div>
-            <label className="text-sm font-bold text-slate-300 block mb-2">المقاطع التمهيدية قبل الآية الأولى:</label>
+            <label className="text-sm font-bold text-muted-foreground block mb-2">المقاطع التمهيدية قبل الآية الأولى:</label>
             <select value={leadingSegments} onChange={(e) => setLeadingSegments(parseInt(e.target.value, 10))}
-              className="w-full p-3 rounded-xl bg-slate-700 border border-slate-600 text-white text-sm focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all">
-              <option value={1}>🕌 بسملة فقط (الافتراضي)</option>
-              <option value={2}>🤲 استعاذة + بسملة</option>
-              <option value={0}>🚫 بلا تمهيد (تبدأ بالآية مباشرة)</option>
+              className="w-full p-3 rounded-xl bg-secondary border border-border text-secondary-foreground text-sm focus:border-accent/50 focus:ring-2 focus:ring-accent/20 outline-none transition-all">
+              <option value={1}>بسملة فقط (الافتراضي)</option>
+              <option value={2}>استعاذة + بسملة</option>
+              <option value={0}>بلا تمهيد (تبدأ بالآية مباشرة)</option>
             </select>
-            <p className="text-[11px] text-slate-500 mt-1">تُحسَب البسملة/الاستعاذة كمقاطع تمهيدية فلا تُرقَّم كآيات.</p>
+            <p className="text-[11px] text-muted-foreground mt-1">تُحسَب البسملة/الاستعاذة كمقاطع تمهيدية فلا تُرقَّم كآيات.</p>
           </div>
         </div>
 
@@ -1566,19 +1586,19 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
         <QuranPageViewer surahNum={surahNum} />
 
         {/* اسم السورة */}
-        <div className="bg-gradient-to-br from-amber-950/40 to-orange-950/30 border border-amber-500/20 rounded-2xl p-5 text-center">
-          <p className="text-xs text-amber-400/70 mb-1">السورة المختارة</p>
+        <div className="bg-gradient-to-br from-amber-950/40 to-orange-950/30 border border-accent/20 rounded-2xl p-5 text-center shadow-soft">
+          <p className="text-xs text-accent mb-1">السورة المختارة</p>
           <h2 className="text-4xl font-bold font-amiri bg-gradient-to-r from-amber-200 via-amber-300 to-orange-300 bg-clip-text text-transparent">
             سورة {SURAH_NAMES[surahNum]}
           </h2>
-          <div className="flex items-center justify-center gap-4 mt-3 text-sm text-slate-400">
-            <span className="bg-slate-800/60 px-3 py-1 rounded-full">📖 {AYAH_COUNTS[surahNum]} آيات</span>
-            {segments.length > 0 && <span className="bg-emerald-900/40 px-3 py-1 rounded-full text-emerald-400">✅ {segments.length} مقطع</span>}
+          <div className="flex items-center justify-center gap-4 mt-3 text-sm text-muted-foreground">
+            <span className="bg-muted px-3 py-1 rounded-full">{AYAH_COUNTS[surahNum]} آيات</span>
+            {segments.length > 0 && <span className="bg-success/15 px-3 py-1 rounded-full text-success">{segments.length} مقطع</span>}
           </div>
         </div>
 
         {/* مشغل الصوت */}
-        <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-4 space-y-3">
+        <div className="card-nour backdrop-blur p-4 space-y-3">
           <audio ref={audioRef} src={audioPath(surahNum)} crossOrigin="anonymous"
             onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)}
             onTimeUpdate={onTimeUpdate}
@@ -1593,8 +1613,8 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
               <input type="range" min={0} max={duration || 0} step={0.001} value={current}
                 onChange={(e) => { const a = audioRef.current; if (a) a.currentTime = parseFloat(e.target.value); }}
                 className="w-full accent-emerald-500" dir="ltr" />
-              <div className="flex justify-between text-xs tabular-nums text-slate-400 mt-1" dir="ltr">
-                <span className="font-bold text-emerald-400">{fmt(current)}</span>
+              <div className="flex justify-between text-xs tabular-nums text-muted-foreground mt-1" dir="ltr">
+                <span className="font-bold text-success">{fmt(current)}</span>
                 <span>{fmt(duration)}</span>
               </div>
             </div>
@@ -1603,19 +1623,19 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
           {duration > 0 && (
             <div className="space-y-3">
               {/* Timeline Toolbar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-muted p-2 rounded-xl border border-border">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-400 ml-2">التكبير (Zoom):</span>
-                  <button onClick={() => setZoomLevel(Math.max(1, zoomLevel - 1))} className="p-1.5 rounded-lg bg-slate-700/50 text-slate-300 hover:bg-slate-600 transition-colors" title="تصغير">
+                  <span className="text-xs font-bold text-muted-foreground ml-2">التكبير (Zoom):</span>
+                  <button onClick={() => setZoomLevel(Math.max(1, zoomLevel - 1))} className="p-1.5 rounded-lg bg-secondary text-secondary-foreground hover:brightness-95 transition-colors" title="تصغير">
                     <ZoomOut className="w-4 h-4" />
                   </button>
-                  <span className="text-xs font-mono w-6 text-center text-emerald-400">{zoomLevel}x</span>
-                  <button onClick={() => setZoomLevel(Math.min(10, zoomLevel + 1))} className="p-1.5 rounded-lg bg-slate-700/50 text-slate-300 hover:bg-slate-600 transition-colors" title="تكبير">
+                  <span className="text-xs font-mono w-6 text-center text-success">{zoomLevel}x</span>
+                  <button onClick={() => setZoomLevel(Math.min(10, zoomLevel + 1))} className="p-1.5 rounded-lg bg-secondary text-secondary-foreground hover:brightness-95 transition-colors" title="تكبير">
                     <ZoomIn className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-400 ml-2">أدوات:</span>
+                  <span className="text-xs font-bold text-muted-foreground ml-2">أدوات:</span>
                   <button onClick={() => splitSegment()} className="px-3 py-1.5 rounded-lg bg-violet-600/20 text-violet-400 hover:bg-violet-600/40 border border-violet-500/30 transition-colors flex items-center gap-1.5 text-xs font-bold" title="قص المقطع الحالي من المنتصف (عند مؤشر التشغيل)">
                     <Scissors className="w-3.5 h-3.5" /> تقسيم
                   </button>
@@ -1624,11 +1644,11 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
                   </button>
                   
                   {/* تراجع / إعادة */}
-                  <div className="flex items-center gap-1 border-r border-slate-700/80 pr-2 mr-1">
-                    <button onClick={undo} disabled={historyIndex <= 0} className="p-1.5 rounded-lg bg-slate-700/50 text-slate-300 hover:bg-slate-600 disabled:opacity-30 disabled:hover:bg-slate-700/50 transition-all flex items-center justify-center" title="تراجع (Ctrl+Z)">
+                  <div className="flex items-center gap-1 border-r border-border pr-2 mr-1">
+                    <button onClick={undo} disabled={historyIndex <= 0} className="p-1.5 rounded-lg bg-secondary text-secondary-foreground hover:brightness-95 disabled:opacity-30 disabled:hover:brightness-100 transition-all flex items-center justify-center" title="تراجع (Ctrl+Z)">
                       <Undo2 className="w-4 h-4" />
                     </button>
-                    <button onClick={redo} disabled={historyIndex >= history.length - 1} className="p-1.5 rounded-lg bg-slate-700/50 text-slate-300 hover:bg-slate-600 disabled:opacity-30 disabled:hover:bg-slate-700/50 transition-all flex items-center justify-center" title="إعادة (Ctrl+Y)">
+                    <button onClick={redo} disabled={historyIndex >= history.length - 1} className="p-1.5 rounded-lg bg-secondary text-secondary-foreground hover:brightness-95 disabled:opacity-30 disabled:hover:brightness-100 transition-all flex items-center justify-center" title="إعادة (Ctrl+Y)">
                       <Redo2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -1645,72 +1665,89 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
         <div className="bg-gradient-to-br from-violet-950/60 via-fuchsia-950/40 to-purple-950/60 border border-violet-500/30 rounded-2xl p-5 space-y-4">
           <div className="text-center space-y-2">
             <div className="flex items-center justify-center gap-2">
-              <Zap className="w-5 h-5 text-amber-400" />
-              <h2 className="text-lg font-bold text-white font-amiri">المحرك الهجين</h2>
+              <Zap className="w-5 h-5 text-accent" />
+              <h2 className="text-lg font-bold text-foreground font-amiri">المحرك الهجين</h2>
             </div>
-            <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+            <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
               يجمع <b className="text-emerald-300">كشف الصمت</b> (الطريقة المجرّبة) + <b className="text-violet-300">Boundary Likelihood</b> (للأماكن بدون صمت)
             </p>
           </div>
 
           {splitting && (
             <div className="space-y-2">
-              <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-2.5 bg-muted rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-emerald-500 via-violet-500 to-amber-500 rounded-full transition-all duration-500"
                   style={{ width: `${progressPct}%` }} />
               </div>
-              {progress && <div className="bg-slate-900/50 rounded-xl p-3 text-center">
-                <p className="text-sm text-amber-300 font-bold animate-pulse">{progress}</p>
+              {progress && <div className="bg-background/50 rounded-xl p-3 text-center">
+                <p className="text-sm text-accent font-bold animate-pulse">{progress}</p>
               </div>}
             </div>
           )}
 
           {/* ── التقسيم عبر خدمة Python (أعلى دقة) ── */}
           <div className="rounded-xl bg-gradient-to-br from-violet-950/40 to-fuchsia-950/30 border border-violet-500/30 p-3 space-y-2 mb-2">
-            <label className="text-xs font-bold text-violet-300 flex items-center gap-1">🚀 خدمة التقسيم (دقة عالية)</label>
+            <label className="text-xs font-bold text-violet-300 flex items-center gap-1">خدمة التقسيم (دقة عالية)</label>
             <input
               type="url"
               dir="ltr"
               placeholder="https://hammoualiyoucef20-quran-audio.hf.space"
               value={serviceUrl}
               onChange={(e) => { setServiceUrl(e.target.value); try { localStorage.setItem(SERVICE_URL_KEY, e.target.value); } catch { /* ignore */ } }}
-              className="w-full p-2 rounded-lg bg-slate-800 border border-slate-600 text-white text-xs outline-none focus:border-violet-500"
+              className="w-full p-2 rounded-lg bg-secondary border border-border text-secondary-foreground text-xs outline-none focus:border-violet-500"
             />
             <div className="grid grid-cols-2 gap-2">
               <button onClick={handleServiceSplit} disabled={splitting || aiSplitting || !duration || !serviceUrl.trim()}
                 className="p-3 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-1 active:scale-[0.98] transition-all">
-                🚀 {splitting ? "جارٍ..." : "بالخدمة"}
+                {splitting ? "جارٍ..." : "بالخدمة"}
               </button>
               <button onClick={handleGeminiSplit} disabled={splitting || aiSplitting || !duration || !serviceUrl.trim()}
                 className="p-3 rounded-xl bg-gradient-to-r from-sky-600 to-emerald-600 text-white font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-1 active:scale-[0.98] transition-all">
-                ✨ {splitting ? "جارٍ..." : "بـ Gemini"}
+                {splitting ? "جارٍ..." : "بـ Gemini"}
               </button>
             </div>
-            <p className="text-[10px] text-slate-500 leading-relaxed">✅ متصلة تلقائياً على Hugging Face. <b>بالخدمة</b>: تحليل صوتي سريع. <b>Gemini</b>: ذكاء يفهم المعلم/الطفل (و٣ أصوات) — أبطأ قليلاً. أول طلب بعد الخمول ~٣٠ ثانية.</p>
+            <p className="text-[10px] text-muted-foreground leading-relaxed">متصلة تلقائياً على Hugging Face. <b>بالخدمة</b>: تحليل صوتي سريع. <b>Gemini</b>: ذكاء يفهم المعلم/الطفل (و٣ أصوات) — أبطأ قليلاً. أول طلب بعد الخمول ~٣٠ ثانية.</p>
           </div>
 
           {segments.length > 0 && (
             <button onClick={linkToShading}
-              className="w-full p-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] mb-2 shadow-lg">
-              🔗 ربط المقاطع بالتظليل (تظهر في المصحف)
+              className="btn-gold w-full p-3 rounded-xl font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] mb-2 shadow-lg">
+              <Link2 className="w-5 h-5" /> ربط المقاطع بالتظليل (تظهر في المصحف)
             </button>
+          )}
+
+          {/* نتيجة الربط — تظهر بوضوح بعد الربط */}
+          {linkResult && (
+            <div className={`rounded-xl p-3 mb-2 text-sm font-bold ${linkResult.linked > 0 ? "bg-emerald-500/10 border border-emerald-500/40 text-success" : "bg-amber-500/10 border border-amber-500/40 text-accent"}`}>
+              {linkResult.linked > 0 ? (
+                <div className="flex flex-col items-center gap-1.5 text-center">
+                  <span className="flex items-center gap-1.5"><CheckCircle2 className="w-5 h-5" /> نتيجة الربط: رُبطت {linkResult.linked} آية على {linkResult.pages} صفحة</span>
+                  <Link to="/" className="inline-flex items-center gap-1 text-xs font-bold underline underline-offset-2"><Volume2 className="w-3.5 h-3.5" /> افتح المصحف لتسمع النتيجة</Link>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1.5 text-center">
+                  <span className="flex items-center gap-1.5"><AlertTriangle className="w-5 h-5" /> لم يُربط شيء — لا توجد مربعات تظليل لهذه السورة</span>
+                  <Link to="/calibrate" className="inline-flex items-center gap-1 text-xs font-bold underline underline-offset-2">أنشئ تظليل السورة في المعايرة أولاً ثم اربط</Link>
+                </div>
+              )}
+            </div>
           )}
 
           <button onClick={handleSplit} disabled={splitting || aiSplitting || !duration}
             className="w-full p-4 rounded-xl bg-gradient-to-r from-emerald-600 via-violet-600 to-fuchsia-600 text-white font-bold text-lg disabled:opacity-40 flex items-center justify-center gap-3 shadow-xl shadow-violet-500/20 hover:shadow-violet-500/40 active:scale-[0.98] transition-all">
             <Wand2 className="w-6 h-6" />
-            {splitting ? "⏳ جاري التحليل الهجين..." : "⚡ تقسيم هجين — في المتصفّح"}
+            {splitting ? "جاري التحليل الهجين..." : "تقسيم هجين — في المتصفّح"}
           </button>
 
           <div className="flex items-center gap-3 mt-2">
-            <div className="flex-1 h-px bg-slate-700" /><span className="text-xs text-slate-500 font-bold">أو</span><div className="flex-1 h-px bg-slate-700" />
+            <div className="flex-1 h-px bg-border" /><span className="text-xs text-muted-foreground font-bold">أو</span><div className="flex-1 h-px bg-border" />
           </div>
 
           {aiProfiles.length >= 2 ? (
             <button
               onClick={async () => {
                 const a = audioRef.current;
-                if (!a || !duration) { toast({ title: "⚠️ انتظر", variant: "destructive" }); return; }
+                if (!a || !duration) { toast({ title: "انتظر", variant: "destructive" }); return; }
                 setAiSplitting(true); setProgress("");
                 try {
                   const { samples, sampleRate } = await decodeAudioFromUrl(a.src);
@@ -1724,17 +1761,17 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
                       label: `${sn} - آية ${ay} (${r.speaker === "teacher" ? "معلم" : "طفل"}) [${Math.round(r.confidence * 100)}%]` };
                   });
                   setSegments(aiS); persistSegments(surahNum, aiS);
-                  toast({ title: "✅ تم!", description: `${aiS.length} مقطع` });
-                } catch (e) { toast({ title: "❌ فشل", description: e instanceof Error ? e.message : "خطأ", variant: "destructive" }); }
+                  toast({ title: "تم!", description: `${aiS.length} مقطع` });
+                } catch (e) { toast({ title: "فشل", description: e instanceof Error ? e.message : "خطأ", variant: "destructive" }); }
                 finally { setAiSplitting(false); setProgress(""); }
               }}
               disabled={aiSplitting || splitting || !duration}
               className="w-full p-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white font-bold text-lg disabled:opacity-40 flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] transition-all">
               <Brain className="w-6 h-6" />
-              {aiSplitting ? "🧠 جاري..." : "🧠 تقسيم بالبصمة الصوتية (AI)"}
+              {aiSplitting ? "جاري..." : "تقسيم بالبصمة الصوتية (AI)"}
             </button>
           ) : (
-            <div className="w-full p-4 rounded-xl bg-slate-800/80 border-2 border-dashed border-slate-600 text-slate-400 font-bold text-sm flex items-center justify-center gap-3">
+            <div className="w-full p-4 rounded-xl bg-card border-2 border-dashed border-border text-muted-foreground font-bold text-sm flex items-center justify-center gap-3">
               <Brain className="w-5 h-5" /><span>البصمات غير مسجلة — استخدم المحرك الهجين</span>
             </div>
           )}
@@ -1742,55 +1779,55 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
 
         {/* إحصائيات */}
         {stats && (
-          <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-4 space-y-4">
-            <p className="text-sm font-bold text-emerald-300 flex items-center gap-2">
+          <div className="card-nour backdrop-blur p-4 space-y-4">
+            <p className="text-sm font-bold text-success flex items-center gap-2">
               <BarChart3 className="w-4 h-4" /> نتائج التقسيم الهجين
             </p>
             <div className="grid grid-cols-3 gap-2 text-xs">
-              <div className="bg-slate-700/50 rounded-xl p-3 text-center">
-                <div className="text-2xl font-bold text-white">{segments.length}</div>
-                <div className="text-slate-400 mt-0.5">مقطع</div>
+              <div className="bg-muted rounded-xl p-3 text-center">
+                <div className="text-2xl font-bold text-foreground">{segments.length}</div>
+                <div className="text-muted-foreground mt-0.5">مقطع</div>
               </div>
               <div className="bg-amber-950/20 border border-amber-500/10 rounded-xl p-3 text-center">
                 <div className="text-2xl font-bold text-amber-400">{stats.tC}</div>
-                <div className="text-slate-400 mt-0.5">🎙️ معلم</div>
+                <div className="text-muted-foreground mt-0.5">معلم</div>
               </div>
               <div className="bg-sky-950/20 border border-sky-500/10 rounded-xl p-3 text-center">
                 <div className="text-2xl font-bold text-sky-400">{stats.kC}</div>
-                <div className="text-slate-400 mt-0.5">👦 طفل</div>
+                <div className="text-muted-foreground mt-0.5">طفل</div>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2 text-xs">
-              <div className="bg-slate-700/30 rounded-xl p-2.5 text-center">
-                <div className="text-xl font-bold text-violet-400">{stats.avg.toFixed(1)}ث</div><div className="text-slate-500">متوسط المقطع</div>
+              <div className="bg-muted rounded-xl p-2.5 text-center">
+                <div className="text-xl font-bold text-violet-400">{stats.avg.toFixed(1)}ث</div><div className="text-muted-foreground">متوسط المقطع</div>
               </div>
-              <div className="bg-slate-700/30 rounded-xl p-2.5 text-center">
-                <div className="text-xl font-bold text-fuchsia-400">{stats.min.toFixed(1)}-{stats.max.toFixed(1)}ث</div><div className="text-slate-500">نطاق المدة</div>
+              <div className="bg-muted rounded-xl p-2.5 text-center">
+                <div className="text-xl font-bold text-fuchsia-400">{stats.min.toFixed(1)}-{stats.max.toFixed(1)}ث</div><div className="text-muted-foreground">نطاق المدة</div>
               </div>
-              <div className="bg-slate-700/30 rounded-xl p-2.5 text-center">
-                <div className="text-xl font-bold text-emerald-400">{stats.total.toFixed(0)}ث</div><div className="text-slate-500">إجمالي</div>
+              <div className="bg-muted rounded-xl p-2.5 text-center">
+                <div className="text-xl font-bold text-success">{stats.total.toFixed(0)}ث</div><div className="text-muted-foreground">إجمالي</div>
               </div>
             </div>
             {qualities.length > 0 && (
               <div className="grid grid-cols-3 gap-2 text-xs">
-                <div className="bg-slate-700/30 rounded-xl p-2.5 flex items-center gap-2">
-                  {stats.avgBnd >= 0.2 ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />}
-                  <div><div className="font-bold text-slate-300">حدود</div><div className="text-slate-500">{(stats.avgBnd * 100).toFixed(0)}%</div></div>
+                <div className="bg-muted rounded-xl p-2.5 flex items-center gap-2">
+                  {stats.avgBnd >= 0.2 ? <CheckCircle2 className="w-4 h-4 text-success shrink-0" /> : <AlertTriangle className="w-4 h-4 text-accent shrink-0" />}
+                  <div><div className="font-bold text-foreground">حدود</div><div className="text-muted-foreground">{(stats.avgBnd * 100).toFixed(0)}%</div></div>
                 </div>
-                <div className="bg-slate-700/30 rounded-xl p-2.5 flex items-center gap-2">
-                  {stats.pValid >= qualities.length * 0.6 ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> : <Info className="w-4 h-4 text-sky-400 shrink-0" />}
-                  <div><div className="font-bold text-slate-300">F0</div><div className="text-slate-500">{stats.pValid}/{qualities.length}</div></div>
+                <div className="bg-muted rounded-xl p-2.5 flex items-center gap-2">
+                  {stats.pValid >= qualities.length * 0.6 ? <CheckCircle2 className="w-4 h-4 text-success shrink-0" /> : <Info className="w-4 h-4 text-sky-400 shrink-0" />}
+                  <div><div className="font-bold text-foreground">F0</div><div className="text-muted-foreground">{stats.pValid}/{qualities.length}</div></div>
                 </div>
-                <div className="bg-slate-700/30 rounded-xl p-2.5 flex items-center gap-2">
-                  {stats.eClean >= qualities.length * 0.6 ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> : <Info className="w-4 h-4 text-sky-400 shrink-0" />}
-                  <div><div className="font-bold text-slate-300">ZC</div><div className="text-slate-500">{stats.eClean}/{qualities.length}</div></div>
+                <div className="bg-muted rounded-xl p-2.5 flex items-center gap-2">
+                  {stats.eClean >= qualities.length * 0.6 ? <CheckCircle2 className="w-4 h-4 text-success shrink-0" /> : <Info className="w-4 h-4 text-sky-400 shrink-0" />}
+                  <div><div className="font-bold text-foreground">ZC</div><div className="text-muted-foreground">{stats.eClean}/{qualities.length}</div></div>
                 </div>
               </div>
             )}
             <Link to="/calibrate" onClick={() => persistSegments(surahNum, segments)}
               className="block w-full mt-4 p-4 rounded-xl bg-gradient-to-r from-violet-600/20 via-fuchsia-600/20 to-amber-600/20 border border-violet-500/30 text-center hover:border-violet-400 transition-all active:scale-[0.98]">
               <div className="flex items-center justify-center gap-2 text-violet-300 font-bold">
-                <Link2 className="w-5 h-5" /><span>💾 حفظ وربط في صفحة المعايرة</span><ArrowLeft className="w-4 h-4" />
+                <Link2 className="w-5 h-5" /><span>حفظ وربط في صفحة المعايرة</span><ArrowLeft className="w-4 h-4" />
               </div>
             </Link>
           </div>
@@ -1798,8 +1835,9 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
 
         {/* قائمة المقاطع */}
         {segments.length > 0 && (
-          <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-4">
-            <p className="font-bold mb-3 text-sm text-slate-300">المقاطع ({segments.length}):</p>
+          <div className="card-nour backdrop-blur p-4">
+            <p className="font-bold mb-1 text-sm text-muted-foreground">المقاطع ({segments.length}):</p>
+            <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">صحّح يدوياً: اضغط زرّ <b className="text-amber-400">معلم/طفل</b> للتبديل، وعدّل <b className="text-white">رقم الآية</b> بالأسهم لكل مقطع — ثم اضغط «ربط المقاطع بالتظليل» في الأعلى.</p>
             <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
               {segments.map((seg, i) => {
                 const isAct = i === activeSegIndex;
@@ -1822,24 +1860,24 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
                       </button>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-lg">{seg.speaker === "teacher" ? "🎙️" : "👦"}</span>
+                          <span className={seg.speaker === "teacher" ? "text-amber-400" : "text-sky-400"}>{seg.speaker === "teacher" ? <Mic className="w-4 h-4" /> : <Baby className="w-4 h-4" />}</span>
                           <span className="text-sm font-bold text-white truncate block">{seg.label || `مقطع ${i + 1}`}</span>
                         </div>
                         <div className="text-xs font-mono mt-2 flex items-center gap-2 text-slate-400">
                           {/* Start Controls */}
                           <div className="flex items-center bg-slate-900/60 rounded border border-slate-700/50 overflow-hidden">
-                            <button onClick={() => updateSegmentBoundaries(i, "start", -0.05)} className="px-1.5 py-1 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors" title="-50ms"><Minus className="w-3 h-3" /></button>
+                            <button onClick={() => updateSegmentBoundaries(i, "start", -0.05)} className="px-1.5 py-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="-50ms"><Minus className="w-3 h-3" /></button>
                             <span className="px-2 py-0.5 text-emerald-400 font-bold min-w-[50px] text-center">{fmt(seg.start)}</span>
-                            <button onClick={() => updateSegmentBoundaries(i, "start", 0.05)} className="px-1.5 py-1 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors" title="+50ms"><Plus className="w-3 h-3" /></button>
+                            <button onClick={() => updateSegmentBoundaries(i, "start", 0.05)} className="px-1.5 py-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="+50ms"><Plus className="w-3 h-3" /></button>
                           </div>
                           
                           <span className="text-slate-600">→</span>
                           
                           {/* End Controls */}
                           <div className="flex items-center bg-slate-900/60 rounded border border-slate-700/50 overflow-hidden">
-                            <button onClick={() => updateSegmentBoundaries(i, "end", -0.05)} className="px-1.5 py-1 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors" title="-50ms"><Minus className="w-3 h-3" /></button>
+                            <button onClick={() => updateSegmentBoundaries(i, "end", -0.05)} className="px-1.5 py-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="-50ms"><Minus className="w-3 h-3" /></button>
                             <span className="px-2 py-0.5 text-rose-400 font-bold min-w-[50px] text-center">{fmt(seg.end)}</span>
-                            <button onClick={() => updateSegmentBoundaries(i, "end", 0.05)} className="px-1.5 py-1 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors" title="+50ms"><Plus className="w-3 h-3" /></button>
+                            <button onClick={() => updateSegmentBoundaries(i, "end", 0.05)} className="px-1.5 py-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="+50ms"><Plus className="w-3 h-3" /></button>
                           </div>
                           
                           <span className="text-[10px] text-slate-500 ml-1">({(seg.end - seg.start).toFixed(2)}ث)</span>
@@ -1856,11 +1894,22 @@ const RecitationMethods = ({ onBack }: { onBack?: () => void }) => {
                           </div>
                         )}
                       </div>
-                      <div className="shrink-0">
-                        <div className={`rounded-lg px-2.5 py-1.5 text-xs font-bold text-center border ${
-                          seg.speaker === "teacher" ? "bg-amber-950/40 border-amber-500/20 text-amber-400"
-                            : "bg-sky-950/40 border-sky-500/20 text-sky-400"
-                        }`}>{seg.speaker === "teacher" ? "معلم" : "طفل"}</div>
+                      <div className="shrink-0 flex flex-col items-stretch gap-1.5">
+                        {/* المتحدّث — اضغط للتبديل يدوياً */}
+                        <button onClick={() => setSegmentSpeaker(i, seg.speaker === "teacher" ? "kids" : "teacher")} title="تبديل المتحدّث (معلم/طفل)"
+                          className={`rounded-lg px-2.5 py-1.5 text-xs font-bold text-center border active:scale-95 flex items-center justify-center gap-1 ${
+                            seg.speaker === "teacher" ? "bg-amber-950/40 border-amber-500/30 text-amber-400 hover:bg-amber-900/40"
+                              : "bg-sky-950/40 border-sky-500/30 text-sky-400 hover:bg-sky-900/40"
+                          }`}>
+                          {seg.speaker === "teacher" ? <Mic className="w-3 h-3" /> : <Baby className="w-3 h-3" />}
+                          {seg.speaker === "teacher" ? "معلم" : "طفل"}
+                        </button>
+                        {/* رقم الآية — يدوي */}
+                        <div className="flex items-center justify-center bg-slate-900/60 rounded border border-slate-700/50 overflow-hidden">
+                          <button onClick={() => setSegmentAyah(i, (seg.ayah ?? 0) - 1)} className="px-1.5 py-1 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="آية أقل"><Minus className="w-3 h-3" /></button>
+                          <span className="px-1 text-[11px] font-bold text-white min-w-[44px] text-center">{(seg.ayah ?? 0) < 1 ? "تمهيد" : `آية ${seg.ayah}`}</span>
+                          <button onClick={() => setSegmentAyah(i, (seg.ayah ?? 0) + 1)} className="px-1.5 py-1 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="آية أكثر"><Plus className="w-3 h-3" /></button>
+                        </div>
                       </div>
                     </div>
                   </div>

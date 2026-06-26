@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Plus, RotateCcw, Save, Trash2, ZoomIn, ZoomOut, Copy, Link2, ListOrdered, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, X, Check, Square, Upload } from "lucide-react";
 import { AyahBox, getAllPageSources, getPageAyahBoxes, PAGE_IMAGE_SIZE, resetPageAyahBoxes, savePageAyahBoxes } from "@/data/ayahCoordinates";
 import { getPageSurahRegions, savePageSurahRegions, SurahRegion } from "@/data/surahRegions";
+import { clearSavedSurahTimings } from "@/data/ayahTimings";
 import { CustomPage, getCustomPages, addCustomPage, removeCustomPage, savePageImage, getAllPageImages, deletePageImage, getPageOrder, savePageOrder, clearPageOrder } from "@/data/customPages";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
@@ -24,6 +25,7 @@ const AyahCalibration = () => {
   const [regions, setRegions] = useState<SurahRegion[]>(() => getPageSurahRegions(pageSources[0]));
   const [selectedRegion, setSelectedRegion] = useState(0);
   const [showRegions, setShowRegions] = useState(true);
+  const [regionMoveTarget, setRegionMoveTarget] = useState("");   // صفحة هدف لنقل سورة واحدة
 
   // إضافة صفحة جديدة برفع صورة
   const [newSurahOpen, setNewSurahOpen] = useState(false);
@@ -152,6 +154,21 @@ const AyahCalibration = () => {
     toast({ title: "✅ محاذاة العرض والمكان" });
   };
 
+  // توحيد بالموقع: يُسنِد كل مربّع آية إلى السورة التي يقع مركزه داخل منطقتها (بلا نقل يدوي)
+  const unifyBySurahLocation = () => {
+    const withSurah = regions.filter(r => r.surah);
+    if (withSurah.length === 0) { toast({ title: "⚠️ أضف «منطقة سورة» باسم ورقم أولاً" }); return; }
+    saveHistory(boxes);
+    let changed = 0;
+    setBoxes(cur => cur.map(b => {
+      const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+      const reg = withSurah.find(r => cx >= r.x && cx <= r.x + r.width && cy >= r.y && cy <= r.y + r.height);
+      if (reg && reg.surah !== b.surah) { changed++; return { ...b, surah: reg.surah as number }; }
+      return b;
+    }));
+    toast({ title: "✅ وُحّدت السور بالموقع", description: changed > 0 ? `${changed} مربّع أُسنِد للسورة التي يقع داخل منطقتها` : "كل المربّعات مطابقة لمناطقها" });
+  };
+
   // نقل (نسخ) تظليل الصفحة الحالية إلى صفحة أخرى — مفيد لصورة فيها صفحتان أو لصفحات متشابهة
   const copyShadingTo = async (targetSrc: string) => {
     if (!targetSrc || targetSrc === pageSrc) return;
@@ -200,6 +217,46 @@ const AyahCalibration = () => {
   const deleteRegion = (i: number) => {
     setRegions(cur => cur.filter((_, idx) => idx !== i));
     setSelectedRegion(s => Math.max(0, s - (i <= s ? 1 : 0)));
+  };
+
+  // نقل سورة واحدة (منطقتها + مربّعات آياتها) إلى صفحة أخرى — يحافظ على رقم السورة فتبقى
+  // سورة واحدة عبر الصفحتين (يدمج في الصفحة الهدف المخزّنة ويزيلها من الحالية، ثم يحفظ الصفحتين).
+  const moveSurahToPage = async (i: number, targetSrc: string) => {
+    const region = regions[i];
+    if (!region || !targetSrc || targetSrc === pageSrc) return;
+    const num = region.surah;
+    const movingBoxes = num != null ? boxes.filter(b => b.surah === num) : [];
+    const remainingBoxes = num != null ? boxes.filter(b => b.surah !== num) : boxes;
+    const remainingRegions = regions.filter((_, idx) => idx !== i);
+    await savePageAyahBoxes(targetSrc, [...getPageAyahBoxes(targetSrc), ...movingBoxes.map(b => ({ ...b }))]);
+    await savePageSurahRegions(targetSrc, [...getPageSurahRegions(targetSrc), { ...region }]);
+    setBoxes(remainingBoxes);
+    setRegions(remainingRegions);
+    setSelectedRegion(s => Math.max(0, Math.min(s, remainingRegions.length - 1)));
+    setSelectedIndex(0);
+    await savePageAyahBoxes(pageSrc, remainingBoxes);
+    await savePageSurahRegions(pageSrc, remainingRegions);
+    setRegionMoveTarget("");
+    toast({ title: `نُقلت ${region.name || "السورة"} إلى ${pageLabel(targetSrc)}`, description: `${movingBoxes.length} مربع آية + المنطقة — بنفس رقم السورة فتبقى سورة واحدة` });
+  };
+
+  // حذف بيانات سورة نهائياً (كل المربعات + المناطق + التوقيت عبر كل الصفحات) — لإعادة بنائها من الصفر
+  const deleteSurahData = async (num?: number) => {
+    if (!num) return;
+    if (typeof window !== "undefined" && !window.confirm(`حذف كل بيانات السورة رقم ${num} نهائياً (المربعات + المناطق + التوقيت) من كل الصفحات؟ هذا لا يمكن التراجع عنه.`)) return;
+    for (const src of pageSources) {
+      const bx = getPageAyahBoxes(src);
+      const nbx = bx.filter(b => b.surah !== num);
+      if (nbx.length !== bx.length) await savePageAyahBoxes(src, nbx);
+      const rg = getPageSurahRegions(src);
+      const nrg = rg.filter(r => r.surah !== num);
+      if (nrg.length !== rg.length) await savePageSurahRegions(src, nrg);
+    }
+    await clearSavedSurahTimings(num);
+    setBoxes(getPageAyahBoxes(pageSrc).filter(b => b.surah !== num));
+    setRegions(getPageSurahRegions(pageSrc).filter(r => r.surah !== num));
+    setSelectedRegion(0); setSelectedIndex(0); setHistory([]);
+    toast({ title: "🗑️ حُذفت بيانات السورة نهائياً", description: `سورة ${num} — يمكنك إعادة بنائها من الصفر.` });
   };
 
   const regionMove = (dx: number, dy: number) => {
@@ -331,24 +388,26 @@ const AyahCalibration = () => {
   }, []);
 
   const isCustom = customPages.some(p => p.src === pageSrc);
+  // رابط صورة صالح فقط: صفحة مرفوعة بلا صورة → فارغ (نعرض بديلاً موجّهاً بدل صورة مكسورة)
+  const pageImgUrl = customImages[pageSrc] || (pageSrc.startsWith("custom:") ? "" : pageSrc);
 
   // ─────────── الواجهة ───────────
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white" dir="rtl">
+    <div className="min-h-screen page-nour text-foreground" dir="rtl">
       <div className="mx-auto max-w-6xl px-3 py-3 space-y-3">
         {/* الرأس */}
-        <header className="flex items-center justify-between gap-2 rounded-2xl bg-slate-800/70 backdrop-blur border border-slate-700 px-3 py-2 sticky top-2 z-20">
-          <Link to="/" className="flex h-10 items-center gap-1 rounded-full bg-slate-700 px-4 text-sm font-bold hover:bg-slate-600 active:scale-95 transition-all">
+        <header className="flex items-center justify-between gap-2 rounded-2xl bg-card backdrop-blur border border-border px-3 py-2 sticky top-2 z-20 shadow-soft">
+          <Link to="/" className="flex h-10 items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold hover:brightness-95 active:scale-95 transition-all">
             <ArrowRight className="h-4 w-4" /> رجوع
           </Link>
-          <h1 className="font-extrabold text-base sm:text-lg text-amber-300">📐 معايرة المصحف</h1>
+          <h1 className="font-extrabold text-base sm:text-lg text-gradient-gold">📐 معايرة المصحف</h1>
           <div className="flex items-center gap-2">
             <button onClick={undo} disabled={history.length === 0}
-              className={`flex h-10 items-center gap-1 rounded-full px-3 text-sm font-bold active:scale-95 transition-all ${history.length === 0 ? "bg-slate-700/50 text-slate-500" : "bg-slate-700 hover:bg-slate-600 text-white"}`}>
+              className={`flex h-10 items-center gap-1 rounded-full px-3 text-sm font-bold active:scale-95 transition-all ${history.length === 0 ? "bg-secondary/50 text-muted-foreground" : "bg-secondary text-secondary-foreground hover:brightness-95"}`}>
               <RotateCcw className="h-4 w-4" />
             </button>
             <button onClick={() => saveAll(false)}
-              className={`flex h-10 items-center gap-1 rounded-full px-5 text-sm font-extrabold active:scale-95 transition-all ${isSaving ? "bg-emerald-600 text-white" : "bg-gradient-to-r from-amber-500 to-amber-600 text-black"}`}>
+              className={`flex h-10 items-center gap-1 rounded-full px-5 text-sm font-extrabold active:scale-95 transition-all ${isSaving ? "btn-emerald" : "btn-gold"}`}>
               <Save className="h-4 w-4" /> {isSaving ? "✅" : "حفظ"}
             </button>
           </div>
@@ -356,9 +415,17 @@ const AyahCalibration = () => {
 
         <section className="grid gap-3 lg:grid-cols-[1fr_330px]">
           {/* اللوحة */}
-          <div className="max-h-[82vh] overflow-auto rounded-2xl bg-slate-800/60 backdrop-blur border border-slate-700 p-2 touch-none">
+          <div className="max-h-[82vh] overflow-auto rounded-2xl bg-card backdrop-blur border border-border p-2 touch-none shadow-soft">
             <div ref={canvasRef} className="relative mx-auto origin-top" style={{ width: PAGE_IMAGE_SIZE.width * scale, height: PAGE_IMAGE_SIZE.height * scale }}>
-              <img src={imgSrcFor(pageSrc)} alt="صفحة المصحف" className="absolute inset-0 h-full w-full select-none object-fill" draggable={false} />
+              {pageImgUrl ? (
+                <img src={pageImgUrl} alt="صفحة المصحف" className="absolute inset-0 h-full w-full select-none object-fill" draggable={false} />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted text-center px-8">
+                  <Upload className="w-12 h-12 text-muted-foreground" />
+                  <p className="font-extrabold text-foreground text-lg">لا توجد صورة لهذه الصفحة</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">تظليلك محفوظ — تنقصه صورة المصحف فقط. ارفع صورة الصفحة من زرّ «صفحة جديدة» في الأعلى، ثم ضع التظليل فوقها.</p>
+                </div>
+              )}
               {/* مربعات الآيات */}
               {boxes.map((box, index) => {
                 const isSel = index === selectedIndex;
@@ -404,9 +471,9 @@ const AyahCalibration = () => {
           {/* الشريط الجانبي */}
           <aside className="space-y-3 max-h-[82vh] overflow-y-auto pb-2">
             {/* ① الصفحة + الرفع + الترتيب */}
-            <div className="rounded-2xl bg-slate-800/80 border border-slate-700 p-3 space-y-2">
-              <label className="block text-xs font-bold text-slate-400">① الصفحة</label>
-              <select value={pageSrc} onChange={(e) => loadPage(e.target.value)} className="w-full rounded-lg bg-slate-700 border-slate-600 p-2 text-sm text-white">
+            <div className="card-nour p-3 space-y-2 animate-fade-up">
+              <label className="block text-xs font-bold text-muted-foreground">① الصفحة</label>
+              <select value={pageSrc} onChange={(e) => loadPage(e.target.value)} className="w-full rounded-lg bg-secondary border-border p-2 text-sm text-secondary-foreground">
                 {pageSources.map(src => <option key={src} value={src}>{pageLabel(src)}</option>)}
               </select>
               <div className="grid grid-cols-2 gap-2">
@@ -420,7 +487,7 @@ const AyahCalibration = () => {
               {/* نقل التظليل إلى صفحة أخرى */}
               {pageSources.length > 1 && (
                 <div className="flex items-center gap-1">
-                  <select value={copyTarget} onChange={(e) => setCopyTarget(e.target.value)} className="flex-1 min-w-0 rounded-lg bg-slate-700 border-slate-600 p-1.5 text-xs text-white">
+                  <select value={copyTarget} onChange={(e) => setCopyTarget(e.target.value)} className="flex-1 min-w-0 rounded-lg bg-secondary border-border p-1.5 text-xs text-secondary-foreground">
                     <option value="">📋 نقل التظليل إلى…</option>
                     {pageSources.filter(s => s !== pageSrc).map(s => <option key={s} value={s}>{pageLabel(s)}</option>)}
                   </select>
@@ -436,12 +503,12 @@ const AyahCalibration = () => {
                 </button>
               )}
               {newSurahOpen && (
-                <div className="rounded-lg bg-slate-900/60 border border-emerald-500/30 p-2 space-y-2">
-                  <p className="text-[10px] text-slate-400 leading-relaxed">ارفع صورة الصفحة واكتب اسمها/رقمها. الصفحة قد تحوي أكثر من سورة — عرّف كل سورة بأداة «مناطق السور».</p>
+                <div className="rounded-lg bg-background/70 backdrop-blur-sm border border-emerald-500/30 p-2 space-y-2">
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">ارفع صورة الصفحة واكتب اسمها/رقمها. الصفحة قد تحوي أكثر من سورة — عرّف كل سورة بأداة «مناطق السور».</p>
                   <input type="file" accept="image/*" onChange={(e) => setNewFile(e.target.files?.[0] || null)}
-                    className="w-full text-[11px] text-slate-300 file:mr-2 file:rounded-md file:border-0 file:bg-emerald-600 file:text-white file:px-2 file:py-1 file:text-xs" />
+                    className="w-full text-[11px] text-muted-foreground file:mr-2 file:rounded-md file:border-0 file:bg-emerald-600 file:text-white file:px-2 file:py-1 file:text-xs" />
                   <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="اسم/رقم الصفحة (مثل: 587)"
-                    className="w-full rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-emerald-500" />
+                    className="w-full rounded-md bg-secondary border-border p-1.5 text-sm text-secondary-foreground outline-none focus:border-emerald-500" />
                   <button onClick={createPage} disabled={creating}
                     className="w-full p-2 rounded-md bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1 active:scale-95 disabled:opacity-50">
                     <Plus className="h-3.5 w-3.5" /> {creating ? "جارٍ الإنشاء..." : "إنشاء الصفحة"}
@@ -450,34 +517,34 @@ const AyahCalibration = () => {
               )}
               {/* التكبير */}
               <div className="flex items-center justify-between gap-2 pt-1">
-                <span className="text-[11px] text-slate-400">التكبير</span>
+                <span className="text-[11px] text-muted-foreground">التكبير</span>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => setScale(s => clamp(s - 0.1, 0.25, 2))} className="p-1.5 rounded-md bg-slate-700 text-white active:scale-95"><ZoomOut className="h-4 w-4" /></button>
-                  <span className="text-xs text-slate-300 w-10 text-center">{Math.round(scale * 100)}%</span>
-                  <button onClick={() => setScale(s => clamp(s + 0.1, 0.25, 2))} className="p-1.5 rounded-md bg-slate-700 text-white active:scale-95"><ZoomIn className="h-4 w-4" /></button>
+                  <button onClick={() => setScale(s => clamp(s - 0.1, 0.25, 2))} className="p-1.5 rounded-md bg-secondary text-secondary-foreground active:scale-95"><ZoomOut className="h-4 w-4" /></button>
+                  <span className="text-xs text-muted-foreground w-10 text-center">{Math.round(scale * 100)}%</span>
+                  <button onClick={() => setScale(s => clamp(s + 0.1, 0.25, 2))} className="p-1.5 rounded-md bg-secondary text-secondary-foreground active:scale-95"><ZoomIn className="h-4 w-4" /></button>
                 </div>
               </div>
             </div>
 
             {/* ➕ إنشاء تظليل سورة جديدة */}
             <div className="rounded-2xl bg-amber-950/30 border border-amber-500/40 p-3 space-y-2">
-              <button onClick={() => setCsOpen(v => !v)} className="w-full flex items-center justify-between text-amber-300 font-bold text-sm">
+              <button onClick={() => setCsOpen(v => !v)} className="w-full flex items-center justify-between text-accent font-bold text-sm">
                 <span className="flex items-center gap-1.5"><Plus className="h-4 w-4" /> إنشاء تظليل سورة جديدة</span>
                 <span className="text-xs">{csOpen ? "▲" : "▼"}</span>
               </button>
               {csOpen && (
                 <div className="space-y-2">
-                  <p className="text-[10px] text-slate-400 leading-relaxed">اكتب اسم السورة ورقمها وعدد آياتها — يُنشأ تظليلها (منطقة باسمها + مربعات آياتها) جاهزاً للتحريك فوق الصفحة.</p>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">اكتب اسم السورة ورقمها وعدد آياتها — يُنشأ تظليلها (منطقة باسمها + مربعات آياتها) جاهزاً للتحريك فوق الصفحة.</p>
                   <input value={csName} onChange={(e) => setCsName(e.target.value)} placeholder="اسم السورة (مثل: النبأ)"
-                    className="w-full rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-amber-500" />
+                    className="w-full rounded-md bg-secondary border-border p-1.5 text-sm text-secondary-foreground outline-none focus:border-accent" />
                   <div className="grid grid-cols-2 gap-2">
                     <input type="number" min={1} max={114} value={csNumber} onChange={(e) => setCsNumber(e.target.value)} placeholder="رقم السورة"
-                      className="rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-amber-500" />
+                      className="rounded-md bg-secondary border-border p-1.5 text-sm text-secondary-foreground outline-none focus:border-accent" />
                     <input type="number" min={0} value={csCount} onChange={(e) => setCsCount(e.target.value)} placeholder="عدد الآيات"
-                      className="rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-amber-500" />
+                      className="rounded-md bg-secondary border-border p-1.5 text-sm text-secondary-foreground outline-none focus:border-accent" />
                   </div>
                   <button onClick={createSurahCalibration}
-                    className="w-full p-2 rounded-md bg-amber-500 text-black font-bold text-xs flex items-center justify-center gap-1 active:scale-95">
+                    className="w-full p-2 rounded-md btn-gold font-bold text-xs flex items-center justify-center gap-1 active:scale-95">
                     <Plus className="h-3.5 w-3.5" /> إنشاء التظليل
                   </button>
                 </div>
@@ -495,27 +562,46 @@ const AyahCalibration = () => {
                   <button onClick={addRegion} className="w-full p-2 rounded-lg bg-emerald-600/30 border border-emerald-500/50 text-emerald-200 font-bold text-xs flex items-center justify-center gap-1 active:scale-95">
                     <Plus className="h-3.5 w-3.5" /> أضف سورة (منطقة)
                   </button>
-                  {regions.length === 0 && <p className="text-[11px] text-slate-500 text-center leading-relaxed">اضغط «أضف سورة»، اكتب الاسم والرقم، وحرّك المستطيل الأخضر فوق السورة.</p>}
+                  {regions.length === 0 && <p className="text-[11px] text-muted-foreground text-center leading-relaxed">اضغط «أضف سورة»، اكتب الاسم والرقم، وحرّك المستطيل الأخضر فوق السورة.</p>}
                   {regions.map((r, i) => (
-                    <div key={i} className={`rounded-lg p-2 border ${i === selectedRegion ? "border-emerald-400 bg-emerald-900/30" : "border-slate-700 bg-slate-800/60"}`}>
+                    <div key={i} className={`rounded-lg p-2 border ${i === selectedRegion ? "border-emerald-400 bg-emerald-900/30" : "border-border bg-card"}`}>
                       <div className="flex items-center gap-1">
                         <input value={r.name} onChange={(e) => { setSelectedRegion(i); updateRegion({ name: e.target.value }); }} onFocus={() => setSelectedRegion(i)}
-                          placeholder="اسم السورة" className="flex-1 min-w-0 rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-emerald-500" />
+                          placeholder="اسم السورة" className="flex-1 min-w-0 rounded-md bg-secondary border-border p-1.5 text-sm text-secondary-foreground outline-none focus:border-emerald-500" />
                         <input type="number" min={1} max={114} value={r.surah ?? ""} onChange={(e) => { setSelectedRegion(i); updateRegion({ surah: parseInt(e.target.value, 10) || undefined }); }} onFocus={() => setSelectedRegion(i)}
-                          placeholder="رقم" className="w-14 shrink-0 rounded-md bg-slate-700 border-slate-600 p-1.5 text-sm text-white outline-none focus:border-emerald-500" />
-                        <button onClick={() => deleteRegion(i)} className="p-1.5 rounded-md bg-red-600/30 text-red-300 active:scale-95 shrink-0" title="حذف"><Trash2 className="h-4 w-4" /></button>
+                          placeholder="رقم" className="w-14 shrink-0 rounded-md bg-secondary border-border p-1.5 text-sm text-secondary-foreground outline-none focus:border-emerald-500" />
+                        <button onClick={() => deleteRegion(i)} className="p-1.5 rounded-md bg-destructive/30 text-destructive active:scale-95 shrink-0" title="حذف"><Trash2 className="h-4 w-4" /></button>
                       </div>
                       {i === selectedRegion && (
+                        <>
                         <div className="mt-2 grid grid-cols-4 gap-1 text-sm">
-                          <button onClick={() => regionMove(-step, 0)} className="p-1.5 rounded bg-slate-700 text-white active:scale-95">←</button>
-                          <button onClick={() => regionMove(step, 0)} className="p-1.5 rounded bg-slate-700 text-white active:scale-95">→</button>
-                          <button onClick={() => regionMove(0, -step)} className="p-1.5 rounded bg-slate-700 text-white active:scale-95">↑</button>
-                          <button onClick={() => regionMove(0, step)} className="p-1.5 rounded bg-slate-700 text-white active:scale-95">↓</button>
-                          <button onClick={() => regionResize(-step, 0)} className="p-1.5 rounded bg-slate-600 text-white active:scale-95">◀▶−</button>
-                          <button onClick={() => regionResize(step, 0)} className="p-1.5 rounded bg-slate-600 text-white active:scale-95">◀▶+</button>
-                          <button onClick={() => regionResize(0, -step)} className="p-1.5 rounded bg-slate-600 text-white active:scale-95">▲▼−</button>
-                          <button onClick={() => regionResize(0, step)} className="p-1.5 rounded bg-slate-600 text-white active:scale-95">▲▼+</button>
+                          <button onClick={() => regionMove(-step, 0)} className="p-1.5 rounded bg-secondary text-secondary-foreground active:scale-95">←</button>
+                          <button onClick={() => regionMove(step, 0)} className="p-1.5 rounded bg-secondary text-secondary-foreground active:scale-95">→</button>
+                          <button onClick={() => regionMove(0, -step)} className="p-1.5 rounded bg-secondary text-secondary-foreground active:scale-95">↑</button>
+                          <button onClick={() => regionMove(0, step)} className="p-1.5 rounded bg-secondary text-secondary-foreground active:scale-95">↓</button>
+                          <button onClick={() => regionResize(-step, 0)} className="p-1.5 rounded bg-muted text-foreground active:scale-95">◀▶−</button>
+                          <button onClick={() => regionResize(step, 0)} className="p-1.5 rounded bg-muted text-foreground active:scale-95">◀▶+</button>
+                          <button onClick={() => regionResize(0, -step)} className="p-1.5 rounded bg-muted text-foreground active:scale-95">▲▼−</button>
+                          <button onClick={() => regionResize(0, step)} className="p-1.5 rounded bg-muted text-foreground active:scale-95">▲▼+</button>
                         </div>
+                        {pageSources.length > 1 && (
+                          <div className="mt-2 flex items-center gap-1">
+                            <select value={regionMoveTarget} onChange={(e) => setRegionMoveTarget(e.target.value)} className="flex-1 min-w-0 rounded-md bg-secondary border-border p-1.5 text-xs text-secondary-foreground">
+                              <option value="">انقل هذه السورة إلى…</option>
+                              {pageSources.filter(s => s !== pageSrc).map(s => <option key={s} value={s}>{pageLabel(s)}</option>)}
+                            </select>
+                            <button onClick={() => { if (regionMoveTarget) moveSurahToPage(i, regionMoveTarget); }} disabled={!regionMoveTarget}
+                              className="shrink-0 px-2.5 py-1.5 rounded-md bg-sky-600/30 border border-sky-500/40 text-sky-200 font-bold text-xs disabled:opacity-40 active:scale-95" title="نقل السورة لهذه الصفحة">
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
+                        {r.surah ? (
+                          <button onClick={() => deleteSurahData(r.surah)} className="mt-2 w-full p-1.5 rounded-md bg-destructive/20 border border-destructive/40 text-destructive text-[11px] font-bold active:scale-95 flex items-center justify-center gap-1">
+                            <Trash2 className="h-3.5 w-3.5" /> حذف بيانات هذه السورة نهائياً (كل الصفحات)
+                          </button>
+                        ) : null}
+                        </>
                       )}
                     </div>
                   ))}
@@ -524,66 +610,81 @@ const AyahCalibration = () => {
             </div>
 
             {/* ③ مربعات الآيات */}
-            <div className="rounded-2xl bg-slate-800/80 border border-slate-700 p-3 space-y-2">
+            <div className="card-nour p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-400">③ مربعات الآيات ({boxes.length})</label>
-                <button onClick={addNewBox} className="p-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 active:scale-95" title="أضف مربع آية"><Plus className="h-4 w-4" /></button>
+                <label className="text-xs font-bold text-muted-foreground">③ مربعات الآيات ({boxes.length})</label>
+                <button onClick={addNewBox} className="p-1.5 rounded-lg bg-accent/15 border border-accent/40 text-accent active:scale-95" title="أضف مربع آية"><Plus className="h-4 w-4" /></button>
               </div>
-              {boxes.length === 0 && <p className="text-[11px] text-slate-500 text-center leading-relaxed">لا مربعات. اضغط ＋ لإضافة مربع آية، أو اكتفِ بمناطق السور أعلاه.</p>}
+              {boxes.length === 0 && <p className="text-[11px] text-muted-foreground text-center leading-relaxed">لا مربعات. اضغط ＋ لإضافة مربع آية، أو اكتفِ بمناطق السور أعلاه.</p>}
               {selected && (
                 <>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => setSelectedIndex(i => Math.max(0, i - 1))} className="p-2 rounded-lg bg-slate-700 text-white active:scale-95"><ChevronRight className="h-4 w-4" /></button>
-                    <select value={selectedIndex} onChange={(e) => setSelectedIndex(Number(e.target.value))} className="flex-1 rounded-lg bg-slate-700 border-slate-600 p-2 text-sm text-white">
+                    <button onClick={() => setSelectedIndex(i => Math.max(0, i - 1))} className="p-2 rounded-lg bg-secondary text-secondary-foreground active:scale-95"><ChevronRight className="h-4 w-4" /></button>
+                    <select value={selectedIndex} onChange={(e) => setSelectedIndex(Number(e.target.value))} className="flex-1 rounded-lg bg-secondary border-border p-2 text-sm text-secondary-foreground">
                       {boxes.map((b, i) => <option key={i} value={i}>{b.label || `${b.surah}:${b.ayah}`}</option>)}
                     </select>
-                    <button onClick={() => setSelectedIndex(i => Math.min(boxes.length - 1, i + 1))} className="p-2 rounded-lg bg-slate-700 text-white active:scale-95"><ChevronLeft className="h-4 w-4" /></button>
+                    <button onClick={() => setSelectedIndex(i => Math.min(boxes.length - 1, i + 1))} className="p-2 rounded-lg bg-secondary text-secondary-foreground active:scale-95"><ChevronLeft className="h-4 w-4" /></button>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <label className="block">
-                      <span className="text-[10px] text-slate-500">رقم السورة (يغيّر كل آياتها)</span>
+                      <span className="text-[10px] text-muted-foreground">رقم السورة (يغيّر كل آياتها)</span>
                       <input type="number" min={1} max={114} value={selected.surah} onChange={(e) => setSurahForGroup(parseInt(e.target.value) || 1)}
-                        className="w-full rounded-lg bg-slate-700 border-slate-600 p-1.5 text-sm text-white" />
+                        className="w-full rounded-lg bg-secondary border-border p-1.5 text-sm text-secondary-foreground" />
                     </label>
                     <label className="block">
-                      <span className="text-[10px] text-slate-500">رقم الآية</span>
+                      <span className="text-[10px] text-muted-foreground">رقم الآية</span>
                       <input type="number" min={0} value={selected.ayah} onChange={(e) => { const v = parseInt(e.target.value, 10); updateSelected({ ayah: isNaN(v) ? 0 : v }); }}
-                        className="w-full rounded-lg bg-slate-700 border-slate-600 p-1.5 text-sm text-white" />
+                        className="w-full rounded-lg bg-secondary border-border p-1.5 text-sm text-secondary-foreground" />
                     </label>
                     <label className="block col-span-2">
-                      <span className="text-[10px] text-slate-500">اسم مخصص (اختياري — مثل: البسملة)</span>
+                      <span className="text-[10px] text-muted-foreground">اسم مخصص (اختياري — مثل: البسملة)</span>
                       <input value={selected.label || ""} onChange={(e) => updateSelected({ label: e.target.value || undefined })}
-                        className="w-full rounded-lg bg-slate-700 border-slate-600 p-1.5 text-sm text-white" />
+                        className="w-full rounded-lg bg-secondary border-border p-1.5 text-sm text-secondary-foreground" />
                     </label>
                   </div>
 
                   {/* تحريك وتحجيم */}
                   <div className="grid grid-cols-4 gap-1 text-sm">
-                    <button onClick={() => move(-step, 0)} className="p-1.5 rounded bg-slate-700 text-white active:scale-95">←</button>
-                    <button onClick={() => move(step, 0)} className="p-1.5 rounded bg-slate-700 text-white active:scale-95">→</button>
-                    <button onClick={() => move(0, -step)} className="p-1.5 rounded bg-slate-700 text-white active:scale-95">↑</button>
-                    <button onClick={() => move(0, step)} className="p-1.5 rounded bg-slate-700 text-white active:scale-95">↓</button>
-                    <button onClick={() => resize(-step, 0)} className="p-1.5 rounded bg-slate-600 text-white active:scale-95">◀▶−</button>
-                    <button onClick={() => resize(step, 0)} className="p-1.5 rounded bg-slate-600 text-white active:scale-95">◀▶+</button>
-                    <button onClick={() => resize(0, -step)} className="p-1.5 rounded bg-slate-600 text-white active:scale-95">▲▼−</button>
-                    <button onClick={() => resize(0, step)} className="p-1.5 rounded bg-slate-600 text-white active:scale-95">▲▼+</button>
+                    <button onClick={() => move(-step, 0)} className="p-1.5 rounded bg-secondary text-secondary-foreground active:scale-95">←</button>
+                    <button onClick={() => move(step, 0)} className="p-1.5 rounded bg-secondary text-secondary-foreground active:scale-95">→</button>
+                    <button onClick={() => move(0, -step)} className="p-1.5 rounded bg-secondary text-secondary-foreground active:scale-95">↑</button>
+                    <button onClick={() => move(0, step)} className="p-1.5 rounded bg-secondary text-secondary-foreground active:scale-95">↓</button>
+                    <button onClick={() => resize(-step, 0)} className="p-1.5 rounded bg-muted text-foreground active:scale-95">◀▶−</button>
+                    <button onClick={() => resize(step, 0)} className="p-1.5 rounded bg-muted text-foreground active:scale-95">◀▶+</button>
+                    <button onClick={() => resize(0, -step)} className="p-1.5 rounded bg-muted text-foreground active:scale-95">▲▼−</button>
+                    <button onClick={() => resize(0, step)} className="p-1.5 rounded bg-muted text-foreground active:scale-95">▲▼+</button>
                   </div>
 
                   <div className="grid grid-cols-3 gap-1">
-                    <button onClick={duplicateSelected} className="p-2 rounded-lg bg-slate-700 text-white text-xs font-bold active:scale-95 flex items-center justify-center gap-1"><Copy className="h-3.5 w-3.5" /> نسخ</button>
+                    <button onClick={duplicateSelected} className="p-2 rounded-lg bg-secondary text-secondary-foreground text-xs font-bold active:scale-95 flex items-center justify-center gap-1"><Copy className="h-3.5 w-3.5" /> نسخ</button>
                     <button onClick={addLinkedPart} className="p-2 rounded-lg bg-sky-600/30 border border-sky-500/40 text-sky-200 text-xs font-bold active:scale-95 flex items-center justify-center gap-1" title="جزء بنفس الآية (سطر ثانٍ)"><Link2 className="h-3.5 w-3.5" /> سطرين</button>
-                    <button onClick={deleteSelected} className="p-2 rounded-lg bg-red-600/30 border border-red-500/40 text-red-300 text-xs font-bold active:scale-95 flex items-center justify-center gap-1"><Trash2 className="h-3.5 w-3.5" /> حذف</button>
+                    <button onClick={deleteSelected} className="p-2 rounded-lg bg-destructive/30 border border-destructive/40 text-destructive text-xs font-bold active:scale-95 flex items-center justify-center gap-1"><Trash2 className="h-3.5 w-3.5" /> حذف</button>
                   </div>
                   <div className="grid grid-cols-2 gap-1">
-                    <button onClick={applyHeightToAll} className="p-2 rounded-lg bg-slate-700/70 text-slate-200 text-[11px] font-bold active:scale-95">توحيد الارتفاع</button>
-                    <button onClick={applyWidthAndXToAll} className="p-2 rounded-lg bg-slate-700/70 text-slate-200 text-[11px] font-bold active:scale-95">محاذاة العرض</button>
+                    <button onClick={applyHeightToAll} className="p-2 rounded-lg bg-secondary text-secondary-foreground text-[11px] font-bold active:scale-95">توحيد الارتفاع</button>
+                    <button onClick={applyWidthAndXToAll} className="p-2 rounded-lg bg-secondary text-secondary-foreground text-[11px] font-bold active:scale-95">محاذاة العرض</button>
                   </div>
+                  <button onClick={unifyBySurahLocation} className="w-full p-2 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold active:scale-95 flex items-center justify-center gap-1">
+                    <Square className="h-3.5 w-3.5" /> وحّد السور بالموقع — أسنِد كل مربّع لمنطقة سورته
+                  </button>
                 </>
               )}
             </div>
 
-            <button onClick={() => saveAll(false)} className="w-full p-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold flex items-center justify-center gap-2 active:scale-[0.98]">
+            {/* ④ ربط الصوت بالآيات (التقسيم ← الربط) — خطوة منظّمة بعد ضبط المربعات */}
+            <Link to="/link" className="block rounded-2xl bg-sky-950/30 border border-sky-500/30 p-3 hover:border-sky-400/50 active:scale-[0.99] transition-all">
+              <div className="flex items-center gap-3">
+                <span className="w-11 h-11 rounded-xl bg-sky-500/20 text-sky-300 flex items-center justify-center shrink-0"><Link2 className="h-6 w-6" /></span>
+                <span className="flex-1 min-w-0">
+                  <span className="block font-bold text-sky-200 text-sm">④ اربط الصوت بالآيات</span>
+                  <span className="block text-[11px] text-muted-foreground leading-relaxed">بعد ضبط مربعات السورة: ارفع تسجيلها ← يُقسَّم (معلم/طفل) ← يُربط بكل آية تلقائياً فيُشغّلها المصحف.</span>
+                </span>
+                <ChevronLeft className="w-5 h-5 text-sky-300/70 shrink-0" />
+              </div>
+            </Link>
+
+            <button onClick={() => saveAll(false)} className="w-full p-3 rounded-2xl btn-gold font-extrabold flex items-center justify-center gap-2 active:scale-[0.98]">
               <Save className="h-5 w-5" /> حفظ الصفحة (مربعات + مناطق)
             </button>
           </aside>
@@ -593,25 +694,25 @@ const AyahCalibration = () => {
       {/* نافذة ترتيب الصفحات */}
       {arrangeOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setArrangeOpen(false)}>
-          <div className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-2xl bg-slate-800 border border-slate-600 p-4 space-y-2" onClick={(e) => e.stopPropagation()} dir="rtl">
+          <div className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-2xl bg-card border border-border p-4 space-y-2 shadow-soft" onClick={(e) => e.stopPropagation()} dir="rtl">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-amber-300">ترتيب الصفحات في القارئ</h3>
-              <button onClick={() => setArrangeOpen(false)} className="p-1.5 rounded-lg bg-slate-700 text-white"><X className="h-4 w-4" /></button>
+              <h3 className="font-bold text-accent">ترتيب الصفحات في القارئ</h3>
+              <button onClick={() => setArrangeOpen(false)} className="p-1.5 rounded-lg bg-secondary text-secondary-foreground"><X className="h-4 w-4" /></button>
             </div>
             {draftSrcOrder.map((src, pos) => (
-              <div key={src} className="flex items-center gap-2 rounded-lg bg-slate-700/60 p-2 border border-slate-600/50">
-                <span className="text-xs text-slate-400 w-5">{pos + 1}</span>
-                <img src={imgSrcFor(src)} alt={src} className="w-10 h-14 object-cover rounded-md border border-slate-600 shrink-0" loading="lazy" />
-                <span className="flex-1 min-w-0 font-bold text-sm text-slate-200 truncate">{pageLabel(src)}</span>
-                <button onClick={() => moveInOrder(pos, -1)} disabled={pos === 0} className="p-1.5 rounded-md bg-slate-600 text-white disabled:opacity-30 active:scale-95"><ChevronUp className="h-4 w-4" /></button>
-                <button onClick={() => moveInOrder(pos, 1)} disabled={pos === draftSrcOrder.length - 1} className="p-1.5 rounded-md bg-slate-600 text-white disabled:opacity-30 active:scale-95"><ChevronDown className="h-4 w-4" /></button>
+              <div key={src} className="flex items-center gap-2 rounded-lg bg-muted p-2 border border-border">
+                <span className="text-xs text-muted-foreground w-5">{pos + 1}</span>
+                <img src={imgSrcFor(src)} alt={src} className="w-10 h-14 object-cover rounded-md border border-border shrink-0" loading="lazy" />
+                <span className="flex-1 min-w-0 font-bold text-sm text-foreground truncate">{pageLabel(src)}</span>
+                <button onClick={() => moveInOrder(pos, -1)} disabled={pos === 0} className="p-1.5 rounded-md bg-muted text-foreground disabled:opacity-30 active:scale-95"><ChevronUp className="h-4 w-4" /></button>
+                <button onClick={() => moveInOrder(pos, 1)} disabled={pos === draftSrcOrder.length - 1} className="p-1.5 rounded-md bg-muted text-foreground disabled:opacity-30 active:scale-95"><ChevronDown className="h-4 w-4" /></button>
               </div>
             ))}
             <div className="grid grid-cols-2 gap-2 pt-1">
               <button onClick={() => { clearPageOrder(); setArrangeOpen(false); toast({ title: "↩️ أُعيد الترتيب الأصلي" }); }}
-                className="p-2 rounded-lg bg-slate-700 text-white font-bold text-sm active:scale-95">إعادة الأصل</button>
+                className="p-2 rounded-lg bg-secondary text-secondary-foreground font-bold text-sm active:scale-95">إعادة الأصل</button>
               <button onClick={() => { savePageOrder(draftSrcOrder); setArrangeOpen(false); toast({ title: "✅ تم حفظ الترتيب على السيرفر", description: "افتح القارئ لرؤيته" }); }}
-                className="p-2 rounded-lg bg-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-1 active:scale-95"><Check className="h-4 w-4" /> حفظ الترتيب</button>
+                className="p-2 rounded-lg btn-emerald font-bold text-sm flex items-center justify-center gap-1 active:scale-95"><Check className="h-4 w-4" /> حفظ الترتيب</button>
             </div>
           </div>
         </div>

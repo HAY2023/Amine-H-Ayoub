@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Pencil, Check, Shuffle } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Pencil, Check, Shuffle, Mic, Headphones, Baby } from "lucide-react";
 import { getSavedTimings, getSurahTimings, getAyahStartTime, hasKidsSection } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
@@ -969,9 +969,9 @@ const MushafPage = ({ onBack }: Props) => {
               <p className="text-xs font-bold mb-2 text-muted-foreground">وضع التشغيل</p>
               <div className="flex gap-1.5 mb-3">
                 {([
-                  { mode: "both" as PlayMode, label: "🎧 تصحيح", desc: "معلم ثم طفل" },
-                  { mode: "teacher" as PlayMode, label: "🎙️ معلم", desc: "صوت المعلم فقط" },
-                  { mode: "kids" as PlayMode, label: "👦 أطفال", desc: "صوت الأطفال فقط" },
+                  { mode: "both" as PlayMode, label: "تصحيح", desc: "معلم ثم طفل" },
+                  { mode: "teacher" as PlayMode, label: "معلم", desc: "صوت المعلم فقط" },
+                  { mode: "kids" as PlayMode, label: "أطفال", desc: "صوت الأطفال فقط" },
                 ]).map(({ mode, label, desc }) => (
                   <button
                     key={mode}
@@ -1098,7 +1098,7 @@ const MushafPage = ({ onBack }: Props) => {
             opacity: 0.85,
           }}
         >
-          <span>🎧</span>
+          <span><Headphones className="w-4 h-4 inline-block" /></span>
           <span className="font-amiri">{activeSurah.name} · آية {currentAyahRef.current}</span>
         </div>
       )}
@@ -1141,7 +1141,7 @@ const MushafPage = ({ onBack }: Props) => {
                 }}
                 className="w-full py-3 px-4 rounded-2xl bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/50 text-amber-900 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-sm"
               >
-                🎙️ تلاوة المعلم
+                <Mic className="w-4 h-4 inline-block" /> تلاوة المعلم
               </button>
 
               <button
@@ -1156,7 +1156,7 @@ const MushafPage = ({ onBack }: Props) => {
                 }}
                 className="w-full py-3 px-4 rounded-2xl bg-sky-400/20 hover:bg-sky-400/30 border border-sky-400/50 text-sky-900 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-sm"
               >
-                👦 تكرار الأطفال
+                <Baby className="w-4 h-4 inline-block" /> تكرار الأطفال
               </button>
 
               <button
@@ -1171,7 +1171,7 @@ const MushafPage = ({ onBack }: Props) => {
                 }}
                 className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-400/30 to-sky-400/30 hover:from-amber-400/40 hover:to-sky-400/40 border border-amber-400/40 text-slate-800 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-md"
               >
-                🎧 تصحيح (المعلم ثم الطفل)
+                <Headphones className="w-4 h-4 inline-block" /> تصحيح (المعلم ثم الطفل)
               </button>
 
               <div className="flex gap-2 mt-2 pt-2 border-t border-slate-200/50">

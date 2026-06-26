@@ -1,55 +1,126 @@
-@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   نظام تصميم «نور» — دافئ فاخر (نسخة غنية عالية التباين)
+   كريمي دافئ + أخضر زمردي عميق + ذهبي غنيّ. سمتان حقيقيتان.
+   ============================================================ */
 @layer base {
   :root {
-    --background: 38 30% 88%;
-    --foreground: 25 40% 18%;
+    /* نهار — نور (تباين أعلى وعمق أوضح) */
+    --background: 37 40% 87%;        /* بيج دافئ له حضور */
+    --foreground: 28 33% 12%;        /* حِبر بنّي عميق غنيّ */
 
-    --card: 40 35% 94%;
-    --card-foreground: 25 40% 18%;
+    --card: 42 60% 99%;              /* أبيض دافئ ناصع — يبرز فوق الخلفية */
+    --card-foreground: 28 33% 12%;
 
-    --popover: 40 35% 94%;
-    --popover-foreground: 25 40% 18%;
+    --popover: 42 60% 99%;
+    --popover-foreground: 28 33% 12%;
 
-    --primary: 30 30% 45%;
-    --primary-foreground: 45 40% 97%;
+    --primary: 153 62% 18%;          /* أخضر زمردي عميق */
+    --primary-foreground: 44 62% 98%;
 
-    --secondary: 38 25% 85%;
-    --secondary-foreground: 25 40% 18%;
+    --secondary: 38 34% 83%;         /* رقاقة دافئة واضحة */
+    --secondary-foreground: 28 32% 15%;
 
-    --muted: 38 20% 90%;
-    --muted-foreground: 25 15% 40%;
+    --muted: 38 32% 86%;
+    --muted-foreground: 30 18% 34%;
 
-    --accent: 42 70% 55%;
-    --accent-foreground: 25 40% 18%;
+    --accent: 39 86% 45%;            /* ذهبي غنيّ عميق */
+    --accent-foreground: 30 60% 10%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 47%;
+    --destructive-foreground: 44 62% 98%;
 
-    --border: 30 20% 75%;
-    --input: 30 20% 80%;
-    --ring: 42 70% 55%;
+    --success: 150 60% 29%;
+    --success-foreground: 44 62% 98%;
 
-    --radius: 1rem;
+    --border: 35 30% 73%;            /* حدّ واضح */
+    --input: 35 28% 79%;
+    --ring: 39 86% 49%;
 
-    --gold: 42 70% 55%;
-    --gold-light: 42 60% 75%;
-    --green-dark: 25 30% 20%;
-    --green-light: 35 25% 85%;
-    --cream: 45 40% 95%;
+    --radius: 1.25rem;
 
-    --sidebar-background: 38 30% 90%;
-    --sidebar-foreground: 25 40% 18%;
-    --sidebar-primary: 25 30% 25%;
-    --sidebar-primary-foreground: 45 40% 95%;
-    --sidebar-accent: 38 25% 88%;
-    --sidebar-accent-foreground: 25 40% 18%;
-    --sidebar-border: 30 20% 78%;
-    --sidebar-ring: 42 70% 55%;
+    --gold: 39 86% 45%;
+    --gold-light: 43 90% 60%;
+    --emerald: 153 62% 18%;
+    --emerald-light: 150 50% 33%;
+    --cream: 42 60% 99%;
+    --ink: 28 33% 12%;
+
+    --grad-page: radial-gradient(1100px 520px at 100% -8%, hsl(43 74% 79% / 0.95), transparent 56%),
+                 radial-gradient(950px 500px at -8% 10%, hsl(150 42% 77% / 0.6), transparent 55%),
+                 linear-gradient(180deg, hsl(40 48% 91%), hsl(35 36% 82%));
+    --shadow-soft: 0 2px 4px hsl(28 40% 16% / 0.08), 0 16px 40px hsl(28 40% 16% / 0.16);
+    --shadow-gold: 0 10px 30px hsl(var(--gold) / 0.45);
+
+    --sidebar-background: 40 46% 93%;
+    --sidebar-foreground: 28 32% 15%;
+    --sidebar-primary: 153 62% 18%;
+    --sidebar-primary-foreground: 44 62% 98%;
+    --sidebar-accent: 38 34% 86%;
+    --sidebar-accent-foreground: 28 32% 15%;
+    --sidebar-border: 35 30% 75%;
+    --sidebar-ring: 39 86% 49%;
+  }
+
+  .dark {
+    /* ليل — نور (ليل زمردي دافئ، ذهبي متوهّج) */
+    --background: 162 28% 6%;
+    --foreground: 42 46% 93%;
+
+    --card: 160 24% 10%;
+    --card-foreground: 42 46% 93%;
+
+    --popover: 160 24% 10%;
+    --popover-foreground: 42 46% 93%;
+
+    --primary: 150 52% 46%;
+    --primary-foreground: 162 32% 6%;
+
+    --secondary: 160 18% 16%;
+    --secondary-foreground: 42 46% 93%;
+
+    --muted: 160 15% 18%;
+    --muted-foreground: 42 18% 68%;
+
+    --accent: 44 86% 58%;
+    --accent-foreground: 162 34% 7%;
+
+    --destructive: 0 66% 51%;
+    --destructive-foreground: 44 62% 98%;
+
+    --success: 150 54% 47%;
+    --success-foreground: 162 32% 6%;
+
+    --border: 160 15% 20%;
+    --input: 160 15% 22%;
+    --ring: 44 86% 58%;
+
+    --gold: 44 86% 58%;
+    --gold-light: 44 90% 72%;
+    --emerald: 150 52% 46%;
+    --emerald-light: 150 50% 58%;
+    --cream: 42 46% 93%;
+    --ink: 42 46% 93%;
+
+    --grad-page: radial-gradient(1100px 520px at 100% -8%, hsl(150 46% 13% / 0.75), transparent 56%),
+                 radial-gradient(950px 500px at -8% 10%, hsl(162 38% 11% / 0.7), transparent 55%),
+                 linear-gradient(180deg, hsl(162 30% 8%), hsl(162 28% 5%));
+    --shadow-soft: 0 2px 6px hsl(0 0% 0% / 0.4), 0 18px 44px hsl(0 0% 0% / 0.5);
+    --shadow-gold: 0 10px 32px hsl(var(--gold) / 0.35);
+
+    --sidebar-background: 162 24% 8%;
+    --sidebar-foreground: 42 46% 93%;
+    --sidebar-primary: 150 52% 46%;
+    --sidebar-primary-foreground: 162 32% 6%;
+    --sidebar-accent: 160 18% 14%;
+    --sidebar-accent-foreground: 42 46% 93%;
+    --sidebar-border: 160 15% 19%;
+    --sidebar-ring: 44 86% 58%;
   }
 }
 
@@ -59,81 +130,137 @@
   }
 
   body {
-    @apply bg-background text-foreground font-amiri;
+    @apply bg-background text-foreground;
+    font-family: 'Cairo', 'Amiri', system-ui, sans-serif;
     direction: rtl;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
+
+  /* خلفية الصفحة الفاخرة — استعملها على حاوية الصفحة: class="page-nour" */
+  .page-nour {
+    position: relative;
+    background: var(--grad-page);
+    min-height: 100vh;
+  }
+  /* نقش هندسي خفيف يضيف فخامة دون ضجيج */
+  .page-nour::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='48'%20height='48'%20viewBox='0%200%2048%2048'%3E%3Cpath%20d='M24%204%20L44%2024%20L24%2044%20L4%2024%20Z'%20fill='none'%20stroke='%23a07c2e'%20stroke-width='1'%20stroke-opacity='0.18'/%3E%3C/svg%3E");
+    background-size: 48px 48px;
+    opacity: 0.5;
+  }
+  .page-nour > * { position: relative; }
 }
 
-@keyframes wave {
-  0%, 100% { height: 4px; }
-  50% { height: 20px; }
+/* ============================================================
+   مكوّنات «نور» القابلة لإعادة الاستخدام
+   ============================================================ */
+@layer components {
+  .card-nour {
+    @apply rounded-2xl border bg-card text-card-foreground;
+    border-color: hsl(var(--border));
+    box-shadow: var(--shadow-soft);
+  }
+  /* بطاقة زجاجية فاخرة */
+  .glass-nour {
+    @apply rounded-2xl border;
+    background: hsl(var(--card) / 0.8);
+    border-color: hsl(var(--border) / 0.8);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    box-shadow: var(--shadow-soft);
+  }
+  /* زرّ ذهبي أساسي */
+  .btn-gold {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl font-extrabold transition-all active:scale-95;
+    background: linear-gradient(180deg, hsl(var(--gold-light)), hsl(var(--gold)));
+    color: hsl(var(--accent-foreground));
+    box-shadow: var(--shadow-gold);
+  }
+  .btn-gold:hover { filter: brightness(1.06); }
+  /* زرّ زمردي */
+  .btn-emerald {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl font-extrabold text-primary-foreground transition-all active:scale-95;
+    background: linear-gradient(180deg, hsl(var(--emerald-light)), hsl(var(--emerald)));
+    box-shadow: var(--shadow-soft);
+  }
+  .btn-emerald:hover { filter: brightness(1.08); }
+  /* عنوان متدرّج ذهبي */
+  .text-gradient-gold {
+    background: linear-gradient(95deg, hsl(var(--gold)), hsl(var(--gold-light)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .font-quran { font-family: 'Amiri', serif; }
 }
 
-.animate-wave {
-  animation: wave 0.8s ease-in-out infinite;
-  height: 4px;
+/* ============================================================
+   الحركات (Motion) — هادئة وراقية
+   ============================================================ */
+@keyframes wave { 0%, 100% { height: 4px; } 50% { height: 20px; } }
+.animate-wave { animation: wave 0.8s ease-in-out infinite; height: 4px; }
+
+@keyframes breathe { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.3; } }
+.animate-breathe { animation: breathe 3s ease-in-out infinite; }
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.animate-fade-in { animation: fade-in 0.25s ease-out both; }
+
+@keyframes fade-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-up { animation: fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes scale-up { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+.animate-scale-up { animation: scale-up 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes float-soft { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.animate-float { animation: float-soft 4s ease-in-out infinite; }
+
+/* احتفال الألعاب: كلمة تشجيع تطفو وتتلاشى عند كل إجابة صحيحة */
+@keyframes celebrate {
+  0% { opacity: 0; transform: translate(-50%, 16px) scale(0.7); }
+  25% { opacity: 1; transform: translate(-50%, -6px) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -52px) scale(1); }
+}
+.animate-celebrate { animation: celebrate 1s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+@keyframes pop-in { 0% { opacity: 0; transform: scale(0.5); } 60% { transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
+.animate-pop { animation: pop-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.shimmer-gold {
+  background: linear-gradient(100deg, transparent 30%, hsl(var(--gold-light) / 0.55) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: shimmer 2.4s linear infinite;
 }
 
-@keyframes breathe {
-  0%, 100% { opacity: 0.15; }
-  50% { opacity: 0.3; }
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 hsl(var(--gold) / 0); }
+  50% { box-shadow: 0 0 26px hsl(var(--gold) / 0.5); }
 }
+.animate-glow { animation: glow-pulse 2.4s ease-in-out infinite; }
 
-.animate-breathe {
-  animation: breathe 3s ease-in-out infinite;
-}
-
-/* ===== Ayah highlight styles ===== */
+/* ===== تظليل الآيات (يعتمده القارئ) — يبقى كما هو ===== */
 @keyframes ayah-glow {
-  0%, 100% {
-    filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.35));
-    opacity: 0.85;
-  }
-  50% {
-    filter: drop-shadow(0 0 16px rgba(250, 204, 21, 0.65));
-    opacity: 1;
-  }
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.35)); opacity: 0.85; }
+  50% { filter: drop-shadow(0 0 16px rgba(250, 204, 21, 0.65)); opacity: 1; }
 }
-
 @keyframes ayah-active-glow-teacher {
-  0%, 100% {
-    filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.5))
-           drop-shadow(0 0 16px rgba(250, 204, 21, 0.25));
-    opacity: 0.9;
-  }
-  50% {
-    filter: drop-shadow(0 0 20px rgba(250, 204, 21, 0.8))
-           drop-shadow(0 0 40px rgba(250, 204, 21, 0.35));
-    opacity: 1;
-  }
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.5)) drop-shadow(0 0 16px rgba(250, 204, 21, 0.25)); opacity: 0.9; }
+  50% { filter: drop-shadow(0 0 20px rgba(250, 204, 21, 0.8)) drop-shadow(0 0 40px rgba(250, 204, 21, 0.35)); opacity: 1; }
 }
-
 @keyframes ayah-active-glow-kids {
-  0%, 100% {
-    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.5))
-           drop-shadow(0 0 16px rgba(56, 189, 248, 0.25));
-    opacity: 0.9;
-  }
-  50% {
-    filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.8))
-           drop-shadow(0 0 40px rgba(56, 189, 248, 0.35));
-    opacity: 1;
-  }
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.5)) drop-shadow(0 0 16px rgba(56, 189, 248, 0.25)); opacity: 0.9; }
+  50% { filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.8)) drop-shadow(0 0 40px rgba(56, 189, 248, 0.35)); opacity: 1; }
 }
+.ayah-rect { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.1)); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.ayah-rect.animate-pulse { animation: ayah-active-glow-teacher 1.4s ease-in-out infinite !important; }
+.ayah-rect.animate-pulse.glow-kids { animation: ayah-active-glow-kids 1.4s ease-in-out infinite !important; }
 
-.ayah-rect {
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.1));
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.ayah-rect.animate-pulse {
-  animation: ayah-active-glow-teacher 1.4s ease-in-out infinite !important;
-}
-
-.ayah-rect.animate-pulse.glow-kids {
-  animation: ayah-active-glow-kids 1.4s ease-in-out infinite !important;
-}
-
-/* Hide scrollbar for carousel */
+/* إخفاء شريط التمرير للكاروسيل */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

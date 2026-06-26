@@ -1,20 +1,21 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X, BarChart3, Wrench, User, Users } from "lucide-react";
+import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X, BarChart3, Wrench, User, Users, GraduationCap, Settings as SettingsIcon } from "lucide-react";
 import { getAppMode, setAppMode, getProfiles, addProfile, type AppMode } from "../data/kidsProfile";
 import { syncCoordinatesFromServer } from "../data/ayahCoordinates";
 import { syncTimingsFromServer } from "../data/ayahTimings";
 import { syncSurahRegionsFromServer } from "../data/surahRegions";
 import { syncCustomPagesFromServer } from "../data/customPages";
 import { downloadEverything } from "../data/offlineDownload";
-import { isKidsMode } from "../data/kidsLock";
+import { isKidsMode, hasKidsPin } from "../data/kidsLock";
+import PinModal from "../components/PinModal";
 import { toast } from "../hooks/use-toast";
 
 const THEME_KEY = "mushaf:theme";
 export const RECITER_URL = "https://www.youtube.com/@aminehadjyoub";
 
 export const getTheme = (): "dark" | "light" => {
-  try { return (localStorage.getItem(THEME_KEY) as "dark" | "light") || "dark"; } catch { return "dark"; }
+  try { return (localStorage.getItem(THEME_KEY) as "dark" | "light") || "light"; } catch { return "light"; }
 };
 export const applyTheme = (t: "dark" | "light") => {
   if (typeof document === "undefined") return;
@@ -22,14 +23,23 @@ export const applyTheme = (t: "dark" | "light") => {
   if (t === "light") el.classList.remove("dark"); else el.classList.add("dark");
 };
 
-const Row = ({ icon, title, desc, onClick, right }: { icon: React.ReactNode; title: string; desc?: string; onClick?: () => void; right?: React.ReactNode }) => (
-  <button onClick={onClick} className="w-full flex items-center gap-3 rounded-2xl bg-slate-800/80 border border-slate-700 p-3 text-right hover:border-amber-500/40 active:scale-[0.99] transition-all">
-    <span className="w-10 h-10 rounded-xl bg-slate-700/70 text-amber-300 flex items-center justify-center shrink-0">{icon}</span>
+/** عنوان قسم صغير فوق مجموعة مرتّبة. */
+const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <section className="space-y-1.5">
+    <h2 className="px-1.5 text-xs font-extrabold text-muted-foreground">{label}</h2>
+    <div className="card-nour overflow-hidden divide-y divide-border">{children}</div>
+  </section>
+);
+
+/** صفّ داخل مجموعة (بلا بطاقة منفصلة — تفصلها خطوط المجموعة). */
+const Item = ({ icon, title, desc, onClick, right }: { icon: React.ReactNode; title: string; desc?: string; onClick?: () => void; right?: React.ReactNode }) => (
+  <button onClick={onClick} className="w-full flex items-center gap-3 p-3 text-right hover:bg-muted/60 active:scale-[0.99] transition-colors">
+    <span className="w-10 h-10 rounded-xl bg-secondary text-accent flex items-center justify-center shrink-0">{icon}</span>
     <span className="flex-1 min-w-0">
-      <span className="block font-bold text-white">{title}</span>
-      {desc && <span className="block text-[11px] text-slate-400">{desc}</span>}
+      <span className="block font-bold text-foreground">{title}</span>
+      {desc && <span className="block text-[11px] text-muted-foreground leading-relaxed">{desc}</span>}
     </span>
-    {right ?? <ChevronLeft className="w-5 h-5 text-slate-500" />}
+    {right ?? <ChevronLeft className="w-5 h-5 text-muted-foreground" />}
   </button>
 );
 
@@ -38,6 +48,7 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState<"dark" | "light">(getTheme);
   const [appMode, setMode] = useState<AppMode>(getAppMode);
   const [termsOpen, setTermsOpen] = useState(false);
+  const [showPin, setShowPin] = useState(false);
   const [dlPct, setDlPct] = useState<number | null>(null);
 
   const changeMode = (m: AppMode) => {
@@ -66,75 +77,100 @@ export default function SettingsPage() {
     setTimeout(() => setDlPct(null), 1500);
   };
 
-  const openParent = () => {
-    let pin = ""; try { pin = localStorage.getItem("mushaf:kidsPin") || ""; } catch { /* ignore */ }
-    if (pin) { const p = (window.prompt("رمز ولي الأمر:") || "").trim(); if (p !== pin) { toast({ title: "رمز خاطئ", variant: "destructive" }); return; } }
-    navigate("/parent");
-  };
+  // دخول لوحة وليّ الأمر — بنافذة رمز أنيقة بدل نافذة المتصفّح (وإن لم يوجد رمز يدخل مباشرة)
+  const openParent = () => { if (hasKidsPin()) setShowPin(true); else navigate("/parent"); };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white" dir="rtl">
-      <div className="mx-auto max-w-md px-4 py-4 space-y-3">
+    <div className="min-h-screen page-nour text-foreground" dir="rtl">
+      {/* وهج ذهبي زخرفي علوي */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-accent/10 to-transparent" aria-hidden="true" />
+
+      <div className="relative mx-auto max-w-md px-4 py-5 space-y-5">
         <header className="flex items-center justify-between">
-          <button onClick={() => navigate("/")} className="flex h-10 items-center gap-1 rounded-full bg-slate-700 px-4 text-sm font-bold hover:bg-slate-600 active:scale-95">
+          <button onClick={() => navigate("/")} className="flex h-10 items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold border border-border hover:brightness-95 active:scale-95 transition-all shadow-soft">
             <ArrowRight className="h-4 w-4" /> رجوع
           </button>
-          <h1 className="font-extrabold text-lg text-amber-300">الإعدادات</h1>
           <span className="w-16" />
         </header>
 
-        {/* المظهر */}
-        <div className="rounded-2xl bg-slate-800/80 border border-slate-700 p-3 flex items-center gap-3">
-          <span className="w-10 h-10 rounded-xl bg-slate-700/70 text-amber-300 flex items-center justify-center">{theme === "dark" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}</span>
-          <span className="flex-1"><span className="block font-bold">المظهر</span><span className="block text-[11px] text-slate-400">ليل / نهار</span></span>
-          <div className="flex rounded-xl bg-slate-700 p-1">
-            <button onClick={() => setTheme("dark")} className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 ${theme === "dark" ? "bg-slate-900 text-amber-300" : "text-slate-300"}`}><Moon className="w-3.5 h-3.5" /> ليل</button>
-            <button onClick={() => setTheme("light")} className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 ${theme === "light" ? "bg-white text-slate-900" : "text-slate-300"}`}><Sun className="w-3.5 h-3.5" /> نهار</button>
-          </div>
+        {/* بطاقة العنوان */}
+        <div className="card-nour relative overflow-hidden p-5 text-center animate-fade-up">
+          <div className="pointer-events-none absolute -top-10 -left-10 h-28 w-28 rounded-full bg-accent/10 blur-2xl" aria-hidden="true" />
+          <span className="mx-auto mb-2.5 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/15 text-accent shadow-soft"><SettingsIcon className="h-6 w-6" /></span>
+          <h1 className="font-extrabold text-2xl text-gradient-gold">الإعدادات</h1>
+          <p className="mt-1 text-xs text-muted-foreground">خصّص المظهر وأدوات الأهل والمحتوى</p>
         </div>
 
-        {/* لِمَن التطبيق؟ */}
-        <div className="rounded-2xl bg-slate-800/80 border border-slate-700 p-3 space-y-2">
-          <span className="block font-bold">لِمَن هذا التطبيق؟</span>
-          <div className="grid grid-cols-3 gap-2">
-            {([
-              { m: "parent" as AppMode, Icon: User, label: "لي" },
-              { m: "kids" as AppMode, Icon: Baby, label: "لأطفالي" },
-              { m: "both" as AppMode, Icon: Users, label: "معاً" },
-            ]).map(o => (
-              <button key={o.m} onClick={() => changeMode(o.m)}
-                className={`flex flex-col items-center gap-1 rounded-xl py-2.5 text-xs font-bold border transition-all ${appMode === o.m ? "border-amber-400 bg-amber-500/20 text-amber-200" : "border-slate-700 bg-slate-900/50 text-slate-300"}`}>
-                <o.Icon className="w-5 h-5" /> {o.label}
-              </button>
-            ))}
+        {/* ===== المظهر ===== */}
+        <Section label="المظهر">
+          <div className="flex items-center gap-3 p-3">
+            <span className="w-10 h-10 rounded-xl bg-secondary text-accent flex items-center justify-center">{theme === "dark" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}</span>
+            <span className="flex-1"><span className="block font-bold">المظهر</span><span className="block text-[11px] text-muted-foreground">ليل / نهار</span></span>
+            <div className="flex rounded-xl bg-secondary p-1">
+              <button onClick={() => setTheme("light")} className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${theme === "light" ? "bg-card text-accent shadow-soft" : "text-muted-foreground"}`}><Sun className="w-3.5 h-3.5" /> نهار</button>
+              <button onClick={() => setTheme("dark")} className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${theme === "dark" ? "bg-card text-accent shadow-soft" : "text-muted-foreground"}`}><Moon className="w-3.5 h-3.5" /> ليل</button>
+            </div>
           </div>
-          <p className="text-[11px] text-slate-400 leading-relaxed">«لي»: بلا ركن أطفال. «لأطفالي»: ركن أطفال آمن. «معاً»: تختار من يستخدم التطبيق عند كل فتح.</p>
-        </div>
+        </Section>
 
-        <Row icon={<BarChart3 className="w-5 h-5" />} title="لوحة ولي الأمر (إعدادات الطفل)" desc="إعدادات كل طفل، التقدّم والسجلّ، تذكير الدرس، منح وقت لعب" onClick={openParent} />
-        <Row icon={<Baby className="w-5 h-5" />} title="ركن الأطفال (الألعاب)" desc="دخول الألعاب والمتجر" onClick={() => navigate("/games")} />
-        <Row icon={<Wrench className="w-5 h-5" />} title="أدوات المعلّم" desc="المعايرة · تقسيم الصوت · ربط الصوت بالتظليل" onClick={() => navigate("/tools")} />
-        <Row icon={<RefreshCw className="w-5 h-5" />} title="تحقق من التحديث" desc="جلب أحدث نسخة من التطبيق" onClick={checkUpdate} />
-        <Row icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل كل المحتوى للعمل دون إنترنت" desc="السور والصوت والصفحات إلى جهازك" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-emerald-300 w-12 text-center">{dlPct}%</span> : undefined} />
+        {/* ===== من يستخدم التطبيق؟ ===== */}
+        <Section label="من يستخدم التطبيق؟">
+          <div className="p-3 space-y-2">
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { m: "parent" as AppMode, Icon: User, label: "لي" },
+                { m: "kids" as AppMode, Icon: Baby, label: "لأطفالي" },
+                { m: "both" as AppMode, Icon: Users, label: "معاً" },
+              ]).map(o => (
+                <button key={o.m} onClick={() => changeMode(o.m)}
+                  className={`flex flex-col items-center gap-1 rounded-xl py-3 text-xs font-bold border transition-all ${appMode === o.m ? "border-accent bg-accent/15 text-accent shadow-soft" : "border-border bg-muted text-muted-foreground hover:border-accent/40"}`}>
+                  <o.Icon className="w-5 h-5" /> {o.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">«لي»: بلا ركن أطفال. «لأطفالي»: ركن أطفال آمن. «معاً»: تختار من يستخدم التطبيق عند كل فتح.</p>
+          </div>
+        </Section>
 
-        {/* الاشتراك بالقارئ */}
-        <a href={RECITER_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-2xl bg-gradient-to-l from-red-600/30 to-slate-800/80 border border-red-500/40 p-3 hover:border-red-400 active:scale-[0.99] transition-all">
+        {/* ===== الأطفال وولي الأمر ===== */}
+        <Section label="الأطفال وولي الأمر">
+          <Item icon={<BarChart3 className="w-5 h-5" />} title="لوحة وليّ الأمر" desc="إعدادات كل طفل · التقدّم والسجلّ · تذكير الدرس" onClick={openParent} />
+          <Item icon={<Baby className="w-5 h-5" />} title="ركن الأطفال (الألعاب)" desc="دخول الألعاب والمكافآت" onClick={() => navigate("/games")} />
+        </Section>
+
+        {/* ===== التعلّم والمحتوى ===== */}
+        <Section label="التعلّم والمحتوى">
+          <Item icon={<GraduationCap className="w-5 h-5" />} title="ركن طالب القرآن" desc="مؤقّت · مكتبة صوتية · بحث في الكلمات · مدرّب تلاوة" onClick={() => navigate("/student")} />
+          <Item icon={<Wrench className="w-5 h-5" />} title="أدوات المحتوى" desc="التظليل (المعايرة) · تقسيم الصوت · ربط الصوت بالآيات" onClick={() => navigate("/tools")} />
+        </Section>
+
+        {/* ===== التطبيق ===== */}
+        <Section label="التطبيق">
+          <Item icon={<RefreshCw className="w-5 h-5" />} title="تحقّق من التحديث" desc="جلب أحدث نسخة من التطبيق" onClick={checkUpdate} />
+          <Item icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل للعمل دون إنترنت" desc="السور والصوت والصفحات إلى جهازك" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-success w-12 text-center">{dlPct}%</span> : undefined} />
+          <Item icon={<FileText className="w-5 h-5" />} title="بنود الاستخدام" onClick={() => setTermsOpen(true)} />
+        </Section>
+
+        {/* اشتراك القارئ — بطاقة مميّزة */}
+        <a href={RECITER_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-2xl bg-gradient-to-l from-red-600/25 to-card border border-red-500/40 p-3 hover:border-red-400 active:scale-[0.99] transition-all shadow-soft">
           <span className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0"><Youtube className="w-5 h-5" /></span>
-          <span className="flex-1 min-w-0"><span className="block font-bold text-white">اشترك بقناة القارئ</span><span className="block text-[11px] text-slate-300">حاج أيوب أمين على يوتيوب</span></span>
-          <ChevronLeft className="w-5 h-5 text-slate-400" />
+          <span className="flex-1 min-w-0"><span className="block font-bold text-foreground">اشترك بقناة القارئ</span><span className="block text-[11px] text-muted-foreground">حاج أيوب أمين على يوتيوب</span></span>
+          <ChevronLeft className="w-5 h-5 text-muted-foreground" />
         </a>
 
-        <Row icon={<FileText className="w-5 h-5" />} title="بنود الاستخدام" onClick={() => setTermsOpen(true)} />
-
-        <p className="text-[11px] text-slate-500 text-center pt-2 leading-relaxed">العمل الكامل دون إنترنت والسمة النهارية لكل الصفحات قيد التوسعة تدريجياً.</p>
+        <p className="text-[11px] text-muted-foreground text-center pt-1 leading-relaxed">العمل الكامل دون إنترنت قيد التوسعة تدريجياً.</p>
       </div>
 
+      {showPin && (
+        <PinModal mode="verify" title="رمز وليّ الأمر" onSuccess={() => { setShowPin(false); navigate("/parent"); }} onCancel={() => setShowPin(false)} />
+      )}
+
       {termsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" dir="rtl" onClick={() => setTermsOpen(false)}>
-          <div className="w-full max-w-md max-h-[80vh] overflow-y-auto rounded-2xl bg-slate-800 border border-slate-700 p-4 space-y-2" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm p-4" dir="rtl" onClick={() => setTermsOpen(false)}>
+          <div className="w-full max-w-md max-h-[80vh] overflow-y-auto card-nour p-4 space-y-2 animate-fade-up" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-amber-300">بنود الاستخدام</h3>
-              <button onClick={() => setTermsOpen(false)} className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center"><X className="w-4 h-4" /></button>
+              <h3 className="font-extrabold text-accent">بنود الاستخدام</h3>
+              <button onClick={() => setTermsOpen(false)} className="w-8 h-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center"><X className="w-4 h-4" /></button>
             </div>
             <TermsText />
           </div>
@@ -154,7 +190,7 @@ export function TermsText() {
     "نسأل الله أن ينفع به، والاستخدام يعني موافقتك على هذه البنود.",
   ];
   return (
-    <ol className="space-y-2 text-sm text-slate-200 leading-relaxed list-decimal pr-5">
+    <ol className="space-y-2 text-sm text-foreground leading-relaxed list-decimal pr-5">
       {items.map((t, i) => <li key={i}>{t}</li>)}
     </ol>
   );

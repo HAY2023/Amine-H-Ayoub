@@ -29,23 +29,50 @@ export default function PinModal({ mode, title, onSuccess, onCancel }: {
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"];
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4" dir="rtl">
-      <div className="w-full max-w-xs rounded-2xl bg-slate-800 border border-slate-700 p-5 space-y-4 text-center">
-        <div className="mx-auto w-12 h-12 rounded-full bg-amber-500/20 text-amber-300 flex items-center justify-center"><Lock className="w-6 h-6" /></div>
-        <h3 className="font-extrabold text-white">{title || (mode === "set" ? "اختر رمزاً من ٤ أرقام" : "أدخل رمز ولي الأمر")}</h3>
-        <div className={`flex justify-center gap-3 ${err ? "animate-pulse" : ""}`}>
-          {[0, 1, 2, 3].map(i => <span key={i} className={`w-4 h-4 rounded-full transition-colors ${err ? "bg-red-500" : i < pin.length ? "bg-amber-400" : "bg-slate-600"}`} />)}
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-background/70 backdrop-blur-sm p-4 animate-fade-in" dir="rtl">
+      <div className="relative w-full max-w-xs glass-nour shadow-soft p-6 space-y-5 text-center overflow-hidden animate-scale-up">
+        {/* وهج ذهبي زخرفي خلف البطاقة */}
+        <div aria-hidden className="pointer-events-none absolute -top-16 left-1/2 -translate-x-1/2 w-40 h-40 rounded-full bg-accent/20 blur-3xl" />
+
+        <div className="relative mx-auto w-14 h-14 rounded-full bg-accent/15 text-accent flex items-center justify-center ring-1 ring-accent/30 animate-glow">
+          <Lock className="w-7 h-7" />
         </div>
-        {err && <p className="text-xs text-red-400">رمز خاطئ، حاول مجدداً</p>}
-        <div className="grid grid-cols-3 gap-2">
+
+        <h3 className="relative font-extrabold text-lg text-gradient-gold">
+          {title || (mode === "set" ? "اختر رمزاً من ٤ أرقام" : "أدخل رمز ولي الأمر")}
+        </h3>
+
+        <div className={`relative flex justify-center gap-3 ${err ? "animate-pulse" : ""}`}>
+          {[0, 1, 2, 3].map(i => (
+            <span
+              key={i}
+              className={`w-3.5 h-3.5 rounded-full transition-all duration-200 ${
+                err ? "bg-destructive scale-110" : i < pin.length ? "bg-accent scale-110 shadow-[0_0_10px_hsl(var(--gold)/0.6)]" : "bg-muted"
+              }`}
+            />
+          ))}
+        </div>
+
+        {err && <p className="relative text-xs text-destructive font-medium">رمز خاطئ، حاول مجدداً</p>}
+
+        <div className="relative grid grid-cols-3 gap-2.5">
           {keys.map((k, i) => k === "" ? <span key={i} /> : (
-            <button key={i} onClick={() => (k === "back" ? setPin(p => p.slice(0, -1)) : press(k))}
-              className="h-12 rounded-xl bg-slate-700 text-white text-xl font-bold flex items-center justify-center active:scale-95 hover:bg-slate-600">
+            <button
+              key={i}
+              onClick={() => (k === "back" ? setPin(p => p.slice(0, -1)) : press(k))}
+              className="h-14 rounded-2xl bg-secondary border border-border text-secondary-foreground text-xl font-bold flex items-center justify-center transition-all active:scale-95 hover:border-accent/50 hover:text-accent"
+            >
               {k === "back" ? <Delete className="w-5 h-5" /> : k}
             </button>
           ))}
         </div>
-        <button onClick={onCancel} className="w-full p-2 rounded-xl bg-slate-700/60 text-slate-300 font-bold">إلغاء</button>
+
+        <button
+          onClick={onCancel}
+          className="relative w-full p-2.5 rounded-2xl bg-secondary border border-border text-muted-foreground font-bold transition-all hover:brightness-95"
+        >
+          إلغاء
+        </button>
       </div>
     </div>
   );

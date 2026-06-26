@@ -44,12 +44,12 @@ export async function alignAyahsViterbi(
   }
 
   if (onProgress) {
-    onProgress(`🔬 Viterbi Debug: raw=${rawRegions.length}, merged=${merged.length}, target=${ayahCount * 2}`);
+    onProgress(`Viterbi Debug: raw=${rawRegions.length}, merged=${merged.length}, target=${ayahCount * 2}`);
   }
 
   // If we have fewer regions than ayahCount * 2, we just return them split evenly (fallback)
   if (merged.length < ayahCount * 2) {
-      if (onProgress) onProgress(`⚠️ تحذير: عدد المقاطع المكتشفة (${merged.length}) أقل من المطلوب (${ayahCount * 2}). سنستخدم التقسيم الاحتياطي.`);
+      if (onProgress) onProgress(`تحذير: عدد المقاطع المكتشفة (${merged.length}) أقل من المطلوب (${ayahCount * 2}). سنستخدم التقسيم الاحتياطي.`);
       // Fallback
       return fallbackSplit(merged, ayahCount);
   }

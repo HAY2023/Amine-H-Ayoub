@@ -37,8 +37,8 @@ export interface KidsProgress {
   playExpired: boolean;  // هل انتهى وقت اللعب
 }
 
-/** وجوه وألوان جاهزة لبطاقات الأطفال (محبّبة للصغار، بلا حاجة لرفع صور). */
-export const KID_AVATARS = ["🦁", "🐯", "🐰", "🐼", "🦊", "🐨", "🐸", "🐱", "🐶", "🦉", "🐥", "🦄"];
+/** وجوه (أيقونات lucide — لا إيموجي) وألوان جاهزة لبطاقات الأطفال. القيم مفاتيح تُربط في components/Avatar.tsx */
+export const KID_AVATARS = ["cat", "dog", "rabbit", "bird", "fish", "bug", "squirrel", "turtle", "snail", "rat", "paw", "smile"];
 export const KID_COLORS = [
   "from-amber-400 to-orange-500",
   "from-sky-400 to-blue-500",
@@ -64,21 +64,21 @@ const LEGACY_HISTORY_KEY = "mushaf:kidsHistory:v1";
 const progKey = (id: string) => `${PROGRESS_BASE}:${id}`;
 const histKey = (id: string) => `${HISTORY_BASE}:${id}`;
 
-const DEFAULT_FIELDS = { goalMinutes: 5, playMinutes: 15, reward: "أحسنت، لقد فتحت الألعاب", lessonTime: "", coins: 0, inventory: [] as string[] };
+const DEFAULT_FIELDS = { goalMinutes: 5, playMinutes: 0, reward: "أحسنت، لقد فتحت الألعاب", lessonTime: "", coins: 0, inventory: [] as string[] };
 const DEFAULT_PROFILE: KidsProfile = { id: "default", name: "", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0], ...DEFAULT_FIELDS };
 
-/** متجر المكافآت — وجوه وألوان تُفتح بالنقاط (محتوى داخلي، بلا أي ملفات خارجية). */
+/** متجر المكافآت — وجوه (أيقونات) وألوان تُفتح بالنقاط (محتوى داخلي، بلا أي ملفات خارجية). */
 export const SHOP_AVATARS: ShopItem[] = [
-  { id: "av-dragon", type: "avatar", label: "تنّين", value: "🐲", cost: 20 },
-  { id: "av-trex", type: "avatar", label: "ديناصور", value: "🦖", cost: 25 },
-  { id: "av-eagle", type: "avatar", label: "نسر", value: "🦅", cost: 25 },
-  { id: "av-dolphin", type: "avatar", label: "دلفين", value: "🐬", cost: 30 },
-  { id: "av-peacock", type: "avatar", label: "طاووس", value: "🦚", cost: 35 },
-  { id: "av-butterfly", type: "avatar", label: "فراشة", value: "🦋", cost: 35 },
-  { id: "av-octopus", type: "avatar", label: "أخطبوط", value: "🐙", cost: 40 },
-  { id: "av-rocket", type: "avatar", label: "صاروخ", value: "🚀", cost: 50 },
-  { id: "av-star", type: "avatar", label: "نجمة", value: "🌟", cost: 50 },
-  { id: "av-crown", type: "avatar", label: "تاج", value: "👑", cost: 80 },
+  { id: "av-rocket", type: "avatar", label: "صاروخ", value: "rocket", cost: 20 },
+  { id: "av-flame", type: "avatar", label: "شعلة", value: "flame", cost: 25 },
+  { id: "av-ghost", type: "avatar", label: "شبح", value: "ghost", cost: 25 },
+  { id: "av-sparkles", type: "avatar", label: "بريق", value: "sparkles", cost: 30 },
+  { id: "av-heart", type: "avatar", label: "قلب", value: "heart", cost: 30 },
+  { id: "av-gem", type: "avatar", label: "جوهرة", value: "gem", cost: 35 },
+  { id: "av-bot", type: "avatar", label: "روبوت", value: "bot", cost: 40 },
+  { id: "av-rainbow", type: "avatar", label: "قوس قزح", value: "rainbow", cost: 50 },
+  { id: "av-trophy", type: "avatar", label: "كأس", value: "trophy", cost: 50 },
+  { id: "av-crown", type: "avatar", label: "تاج", value: "crown", cost: 80 },
 ];
 export const SHOP_COLORS: ShopItem[] = [
   { id: "col-sunset", type: "color", label: "غروب", value: "from-pink-500 to-orange-400", cost: 20 },
@@ -89,6 +89,9 @@ export const SHOP_COLORS: ShopItem[] = [
   { id: "col-galaxy", type: "color", label: "مجرّة", value: "from-indigo-500 to-purple-700", cost: 50 },
 ];
 export const SHOP_ITEMS: ShopItem[] = [...SHOP_AVATARS, ...SHOP_COLORS];
+
+/** كل مفاتيح الوجوه الصالحة (للتحقّق وترقية القيم القديمة/الإيموجي). */
+export const ALL_AVATAR_KEYS = [...KID_AVATARS, ...SHOP_AVATARS.map(a => a.value)];
 
 const today = () => new Date().toDateString();
 const newId = (): string => {
@@ -104,7 +107,8 @@ const normalize = (p: Partial<KidsProfile>, i = 0): KidsProfile => ({
   ...DEFAULT_PROFILE,
   ...p,
   id: p.id || newId(),
-  avatar: p.avatar || KID_AVATARS[i % KID_AVATARS.length],
+  // ترقية الوجوه القديمة (إيموجي) إلى مفاتيح أيقونات صالحة
+  avatar: (p.avatar && ALL_AVATAR_KEYS.includes(p.avatar)) ? p.avatar : KID_AVATARS[i % KID_AVATARS.length],
   color: p.color || KID_COLORS[i % KID_COLORS.length],
   coins: typeof p.coins === "number" ? p.coins : 0,
   inventory: Array.isArray(p.inventory) ? p.inventory : [],

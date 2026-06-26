@@ -189,7 +189,7 @@ export function AudioUploadPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4" dir="rtl">
+    <div className="min-h-screen page-nour text-foreground p-4" dir="rtl">
       <div className="max-w-4xl mx-auto">
 
         {/* Header */}
@@ -199,8 +199,8 @@ export function AudioUploadPage() {
               <FileAudio className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">📤 رفع صوتي وصور</h1>
-              <p className="text-slate-400 text-sm">رفع تلاوة مع صور السورة لتقسيم ومعالجة تلقائية</p>
+              <h1 className="text-3xl font-bold text-gradient-gold">📤 رفع صوتي وصور</h1>
+              <p className="text-muted-foreground text-sm">رفع تلاوة مع صور السورة لتقسيم ومعالجة تلقائية</p>
             </div>
           </div>
         </div>
@@ -209,13 +209,13 @@ export function AudioUploadPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
 
           {/* Audio Upload */}
-          <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <FileAudio className="w-5 h-5 text-amber-400" />
+          <div className="card-nour rounded-xl shadow-soft animate-fade-up p-6">
+            <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+              <FileAudio className="w-5 h-5 text-accent" />
               الملف الصوتي
             </h2>
             <div
-              className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center transition-all hover:border-blue-500 hover:bg-slate-700/50 cursor-pointer"
+              className="border-2 border-dashed border-border rounded-lg p-8 text-center transition-all hover:border-accent/50 hover:bg-secondary/50 cursor-pointer"
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleAudioDrop}
@@ -228,25 +228,25 @@ export function AudioUploadPage() {
                 onChange={handleAudioSelect}
                 className="hidden"
               />
-              <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <p className="text-white font-medium mb-1">اسحب الملف أو اضغط للاختيار</p>
-              <p className="text-slate-400 text-sm">MP3 أو WAV (أقصى 50MB)</p>
+              <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-foreground font-medium mb-1">اسحب الملف أو اضغط للاختيار</p>
+              <p className="text-muted-foreground text-sm">MP3 أو WAV (أقصى 50MB)</p>
               {audioFile && (
-                <div className="mt-4 p-3 bg-emerald-950/50 border border-emerald-700 rounded-lg">
-                  <p className="text-emerald-400 text-sm font-medium">✅ {audioFile.name}</p>
+                <div className="mt-4 p-3 bg-success/10 border border-success/40 rounded-lg">
+                  <p className="text-success text-sm font-medium">✅ {audioFile.name}</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Image Upload */}
-          <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <ImageIcon className="w-5 h-5 text-amber-400" />
+          <div className="card-nour rounded-xl shadow-soft p-6">
+            <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+              <ImageIcon className="w-5 h-5 text-accent" />
               صور السورة (اختياري)
             </h2>
             <div
-              className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center transition-all hover:border-blue-500 hover:bg-slate-700/50 cursor-pointer"
+              className="border-2 border-dashed border-border rounded-lg p-8 text-center transition-all hover:border-accent/50 hover:bg-secondary/50 cursor-pointer"
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleImageDrop}
@@ -259,12 +259,12 @@ export function AudioUploadPage() {
                 onChange={handleImageSelect}
                 className="hidden"
               />
-              <ImageIcon className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <p className="text-white font-medium mb-1">اسحب الصورة أو اضغط للاختيار</p>
-              <p className="text-slate-400 text-sm">JPG أو PNG</p>
+              <ImageIcon className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-foreground font-medium mb-1">اسحب الصورة أو اضغط للاختيار</p>
+              <p className="text-muted-foreground text-sm">JPG أو PNG</p>
               {imageFile && (
-                <div className="mt-4 p-3 bg-emerald-950/50 border border-emerald-700 rounded-lg">
-                  <p className="text-emerald-400 text-sm font-medium">✅ {imageFile.name}</p>
+                <div className="mt-4 p-3 bg-success/10 border border-success/40 rounded-lg">
+                  <p className="text-success text-sm font-medium">✅ {imageFile.name}</p>
                 </div>
               )}
             </div>
@@ -272,22 +272,22 @@ export function AudioUploadPage() {
         </div>
 
         {/* Configuration */}
-        <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 mb-6">
-          <h2 className="text-lg font-bold text-white mb-4">⚙️ السورة</h2>
+        <div className="card-nour rounded-xl shadow-soft p-6 mb-6">
+          <h2 className="text-lg font-bold text-foreground mb-4">⚙️ السورة</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">رقم السورة</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">رقم السورة</label>
               <input
                 type="number"
                 min={1}
                 max={114}
                 value={surahNumber}
                 onChange={e => setSurahNumber(parseInt(e.target.value))}
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                className="w-full px-4 py-2 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:border-accent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">اسم السورة (قابل للتعديل)</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">اسم السورة (قابل للتعديل)</label>
               <input
                 type="text"
                 value={currentSurah.name}
@@ -295,12 +295,12 @@ export function AudioUploadPage() {
                   // السماح بتعديل الاسم
                   currentSurah.name = e.target.value;
                 }}
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-amber-300 font-bold focus:outline-none focus:border-blue-500"
+                className="w-full px-4 py-2 bg-secondary border border-border rounded-lg text-accent font-bold focus:outline-none focus:border-accent"
               />
             </div>
           </div>
-          <div className="mt-4 p-3 bg-emerald-950/50 border border-emerald-700 rounded-lg">
-            <p className="text-emerald-400 text-sm">📖 عدد الآيات: <span className="font-bold">{currentSurah.ayahCount}</span></p>
+          <div className="mt-4 p-3 bg-success/10 border border-success/40 rounded-lg">
+            <p className="text-success text-sm">📖 عدد الآيات: <span className="font-bold">{currentSurah.ayahCount}</span></p>
           </div>
         </div>
 
@@ -309,7 +309,7 @@ export function AudioUploadPage() {
           <button
             onClick={handleProcess}
             disabled={!audioFile || state.status === "uploading" || state.status === "processing"}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-slate-600 disabled:to-slate-700 text-white font-bold py-4 rounded-xl transition-all active:scale-95"
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-muted disabled:to-muted text-white font-bold py-4 rounded-xl transition-all active:scale-95"
           >
             {state.status === "uploading" && "📤 جاري الرفع..."}
             {state.status === "processing" && "⏳ جاري المعالجة..."}
@@ -319,47 +319,47 @@ export function AudioUploadPage() {
           {/* Progress Bar */}
           {state.status !== "idle" && (
             <div className="mt-4">
-              <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
                 <div
                   className="bg-gradient-to-r from-blue-500 to-cyan-500 h-full transition-all duration-300"
                   style={{ width: `${state.progress}%` }}
                 />
               </div>
-              <p className="text-slate-400 text-sm mt-2 text-center">{state.progress}%</p>
+              <p className="text-muted-foreground text-sm mt-2 text-center">{state.progress}%</p>
             </div>
           )}
         </div>
 
         {/* Error Message */}
         {state.status === "error" && (
-          <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 flex items-start gap-3 mb-6">
-            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div className="bg-destructive/15 border border-destructive/40 rounded-xl p-4 flex items-start gap-3 mb-6">
+            <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-red-400 font-bold">❌ خطأ</p>
-              <p className="text-red-300 text-sm mt-1">{state.error}</p>
+              <p className="text-destructive font-bold">❌ خطأ</p>
+              <p className="text-destructive text-sm mt-1">{state.error}</p>
             </div>
           </div>
         )}
 
         {/* Success Message */}
         {state.status === "completed" && (
-          <div className="bg-green-900/30 border border-green-700 rounded-xl p-4 mb-6">
+          <div className="bg-success/10 border border-success/40 rounded-xl p-4 mb-6">
             <div className="flex items-center gap-3 mb-4">
-              <CheckCircle2 className="w-5 h-5 text-green-400" />
-              <span className="text-green-400 font-bold">✅ تمت المعالجة بنجاح!</span>
+              <CheckCircle2 className="w-5 h-5 text-success" />
+              <span className="text-success font-bold">✅ تمت المعالجة بنجاح!</span>
             </div>
             <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
               <div>
-                <p className="text-slate-400">المدة</p>
-                <p className="text-green-400 font-bold">{state.duration?.toFixed(1)}s</p>
+                <p className="text-muted-foreground">المدة</p>
+                <p className="text-success font-bold">{state.duration?.toFixed(1)}s</p>
               </div>
               <div>
-                <p className="text-slate-400">وقت المعالجة</p>
-                <p className="text-green-400 font-bold">{state.processingTime}ms</p>
+                <p className="text-muted-foreground">وقت المعالجة</p>
+                <p className="text-success font-bold">{state.processingTime}ms</p>
               </div>
               <div>
-                <p className="text-slate-400">المقاطع</p>
-                <p className="text-green-400 font-bold">{state.segments.length}</p>
+                <p className="text-muted-foreground">المقاطع</p>
+                <p className="text-success font-bold">{state.segments.length}</p>
               </div>
             </div>
           </div>
@@ -367,9 +367,9 @@ export function AudioUploadPage() {
 
         {/* Results Table */}
         {state.segments.length > 0 && (
-          <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-700 bg-slate-700/50">
-              <h3 className="text-white font-bold flex items-center gap-2">
+          <div className="card-nour rounded-xl shadow-soft overflow-hidden">
+            <div className="px-6 py-4 border-b border-border bg-secondary/50">
+              <h3 className="text-foreground font-bold flex items-center gap-2">
                 <Play className="w-4 h-4" />
                 المقاطع ({state.segments.length})
               </h3>
@@ -377,18 +377,18 @@ export function AudioUploadPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-slate-700 bg-slate-700/50">
-                    <th className="px-6 py-3 text-right text-xs font-bold text-slate-300">الآية</th>
-                    <th className="px-6 py-3 text-right text-xs font-bold text-slate-300">المتحدث</th>
-                    <th className="px-6 py-3 text-right text-xs font-bold text-slate-300">البداية (ث)</th>
-                    <th className="px-6 py-3 text-right text-xs font-bold text-slate-300">النهاية (ث)</th>
-                    <th className="px-6 py-3 text-right text-xs font-bold text-slate-300">المدة (ث)</th>
+                  <tr className="border-b border-border bg-secondary/50">
+                    <th className="px-6 py-3 text-right text-xs font-bold text-muted-foreground">الآية</th>
+                    <th className="px-6 py-3 text-right text-xs font-bold text-muted-foreground">المتحدث</th>
+                    <th className="px-6 py-3 text-right text-xs font-bold text-muted-foreground">البداية (ث)</th>
+                    <th className="px-6 py-3 text-right text-xs font-bold text-muted-foreground">النهاية (ث)</th>
+                    <th className="px-6 py-3 text-right text-xs font-bold text-muted-foreground">المدة (ث)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {state.segments.map((seg, i) => (
-                    <tr key={i} className="border-b border-slate-700 hover:bg-slate-700/30">
-                      <td className="px-6 py-3 text-slate-300">
+                    <tr key={i} className="border-b border-border hover:bg-secondary/30">
+                      <td className="px-6 py-3 text-muted-foreground">
                         {seg.ayah ? `آية ${seg.ayah}` : "-"}
                       </td>
                       <td className="px-6 py-3">
@@ -402,9 +402,9 @@ export function AudioUploadPage() {
                           {seg.speaker === "teacher" ? "🎙️ معلم" : "👶 أطفال"}
                         </span>
                       </td>
-                      <td className="px-6 py-3 text-slate-300 font-mono">{seg.start.toFixed(2)}</td>
-                      <td className="px-6 py-3 text-slate-300 font-mono">{seg.end.toFixed(2)}</td>
-                      <td className="px-6 py-3 text-slate-300 font-mono">{(seg.end - seg.start).toFixed(2)}</td>
+                      <td className="px-6 py-3 text-muted-foreground font-mono">{seg.start.toFixed(2)}</td>
+                      <td className="px-6 py-3 text-muted-foreground font-mono">{seg.end.toFixed(2)}</td>
+                      <td className="px-6 py-3 text-muted-foreground font-mono">{(seg.end - seg.start).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>

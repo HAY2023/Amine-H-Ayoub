@@ -16,6 +16,8 @@ export default {
     extend: {
       fontFamily: {
         amiri: ["Amiri", "serif"],
+        quran: ["Amiri", "serif"],
+        sans: ["Cairo", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -51,12 +53,19 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
         gold: {
           DEFAULT: "hsl(var(--gold))",
           light: "hsl(var(--gold-light))",
         },
-        "green-dark": "hsl(var(--green-dark))",
-        "green-light": "hsl(var(--green-light))",
+        emerald: {
+          DEFAULT: "hsl(var(--emerald))",
+          light: "hsl(var(--emerald-light))",
+        },
+        ink: "hsl(var(--ink))",
         cream: "hsl(var(--cream))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -73,6 +82,17 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "calc(var(--radius) + 4px)",
+        "2xl": "calc(var(--radius) + 10px)",
+      },
+      boxShadow: {
+        soft: "var(--shadow-soft)",
+        gold: "var(--shadow-gold)",
+      },
+      backgroundImage: {
+        "grad-page": "var(--grad-page)",
+        "grad-gold": "linear-gradient(180deg, hsl(var(--gold-light)), hsl(var(--gold)))",
+        "grad-emerald": "linear-gradient(180deg, hsl(var(--emerald-light)), hsl(var(--emerald)))",
       },
       keyframes: {
         "accordion-down": {
@@ -87,11 +107,26 @@ export default {
           "0%, 100%": { boxShadow: "0 0 8px hsl(var(--gold) / 0.3)" },
           "50%": { boxShadow: "0 0 20px hsl(var(--gold) / 0.6)" },
         },
+        "fade-up": {
+          from: { opacity: "0", transform: "translateY(12px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "scale-up": {
+          from: { opacity: "0", transform: "scale(0.94)" },
+          to: { opacity: "1", transform: "scale(1)" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-6px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        "fade-up": "fade-up 0.4s cubic-bezier(0.22,1,0.36,1) both",
+        "scale-up": "scale-up 0.3s cubic-bezier(0.22,1,0.36,1) both",
+        float: "float 4s ease-in-out infinite",
       },
     },
   },

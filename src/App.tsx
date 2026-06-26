@@ -25,6 +25,7 @@ import SettingsPage, { applyTheme, getTheme } from "./pages/SettingsPage.tsx";
 import ParentDashboard from "./pages/ParentDashboard.tsx";
 import TeacherTools from "./pages/TeacherTools.tsx";
 import KidsShop from "./pages/KidsShop.tsx";
+import QuranStudent from "./pages/QuranStudent.tsx";
 import { getProfile, getAppMode, getProfiles } from "./data/kidsProfile";
 import { syncGameCatalogFromServer } from "./data/gameCatalog";
 import { toast } from "./hooks/use-toast";
@@ -78,7 +79,7 @@ const App = () => {
       if (hhmm >= t && last !== todayStr) {
         try { localStorage.setItem("mushaf:lessonNotified", todayStr); } catch { /* ignore */ }
         if (typeof Notification !== "undefined" && Notification.permission === "granted") { try { new Notification("حان وقت درس القرآن", { body: "اقرأ لتُفتح الألعاب" }); } catch { /* ignore */ } }
-        toast({ title: "🔔 حان وقت درس القرآن", description: "الألعاب مقفلة حتى تُكمل قراءتك اليوم" });
+        toast({ title: "حان وقت درس القرآن", description: "الألعاب مقفلة حتى تُكمل قراءتك اليوم" });
       }
     }, 60000);
     return () => clearInterval(id);
@@ -117,6 +118,7 @@ const App = () => {
               <Route path="/tools" element={<TeacherTools />} />
               <Route path="/profiles" element={<ProfilePicker />} />
               <Route path="/shop" element={<KidsShop />} />
+              <Route path="/student" element={<QuranStudent />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

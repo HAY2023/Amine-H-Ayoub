@@ -163,7 +163,7 @@ export function diarize(
   profiles: SpeakerProfile[],
   onProgress?: (msg: string) => void,
 ): DiarSegment[] {
-  onProgress?.("🔍 المرحلة 1/4: كشف مناطق الكلام (VAD)...");
+  onProgress?.("المرحلة 1/4: كشف مناطق الكلام (VAD)...");
   
   // ── Step 1: Energy-based VAD ──
   const hopSize = Math.floor(sampleRate * 0.01); // 10ms
@@ -233,10 +233,10 @@ export function diarize(
   // Filter noise
   regions = regions.filter(r => r.end - r.start > 0.3);
 
-  onProgress?.(`🔍 المرحلة 2/4: تم كشف ${regions.length} منطقة كلام`);
+  onProgress?.(`المرحلة 2/4: تم كشف ${regions.length} منطقة كلام`);
 
   // ── Step 2+3: Extract embeddings and classify ──
-  onProgress?.("🧠 المرحلة 3/4: استخراج بصمات الصوت وتصنيف المتحدثين...");
+  onProgress?.("المرحلة 3/4: استخراج بصمات الصوت وتصنيف المتحدثين...");
   
   const results: DiarSegment[] = [];
 
@@ -252,7 +252,7 @@ export function diarize(
     results.push({ start: r.start, end: r.end, speaker, confidence });
   }
 
-  onProgress?.("✅ المرحلة 4/4: التحقق والتصحيح...");
+  onProgress?.("المرحلة 4/4: التحقق والتصحيح...");
 
   // ── Step 4: Post-processing — smooth out isolated misclassifications ──
   // If a single segment is different from its neighbors, flip it
@@ -266,7 +266,7 @@ export function diarize(
     }
   }
 
-  onProgress?.(`✅ تم: ${results.length} مقطع مصنّف بنجاح!`);
+  onProgress?.(`تم: ${results.length} مقطع مصنّف بنجاح!`);
   return results;
 }
 

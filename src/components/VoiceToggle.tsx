@@ -1,3 +1,5 @@
+import { Mic, Baby } from "lucide-react";
+
 interface Props {
   voiceMode: "teacher" | "kids";
   onChange: (mode: "teacher" | "kids") => void;
@@ -18,7 +20,7 @@ const VoiceToggle = ({ voiceMode, onChange }: Props) => {
               : "bg-background text-foreground border-input hover:border-primary/50"
           }`}
         >
-          🎙️ صوت المعلم فقط
+          <Mic className="w-4 h-4 inline-block" /> صوت المعلم فقط
         </button>
         <button
           onClick={() => onChange("kids")}
@@ -28,7 +30,7 @@ const VoiceToggle = ({ voiceMode, onChange }: Props) => {
               : "bg-background text-foreground border-input hover:border-primary/50"
           }`}
         >
-          👦 المعلم مع الأطفال
+          <Baby className="w-4 h-4 inline-block" /> المعلم مع الأطفال
         </button>
       </div>
     </div>

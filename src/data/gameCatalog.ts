@@ -32,10 +32,10 @@ export const BUILTIN_GAMES: GameDef[] = [
   { id: "count", title: "عدّ الآيات", engine: "count", ageMin: 9, cost: 0, tint: "bg-teal-500/20 text-teal-300", icon: "Hash" },
   { id: "memhard", title: "ذاكرة متقدّمة", engine: "memory", ageMin: 10, cost: 0, tint: "bg-indigo-500/20 text-indigo-300", icon: "Grid3x3", params: { pairs: 6 } },
   { id: "quiz", title: "اختبار قرآني", engine: "quiz", ageMin: 12, cost: 0, tint: "bg-rose-500/20 text-rose-300", icon: "Trophy" },
-  // ألعاب تُشترى بالنجوم (أمثلة على المحتوى القابل للتوسعة)
-  { id: "quiz-mufassal", title: "اختبار المفصّل", engine: "quiz", ageMin: 8, cost: 30, tint: "bg-fuchsia-500/20 text-fuchsia-300", icon: "Trophy", params: { minSurah: 78 } },
-  { id: "memory-juz30", title: "ذاكرة جزء عمّ", engine: "memory", ageMin: 7, cost: 25, tint: "bg-cyan-500/20 text-cyan-300", icon: "LayoutGrid", params: { pairs: 5, minSurah: 78 } },
-  { id: "order-short", title: "ترتيب السور القصيرة", engine: "order", ageMin: 6, cost: 20, tint: "bg-lime-500/20 text-lime-300", icon: "ListOrdered", params: { minAyah: 3, maxAyah: 5 } },
+  // ألعاب إضافية بمحتوى مختلف — كلّها مجانية ومفتوحة (لا شراء، تبسيطاً لركن الطفل)
+  { id: "quiz-mufassal", title: "اختبار المفصّل", engine: "quiz", ageMin: 8, cost: 0, tint: "bg-fuchsia-500/20 text-fuchsia-300", icon: "Trophy", params: { minSurah: 78 } },
+  { id: "memory-juz30", title: "ذاكرة جزء عمّ", engine: "memory", ageMin: 7, cost: 0, tint: "bg-cyan-500/20 text-cyan-300", icon: "LayoutGrid", params: { pairs: 5, minSurah: 78 } },
+  { id: "order-short", title: "ترتيب السور القصيرة", engine: "order", ageMin: 6, cost: 0, tint: "bg-lime-500/20 text-lime-300", icon: "ListOrdered", params: { minAyah: 3, maxAyah: 5 } },
 ];
 
 let serverGames: GameDef[] = [];

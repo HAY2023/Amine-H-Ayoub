@@ -11,7 +11,7 @@ import { getBookmarks, addBookmark, removeBookmark, Bookmark } from "@/data/book
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
 import PinModal from "@/components/PinModal";
 import { toast } from "@/hooks/use-toast";
-import { Headphones } from "lucide-react";
+import { Headphones, Mic, VolumeX, Repeat, Download } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { isTauri, checkOfflineStatus, getOfflineAudioUrl, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
 import { useAudioContext } from "@/contexts/audioContext";
@@ -136,6 +136,9 @@ export default function QuranReader() {
     return () => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); window.removeEventListener("mushaf:sync_complete", refresh); };
   }, []);
   const imgSrcFor = (src: string) => customImgs[src] || src;
+  // تتبّع تحميل صور الصفحات: لا نُظهر التظليل إلا بعد ظهور الصورة (يمنع «تظليل فوق صفحة فارغة»)
+  const [loadedImgs, setLoadedImgs] = useState<Set<string>>(() => new Set());
+  const markLoaded = useCallback((src: string) => setLoadedImgs(prev => (prev.has(src) ? prev : new Set(prev).add(src))), []);
 
   // تتبّع وقت القراءة: تُفتح ألعاب ركن الأطفال بعد بلوغ الهدف اليومي
   useEffect(() => {
@@ -143,7 +146,7 @@ export default function QuranReader() {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       if (!getKidsEnabled()) return;   // وضع وليّ الأمر فقط: لا تتبّع لركن الأطفال
       const { justUnlocked } = addReadingMinutes(1);
-      if (justUnlocked) toast({ title: "🎉 أحسنت! فتحت ألعاب ركن الأطفال", description: "اذهب إلى ركن الأطفال 🧒" });
+      if (justUnlocked) toast({ title: "أحسنت! فتحت ألعاب ركن الأطفال", description: "اذهب إلى ركن الأطفال" });
     }, 60000);
     return () => clearInterval(id);
   }, []);
@@ -367,6 +370,7 @@ export default function QuranReader() {
   const isSeekingRef = useRef(false);
   const expectedStartTimeRef = useRef(0);
   const internalPauseRef = useRef(false); // guards against external pause listener firing on internal pauses
+  const autoFollowRef = useRef(false); // true عندما يتغيّر الصفحة بسبب متابعة التشغيل لسورة ممتدّة على صفحتين (يمنع إيقاف الصوت)
 
   // Register mushaf audio with central AudioContext
   useEffect(() => {
@@ -483,6 +487,8 @@ export default function QuranReader() {
   useEffect(() => { localStorage.setItem(STORAGE_KEY, String(currentPage)); }, [currentPage]);
 
   useEffect(() => {
+    // تغيُّر الصفحة بسبب متابعة التشغيل لسورة ممتدّة على صفحتين: لا توقف الصوت ولا تُصفّر الحالة
+    if (autoFollowRef.current) { autoFollowRef.current = false; return; }
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     setActiveSurah(null); setIsPlaying(false); currentAyahRef.current = -1; currentBoxIndexRef.current = -1;
     setSelectedSurahIdx(0); setSelectedAyah(-1);
@@ -534,6 +540,31 @@ export default function QuranReader() {
     currentAyahRef.current = ayahNum;
     currentBoxIndexRef.current = boxIndex ?? -1;
     stopAtRef.current = null;
+
+    // متابعة عبر الصفحات: إن كان صندوق هذه الآية في صفحة غير المعروضة، اقلب إليها دون إيقاف الصوت
+    // (لا يقع هذا للسور المضمّنة لأن كل سورة على صفحة واحدة — يُفعَّل فقط لسورة موزّعة على صفحتين)
+    {
+      const allBoxes = pages.flatMap(p => getPageAyahBoxes(p.src));
+      const tgtIdx = boxIndex !== undefined ? boxIndex : allBoxes.findIndex(b => b.surah === surah.number && b.ayah === ayahNum);
+      if (tgtIdx >= 0) {
+        let ownerActual = -1, acc = 0;
+        for (let pi = 0; pi < pages.length; pi++) {
+          const len = getPageAyahBoxes(pages[pi].src).length;
+          if (tgtIdx < acc + len) { ownerActual = pi; break; }
+          acc += len;
+        }
+        if (ownerActual >= 0 && ownerActual !== actualPage) {
+          let displayIdx = ownerActual;
+          if (isShuffled && shuffledPageOrder.length > 0) displayIdx = shuffledPageOrder.indexOf(ownerActual);
+          else if (customPageOrder.length > 0) displayIdx = customPageOrder.indexOf(ownerActual);
+          if (displayIdx >= 0) {
+            currentBoxIndexRef.current = -1;   // يُعاد التظليل بعد ظهور صناديق الصفحة الجديدة
+            autoFollowRef.current = true;
+            setCurrentPage(displayIdx);
+          }
+        }
+      }
+    }
 
     const startPlayback = () => {
       const sp: Speaker = forceSpeaker ?? "teacher";
@@ -627,7 +658,7 @@ export default function QuranReader() {
       if (a.duration > 0) startPlayback();
       else a.addEventListener("loadedmetadata", startPlayback, { once: true });
     }
-  }, [actualPage, resolveAudioSrc]);
+  }, [actualPage, resolveAudioSrc, isShuffled, shuffledPageOrder, customPageOrder]);
 
   const advanceSurah = useCallback((sp: Speaker) => {
     if (!activeSurah) return;
@@ -958,6 +989,21 @@ export default function QuranReader() {
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, [controlsOpen, navigate, goPrev, goNext]);
 
+  // تحميل مسبق لصور الصفحة الحالية وجيرانها (تظهر فوراً عند التنقّل) — بأولوية عالية للحالية
+  useEffect(() => {
+    [currentPage, currentPage + 1, currentPage - 1]
+      .filter(d => d >= 0 && d < totalDisplayPages)
+      .forEach((d, order) => {
+        const p = pages[getActualPageIndex(d)];
+        if (!p) return;
+        const img = new Image();
+        try { (img as HTMLImageElement & { fetchPriority?: string }).fetchPriority = order === 0 ? "high" : "low"; } catch { /* ignore */ }
+        img.decoding = "async";
+        img.src = imgSrcFor(p.src);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, totalDisplayPages, getActualPageIndex, customImgs, pages]);
+
   const visiblePages = useMemo(() => {
     // صفحة واحدة فقط دائماً (حتى على الحاسوب)
     return [pages[getActualPageIndex(currentPage)]].filter(Boolean) as PageInfo[];
@@ -1092,8 +1138,18 @@ export default function QuranReader() {
                 className={`relative ${isDesktop ? 'shadow-none' : 'shadow-xl'}`}
                 style={{ aspectRatio: `${PAGE_IMAGE_SIZE.width}/${PAGE_IMAGE_SIZE.height}`, height: '100%', maxWidth: '100%' }}
               >
-                <img src={imgSrcFor(page.src)} alt={page.name} className="absolute inset-0 w-full h-full select-none animate-fade-in" draggable={false} />
-                {!hideShading && (
+                <img src={imgSrcFor(page.src)} alt={page.name}
+                  className={`absolute inset-0 w-full h-full select-none transition-opacity duration-300 ${loadedImgs.has(page.src) ? "opacity-100" : "opacity-0"}`}
+                  draggable={false} decoding="async"
+                  onLoad={() => markLoaded(page.src)} onError={() => markLoaded(page.src)}
+                  ref={(el) => { if (!el) return; (el as HTMLImageElement & { fetchPriority?: string }).fetchPriority = "high"; if (el.complete && el.naturalWidth > 0) markLoaded(page.src); }} />
+                {/* هيكل تحميل لطيف حتى تظهر الصورة (لا تظليل فوق فراغ) */}
+                {!loadedImgs.has(page.src) && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-card">
+                    <div className="w-10 h-10 rounded-full border-[3px] border-accent/25 border-t-accent animate-spin" />
+                  </div>
+                )}
+                {loadedImgs.has(page.src) && !hideShading && (
                 <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${PAGE_IMAGE_SIZE.width} ${PAGE_IMAGE_SIZE.height}`} preserveAspectRatio="none">
                   {getPageAyahBoxes(page.src).map((box, i) => (
                     <rect
@@ -1288,11 +1344,11 @@ export default function QuranReader() {
                   <div className="mr-2">
                     {isDownloading[selectedSurah.number] ? (
                       <div className="text-[10px] bg-amber-100/10 text-amber-500 border border-amber-500/20 font-bold px-2 py-1 rounded-full animate-pulse flex items-center gap-1">
-                        <span>⏳ جاري التحميل {downloadProgress[selectedSurah.number] || 0}%</span>
+                        <Download className="w-3 h-3 animate-pulse" /><span>جاري التحميل {downloadProgress[selectedSurah.number] || 0}%</span>
                       </div>
                     ) : offlineStatus[selectedSurah.number] ? (
                       <div className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold px-2 py-1 rounded-full flex items-center gap-1">
-                        <span>✓ متوفر أوفلاين</span>
+                        <Check className="w-3 h-3" /><span>متوفر أوفلاين</span>
                       </div>
                     ) : (
                       <button
@@ -1304,7 +1360,7 @@ export default function QuranReader() {
                         }}
                         className="rounded-full bg-blue-600 hover:bg-blue-700 px-2 py-1 text-[10px] font-bold text-white shadow-sm flex items-center gap-1 transition-colors"
                       >
-                        📥 تحميل أوفلاين
+                        <Download className="w-3 h-3" /> تحميل أوفلاين
                       </button>
                     )}
                   </div>
@@ -1330,10 +1386,10 @@ export default function QuranReader() {
               {/* Play mode buttons - 2x2 grid for clarity */}
               <div className="grid grid-cols-2 gap-1.5 mb-3">
                 {([
-                  { mode: "teacher" as PlayMode, label: "معلم فقط", emoji: "🎙️", desc: "تشغيل المعلم وحده", activeColor: "bg-amber-400/20 border-amber-400/50 text-amber-800" },
-                  { mode: "kids" as PlayMode, label: "طفل فقط", emoji: "👦", desc: "تشغيل الطفل وحده", activeColor: "bg-sky-400/20 border-sky-400/50 text-sky-800" },
-                  { mode: "both" as PlayMode, label: "تصحيح", emoji: "🎧", desc: "المعلم ثم الطفل", activeColor: "bg-violet-400/20 border-violet-400/50 text-violet-800" },
-                ]).map(({ mode, label, emoji, desc, activeColor }) => (
+                  { mode: "teacher" as PlayMode, label: "معلم فقط", Icon: Mic, desc: "تشغيل المعلم وحده", activeColor: "bg-amber-400/20 border-amber-400/50 text-amber-800" },
+                  { mode: "kids" as PlayMode, label: "طفل فقط", Icon: Baby, desc: "تشغيل الطفل وحده", activeColor: "bg-sky-400/20 border-sky-400/50 text-sky-800" },
+                  { mode: "both" as PlayMode, label: "تصحيح", Icon: Headphones, desc: "المعلم ثم الطفل", activeColor: "bg-violet-400/20 border-violet-400/50 text-violet-800" },
+                ]).map(({ mode, label, Icon, desc, activeColor }) => (
                   <button
                     key={mode}
                     onClick={() => { 
@@ -1348,7 +1404,7 @@ export default function QuranReader() {
                     }`}
                     title={desc}
                   >
-                    <span className="text-base leading-none">{emoji}</span>
+                    <Icon className="w-5 h-5" />
                     <span>{label}</span>
                   </button>
                 ))}
@@ -1359,7 +1415,7 @@ export default function QuranReader() {
                   const hasKids = timings?.kidsStart !== undefined || (timings?.kids && timings.kids.length > 0);
                   if (!hasKids) return (
                     <div className="py-2.5 px-2 rounded-xl text-xs font-bold border border-dashed border-border/40 flex flex-col items-center gap-0.5 text-foreground/30 cursor-not-allowed" title="لا يتوفر صوت الطفل">
-                      <span className="text-base leading-none opacity-40">🔇</span>
+                      <VolumeX className="w-5 h-5 opacity-40" />
                       <span>معاً</span>
                     </div>
                   );
@@ -1382,7 +1438,7 @@ export default function QuranReader() {
                       }`}
                       title="تشغيل المعلم والطفل في نفس الوقت"
                     >
-                      <span className="text-base leading-none">🔊</span>
+                      <Volume2 className="w-5 h-5" />
                       <span>معاً</span>
                     </button>
                   );
@@ -1396,7 +1452,7 @@ export default function QuranReader() {
                     ? "bg-sky-100/50 text-sky-700 border border-sky-200/50" 
                     : "bg-amber-100/50 text-amber-700 border border-amber-200/50"
                 }`}>
-                  <span>{currentSpeakerRef.current === "kids" ? "👦" : "🎙️"}</span>
+                  {currentSpeakerRef.current === "kids" ? <Baby className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                   <span>يتحدث الآن: {currentSpeakerRef.current === "kids" ? "الطفل" : "المعلم"}</span>
                   <div className="flex items-center gap-[2px] h-3">
                     {[0, 1, 2].map((i) => (
@@ -1408,7 +1464,7 @@ export default function QuranReader() {
 
               {isSimultaneousPlaying && (
                 <div className="flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg mb-3 text-xs font-bold bg-emerald-100/50 text-emerald-700 border border-emerald-200/50 animate-fade-in">
-                  <span>🔊</span>
+                  <Volume2 className="w-4 h-4" />
                   <span>المعلم والطفل معاً</span>
                   <div className="flex items-center gap-[2px] h-3">
                     {[0, 1, 2].map((i) => (
@@ -1424,7 +1480,7 @@ export default function QuranReader() {
               </label>
 
               <div className="flex items-center gap-2 text-sm font-bold text-foreground/80 mt-2">
-                <span>🔁 تكرار الآية:</span>
+                <span className="inline-flex items-center gap-1"><Repeat className="w-4 h-4" /> تكرار الآية:</span>
                 <select
                   value={repeatCount}
                   onChange={(e) => setRepeatCount(Number(e.target.value))}

@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Pencil, Scissors, Link2, ChevronLeft } from "lucide-react";
+import { ArrowRight, Pencil, Scissors, Link2, ChevronLeft, GraduationCap } from "lucide-react";
 
 const TOOLS = [
+  { to: "/student", Icon: GraduationCap, name: "ركن طالب القرآن", desc: "مؤقّت · مكتبة صوتية · بحث في الكلمات · مدرّب تلاوة", tint: "bg-teal-500/20 text-teal-300" },
   { to: "/calibrate", Icon: Pencil, name: "المعايرة (التظليل)", desc: "ضبط مواضع الآيات والسور ورفع صفحات المصحف", tint: "bg-violet-500/20 text-violet-300" },
   { to: "/recitation-methods", Icon: Scissors, name: "تقسيم الصوت", desc: "تقسيم صوت السورة (معلم/طفل) بسرعة ودقّة", tint: "bg-sky-500/20 text-sky-300" },
   { to: "/link", Icon: Link2, name: "ربط الصوت بالتظليل", desc: "رفع صوت → تقسيم → ربط بالآيات في مكان واحد", tint: "bg-emerald-500/20 text-emerald-300" },
@@ -10,26 +11,40 @@ const TOOLS = [
 export default function TeacherTools() {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white" dir="rtl">
-      <div className="mx-auto max-w-md px-4 py-4 space-y-3">
+    <div className="min-h-screen page-nour text-foreground" dir="rtl">
+      {/* وهج ذهبي زخرفي علوي */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-accent/10 to-transparent" aria-hidden="true" />
+
+      <div className="relative mx-auto max-w-md px-4 py-5 space-y-5">
         <header className="flex items-center justify-between">
-          <button onClick={() => navigate("/")} className="flex h-10 items-center gap-1 rounded-full bg-slate-700 px-4 text-sm font-bold hover:bg-slate-600 active:scale-95"><ArrowRight className="h-4 w-4" /> المصحف</button>
-          <h1 className="font-extrabold text-lg text-amber-300">أدوات المعلّم</h1>
+          <button onClick={() => navigate("/")} className="flex h-10 items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold border border-border hover:brightness-95 active:scale-95 transition-all shadow-soft"><ArrowRight className="h-4 w-4" /> المصحف</button>
           <span className="w-16" />
         </header>
 
-        <p className="text-xs text-slate-400 text-center leading-relaxed">أدوات إعداد المحتوى (للمعلّم/ولي الأمر). رتّب الصفحات، ظلّل الآيات، وقسّم الصوت واربطه.</p>
+        {/* بطاقة العنوان الفاخرة */}
+        <div className="card-nour relative overflow-hidden p-6 text-center animate-fade-up shadow-soft">
+          <div className="pointer-events-none absolute -top-10 -left-10 h-32 w-32 rounded-full bg-accent/10 blur-2xl" aria-hidden="true" />
+          <div className="pointer-events-none absolute -bottom-12 -right-8 h-32 w-32 rounded-full bg-primary/10 blur-2xl" aria-hidden="true" />
+          <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/15 text-accent shadow-soft animate-float">
+            <GraduationCap className="h-7 w-7" />
+          </span>
+          <h1 className="font-extrabold text-2xl text-gradient-gold">أدوات المعلّم</h1>
+          <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+            أدوات إعداد المحتوى (للمعلّم/ولي الأمر). رتّب الصفحات، ظلّل الآيات، وقسّم الصوت واربطه.
+          </p>
+        </div>
 
-        <div className="space-y-2">
-          {TOOLS.map(t => (
+        <div className="space-y-2.5">
+          {TOOLS.map((t, i) => (
             <button key={t.to} onClick={() => navigate(t.to)}
-              className="w-full flex items-center gap-3 rounded-2xl bg-slate-800/80 border border-slate-700 p-3 text-right hover:border-amber-500/40 active:scale-[0.99] transition-all">
-              <span className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${t.tint}`}><t.Icon className="w-6 h-6" /></span>
+              style={{ animationDelay: `${(i + 1) * 70}ms` }}
+              className="group w-full flex items-center gap-3 card-nour p-3.5 text-right hover:border-accent/50 active:scale-[0.99] transition-all animate-fade-up">
+              <span className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-soft transition-transform group-hover:scale-105 ${t.tint}`}><t.Icon className="w-6 h-6" /></span>
               <span className="flex-1 min-w-0">
-                <span className="block font-bold text-white">{t.name}</span>
-                <span className="block text-[11px] text-slate-400">{t.desc}</span>
+                <span className="block font-bold text-foreground">{t.name}</span>
+                <span className="block text-[11px] text-muted-foreground leading-relaxed">{t.desc}</span>
               </span>
-              <ChevronLeft className="w-5 h-5 text-slate-500" />
+              <ChevronLeft className="w-5 h-5 text-muted-foreground transition-transform group-hover:-translate-x-0.5 group-hover:text-accent" />
             </button>
           ))}
         </div>

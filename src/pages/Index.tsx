@@ -284,7 +284,7 @@ const Index = () => {
           <PointsDisplay points={points} level={level} />
         </div>
 
-        <main className={`mx-auto px-4 py-4 space-y-4 transition-all duration-300 ${isSplitView && isDesktop ? 'max-w-7xl' : 'max-w-2xl'}`}>
+        <main className={`mx-auto px-4 py-4 space-y-4 transition-all duration-300 animate-fade-up ${isSplitView && isDesktop ? 'max-w-7xl' : 'max-w-2xl'}`}>
           {/* Search + Shuffle */}
           <div className="flex gap-2 items-center">
             <div className="flex-1">
@@ -338,14 +338,14 @@ const Index = () => {
 
           {/* Update Checker Banner */}
           {updateInfo && (
-            <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-amber-400/20 border border-amber-400/40 text-amber-900 text-sm font-bold shadow-md animate-fade-in text-right" dir="rtl">
+            <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-accent/15 border border-accent/40 text-accent-foreground text-sm font-bold shadow-soft animate-fade-in text-right" dir="rtl">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-amber-400/30 flex items-center justify-center text-amber-800 animate-bounce shrink-0">
+                <div className="w-8 h-8 rounded-full bg-accent/25 flex items-center justify-center text-accent animate-bounce shrink-0">
                   ✨
                 </div>
                 <div>
-                  <p className="font-extrabold font-amiri text-base leading-tight">تحديث جديد متوفر: نسخة {updateInfo.latestVersion}</p>
-                  <p className="text-xs font-normal text-amber-800/80 mt-0.5">قم بتحميل التحديث للحصول على أحدث التلاوات والميزات للعمل بدون إنترنت!</p>
+                  <p className="font-extrabold font-quran text-base leading-tight">تحديث جديد متوفر: نسخة {updateInfo.latestVersion}</p>
+                  <p className="text-xs font-normal text-muted-foreground mt-0.5">قم بتحميل التحديث للحصول على أحدث التلاوات والميزات للعمل بدون إنترنت!</p>
                 </div>
               </div>
               <a
@@ -367,7 +367,7 @@ const Index = () => {
                   📥
                 </div>
                 <div>
-                  <p className="font-extrabold font-amiri text-base leading-tight">تلاوات جديدة متوفرة للتحميل أوفلاين</p>
+                  <p className="font-extrabold font-quran text-base leading-tight">تلاوات جديدة متوفرة للتحميل أوفلاين</p>
                   <p className="text-xs font-normal text-sky-800/80 mt-0.5">
                     {downloadAllProgress.active 
                       ? `جاري تحميل السورة ${downloadAllProgress.current} من أصل ${downloadAllProgress.total}...`
@@ -390,7 +390,7 @@ const Index = () => {
             <div className="space-y-3">
               <div className="text-center py-6">
                 <div className="w-14 h-14 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-muted-foreground text-lg font-amiri">
+                <p className="text-muted-foreground text-lg font-quran">
                   جاري جلب التلاوات العطرة...
                 </p>
                 <p className="text-muted-foreground/70 text-sm mt-1">
@@ -452,7 +452,7 @@ const Index = () => {
                           draggable={false}
                         />
                         <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
-                          <p className="text-white font-amiri font-bold text-sm text-center">
+                          <p className="text-white font-quran font-bold text-sm text-center">
                             {currentSurah?.name ? `سورة ${currentSurah.name}` : ''}
                           </p>
                         </div>
@@ -460,7 +460,7 @@ const Index = () => {
                     ) : (
                       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/50">
                         <BookOpen className="w-16 h-16 mb-3 opacity-30" />
-                        <p className="font-amiri text-base">اختر سورة لعرض صفحة المصحف</p>
+                        <p className="font-quran text-base">اختر سورة لعرض صفحة المصحف</p>
                       </div>
                     )}
                   </div>

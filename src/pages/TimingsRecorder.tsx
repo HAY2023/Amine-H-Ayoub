@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
-import { Play, Pause, RotateCcw, Save, Check, Trash2, Wand2, Volume2, StopCircle, ArrowLeft, Link2 } from "lucide-react";
+import { Play, Pause, RotateCcw, Save, Check, Trash2, Wand2, Volume2, StopCircle, ArrowLeft, Link2, Mic, Loader2, Bot, Ruler } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings, AudioSegment } from "@/data/ayahTimings";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
@@ -250,24 +250,24 @@ const TimingsRecorder = () => {
   }, [current, segments]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white p-4" dir="rtl">
+    <div className="min-h-screen page-nour text-foreground p-4" dir="rtl">
       <div className="max-w-2xl mx-auto space-y-4">
         <header className="text-center py-3">
           <h1 className="text-2xl font-bold font-amiri bg-gradient-to-r from-amber-300 to-emerald-300 bg-clip-text text-transparent">
-            🎙️ تقسيم الصوت للآيات
+            <Mic className="w-4 h-4 inline-block" /> تقسيم الصوت للآيات
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             تقسيم ذكي عالي الدقة · استماع · حذف
           </p>
         </header>
 
         {/* Surah selector */}
-        <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-4">
-          <label className="text-sm font-bold text-slate-300 block mb-2">اختر السورة:</label>
+        <div className="card-nour backdrop-blur p-4 animate-fade-up">
+          <label className="text-sm font-bold text-muted-foreground block mb-2">اختر السورة:</label>
           <select
             value={surahNum}
             onChange={(e) => setSurahNum(parseInt(e.target.value, 10))}
-            className="w-full p-3 rounded-xl bg-slate-700 border border-slate-600 text-white font-amiri text-lg"
+            className="w-full p-3 rounded-xl bg-secondary border border-border text-secondary-foreground font-amiri text-lg"
           >
             {Object.entries(SURAH_NAMES).map(([n, name]) => (
               <option key={n} value={n}>
@@ -278,7 +278,7 @@ const TimingsRecorder = () => {
         </div>
 
         {/* Audio player */}
-        <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-4 space-y-4">
+        <div className="card-nour backdrop-blur p-4 space-y-4">
           <audio
             ref={audioRef}
             src={audioPath(surahNum)}
@@ -305,7 +305,7 @@ const TimingsRecorder = () => {
                 className="w-full accent-emerald-500"
                 dir="ltr"
               />
-              <div className="flex justify-between text-xs tabular-nums text-slate-400 mt-1" dir="ltr">
+              <div className="flex justify-between text-xs tabular-nums text-muted-foreground mt-1" dir="ltr">
                 <span className="font-bold text-emerald-400">{fmt(current)}</span>
                 <span>{fmt(duration)}</span>
               </div>
@@ -337,14 +337,14 @@ const TimingsRecorder = () => {
                 disabled={detecting || !duration}
                 className="p-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-1 shadow-lg shadow-violet-500/20 active:scale-[0.98] transition-transform text-xs"
               >
-                {detecting ? "⏳ تحليل..." : "🤖 كشف كل المقاطع"}
+                {detecting ? <><Loader2 className="w-4 h-4 inline-block" /> تحليل...</> : <><Bot className="w-4 h-4 inline-block" /> كشف كل المقاطع</>}
               </button>
               <button
                 onClick={() => autoDetectSegments(AYAH_COUNTS[surahNum] || 0)}
                 disabled={detecting || !duration}
                 className="p-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold disabled:opacity-40 flex items-center justify-center gap-1 shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-transform text-xs"
               >
-                {detecting ? "⏳ تحليل..." : `📐 تقسيم ${AYAH_COUNTS[surahNum]} آية`}
+                {detecting ? <><Loader2 className="w-4 h-4 inline-block" /> تحليل...</> : <><Ruler className="w-4 h-4 inline-block" /> تقسيم {AYAH_COUNTS[surahNum]} آية</>}
               </button>
             </div>
             <p className="text-[10px] text-violet-400 text-center">
@@ -359,7 +359,7 @@ const TimingsRecorder = () => {
             onClick={applyAndSave}
             className={`p-3 rounded-xl font-bold text-white shadow-lg active:scale-95 flex items-center justify-center gap-2 transition-all ${savedFlash ? "bg-emerald-600 shadow-emerald-500/30" : "bg-gradient-to-r from-blue-600 to-blue-700 shadow-blue-500/20"}`}
           >
-            {savedFlash ? <><Check className="w-5 h-5" /> تم الحفظ ✅</> : <><Save className="w-5 h-5" /> حفظ</>}
+            {savedFlash ? <><Check className="w-5 h-5" /> تم الحفظ</> : <><Save className="w-5 h-5" /> حفظ</>}
           </button>
            <button
             onClick={clearSaved}
@@ -385,8 +385,8 @@ const TimingsRecorder = () => {
 
         {/* Segments list */}
         {segments.length > 0 && (
-          <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-4">
-            <p className="font-bold mb-3 text-sm text-slate-300">
+          <div className="card-nour backdrop-blur p-4">
+            <p className="font-bold mb-3 text-sm text-muted-foreground">
               المقاطع ({segments.length}):
             </p>
             <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
@@ -401,7 +401,7 @@ const TimingsRecorder = () => {
                         ? "bg-emerald-950/50 border-emerald-500/50 shadow-lg shadow-emerald-500/10"
                         : isSegPlaying
                         ? "bg-violet-950/50 border-violet-500/50"
-                        : "bg-slate-700/50 border-slate-600/30"
+                        : "bg-muted border-border"
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -422,10 +422,10 @@ const TimingsRecorder = () => {
                         <input
                           value={seg.label || ""}
                           onChange={(e) => updateSegment(seg.id, { label: e.target.value })}
-                          className="bg-transparent text-sm font-bold w-full outline-none text-white placeholder:text-slate-500"
+                          className="bg-transparent text-sm font-bold w-full outline-none text-foreground placeholder:text-muted-foreground"
                           placeholder={`مقطع ${i + 1}`}
                         />
-                        <div className="text-xs text-slate-400 font-mono" dir="ltr">
+                        <div className="text-xs text-muted-foreground font-mono" dir="ltr">
                           {fmt(seg.start)} → {fmt(seg.end)} · {(seg.end - seg.start).toFixed(1)}s
                         </div>
                       </div>
@@ -434,7 +434,7 @@ const TimingsRecorder = () => {
                       <select
                         value={seg.speaker}
                         onChange={(e) => updateSegment(seg.id, { speaker: e.target.value as AudioSegment["speaker"] })}
-                        className="rounded-lg bg-slate-600 border-0 px-2 py-1 text-xs text-white"
+                        className="rounded-lg bg-secondary text-secondary-foreground border-0 px-2 py-1 text-xs"
                       >
                         <option value="teacher">معلم</option>
                         <option value="kids">طفل</option>
@@ -470,7 +470,7 @@ const TimingsRecorder = () => {
         {/* Reset */}
         <button
           onClick={resetAll}
-          className="w-full p-3 rounded-xl bg-slate-800/50 border border-slate-700 text-slate-400 font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+          className="w-full p-3 rounded-xl bg-card border border-border text-muted-foreground font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           <RotateCcw className="w-4 h-4" /> إعادة من الصفر
         </button>
