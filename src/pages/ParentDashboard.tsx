@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, BookOpen, Clock, Bell, Baby, Check, Gift, Plus, Trash2, Minus, Star, X } from "lucide-react";
-import { getProfile, updateProfile, getProgress, getHistory, getProfiles, getActiveId, setActiveProfile, addProfile, removeProfile, getAppMode, setAppMode, KID_AVATARS, KID_COLORS, KidsProfile, KidsProgress, DayLog } from "../data/kidsProfile";
+import { getProfile, updateProfile, getProgress, getHistory, getProfiles, getActiveId, setActiveProfile, addProfile, removeProfile, getAppMode, setAppMode, kidsRouteBlocked, KID_AVATARS, KID_COLORS, KidsProfile, KidsProgress, DayLog } from "../data/kidsProfile";
 import { isKidsMode } from "../data/kidsLock";
 import Avatar from "../components/Avatar";
 import { toast } from "../hooks/use-toast";
@@ -21,6 +21,7 @@ export default function ParentDashboard() {
   const [showAdd, setShowAdd] = useState(false);
   const [newKid, setNewKid] = useState({ name: "", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0] });
   useEffect(() => { if (isKidsMode()) navigate("/games"); }, [navigate]);
+  useEffect(() => { if (kidsRouteBlocked()) navigate("/audio", { replace: true }); }, [navigate]);
 
   const refresh = () => {
     setProfiles(getProfiles());

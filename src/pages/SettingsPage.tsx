@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X, BarChart3, Wrench, User, Users, GraduationCap, Settings as SettingsIcon } from "lucide-react";
-import { getAppMode, setAppMode, getProfiles, addProfile, type AppMode } from "../data/kidsProfile";
+import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X, BarChart3, Wrench, User, Users, GraduationCap, BookOpen, Lock, KeyRound, Settings as SettingsIcon } from "lucide-react";
+import { isMushafDevEnabled, setMushafDev } from "../utils/tauriUtils";
+import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHidden, type AppMode } from "../data/kidsProfile";
 import { syncCoordinatesFromServer } from "../data/ayahCoordinates";
 import { syncTimingsFromServer } from "../data/ayahTimings";
 import { syncSurahRegionsFromServer } from "../data/surahRegions";
 import { syncCustomPagesFromServer } from "../data/customPages";
 import { downloadEverything } from "../data/offlineDownload";
-import { isKidsMode, hasKidsPin } from "../data/kidsLock";
+import { isKidsMode, hasKidsPin, setKidsPin } from "../data/kidsLock";
 import PinModal from "../components/PinModal";
 import { toast } from "../hooks/use-toast";
 
@@ -50,6 +51,16 @@ export default function SettingsPage() {
   const [termsOpen, setTermsOpen] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [dlPct, setDlPct] = useState<number | null>(null);
+  const [owner, setOwner] = useState(isMushafDevEnabled);
+  useEffect(() => { const h = () => setOwner(isMushafDevEnabled()); window.addEventListener("mushaf:ownermode", h); return () => window.removeEventListener("mushaf:ownermode", h); }, []);
+  const disableOwner = () => { setMushafDev(false); setOwner(false); toast({ title: "أُوقف وضع المالك", description: "عادت رسالة التطوير للمستخدمين" }); };
+  const [hideKids, setHideKids] = useState(kidsHidden);
+  const toggleHideKids = () => { const next = !kidsHidden(); setKidsHidden(next); setHideKids(next); toast({ title: next ? "أُخفي ركن الأطفال والألعاب بالكامل" : "أُعيد إظهار ركن الأطفال والألعاب" }); };
+  // كلمة المرور (رمز وليّ الأمر): تعيين/تغيير/إزالة من الإعدادات
+  const [hasPin, setHasPin] = useState(hasKidsPin);
+  const [pinFlow, setPinFlow] = useState<null | "verifyOld" | "setNew">(null);
+  const changePin = () => setPinFlow(hasKidsPin() ? "verifyOld" : "setNew");
+  const removePin = () => { setKidsPin(""); setHasPin(false); toast({ title: "أُزيلت كلمة المرور" }); };
 
   const changeMode = (m: AppMode) => {
     setMode(m); setAppMode(m);
@@ -87,7 +98,7 @@ export default function SettingsPage() {
 
       <div className="relative mx-auto max-w-md px-4 py-5 space-y-5">
         <header className="flex items-center justify-between">
-          <button onClick={() => navigate("/")} className="flex h-10 items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold border border-border hover:brightness-95 active:scale-95 transition-all shadow-soft">
+          <button onClick={() => navigate("/audio")} className="flex h-10 items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold border border-border hover:brightness-95 active:scale-95 transition-all shadow-soft">
             <ArrowRight className="h-4 w-4" /> رجوع
           </button>
           <span className="w-16" />
@@ -98,7 +109,7 @@ export default function SettingsPage() {
           <div className="pointer-events-none absolute -top-10 -left-10 h-28 w-28 rounded-full bg-accent/10 blur-2xl" aria-hidden="true" />
           <span className="mx-auto mb-2.5 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/15 text-accent shadow-soft"><SettingsIcon className="h-6 w-6" /></span>
           <h1 className="font-extrabold text-2xl text-gradient-gold">الإعدادات</h1>
-          <p className="mt-1 text-xs text-muted-foreground">خصّص المظهر وأدوات الأهل والمحتوى</p>
+          <p className="mt-1 text-xs text-muted-foreground">خصّص المظهر وأدوات الأهل</p>
         </div>
 
         {/* ===== المظهر ===== */}
@@ -113,7 +124,9 @@ export default function SettingsPage() {
           </div>
         </Section>
 
-        {/* ===== من يستخدم التطبيق؟ ===== */}
+        {/* ===== من يستخدم التطبيق؟ + الأطفال ===== */}
+        {/* تُخفى عن المستخدمين عند الإخفاء، لكنها تبقى ظاهرة للمالك ليختبرها */}
+        {(!hideKids || owner) && (<>
         <Section label="من يستخدم التطبيق؟">
           <div className="p-3 space-y-2">
             <div className="grid grid-cols-3 gap-2">
@@ -137,19 +150,41 @@ export default function SettingsPage() {
           <Item icon={<BarChart3 className="w-5 h-5" />} title="لوحة وليّ الأمر" desc="إعدادات كل طفل · التقدّم والسجلّ · تذكير الدرس" onClick={openParent} />
           <Item icon={<Baby className="w-5 h-5" />} title="ركن الأطفال (الألعاب)" desc="دخول الألعاب والمكافآت" onClick={() => navigate("/games")} />
         </Section>
+        </>)}
 
         {/* ===== التعلّم والمحتوى ===== */}
         <Section label="التعلّم والمحتوى">
           <Item icon={<GraduationCap className="w-5 h-5" />} title="ركن طالب القرآن" desc="مؤقّت · مكتبة صوتية · بحث في الكلمات · مدرّب تلاوة" onClick={() => navigate("/student")} />
-          <Item icon={<Wrench className="w-5 h-5" />} title="أدوات المحتوى" desc="التظليل (المعايرة) · تقسيم الصوت · ربط الصوت بالآيات" onClick={() => navigate("/tools")} />
+        </Section>
+
+        {/* ===== كلمة المرور (رمز وليّ الأمر) — متاحة دائماً ===== */}
+        <Section label="كلمة المرور">
+          <Item icon={<KeyRound className="w-5 h-5" />} title={hasPin ? "تغيير كلمة المرور" : "تعيين كلمة المرور"} desc="رمز من ٤ أرقام يحمي الإعدادات ولوحة وليّ الأمر والخروج من ركن الأطفال" onClick={changePin} />
+          {hasPin && <Item icon={<X className="w-5 h-5" />} title="إزالة كلمة المرور" desc="إلغاء الحماية بالرمز" onClick={removePin} />}
         </Section>
 
         {/* ===== التطبيق ===== */}
         <Section label="التطبيق">
           <Item icon={<RefreshCw className="w-5 h-5" />} title="تحقّق من التحديث" desc="جلب أحدث نسخة من التطبيق" onClick={checkUpdate} />
-          <Item icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل للعمل دون إنترنت" desc="السور والصوت والصفحات إلى جهازك" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-success w-12 text-center">{dlPct}%</span> : undefined} />
+          <Item icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل للعمل دون إنترنت" desc="السور والتلاوات إلى جهازك" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-success w-12 text-center">{dlPct}%</span> : undefined} />
           <Item icon={<FileText className="w-5 h-5" />} title="بنود الاستخدام" onClick={() => setTermsOpen(true)} />
         </Section>
+
+        {/* ===== أدوات المالك (تظهر فقط في وضع المالك) ===== */}
+        {owner && (
+          <Section label="أدوات المالك (قيد التطوير)">
+            <Item icon={<BookOpen className="w-5 h-5" />} title="المصحف التفاعلي" desc="القارئ — غير مُطلق للمستخدمين بعد" onClick={() => navigate("/")} />
+            <Item icon={<Wrench className="w-5 h-5" />} title="أدوات المحتوى" desc="التظليل (المعايرة) · تقسيم الصوت · ربط الصوت بالآيات" onClick={() => navigate("/tools")} />
+            <Item
+              icon={<Baby className="w-5 h-5" />}
+              title={hideKids ? "إظهار ركن الأطفال والألعاب" : "إخفاء ركن الأطفال والألعاب"}
+              desc={hideKids ? "ظاهر الآن للمستخدمين" : "يُخفي كل ما يخصّ الأطفال تماماً — للإطلاق بالسماع فقط"}
+              onClick={toggleHideKids}
+              right={<span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${hideKids ? "bg-destructive/15 text-destructive" : "bg-success/15 text-success"}`}>{hideKids ? "مخفيّ" : "ظاهر"}</span>}
+            />
+            <Item icon={<Lock className="w-5 h-5" />} title="إيقاف وضع المالك" desc="إظهار رسالة التطوير للمستخدمين" onClick={disableOwner} />
+          </Section>
+        )}
 
         {/* اشتراك القارئ — بطاقة مميّزة */}
         <a href={RECITER_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-2xl bg-gradient-to-l from-red-600/25 to-card border border-red-500/40 p-3 hover:border-red-400 active:scale-[0.99] transition-all shadow-soft">
@@ -163,6 +198,13 @@ export default function SettingsPage() {
 
       {showPin && (
         <PinModal mode="verify" title="رمز وليّ الأمر" onSuccess={() => { setShowPin(false); navigate("/parent"); }} onCancel={() => setShowPin(false)} />
+      )}
+
+      {pinFlow === "verifyOld" && (
+        <PinModal mode="verify" title="أدخل كلمة المرور الحالية" onSuccess={() => setPinFlow("setNew")} onCancel={() => setPinFlow(null)} />
+      )}
+      {pinFlow === "setNew" && (
+        <PinModal mode="set" title="اختر كلمة مرور جديدة (٤ أرقام)" onSuccess={() => { setHasPin(true); setPinFlow(null); toast({ title: "تم حفظ كلمة المرور" }); }} onCancel={() => setPinFlow(null)} />
       )}
 
       {termsOpen && (

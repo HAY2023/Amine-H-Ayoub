@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Star, Lock, Sparkles, Palette } from "lucide-react";
-import { getCoins, getProfile, ownItem, unlockItem, equipAvatar, equipColor, KID_AVATARS, KID_COLORS, SHOP_AVATARS, SHOP_COLORS } from "../data/kidsProfile";
+import { getCoins, getProfile, ownItem, unlockItem, equipAvatar, equipColor, kidsRouteBlocked, KID_AVATARS, KID_COLORS, SHOP_AVATARS, SHOP_COLORS } from "../data/kidsProfile";
 import Avatar from "../components/Avatar";
 import { toast } from "../hooks/use-toast";
 
 export default function KidsShop() {
   const navigate = useNavigate();
+  useEffect(() => { if (kidsRouteBlocked()) navigate("/audio", { replace: true }); }, [navigate]);
   const [, force] = useState(0);
   const refresh = () => force(x => x + 1);
 

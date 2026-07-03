@@ -5,15 +5,19 @@ import PointsDisplay from "@/components/PointsDisplay";
 import SurahList from "@/components/SurahList";
 import SearchBar from "@/components/SearchBar";
 import CustomPlayer, { CustomPlayerHandle } from "@/components/CustomPlayer";
-import MushafPage from "@/components/MushafPage";
+import MushafComingSoon from "@/components/MushafComingSoon";
+import PinModal from "@/components/PinModal";
 import BottomNav, { TabType } from "@/components/BottomNav";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
 import RecitationMethods from "./RecitationMethods";
-import { Shuffle, ListOrdered, Loader2, SplitSquareHorizontal, BookOpen } from "lucide-react";
-import { isTauri, checkOfflineStatus, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
+import { Shuffle, ListOrdered, Loader2, SplitSquareHorizontal, BookOpen, Baby, ChevronLeft, Settings } from "lucide-react";
+import { isTauri, shouldHideMushaf, checkOfflineStatus, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
 import { checkForUpdates, UpdateInfo } from "../utils/updateChecker";
+import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
+import { kidsEnabled as getKidsEnabled, addReadingMinutes } from "@/data/kidsProfile";
+import { toast } from "@/hooks/use-toast";
 
 const LAST_SURAH_KEY = "audio:lastSurah";
 const LAST_TIME_KEY = "audio:lastTime";
@@ -60,6 +64,44 @@ const Index = () => {
   // Desktop split view
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" ? window.innerWidth >= 1024 : false);
   const [isSplitView, setIsSplitView] = useState(false);
+
+  // ركن الأطفال (الألعاب) داخل قسم التلاوات
+  const [kidsCorner, setKidsCorner] = useState(getKidsEnabled);   // ركن الأطفال مُفعَّل؟ (ليس وضع وليّ الأمر فقط)
+  const [kidsMode, setKidsMode] = useState(isKidsMode);
+  const [pinAction, setPinAction] = useState<null | "enter" | "settings">(null);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const isAudioPlayingRef = useRef(false);
+  useEffect(() => { isAudioPlayingRef.current = isAudioPlaying; }, [isAudioPlaying]);
+  useEffect(() => { const h = () => setKidsCorner(getKidsEnabled()); window.addEventListener("mushaf:appmode", h); return () => window.removeEventListener("mushaf:appmode", h); }, []);
+  useEffect(() => { const h = () => setKidsMode(isKidsMode()); window.addEventListener("mushaf:kidsmode", h); return () => window.removeEventListener("mushaf:kidsmode", h); }, []);
+
+  // ── ركن الأطفال: الدخول يقفل التطبيق برمز ولي الأمر (كما في القارئ) ──
+  const enterKids = () => { if (hasKidsPin()) { setKidsLocked(true); navigate("/games"); } else setPinAction("enter"); };
+  // ── الإعدادات: محميّة برمز ولي الأمر إن وُجد (القارئ مخفيّ الآن، فمدخل الإعدادات هنا) ──
+  const openSettings = () => { if (hasKidsPin()) setPinAction("settings"); else navigate("/settings"); };
+
+  // تتبّع دقائق الاستماع لفتح الألعاب — عندما يكون المصحف مخفيّاً (الاستماع بديلٌ للقراءة)
+  useEffect(() => {
+    if (!shouldHideMushaf()) return;
+    const id = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      if (!getKidsEnabled()) return;         // وضع وليّ الأمر فقط: لا تتبّع
+      if (!isAudioPlayingRef.current) return; // لا نحتسب إلا أثناء استماع فعلي
+      const { justUnlocked } = addReadingMinutes(1);
+      if (justUnlocked) toast({ title: "أحسنت! فتحت ألعاب ركن الأطفال", description: "اذهب إلى ركن الأطفال" });
+    }, 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  // شريط التنقّل السفلي: «المصحف» في نسخة التطبيق يعرض رسالة اعتذار بدل القارئ
+  const handleTab = useCallback((tab: TabType) => {
+    if (tab === "mushaf") {
+      if (shouldHideMushaf()) setActiveTab("mushaf");   // مخفيّ للمستخدمين → رسالة التطوير
+      else navigate("/");                                // وضع المالك → القارئ
+    } else {
+      setActiveTab(tab);
+    }
+  }, [navigate]);
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
@@ -252,8 +294,14 @@ const Index = () => {
   };
 
   if (activeTab === "mushaf") {
-    // Should not reach here normally, but fallback just in case
-    return <MushafPage onBack={() => setActiveTab("audio")} />;
+    // نسخة التطبيق فقط: المصحف قيد التطوير — رسالة اعتذار مع إبقاء شريط التنقّل
+    // (خلوص الشريط السفلي يُدار داخل MushafComingSoon عبر pb-28)
+    return (
+      <div className="min-h-screen">
+        <MushafComingSoon onGoListen={() => setActiveTab("audio")} />
+        <BottomNav activeTab={activeTab} onChange={handleTab} hasPlayer={!!currentSurah} />
+      </div>
+    );
   }
 
   if (activeTab === "methods") {
@@ -262,7 +310,7 @@ const Index = () => {
         <RecitationMethods onBack={() => setActiveTab("audio")} />
         <BottomNav
           activeTab={activeTab}
-          onChange={setActiveTab}
+          onChange={handleTab}
           hasPlayer={!!currentSurah}
         />
       </div>
@@ -278,11 +326,37 @@ const Index = () => {
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
 
       <div className="relative z-10 min-h-screen pb-40">
+        {/* مدخل الإعدادات — زرّ واضح بعنوان (يُخفى في وضع الطفل المقفل) */}
+        {!kidsMode && (
+          <button
+            onClick={openSettings}
+            className="absolute top-3 left-3 z-20 h-10 px-3.5 rounded-full bg-card/85 backdrop-blur border border-accent/40 shadow-soft flex items-center gap-1.5 text-sm font-bold text-foreground/85 hover:text-foreground hover:border-accent/70 active:scale-95 transition-all"
+          >
+            <Settings className="w-4 h-4 text-accent" /> الإعدادات
+          </button>
+        )}
         <AppHeader />
 
         <div className="flex justify-center mb-4">
           <PointsDisplay points={points} level={level} />
         </div>
+
+        {/* مدخل ركن الأطفال (الألعاب) من داخل قسم التلاوات */}
+        {kidsCorner && (
+          <div className="max-w-2xl mx-auto px-4 mb-4" dir="rtl">
+            <button
+              onClick={kidsMode ? () => navigate("/games") : enterKids}
+              className="w-full p-3.5 rounded-2xl bg-gradient-to-l from-accent/15 to-card border border-accent/40 shadow-soft flex items-center gap-3 active:scale-[0.99] transition-all"
+            >
+              <span className="w-11 h-11 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shrink-0"><Baby className="w-6 h-6" /></span>
+              <span className="flex-1 text-right">
+                <span className="block font-extrabold text-foreground">{kidsMode ? "الألعاب" : "ركن الأطفال"}</span>
+                <span className="block text-[11px] text-muted-foreground">{shouldHideMushaf() ? "استمع للتلاوات لتفتح الألعاب" : "ألعاب ومكافآت لتعلّم القرآن"}</span>
+              </span>
+              <ChevronLeft className="w-5 h-5 text-muted-foreground shrink-0" />
+            </button>
+          </div>
+        )}
 
         <main className={`mx-auto px-4 py-4 space-y-4 transition-all duration-300 animate-fade-up ${isSplitView && isDesktop ? 'max-w-7xl' : 'max-w-2xl'}`}>
           {/* Search + Shuffle */}
@@ -290,7 +364,8 @@ const Index = () => {
             <div className="flex-1">
               <SearchBar value={search} onChange={setSearch} />
             </div>
-            {isDesktop && (
+            {/* عرض المصحف جانبياً — يُخفى ما دام المصحف قيد التطوير */}
+            {isDesktop && !shouldHideMushaf() && (
               <button
                 onClick={() => setIsSplitView(v => !v)}
                 className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 border ${
@@ -484,20 +559,29 @@ const Index = () => {
           onPlayPrev={handlePlayPrev}
           autoNext={autoNext}
           onToggleAutoNext={() => setAutoNext(v => !v)}
+          onPlayingChange={setIsAudioPlaying}
         />
       )}
 
       <BottomNav
         activeTab={activeTab}
-        onChange={(tab) => {
-          if (tab === "mushaf") {
-            navigate("/");
-          } else {
-            setActiveTab(tab);
-          }
-        }}
+        onChange={handleTab}
         hasPlayer={!!currentSurah}
       />
+
+      {/* رمز ولي الأمر: تعيينه عند دخول ركن الأطفال أوّل مرّة، أو التحقّق منه للإعدادات */}
+      {pinAction && (
+        <PinModal
+          mode={pinAction === "enter" ? "set" : "verify"}
+          title={pinAction === "enter" ? "اختر رمز ولي الأمر (٤ أرقام)" : "أدخل الرمز للإعدادات"}
+          onSuccess={() => {
+            if (pinAction === "enter") { setKidsLocked(true); navigate("/games"); }
+            else if (pinAction === "settings") { navigate("/settings"); }
+            setPinAction(null);
+          }}
+          onCancel={() => setPinAction(null)}
+        />
+      )}
     </div>
   );
 };

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Youtube, Check, CloudDownload, Wrench, User, Baby, Users, Plus, Trash2, Minus, KeyRound, Shield } from "lucide-react";
 import { TermsText, RECITER_URL } from "../pages/SettingsPage";
 import { downloadEverything } from "../data/offlineDownload";
-import { setAppMode, addProfile, setActiveProfile, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
+import { setAppMode, addProfile, setActiveProfile, kidsHidden, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
 import { setKidsPin } from "../data/kidsLock";
 import Avatar from "./Avatar";
 
@@ -25,11 +25,15 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
   const [pin2, setPin2] = useState("");
   const [dl, setDl] = useState<{ busy: boolean; done: number; total: number; finished: boolean }>({ busy: false, done: 0, total: 0, finished: false });
 
-  const effMode: AppMode = mode ?? "both";
+  // إذا أخفى المالك ركن الأطفال: إطلاق بالسماع فقط — نتخطّى خطوات الأطفال ونثبّت وضع وليّ الأمر
+  const kidsOff = kidsHidden();
+  const effMode: AppMode = kidsOff ? "parent" : (mode ?? "both");
   // مفاتيح الخطوات: وضع وليّ الأمر لا يحتاج ملفّات أطفال؛ ركن الأطفال يعرض خطوة رمز اختيارية
-  const stepKeys = effMode === "parent"
-    ? ["welcome", "terms", "who", "subscribe", "download"]
-    : ["welcome", "terms", "who", "kids", "pin", "subscribe", "download"];
+  const stepKeys = kidsOff
+    ? ["welcome", "terms", "subscribe", "download"]
+    : effMode === "parent"
+      ? ["welcome", "terms", "who", "subscribe", "download"]
+      : ["welcome", "terms", "who", "kids", "pin", "subscribe", "download"];
   const cur = stepKeys[step];
   const lastIdx = stepKeys.length - 1;
   const pinValid = /^\d{4}$/.test(pin) && pin === pin2;
@@ -106,7 +110,7 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
                 <h1 className="text-4xl font-extrabold text-gradient-gold leading-tight">مرحباً بك</h1>
                 <p className="text-accent text-sm">بصوت القارئ الشيخ حاج أيوب أمين</p>
               </div>
-              <p className="text-muted-foreground leading-relaxed max-w-xs mx-auto">تطبيق تعليم القرآن للأطفال — يقرأ المعلّم وتُكرّر معه، مع ألعاب تعليمية وركن أطفال آمن، ويعمل دون إنترنت بعد التحميل.</p>
+              <p className="text-muted-foreground leading-relaxed max-w-xs mx-auto">{kidsOff ? "استمع إلى تلاوات القرآن الكريم برواية ورش بصوت الشيخ حاج أيوب أمين — ويعمل دون إنترنت بعد التحميل." : "تطبيق تعليم القرآن للأطفال — يقرأ المعلّم وتُكرّر معه، مع ألعاب تعليمية وركن أطفال آمن، ويعمل دون إنترنت بعد التحميل."}</p>
               <div aria-hidden className="mx-auto w-24 h-px bg-gradient-to-l from-transparent via-accent/60 to-transparent" />
             </div>
           )}
@@ -234,7 +238,7 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
                 <button onClick={startDownload} className="btn-emerald px-5 py-3"><CloudDownload className="w-5 h-5" /> حمّل كل شيء الآن</button>
               )}
               <p className="text-[11px] text-muted-foreground">يمكنك التحميل لاحقاً من الإعدادات.</p>
-              {effMode === "parent" && (
+              {effMode === "parent" && !kidsOff && (
                 <button onClick={finishToTools} className="mx-auto inline-flex items-center justify-center gap-2 rounded-xl bg-secondary border border-border text-accent font-bold px-4 py-2.5 text-sm hover:brightness-95 transition-all active:scale-95">
                   <Wrench className="w-4 h-4" /> ابدأ بإعداد المحتوى (أدوات المعلّم)
                 </button>

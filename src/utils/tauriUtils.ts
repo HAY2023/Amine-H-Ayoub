@@ -5,6 +5,21 @@ export const isTauri = (): boolean => {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 };
 
+// ── وضع المالك (المطوّر): يفتح لصاحب التطبيق المصحفَ وأدوات المحتوى لإكمال العمل ──
+// المصحف غير جاهز للإطلاق، فيُخفى عن جميع المستخدمين (ويب وتطبيق) وتظهر رسالة تطوير،
+// إلا لصاحب التطبيق حين يُفعّل وضع المالك (بالنقر ٥ مرّات على أيقونة رسالة التطوير).
+const OWNER_KEY = "mushaf:devReader";
+/** هل وضع المالك مُفعَّل على هذا الجهاز؟ */
+export const isMushafDevEnabled = (): boolean => {
+  try { return localStorage.getItem(OWNER_KEY) === "1"; } catch { return false; }
+};
+export const setMushafDev = (on: boolean): void => {
+  try { localStorage.setItem(OWNER_KEY, on ? "1" : "0"); } catch { /* ignore */ }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:ownermode"));
+};
+/** يُخفى المصحف (تُعرض رسالة التطوير) لكل المستخدمين ما لم يُفعّل صاحب التطبيق وضع المالك. */
+export const shouldHideMushaf = (): boolean => !isMushafDevEnabled();
+
 export interface DownloadProgressPayload {
   surah_number: number;
   progress: number;

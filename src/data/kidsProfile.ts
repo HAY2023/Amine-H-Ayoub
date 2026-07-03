@@ -6,6 +6,7 @@
  * "الملف النشِط" حالياً، فلا حاجة لتغيير صفحات الألعاب/لوحة وليّ الأمر/القارئ.
  */
 import { supabase, hasValidSupabaseKey } from "../lib/supabase";
+import { isMushafDevEnabled } from "../utils/tauriUtils";
 
 /** وضع التطبيق: لوليّ الأمر فقط، للأطفال فقط، أو معاً. */
 export type AppMode = "parent" | "kids" | "both";
@@ -38,7 +39,7 @@ export interface KidsProgress {
 }
 
 /** وجوه (أيقونات lucide — لا إيموجي) وألوان جاهزة لبطاقات الأطفال. القيم مفاتيح تُربط في components/Avatar.tsx */
-export const KID_AVATARS = ["cat", "dog", "rabbit", "bird", "fish", "bug", "squirrel", "turtle", "snail", "rat", "paw", "smile"];
+export const KID_AVATARS = ["boy", "girl", "child", "baby", "smile", "grin", "cool", "wow", "wink", "happy"];
 export const KID_COLORS = [
   "from-amber-400 to-orange-500",
   "from-sky-400 to-blue-500",
@@ -68,17 +69,19 @@ const DEFAULT_FIELDS = { goalMinutes: 5, playMinutes: 0, reward: "أحسنت، �
 const DEFAULT_PROFILE: KidsProfile = { id: "default", name: "", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0], ...DEFAULT_FIELDS };
 
 /** متجر المكافآت — وجوه (أيقونات) وألوان تُفتح بالنقاط (محتوى داخلي، بلا أي ملفات خارجية). */
+// أطفال بأزياء فخمة تُفتح بالنجوم — كلّما زاد الفخم زاد سعره (مال كثير)
 export const SHOP_AVATARS: ShopItem[] = [
-  { id: "av-rocket", type: "avatar", label: "صاروخ", value: "rocket", cost: 20 },
-  { id: "av-flame", type: "avatar", label: "شعلة", value: "flame", cost: 25 },
-  { id: "av-ghost", type: "avatar", label: "شبح", value: "ghost", cost: 25 },
-  { id: "av-sparkles", type: "avatar", label: "بريق", value: "sparkles", cost: 30 },
-  { id: "av-heart", type: "avatar", label: "قلب", value: "heart", cost: 30 },
-  { id: "av-gem", type: "avatar", label: "جوهرة", value: "gem", cost: 35 },
-  { id: "av-bot", type: "avatar", label: "روبوت", value: "bot", cost: 40 },
-  { id: "av-rainbow", type: "avatar", label: "قوس قزح", value: "rainbow", cost: 50 },
-  { id: "av-trophy", type: "avatar", label: "كأس", value: "trophy", cost: 50 },
-  { id: "av-crown", type: "avatar", label: "تاج", value: "crown", cost: 80 },
+  { id: "av-hero", type: "avatar", label: "بطل خارق", value: "hero", cost: 100 },
+  { id: "av-ninja", type: "avatar", label: "نينجا", value: "ninja", cost: 120 },
+  { id: "av-artist", type: "avatar", label: "فنّان", value: "artist", cost: 130 },
+  { id: "av-graduate", type: "avatar", label: "متخرّج", value: "graduate", cost: 140 },
+  { id: "av-detective", type: "avatar", label: "محقّق", value: "detective", cost: 150 },
+  { id: "av-astronaut", type: "avatar", label: "رائد فضاء", value: "astronaut", cost: 180 },
+  { id: "av-king", type: "avatar", label: "أمير بتاج", value: "king", cost: 200 },
+  { id: "av-queen", type: "avatar", label: "أميرة بتاج", value: "queen", cost: 220 },
+  { id: "av-superstar", type: "avatar", label: "نجم لامع", value: "superstar", cost: 260 },
+  { id: "av-champion", type: "avatar", label: "بطل الميدان", value: "champion", cost: 320 },
+  { id: "av-royal", type: "avatar", label: "التاج الملكي", value: "royal", cost: 400 },
 ];
 export const SHOP_COLORS: ShopItem[] = [
   { id: "col-sunset", type: "color", label: "غروب", value: "from-pink-500 to-orange-400", cost: 20 },
@@ -150,8 +153,24 @@ export const setAppMode = (m: AppMode) => {
   upsert(APPMODE_KEY, m);
   if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:appmode"));
 };
-/** هل ركن الأطفال مُفعَّل (أي ليس "وليّ الأمر فقط")؟ */
-export const kidsEnabled = (): boolean => getAppMode() !== "parent";
+/** إخفاء كامل لركن الأطفال والألعاب (زرّ المالك) — يُخفي كل ما يخصّ الأطفال في كل التطبيق. */
+const HIDEKIDS_KEY = "mushaf:hideKids";
+export const kidsHidden = (): boolean => {
+  if (typeof window === "undefined") return false;
+  try { return localStorage.getItem(HIDEKIDS_KEY) === "1"; } catch { return false; }
+};
+export const setKidsHidden = (on: boolean) => {
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem(HIDEKIDS_KEY, on ? "1" : "0"); } catch { /* ignore */ }
+  window.dispatchEvent(new Event("mushaf:appmode"));   // يحدّث القارئ وصفحة السماع فوراً
+};
+
+/** هل ركن الأطفال مُفعَّل؟ (ليس "وليّ الأمر فقط" ولم يُخفِه المالك) */
+export const kidsEnabled = (): boolean => !kidsHidden() && getAppMode() !== "parent";
+
+/** يُمنع الوصول لصفحات الأطفال (ألعاب/متجر/لوحة/اختيار) للمستخدمين عند إخفائها،
+ *  لكن يُسمح للمالك بدخولها للتجربة والاختبار. */
+export const kidsRouteBlocked = (): boolean => kidsHidden() && !isMushafDevEnabled();
 
 /* ---------------- إدارة الملفّات ---------------- */
 const persistProfiles = (arr: KidsProfile[]) => {

@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Plus, Settings, Sparkles } from "lucide-react";
-import { getProfiles, getAppMode, setActiveProfile, type KidsProfile } from "../data/kidsProfile";
+import { getProfiles, getAppMode, setActiveProfile, kidsRouteBlocked, type KidsProfile } from "../data/kidsProfile";
 import { hasKidsPin } from "../data/kidsLock";
 import PinModal from "./PinModal";
 import Avatar from "./Avatar";
@@ -21,6 +21,8 @@ export default function ProfilePicker({ onPicked }: { onPicked?: () => void }) {
   const profiles: KidsProfile[] = getProfiles();
   const appMode = getAppMode();
   const [showPin, setShowPin] = useState(false);
+  // إذا أخفى المالك ركن الأطفال: هذه الصفحة (لا كطبقة فتح) تُحوَّل للسماع
+  useEffect(() => { if (kidsRouteBlocked() && !onPicked) navigate("/audio", { replace: true }); }, [navigate, onPicked]);
 
   const close = () => { markPicked(); onPicked?.(); };
   const goHome = () => { close(); if (!onPicked) navigate("/"); };
