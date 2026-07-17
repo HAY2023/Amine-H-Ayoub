@@ -27,6 +27,8 @@ import ParentDashboard from "./pages/ParentDashboard.tsx";
 import TeacherTools from "./pages/TeacherTools.tsx";
 import KidsShop from "./pages/KidsShop.tsx";
 import QuranStudent from "./pages/QuranStudent.tsx";
+import Login from "./pages/Login.tsx";
+import OAuthConsent from "./pages/OAuthConsent.tsx";
 import { getProfile, getAppMode, getProfiles, kidsEnabled } from "./data/kidsProfile";
 import { syncGameCatalogFromServer } from "./data/gameCatalog";
 import { toast } from "./hooks/use-toast";
@@ -127,6 +129,8 @@ const App = () => {
               <Route path="/profiles" element={<ProfilePicker />} />
               <Route path="/shop" element={<KidsShop />} />
               <Route path="/student" element={<QuranStudent />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
