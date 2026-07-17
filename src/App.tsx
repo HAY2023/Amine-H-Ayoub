@@ -129,6 +129,8 @@ const App = () => {
               <Route path="/profiles" element={<ProfilePicker />} />
               <Route path="/shop" element={<KidsShop />} />
               <Route path="/student" element={<QuranStudent />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
