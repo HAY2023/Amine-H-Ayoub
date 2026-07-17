@@ -11,8 +11,8 @@ import BottomNav, { TabType } from "@/components/BottomNav";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
-import RecitationMethods from "./RecitationMethods";
-import { Shuffle, ListOrdered, Loader2, SplitSquareHorizontal, BookOpen, Baby, ChevronLeft, Settings } from "lucide-react";
+
+import { Shuffle, ListOrdered, Loader2, SplitSquareHorizontal, BookOpen, Baby, ChevronLeft, Settings, Play, Pause, Mic } from "lucide-react";
 import { isTauri, shouldHideMushaf, checkOfflineStatus, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
 import { checkForUpdates, UpdateInfo } from "../utils/updateChecker";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
@@ -110,9 +110,78 @@ const Index = () => {
   }, []);
 
   const currentMushafPage = useMemo(() => {
-    if (!currentSurah) return null;
+    if (!currentSurah || currentSurah.revelationType === "custom") return null;
     return getMushafPageForSurah(currentSurah.number);
   }, [currentSurah]);
+
+  // Unified Playlist State
+  const [combinedSurahs, setCombinedSurahs] = useState<SurahItem[]>([]);
+  const [isConfigLoaded, setIsConfigLoaded] = useState(false);
+
+  useEffect(() => {
+    if (loading || surahs.length === 0) return;
+    
+    let objectUrls: string[] = [];
+    let isMounted = true;
+    
+    const loadUnifiedList = async () => {
+      try {
+        const { getAllCustomAudios } = await import("@/data/customAudioStore");
+        const { syncPlaylist } = await import("@/data/playlistStore");
+        
+        const customAudios = await getAllCustomAudios();
+        const config = await syncPlaylist(surahs as any, customAudios as any);
+        
+        if (!isMounted) return;
+        
+        const customMap = new Map(customAudios.map(a => [a.id, a]));
+        const builtinMap = new Map(surahs.map(s => [s.number, s]));
+        
+        const mapped: SurahItem[] = [];
+        
+        for (const c of config) {
+          if (c.isHidden) continue;
+          
+          if (c.type === 'custom') {
+            const ca = customMap.get(c.originalId as string);
+            if (ca) {
+              const url = URL.createObjectURL(ca.blob);
+              objectUrls.push(url);
+              mapped.push({
+                number: 1000 + mapped.length, // unique high number
+                name: c.customName || ca.title,
+                englishName: "Custom Audio",
+                englishNameTranslation: "",
+                numberOfAyahs: 0,
+                revelationType: "custom",
+                audioSrc: url,
+              });
+            }
+          } else {
+            const s = builtinMap.get(Number(c.originalId));
+            if (s) {
+              mapped.push({
+                ...s,
+                name: c.customName || s.name,
+              });
+            }
+          }
+        }
+        
+        setCombinedSurahs(mapped);
+        setIsConfigLoaded(true);
+      } catch (err) {
+        console.error("Failed to load unified playlist:", err);
+      }
+    };
+    
+    loadUnifiedList();
+    
+    return () => {
+      isMounted = false;
+      objectUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [surahs, loading]);
 
   // Tauri Offline States
   const [offlineStatus, setOfflineStatus] = useState<Record<number, boolean>>({});
@@ -229,21 +298,22 @@ const Index = () => {
     }
   }, [surahs, currentSurah]);
 
+
   const displaySurahs = useMemo(() => {
-    const base = isShuffled ? shuffledSurahs : surahs;
+    const base = isShuffled ? shuffledSurahs : combinedSurahs;
     if (!search.trim()) return base;
     return base.filter((s) => s.name.includes(search.trim()));
-  }, [surahs, shuffledSurahs, isShuffled, search]);
+  }, [combinedSurahs, shuffledSurahs, isShuffled, search]);
 
   const handleShuffle = useCallback(() => {
     if (isShuffled) {
       setIsShuffled(false);
       setShuffledSurahs([]);
     } else {
-      setShuffledSurahs(shuffleArray(surahs));
+      setShuffledSurahs(shuffleArray(combinedSurahs));
       setIsShuffled(true);
     }
-  }, [isShuffled, surahs]);
+  }, [isShuffled, combinedSurahs]);
 
   const handleSelect = (surah: SurahItem) => {
     setResumeTime(0);
@@ -267,7 +337,7 @@ const Index = () => {
     }
   };
 
-  const activeSurahList = isShuffled ? shuffledSurahs : surahs;
+  const activeSurahList = isShuffled ? shuffledSurahs : combinedSurahs;
 
   const handlePlayNext = () => {
     if (!currentSurah || activeSurahList.length === 0) return;
@@ -300,19 +370,6 @@ const Index = () => {
       <div className="min-h-screen">
         <MushafComingSoon onGoListen={() => setActiveTab("audio")} />
         <BottomNav activeTab={activeTab} onChange={handleTab} hasPlayer={!!currentSurah} />
-      </div>
-    );
-  }
-
-  if (activeTab === "methods") {
-    return (
-      <div className="pb-24">
-        <RecitationMethods onBack={() => setActiveTab("audio")} />
-        <BottomNav
-          activeTab={activeTab}
-          onChange={handleTab}
-          hasPlayer={!!currentSurah}
-        />
       </div>
     );
   }
@@ -500,8 +557,9 @@ const Index = () => {
           {/* Split view layout */}
           {!loading && !error && (
             <div className={`${isSplitView && isDesktop ? 'flex gap-6' : ''}`}>
-              {/* Surah list */}
-              <div className={`${isSplitView && isDesktop ? 'w-1/2' : 'w-full'}`}>
+                {/* Surah list */}
+              <div className={`${isSplitView && isDesktop ? 'w-1/2' : 'w-full'} flex flex-col gap-6`}>
+                
                 <SurahList
                   surahs={displaySurahs}
                   currentPlaying={currentSurah?.number ?? null}
@@ -552,6 +610,7 @@ const Index = () => {
           surahName={currentSurah.name}
           surahNumber={currentSurah.number}
           audioSrc={currentSurah.audioSrc}
+          isCustom={currentSurah.revelationType === "custom"}
           initialTime={resumeTime}
           onClose={handleClose}
           onTimeUpdate={handleTimeUpdate}

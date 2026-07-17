@@ -53,8 +53,8 @@ export default function ProfilePicker({ onPicked }: { onPicked?: () => void }) {
         <div className="animate-fade-up flex flex-wrap items-start justify-center gap-6 sm:gap-8">
           {profiles.map(p => (
             <button key={p.id} onClick={() => pickChild(p.id)} className="group flex flex-col items-center gap-3 w-24 sm:w-28 active:scale-95 transition-transform">
-              <span className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-br ${p.color} flex items-center justify-center ring-2 ring-transparent ring-offset-2 ring-offset-background group-hover:ring-accent shadow-soft transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl`}>
-                <Avatar name={p.avatar} className="w-12 h-12 sm:w-14 sm:h-14 text-white drop-shadow" />
+              <span className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center ring-2 ring-transparent ring-offset-2 ring-offset-background group-hover:ring-accent rounded-full transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl">
+                <Avatar name={p.avatar} className="w-24 h-24 sm:w-28 sm:h-28 drop-shadow-md" />
               </span>
               <span className="font-bold text-center truncate w-full text-foreground group-hover:text-accent transition-colors">{p.name || "طفلي"}</span>
             </button>

@@ -37,7 +37,7 @@ export function AudioUploadPage() {
   }, [surahNumber, surahs]);
 
   // حفظ الملف في السيرفر
-  const saveToServer = async (type: string, data: any) => {
+  const saveToServer = async (type: string, data: unknown) => {
     try {
       const { error } = await supabase
         .from("upload_records")

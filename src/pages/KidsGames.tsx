@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Hash, Grid3x3, Flame, Sparkles, Gamepad2 } from "lucide-react";
+import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Hash, Grid3x3, Flame, Sparkles, Gamepad2, Puzzle } from "lucide-react";
 import { getAllSurahs } from "../data/quranData";
 import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
 import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked } from "../data/kidsProfile";
@@ -142,7 +142,6 @@ const CorpusGate = ({ failed, retry }: { failed: boolean; retry: () => void }) =
 function ListenEngine({ def }: { def: GameDef }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const pool = (() => { const p = poolFor(def).filter(s => hasCloudAudio(s.number)); return p.length >= 3 ? p : CLOUD; })();
-  // لا تتكرّر سورة السؤال السابق مباشرة — تنويع منطقي للأسئلة
   const newRound = (prev?: number) => {
     const cand = pool.filter(s => s.number !== prev);
     const o = shuffle(cand.length >= 3 ? cand : pool).slice(0, 3);
@@ -154,8 +153,20 @@ function ListenEngine({ def }: { def: GameDef }) {
   const [wrong, setWrong] = useState<number | null>(null);
   const g = useGame();
   const finished = qNum > ROUNDS;
-  const play = (n: number) => { const a = audioRef.current; if (!a) return; a.src = audioPath(n); a.currentTime = 0; a.play().catch(() => {}); };
-  useEffect(() => () => { audioRef.current?.pause(); }, []);   // إيقاف الصوت عند مغادرة اللعبة
+  
+  const play = (n: number) => { 
+    const a = audioRef.current; 
+    if (!a) return; 
+    const path = audioPath(n);
+    if (!a.src.endsWith(path) && a.src !== path) {
+      a.src = path;
+    }
+    a.currentTime = 0; 
+    a.play().catch(() => {}); 
+  };
+  
+  useEffect(() => () => { audioRef.current?.pause(); }, []);
+
   const choose = (n: number) => {
     if (reveal || finished) return;
     const nn = qNum + 1;
@@ -165,16 +176,20 @@ function ListenEngine({ def }: { def: GameDef }) {
       else audioRef.current?.pause();
     };
     if (n === round.answer.number) { g.correct(); go(); }
-    else { g.miss(); setWrong(n); setReveal(true); window.setTimeout(go, 1400); }   // يكشف الصحيح ثم ينتقل
+    else { g.miss(); setWrong(n); setReveal(true); window.setTimeout(go, 1400); }
   };
   const replay = () => { g.reset(); setQNum(1); const r = newRound(); setRound(r); setTimeout(() => play(r.answer.number), 250); };
   if (finished) return <ResultCard g={g} onReplay={replay} />;
   return (
     <div className="space-y-4 text-center">
-      <audio ref={audioRef} />
+      <audio ref={audioRef} src={audioPath(round.answer.number)} preload="auto" />
       <SessionBar q={qNum} />
       <p className="text-muted-foreground text-sm flex items-center justify-center gap-1"><Headphones className="w-4 h-4" /> استمع ثم اختر اسم السورة</p>
-      <button onClick={() => play(round.answer.number)} className="btn-emerald mx-auto w-20 h-20 rounded-full flex items-center justify-center active:scale-95"><Play className="w-10 h-10" /></button>
+      
+      <button onClick={() => play(round.answer.number)} className="btn-emerald mx-auto w-20 h-20 rounded-full flex items-center justify-center active:scale-95 shadow-lg">
+        <Play className="w-10 h-10" />
+      </button>
+
       <div className="grid gap-2">
         {round.opts.map(s => {
           const cls = reveal && s.number === round.answer.number
@@ -418,13 +433,14 @@ function CountEngine({ def }: { def: GameDef }) {
 }
 
 // ٧) أكمل الآية — يقرأ الطفل آيةً ويختار الآية التالية من نفس السورة (تثبيت حقيقي للحفظ)
-function NextAyahEngine(_: { def: GameDef }) {
+function NextAyahEngine({ def }: { def: GameDef }) {
   const { corpus, failed, retry } = useCorpus();
   if (!corpus) return <CorpusGate failed={failed} retry={retry} />;
-  return <NextAyahPlay corpus={corpus} />;
+  return <NextAyahPlay corpus={corpus} def={def} />;
 }
-function NextAyahPlay({ corpus }: { corpus: SurahText[] }) {
-  const eligible = corpus.filter(c => c.ayahs.length >= 3);
+function NextAyahPlay({ corpus, def }: { corpus: SurahText[], def: GameDef }) {
+  const pool = poolFor(def).map(s => s.number);
+  const eligible = corpus.filter(c => c.ayahs.length >= 3 && pool.includes(c.app));
   const make = (prevApp?: number) => {
     const cand = eligible.filter(c => c.app !== prevApp);
     const list = cand.length ? cand : eligible;
@@ -475,21 +491,82 @@ function NextAyahPlay({ corpus }: { corpus: SurahText[] }) {
   );
 }
 
-// ٨) من أيّ سورة؟ — تُعرض آية حقيقية ويختار الطفل سورتها (ربط الآيات بسورها)
-function WhichSurahEngine(_: { def: GameDef }) {
+// ٧ ب) الآية السابقة — يقرأ الطفل آية ويختار الآية السابقة لها (لتثبيت الحفظ من الاتجاهين)
+function PrevAyahEngine({ def }: { def: GameDef }) {
   const { corpus, failed, retry } = useCorpus();
   if (!corpus) return <CorpusGate failed={failed} retry={retry} />;
-  return <WhichSurahPlay corpus={corpus} />;
+  return <PrevAyahPlay corpus={corpus} def={def} />;
 }
-function WhichSurahPlay({ corpus }: { corpus: SurahText[] }) {
+function PrevAyahPlay({ corpus, def }: { corpus: SurahText[], def: GameDef }) {
+  const pool = poolFor(def).map(s => s.number);
+  const eligible = corpus.filter(c => c.ayahs.length >= 3 && pool.includes(c.app));
   const make = (prevApp?: number) => {
-    const cand = corpus.filter(c => c.app !== prevApp);
-    const list = cand.length ? cand : corpus;
+    const cand = eligible.filter(c => c.app !== prevApp);
+    const list = cand.length ? cand : eligible;
+    const s = list[Math.floor(Math.random() * list.length)];
+    const i = Math.floor(Math.random() * (s.ayahs.length - 1)) + 1;   // ليست الأولى
+    const answer = s.ayahs[i - 1];
+    // المشتِّتات من نفس السورة أولاً، ثم سور أخرى
+    const distract = shuffle(s.ayahs.filter(a => a.n !== answer.n && a.n !== s.ayahs[i].n)).slice(0, 2);
+    const others = shuffle(eligible.filter(c => c.app !== s.app));
+    for (const o of others) {
+      if (distract.length >= 2) break;
+      const a = o.ayahs[Math.floor(Math.random() * o.ayahs.length)];
+      if (a.text !== answer.text && !distract.some(d => d.text === a.text)) distract.push(a);
+    }
+    return { s, prompt: s.ayahs[i], opts: shuffle([answer, ...distract]), answer };
+  };
+  const [q, setQ] = useState(() => make());
+  const [qNum, setQNum] = useState(1);
+  const [reveal, setReveal] = useState(false);
+  const [chosen, setChosen] = useState<string | null>(null);
+  const g = useGame();
+  const finished = qNum > ROUNDS;
+  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) setQ(make(q.s.app)); };
+  const answerTap = (text: string) => {
+    if (reveal || finished) return;
+    setChosen(text);
+    if (text === q.answer.text) g.correct(); else g.miss();
+    setReveal(true);
+    window.setTimeout(() => next(qNum + 1), text === q.answer.text ? 700 : 1600);
+  };
+  const replay = () => { g.reset(); setQNum(1); setQ(make()); };
+  if (finished) return <ResultCard g={g} onReplay={replay} />;
+  return (
+    <div className="space-y-4 text-center">
+      <SessionBar q={qNum} />
+      <p className="text-muted-foreground text-sm">من سورة <b className="text-accent">{q.s.name}</b> — ما الآية السابقة؟</p>
+      <div className="p-4 rounded-2xl bg-accent/10 border border-accent/40 font-amiri text-xl leading-loose text-foreground">{q.prompt.text}</div>
+      <div className="grid gap-2">
+        {q.opts.map((a, i) => {
+          const cls = reveal && a.text === q.answer.text ? "bg-success/20 border-success/60 text-success"
+            : reveal && a.text === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
+            : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
+          return <button key={i} onClick={() => answerTap(a.text)} className={`p-3 rounded-xl border text-right font-amiri text-lg leading-relaxed active:scale-[0.98] transition-colors ${cls}`}>{a.text}</button>;
+        })}
+      </div>
+      <GameHud g={g} />
+    </div>
+  );
+}
+
+// ٨) من أيّ سورة؟ — تُعرض آية حقيقية ويختار الطفل سورتها (ربط الآيات بسورها)
+function WhichSurahEngine({ def }: { def: GameDef }) {
+  const { corpus, failed, retry } = useCorpus();
+  if (!corpus) return <CorpusGate failed={failed} retry={retry} />;
+  return <WhichSurahPlay corpus={corpus} def={def} />;
+}
+function WhichSurahPlay({ corpus, def }: { corpus: SurahText[], def: GameDef }) {
+  const pool = poolFor(def).map(s => s.number);
+  const eligible = corpus.filter(c => pool.includes(c.app));
+  const make = (prevApp?: number) => {
+    const cand = eligible.filter(c => c.app !== prevApp);
+    const list = cand.length ? cand : eligible;
     const s = list[Math.floor(Math.random() * list.length)];
     // نستثني بسملة الفاتحة (آيتها الأولى) لأنها تُقرأ في أوّل كل السور فيلتبس الجواب
     const ayahs = s.ayahs.filter(a => !(s.std === 1 && a.n === 1));
     const a = ayahs[Math.floor(Math.random() * ayahs.length)] || s.ayahs[0];
-    const others = shuffle(corpus.filter(c => c.app !== s.app)).slice(0, 2);
+    const others = shuffle(eligible.filter(c => c.app !== s.app)).slice(0, 2);
     return { text: a.text, answer: s, opts: shuffle([s, ...others]) };
   };
   const [q, setQ] = useState(() => make());
@@ -526,11 +603,83 @@ function WhichSurahPlay({ corpus }: { corpus: SurahText[] }) {
   );
 }
 
+function MissingWordEngine({ def }: { def: GameDef }) {
+  const { corpus, failed, retry } = useCorpus();
+  if (!corpus) return <CorpusGate failed={failed} retry={retry} />;
+  return <MissingWordPlay corpus={corpus} def={def} />;
+}
+function MissingWordPlay({ corpus, def }: { corpus: SurahText[], def: GameDef }) {
+  const pool = poolFor(def).map(s => s.number);
+  const make = () => {
+    const eligible = corpus.filter(c => pool.includes(c.app) && c.ayahs.some(a => a.text.split(" ").length >= 4));
+    const s = eligible[Math.floor(Math.random() * eligible.length)];
+    const ayahs = s.ayahs.filter(a => a.text.split(" ").length >= 4);
+    const a = ayahs[Math.floor(Math.random() * ayahs.length)];
+    const words = a.text.split(" ");
+    
+    let hiddenIdx = 0;
+    let answer = "";
+    // Avoid hiding short words like "في" or "ما" if possible
+    for (let i = 0; i < 5; i++) {
+      hiddenIdx = Math.floor(Math.random() * words.length);
+      answer = words[hiddenIdx];
+      if (answer.length > 3) break;
+    }
+
+    const allWords = s.ayahs.flatMap(ay => ay.text.split(" ")).filter(w => w !== answer && w.length > 2);
+    const distractors = shuffle(Array.from(new Set(allWords))).slice(0, 2);
+    // If not enough distractors from same surah, get from others
+    if (distractors.length < 2) {
+      const extra = corpus.flatMap(c => c.ayahs.flatMap(ay => ay.text.split(" "))).filter(w => w !== answer && w.length > 2);
+      distractors.push(...shuffle(Array.from(new Set(extra))).slice(0, 2 - distractors.length));
+    }
+    return { s, words, hiddenIdx, answer, opts: shuffle([answer, ...distractors]) };
+  };
+  const [q, setQ] = useState(() => make());
+  const [qNum, setQNum] = useState(1);
+  const [reveal, setReveal] = useState(false);
+  const [chosen, setChosen] = useState<string | null>(null);
+  const g = useGame();
+  const finished = qNum > ROUNDS;
+  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) setQ(make()); };
+  const choose = (word: string) => {
+    if (reveal || finished) return;
+    setChosen(word);
+    if (word === q.answer) g.correct(); else g.miss();
+    setReveal(true);
+    window.setTimeout(() => next(qNum + 1), 1600);
+  };
+  const replay = () => { g.reset(); setQNum(1); setQ(make()); };
+  if (finished) return <ResultCard g={g} onReplay={replay} />;
+  return (
+    <div className="space-y-4 text-center">
+      <SessionBar q={qNum} />
+      <p className="text-muted-foreground text-sm">أكمل الكلمة الناقصة في سورة <b className="text-accent">{q.s.name}</b></p>
+      <div className="p-4 rounded-2xl bg-accent/10 border border-accent/40 font-amiri text-2xl leading-loose text-foreground flex flex-wrap justify-center gap-x-2 gap-y-3" dir="rtl">
+        {q.words.map((w, i) => (
+          <span key={i} className={i === q.hiddenIdx ? "text-transparent bg-secondary/50 border-b-2 border-dashed border-accent min-w-[60px] inline-block text-center relative" : ""}>
+            {i === q.hiddenIdx ? (reveal ? <span className={`absolute inset-0 flex items-center justify-center font-bold ${q.answer === chosen ? "text-success" : "text-accent"}`}>{q.answer}</span> : "...") : w}
+          </span>
+        ))}
+      </div>
+      <div className="grid gap-2">
+        {q.opts.map((opt, i) => {
+          const cls = reveal && opt === q.answer ? "bg-success/20 border-success/60 text-success"
+            : reveal && opt === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
+            : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
+          return <button key={i} onClick={() => choose(opt)} className={`p-3 rounded-xl border text-center font-amiri font-bold text-xl active:scale-[0.98] transition-colors ${cls}`}>{opt}</button>;
+        })}
+      </div>
+      <GameHud g={g} />
+    </div>
+  );
+}
+
 const ENGINES: Record<GameEngine, (p: { def: GameDef }) => JSX.Element> = {
   listen: ListenEngine, order: OrderEngine, memory: MemoryEngine, which: WhichEngine, quiz: QuizEngine, count: CountEngine,
-  nextayah: NextAyahEngine, whichsurah: WhichSurahEngine,
+  nextayah: NextAyahEngine, prevayah: PrevAyahEngine, whichsurah: WhichSurahEngine, missingword: MissingWordEngine,
 };
-const ICONS: Record<string, typeof Headphones> = { Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Hash, Grid3x3, Gamepad2, BookOpen, Sparkles };
+const ICONS: Record<string, typeof Headphones> = { Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Hash, Grid3x3, Gamepad2, BookOpen, Sparkles, Puzzle };
 const iconFor = (key: string) => ICONS[key] || Gamepad2;
 
 /* ───────────────── ركن الأطفال ───────────────── */
@@ -605,10 +754,9 @@ export default function KidsGames() {
           </div>
         ) : (
           <>
-            {/* بطاقة الطفل + حالة القراءة/اللعب */}
             <div className="card-nour p-4 text-center space-y-2 animate-fade-up">
               <div className="flex flex-col items-center gap-1">
-                <span className={`w-16 h-16 rounded-3xl bg-gradient-to-br ${profile.color} flex items-center justify-center shadow-soft`}><Avatar name={profile.avatar} className="w-8 h-8 text-white" /></span>
+                <span className="w-16 h-16 flex items-center justify-center transition-all group-hover:scale-105"><Avatar name={profile.avatar} className="w-16 h-16" /></span>
                 <p className="font-bold text-foreground">{profile.name ? `مرحباً ${profile.name}` : "مرحباً بك"}</p>
                 {getProfiles().length > 1 && (
                   <button onClick={() => navigate("/profiles")} className="text-xs font-bold text-accent underline-offset-2 hover:underline">تبديل الطفل</button>

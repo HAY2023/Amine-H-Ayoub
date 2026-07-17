@@ -1,6 +1,6 @@
-import { Headphones, BookOpen, Zap } from "lucide-react";
+import { Headphones, BookOpen } from "lucide-react";
 
-export type TabType = "audio" | "mushaf" | "methods";
+export type TabType = "audio" | "mushaf";
 
 interface Props {
   activeTab: TabType;
@@ -40,17 +40,6 @@ const BottomNav = ({ activeTab, onChange, hasPlayer }: Props) => {
         >
           <BookOpen className="w-6 h-6" />
           <span className="text-xs font-bold">المصحف</span>
-        </button>
-        <button
-          onClick={() => onChange("methods")}
-          className={`flex-1 flex flex-col items-center gap-1 py-3 transition-colors ${
-            activeTab === "methods"
-              ? "text-accent"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Zap className="w-6 h-6" />
-          <span className="text-xs font-bold">الطرق</span>
         </button>
       </div>
     </nav>

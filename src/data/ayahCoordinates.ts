@@ -101,7 +101,7 @@ export const syncCoordinatesFromServer = async () => {
   if (!hasValidSupabaseKey()) return; // skip sync when no valid API key
   try {
     const { data } = await supabase.from("store").select("value").eq("key", CALIBRATION_STORAGE_KEY).maybeSingle();
-    if (data && data.value && Object.keys(data.value as any).length > 0) {
+    if (data && data.value && Object.keys(data.value as Record<string, unknown>).length > 0) {
       // Server has data → mirror to local
       localStorage.setItem(CALIBRATION_STORAGE_KEY, JSON.stringify(data.value));
       window.dispatchEvent(new Event("mushaf:sync_complete"));

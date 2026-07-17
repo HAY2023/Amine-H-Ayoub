@@ -39,14 +39,10 @@ export interface KidsProgress {
 }
 
 /** وجوه (أيقونات lucide — لا إيموجي) وألوان جاهزة لبطاقات الأطفال. القيم مفاتيح تُربط في components/Avatar.tsx */
-export const KID_AVATARS = ["boy", "girl", "child", "baby", "smile", "grin", "cool", "wow", "wink", "happy"];
+export const KID_AVATARS = ["default"];
 export const KID_COLORS = [
   "from-amber-400 to-orange-500",
   "from-sky-400 to-blue-500",
-  "from-emerald-400 to-green-500",
-  "from-fuchsia-400 to-pink-500",
-  "from-violet-400 to-purple-500",
-  "from-rose-400 to-red-500",
   "from-cyan-400 to-teal-500",
   "from-lime-400 to-emerald-500",
 ];
@@ -71,17 +67,25 @@ const DEFAULT_PROFILE: KidsProfile = { id: "default", name: "", age: 6, avatar: 
 /** متجر المكافآت — وجوه (أيقونات) وألوان تُفتح بالنقاط (محتوى داخلي، بلا أي ملفات خارجية). */
 // أطفال بأزياء فخمة تُفتح بالنجوم — كلّما زاد الفخم زاد سعره (مال كثير)
 export const SHOP_AVATARS: ShopItem[] = [
-  { id: "av-hero", type: "avatar", label: "بطل خارق", value: "hero", cost: 100 },
-  { id: "av-ninja", type: "avatar", label: "نينجا", value: "ninja", cost: 120 },
-  { id: "av-artist", type: "avatar", label: "فنّان", value: "artist", cost: 130 },
-  { id: "av-graduate", type: "avatar", label: "متخرّج", value: "graduate", cost: 140 },
-  { id: "av-detective", type: "avatar", label: "محقّق", value: "detective", cost: 150 },
-  { id: "av-astronaut", type: "avatar", label: "رائد فضاء", value: "astronaut", cost: 180 },
-  { id: "av-king", type: "avatar", label: "أمير بتاج", value: "king", cost: 200 },
-  { id: "av-queen", type: "avatar", label: "أميرة بتاج", value: "queen", cost: 220 },
-  { id: "av-superstar", type: "avatar", label: "نجم لامع", value: "superstar", cost: 260 },
-  { id: "av-champion", type: "avatar", label: "بطل الميدان", value: "champion", cost: 320 },
-  { id: "av-royal", type: "avatar", label: "التاج الملكي", value: "royal", cost: 400 },
+  // ── الوجوه الأساسية ──
+  { id: "av-img-boy-1", type: "avatar", label: "ولد لطيف", value: "img-boy-1", cost: 50 },
+  { id: "av-img-girl-1", type: "avatar", label: "بنت لطيفة", value: "img-girl-1", cost: 50 },
+  { id: "av-img-boy-6", type: "avatar", label: "ولد مبتسم", value: "img-boy-6", cost: 50 },
+  { id: "av-img-girl-4", type: "avatar", label: "بنت مبتسمة", value: "img-girl-4", cost: 50 },
+  // ── الوجوه الأسطورية الجديدة ──
+  { id: "av-img-boy-7", type: "avatar", label: "ولد ذكي", value: "img-boy-7", cost: 100 },
+  { id: "av-img-girl-5", type: "avatar", label: "بنت ذكية", value: "img-girl-5", cost: 150 },
+  { id: "av-img-boy-8", type: "avatar", label: "ولد بطل", value: "img-boy-8", cost: 300 },
+  { id: "av-img-girl-6", type: "avatar", label: "بنت بطلة", value: "img-girl-6", cost: 400 },
+  { id: "av-img-boy-9", type: "avatar", label: "أمير صغير", value: "img-boy-9", cost: 700 },
+  { id: "av-img-girl-7", type: "avatar", label: "أميرة صغيرة", value: "img-girl-7", cost: 900 },
+
+  { id: "av-img-boy-2", type: "avatar", label: "طالب علم", value: "img-boy-2", cost: 1000 },
+  { id: "av-img-girl-2", type: "avatar", label: "أميرة نبيلة", value: "img-girl-2", cost: 1200 },
+  { id: "av-img-boy-3", type: "avatar", label: "فارس شجاع", value: "img-boy-3", cost: 2500 },
+  { id: "av-img-boy-4", type: "avatar", label: "أمير القلعة", value: "img-boy-4", cost: 5000 },
+  { id: "av-img-girl-3", type: "avatar", label: "ملكة أسطورية", value: "img-girl-3", cost: 10000 },
+  { id: "av-img-boy-5", type: "avatar", label: "ملك أسطوري", value: "img-boy-5", cost: 15000 },
 ];
 export const SHOP_COLORS: ShopItem[] = [
   { id: "col-sunset", type: "color", label: "غروب", value: "from-pink-500 to-orange-400", cost: 20 },

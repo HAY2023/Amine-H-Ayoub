@@ -1,11 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Pencil, Scissors, Link2, ChevronLeft, GraduationCap } from "lucide-react";
+import { ArrowRight, Pencil, Scissors, Link2, ChevronLeft, GraduationCap, Mic } from "lucide-react";
 
 const TOOLS = [
   { to: "/student", Icon: GraduationCap, name: "ركن طالب القرآن", desc: "مؤقّت · مكتبة صوتية · بحث في الكلمات · مدرّب تلاوة", tint: "bg-teal-500/20 text-teal-300" },
   { to: "/calibrate", Icon: Pencil, name: "المعايرة (التظليل)", desc: "ضبط مواضع الآيات والسور ورفع صفحات المصحف", tint: "bg-violet-500/20 text-violet-300" },
   { to: "/recitation-methods", Icon: Scissors, name: "تقسيم الصوت", desc: "تقسيم صوت السورة (معلم/طفل) بسرعة ودقّة", tint: "bg-sky-500/20 text-sky-300" },
   { to: "/link", Icon: Link2, name: "ربط الصوت بالتظليل", desc: "رفع صوت → تقسيم → ربط بالآيات في مكان واحد", tint: "bg-emerald-500/20 text-emerald-300" },
+  { to: "/custom-audio", Icon: Mic, name: "مكتبتي الصوتية الخاصة", desc: "رفع وترتيب ملفات صوتية خاصة تظهر فوراً للأطفال", tint: "bg-amber-500/20 text-amber-300" },
 ];
 
 export default function TeacherTools() {

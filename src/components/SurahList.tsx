@@ -24,7 +24,7 @@ const SurahList = ({
 }: Props) => {
   return (
     <div className="grid grid-cols-1 gap-3">
-      {surahs.map((surah) => {
+      {surahs.map((surah, index) => {
         const isActive = currentPlaying === surah.number;
         const downloaded = offlineStatus[surah.number] || false;
         const downloading = isDownloading[surah.number] || false;
@@ -48,18 +48,18 @@ const SurahList = ({
                   : "bg-primary/10 text-primary"
               }`}
             >
-              {surah.number}
+              {surah.revelationType === "custom" ? "🎤" : index + 1}
             </div>
 
             {/* Surah name */}
             <div className="flex-1 min-w-0">
               <h3 className="text-xl font-bold text-foreground font-amiri">
-                سورة {surah.name}
+                {surah.revelationType === "custom" ? surah.name : `سورة ${surah.name}`}
               </h3>
             </div>
 
             {/* Offline download status or actions in desktop app */}
-            {isTauri && (
+            {isTauri && surah.revelationType !== "custom" && (
               <div className="shrink-0 flex items-center">
                 {downloading ? (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 text-xs font-bold animate-pulse">

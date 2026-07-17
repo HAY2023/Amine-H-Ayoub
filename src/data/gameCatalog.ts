@@ -7,7 +7,7 @@
  */
 import { supabase, hasValidSupabaseKey } from "../lib/supabase";
 
-export type GameEngine = "listen" | "order" | "memory" | "which" | "quiz" | "count" | "nextayah" | "whichsurah";
+export type GameEngine = "listen" | "order" | "memory" | "which" | "quiz" | "count" | "nextayah" | "prevayah" | "whichsurah" | "missingword";
 
 export interface GameDef {
   id: string;
@@ -25,19 +25,16 @@ const CATALOG_KEY = "mushaf:gameCatalog:v1";
 
 /** الألعاب المضمّنة (كلها مجانية) + نماذج مدفوعة توضّح الشراء بالنجوم. */
 export const BUILTIN_GAMES: GameDef[] = [
-  { id: "listen", title: "استمع واختر", engine: "listen", ageMin: 4, cost: 0, tint: "bg-emerald-500/20 text-emerald-300", icon: "Headphones" },
-  { id: "order", title: "رتّب الآيات", engine: "order", ageMin: 5, cost: 0, tint: "bg-sky-500/20 text-sky-300", icon: "ListOrdered" },
-  { id: "memory", title: "لعبة الذاكرة", engine: "memory", ageMin: 6, cost: 0, tint: "bg-violet-500/20 text-violet-300", icon: "LayoutGrid", params: { pairs: 4 } },
-  { id: "whichsurah", title: "من أيّ سورة؟", engine: "whichsurah", ageMin: 6, cost: 0, tint: "bg-pink-500/20 text-pink-300", icon: "Sparkles" },
-  { id: "nextayah", title: "أكمل الآية", engine: "nextayah", ageMin: 7, cost: 0, tint: "bg-orange-500/20 text-orange-300", icon: "BookOpen" },
-  { id: "more", title: "أيّهما أكثر", engine: "which", ageMin: 9, cost: 0, tint: "bg-amber-500/20 text-amber-300", icon: "Scale" },
-  { id: "count", title: "عدّ الآيات", engine: "count", ageMin: 9, cost: 0, tint: "bg-teal-500/20 text-teal-300", icon: "Hash" },
-  { id: "memhard", title: "ذاكرة متقدّمة", engine: "memory", ageMin: 10, cost: 0, tint: "bg-indigo-500/20 text-indigo-300", icon: "Grid3x3", params: { pairs: 6 } },
-  { id: "quiz", title: "اختبار قرآني", engine: "quiz", ageMin: 12, cost: 0, tint: "bg-rose-500/20 text-rose-300", icon: "Trophy" },
-  // ألعاب إضافية بمحتوى مختلف — كلّها مجانية ومفتوحة (لا شراء، تبسيطاً لركن الطفل)
-  { id: "quiz-mufassal", title: "اختبار المفصّل", engine: "quiz", ageMin: 8, cost: 0, tint: "bg-fuchsia-500/20 text-fuchsia-300", icon: "Trophy", params: { minSurah: 78 } },
-  { id: "memory-juz30", title: "ذاكرة جزء عمّ", engine: "memory", ageMin: 7, cost: 0, tint: "bg-cyan-500/20 text-cyan-300", icon: "LayoutGrid", params: { pairs: 5, minSurah: 78 } },
-  { id: "order-short", title: "ترتيب السور القصيرة", engine: "order", ageMin: 6, cost: 0, tint: "bg-lime-500/20 text-lime-300", icon: "ListOrdered", params: { minAyah: 3, maxAyah: 5 } },
+  { id: "listen", title: "استمع واختر", engine: "listen", ageMin: 4, cost: 0, tint: "bg-emerald-500/20 text-emerald-300", icon: "Headphones", params: { minSurah: 78 } },
+  { id: "order", title: "رتّب الآيات", engine: "order", ageMin: 5, cost: 0, tint: "bg-sky-500/20 text-sky-300", icon: "ListOrdered", params: { minSurah: 78 } },
+  { id: "memory", title: "لعبة الذاكرة", engine: "memory", ageMin: 6, cost: 0, tint: "bg-violet-500/20 text-violet-300", icon: "LayoutGrid", params: { pairs: 4, minSurah: 78 } },
+  { id: "whichsurah", title: "من أيّ سورة؟", engine: "whichsurah", ageMin: 6, cost: 0, tint: "bg-pink-500/20 text-pink-300", icon: "Sparkles", params: { minSurah: 78 } },
+  { id: "nextayah", title: "أكمل الآية", engine: "nextayah", ageMin: 7, cost: 0, tint: "bg-orange-500/20 text-orange-300", icon: "BookOpen", params: { minSurah: 78 } },
+  { id: "prevayah", title: "الآية السابقة", engine: "prevayah", ageMin: 7, cost: 0, tint: "bg-rose-500/20 text-rose-300", icon: "BookOpen", params: { minSurah: 78 } },
+  { id: "missingword", title: "الكلمة الناقصة", engine: "missingword", ageMin: 7, cost: 0, tint: "bg-fuchsia-500/20 text-fuchsia-300", icon: "Puzzle", params: { minSurah: 78 } },
+  { id: "more", title: "أيّهما أكثر", engine: "which", ageMin: 9, cost: 0, tint: "bg-amber-500/20 text-amber-300", icon: "Scale", params: { minSurah: 78 } },
+  { id: "count", title: "عدّ الآيات", engine: "count", ageMin: 9, cost: 0, tint: "bg-teal-500/20 text-teal-300", icon: "Hash", params: { minSurah: 78 } },
+  { id: "quiz", title: "اختبار قرآني", engine: "quiz", ageMin: 12, cost: 0, tint: "bg-indigo-500/20 text-indigo-300", icon: "Trophy", params: { minSurah: 78 } },
 ];
 
 let serverGames: GameDef[] = [];
@@ -45,7 +42,7 @@ let serverGames: GameDef[] = [];
 const isValid = (g: unknown): g is GameDef => {
   const d = g as GameDef;
   return !!d && typeof d.id === "string" && typeof d.title === "string"
-    && ["listen", "order", "memory", "which", "quiz", "count", "nextayah", "whichsurah"].includes(d.engine)
+    && ["listen", "order", "memory", "which", "quiz", "count", "nextayah", "prevayah", "whichsurah", "missingword"].includes(d.engine)
     && typeof d.cost === "number";
 };
 

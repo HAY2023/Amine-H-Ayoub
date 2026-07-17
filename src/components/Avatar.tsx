@@ -133,6 +133,17 @@ function Face({ acc }: { acc: Acc }) {
 
 /** يعرض وجه الطفل كرسم SVG يملأ الصندوق المُمرَّر عبر className (w-N h-N). */
 export default function Avatar({ name, className }: { name: string; className?: string }) {
+  if (name === "default") {
+    return (
+      <svg viewBox="0 0 100 100" className={cn("select-none bg-secondary/50", className)} role="img" aria-label="default">
+        <circle cx="50" cy="40" r="20" fill="#a0a0a0" opacity="0.5" />
+        <path d="M20 90 Q50 60 80 90" stroke="#a0a0a0" strokeWidth="15" strokeLinecap="round" fill="none" opacity="0.5" />
+      </svg>
+    );
+  }
+  if (name.startsWith("img-")) {
+    return <img src={`/avatars/${name}.png`} alt={name} className={cn("object-cover rounded-full shadow-sm", className)} loading="lazy" />;
+  }
   const cfg = AVATAR_CONFIG[name] || AVATAR_CONFIG.boy;
   const showHair = cfg.acc !== "gradcap" && cfg.acc !== "helmet" && cfg.acc !== "detective" && cfg.acc !== "beret";
   return (

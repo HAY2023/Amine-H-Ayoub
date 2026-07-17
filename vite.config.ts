@@ -19,9 +19,12 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     {
       name: 'save-boxes-plugin',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       configureServer(server: any) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         server.middlewares.use('/api/save-boxes', (req: any, res: any) => {
           let body = '';
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           req.on('data', (chunk: any) => body += chunk);
           req.on('end', () => {
             fs.writeFileSync('boxes-dump.json', body);
@@ -68,6 +71,7 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 5000000,
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff,woff2}"],
         runtimeCaching: [

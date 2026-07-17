@@ -14,15 +14,20 @@ export const hasValidSupabaseKey = (): boolean =>
  */
 const NOOP_RESULT = { data: null, error: null, count: null, status: 200, statusText: "OK" };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const noopBuilder: any = new Proxy(
   {},
   {
     get(_target, _prop) {
       // .then / .catch / .finally → make it thenable (Promise-like)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (_prop === "then") return (resolve: any) => Promise.resolve(NOOP_RESULT).then(resolve);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (_prop === "catch") return (reject: any) => Promise.resolve(NOOP_RESULT).catch(reject);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (_prop === "finally") return (cb: any) => Promise.resolve(NOOP_RESULT).finally(cb);
       // Any other chained call (.select, .eq, .single, .upsert, etc.) → return self
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (..._args: any[]) => noopBuilder;
     },
   }

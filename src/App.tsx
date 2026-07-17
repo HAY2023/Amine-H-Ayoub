@@ -26,6 +26,7 @@ import SettingsPage, { applyTheme, getTheme } from "./pages/SettingsPage.tsx";
 import ParentDashboard from "./pages/ParentDashboard.tsx";
 import TeacherTools from "./pages/TeacherTools.tsx";
 import KidsShop from "./pages/KidsShop.tsx";
+import CustomAudioManager from "./pages/CustomAudioManager.tsx";
 import QuranStudent from "./pages/QuranStudent.tsx";
 import { getProfile, getAppMode, getProfiles, kidsEnabled } from "./data/kidsProfile";
 import { syncGameCatalogFromServer } from "./data/gameCatalog";
@@ -127,6 +128,7 @@ const App = () => {
               <Route path="/profiles" element={<ProfilePicker />} />
               <Route path="/shop" element={<KidsShop />} />
               <Route path="/student" element={<QuranStudent />} />
+              <Route path="/custom-audio" element={<CustomAudioManager />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

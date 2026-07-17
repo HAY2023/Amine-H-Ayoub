@@ -7,6 +7,7 @@ interface Props {
   surahName: string;
   surahNumber: number;
   audioSrc: string;
+  isCustom?: boolean;
   initialTime?: number;
   onClose: () => void;
   onTimeUpdate?: (time: number) => void;
@@ -20,6 +21,7 @@ interface Props {
 export interface CustomPlayerHandle {
   seekTo: (seconds: number) => void;
   play: () => void;
+  pause: () => void;
 }
 
 const formatTime = (s: number) => {
@@ -30,7 +32,7 @@ const formatTime = (s: number) => {
 };
 
 const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
-  ({ surahName, surahNumber, audioSrc, initialTime = 0, onClose, onTimeUpdate, onPlayNext, onPlayPrev, autoNext = false, onToggleAutoNext, onPlayingChange }, ref) => {
+  ({ surahName, surahNumber, audioSrc, isCustom = false, initialTime = 0, onClose, onTimeUpdate, onPlayNext, onPlayPrev, autoNext = false, onToggleAutoNext, onPlayingChange }, ref) => {
     const { requestPlay, notifyStop, registerAudio, unregisterAudio } = useAudioContext();
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -52,6 +54,9 @@ const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
       play: () => {
         audioRef.current?.play().catch(() => {});
       },
+      pause: () => {
+        audioRef.current?.pause();
+      },
     }));
 
     useEffect(() => {
@@ -63,7 +68,7 @@ const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
         initialTimeApplied.current = false;
 
         let finalSrc = audioSrc;
-        if (isTauri()) {
+        if (isTauri() && !audioSrc.startsWith("blob:")) {
           const offline = await checkOfflineStatus(surahNumber);
           if (offline) {
             const localUrl = await getOfflineAudioUrl(surahNumber);
@@ -185,12 +190,14 @@ const CustomPlayer = forwardRef<CustomPlayerHandle, Props>(
           {/* Top row: artwork + surah info + close */}
           <div className="flex items-center gap-3 px-4 pt-3 pb-1">
             <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/30">
-              <span className="text-white font-black text-lg tabular-nums">{surahNumber}</span>
+              <span className="text-white font-black text-lg tabular-nums">
+                {isCustom ? "🎤" : surahNumber}
+              </span>
               <span className="absolute -bottom-1 -left-1 w-6 h-6 rounded-full bg-card text-accent flex items-center justify-center shadow-soft ring-1 ring-accent/20"><Music className="w-3 h-3" /></span>
             </div>
             <div className="flex-1 min-w-0 text-right">
               <p className="font-bold text-foreground font-amiri text-lg leading-tight truncate">
-                سورة {surahName}
+                {isCustom ? surahName : `سورة ${surahName}`}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 {isPlaying ? (
