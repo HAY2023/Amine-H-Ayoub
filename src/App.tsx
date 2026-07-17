@@ -27,6 +27,8 @@ import ParentDashboard from "./pages/ParentDashboard.tsx";
 import TeacherTools from "./pages/TeacherTools.tsx";
 import KidsShop from "./pages/KidsShop.tsx";
 import QuranStudent from "./pages/QuranStudent.tsx";
+import Login from "./pages/Login.tsx";
+import OAuthConsent from "./pages/OAuthConsent.tsx";
 import { getProfile, getAppMode, getProfiles, kidsEnabled } from "./data/kidsProfile";
 import { syncGameCatalogFromServer } from "./data/gameCatalog";
 import { toast } from "./hooks/use-toast";
