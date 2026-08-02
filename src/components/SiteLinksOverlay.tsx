@@ -9,11 +9,9 @@ interface Props {
 
 const links = [
   { path: "/", label: "المصحف المعلم", description: "قراءة القرآن مع التقسيم والتشغيل", icon: BookOpen, color: "from-amber-400 to-orange-500", glow: "shadow-amber-500/20" },
-  { path: "/student", label: "ركن طالب القرآن", description: "مؤقّت ومكتبة صوتية وبحث وتلاوة", icon: GraduationCap, color: "from-teal-400 to-emerald-500", glow: "shadow-teal-500/20" },
   { path: "/audio", label: "التلاوات", description: "قائمة السور الصوتية", icon: Headphones, color: "from-sky-400 to-blue-500", glow: "shadow-sky-500/20" },
   { path: "/timings", label: "إعداد التوقيت", description: "معايرة توقيت الآيات الصوتية", icon: Timer, color: "from-emerald-400 to-teal-500", glow: "shadow-emerald-500/20" },
   { path: "/calibrate", label: "ضبط المواضع", description: "ضبط مواضع الآيات على الصفحات", icon: Target, color: "from-violet-400 to-purple-500", glow: "shadow-violet-500/20" },
-  { path: "/recitation-methods", label: "طرق التلاوة", description: "استكشاف طرق تعليم مختلفة", icon: Zap, color: "from-rose-400 to-pink-500", glow: "shadow-rose-500/20" },
 ];
 
 export default function SiteLinksOverlay({ open, onClose }: Props) {

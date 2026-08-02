@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X, BarChart3, Wrench, User, Users, GraduationCap, BookOpen, Lock, KeyRound, Settings as SettingsIcon } from "lucide-react";
+import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, KeyRound, Settings as SettingsIcon } from "lucide-react";
 import { isMushafDevEnabled, setMushafDev } from "../utils/tauriUtils";
 import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHidden, type AppMode } from "../data/kidsProfile";
 import { syncCoordinatesFromServer } from "../data/ayahCoordinates";
@@ -65,7 +65,7 @@ export default function SettingsPage() {
   const changeMode = (m: AppMode) => {
     setMode(m); setAppMode(m);
     if (m !== "parent" && getProfiles().length === 0) addProfile({ name: "طفلي" });   // ضمان وجود طفل واحد على الأقل
-    toast({ title: m === "parent" ? "وضع وليّ الأمر — بلا ركن أطفال" : m === "kids" ? "وضع الأطفال" : "وضع وليّ الأمر والأطفال معاً" });
+    toast({ title: m === "parent" ? "وضع وليّ الأمر — بلا ركن أطفال" : "وضع الأطفال" });
   };
 
   useEffect(() => { applyTheme(theme); try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ } }, [theme]);
@@ -129,11 +129,10 @@ export default function SettingsPage() {
         {(!hideKids || owner) && (<>
         <Section label="من يستخدم التطبيق؟">
           <div className="p-3 space-y-2">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {([
                 { m: "parent" as AppMode, Icon: User, label: "لي" },
                 { m: "kids" as AppMode, Icon: Baby, label: "لأطفالي" },
-                { m: "both" as AppMode, Icon: Users, label: "معاً" },
               ]).map(o => (
                 <button key={o.m} onClick={() => changeMode(o.m)}
                   className={`flex flex-col items-center gap-1 rounded-xl py-3 text-xs font-bold border transition-all ${appMode === o.m ? "border-accent bg-accent/15 text-accent shadow-soft" : "border-border bg-muted text-muted-foreground hover:border-accent/40"}`}>
@@ -141,7 +140,7 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">«لي»: بلا ركن أطفال. «لأطفالي»: ركن أطفال آمن. «معاً»: تختار من يستخدم التطبيق عند كل فتح.</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">«لي»: بلا ركن أطفال. «لأطفالي»: ركن أطفال آمن.</p>
           </div>
         </Section>
 
@@ -152,10 +151,7 @@ export default function SettingsPage() {
         </Section>
         </>)}
 
-        {/* ===== التعلّم والمحتوى ===== */}
-        <Section label="التعلّم والمحتوى">
-          <Item icon={<GraduationCap className="w-5 h-5" />} title="ركن طالب القرآن" desc="مؤقّت · مكتبة صوتية · بحث في الكلمات · مدرّب تلاوة" onClick={() => navigate("/student")} />
-        </Section>
+
 
         {/* ===== كلمة المرور (رمز وليّ الأمر) — متاحة دائماً ===== */}
         <Section label="كلمة المرور">
@@ -174,7 +170,7 @@ export default function SettingsPage() {
         {owner && (
           <Section label="أدوات المالك (قيد التطوير)">
             <Item icon={<BookOpen className="w-5 h-5" />} title="المصحف التفاعلي" desc="القارئ — غير مُطلق للمستخدمين بعد" onClick={() => navigate("/")} />
-            <Item icon={<Wrench className="w-5 h-5" />} title="أدوات المحتوى" desc="التظليل (المعايرة) · تقسيم الصوت · ربط الصوت بالآيات" onClick={() => navigate("/tools")} />
+            {/* أُخفِيَت الروابط إلى أدوات المحتوى وتقسيم الصوت */}
             <Item
               icon={<Baby className="w-5 h-5" />}
               title={hideKids ? "إظهار ركن الأطفال والألعاب" : "إخفاء ركن الأطفال والألعاب"}

@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AppHeader from "@/components/AppHeader";
 import PointsDisplay from "@/components/PointsDisplay";
 import SurahList from "@/components/SurahList";
@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
 
-import { Shuffle, ListOrdered, Loader2, SplitSquareHorizontal, BookOpen, Baby, ChevronLeft, Settings, Play, Pause, Mic } from "lucide-react";
+import { Shuffle, ListOrdered, Loader2, SplitSquareHorizontal, BookOpen, Baby, ChevronLeft, Settings, Play, Pause, Mic, FileText, Image, Video, File } from "lucide-react";
 import { isTauri, shouldHideMushaf, checkOfflineStatus, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
 import { checkForUpdates, UpdateInfo } from "../utils/updateChecker";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
@@ -42,6 +42,37 @@ const MUSHAF_PAGES = [
   { src: "/pages/604.jpg", surahs: [4, 3, 2] },
 ];
 
+interface UploadDeskItem {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  uploadedAt: number;
+}
+
+const UPLOAD_DESK_KEY = "upload-desk:items:v1";
+
+function getPreviewKind(type: string) {
+  if (type.startsWith("image/")) return "image";
+  if (type.startsWith("audio/")) return "audio";
+  if (type.startsWith("video/")) return "video";
+  if (type.startsWith("text/")) return "text";
+  return "file";
+}
+
+function loadUploadDeskItems(): UploadDeskItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(UPLOAD_DESK_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
 function getMushafPageForSurah(surahNumber: number): string | null {
   const page = MUSHAF_PAGES.find(p => p.surahs.includes(surahNumber));
   return page?.src ?? null;
@@ -50,7 +81,7 @@ function getMushafPageForSurah(surahNumber: number): string | null {
 const Index = () => {
   const navigate = useNavigate();
   const { surahs, loading, error, retry } = useSurahData();
-  const { points, level, recordAyah } = useProgress();
+  const { points, recordAyah } = useProgress();
   const [currentSurah, setCurrentSurah] = useState<SurahItem | null>(null);
   const [resumeTime, setResumeTime] = useState(0);
   const [activeTab, setActiveTab] = useState<TabType>("audio");
@@ -60,6 +91,7 @@ const Index = () => {
   const [autoNext, setAutoNext] = useState(true);
   const [isShuffled, setIsShuffled] = useState(false);
   const [shuffledSurahs, setShuffledSurahs] = useState<SurahItem[]>([]);
+  const [uploadDeskItems, setUploadDeskItems] = useState<UploadDeskItem[]>(loadUploadDeskItems);
 
   // Desktop split view
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" ? window.innerWidth >= 1024 : false);
@@ -107,6 +139,16 @@ const Index = () => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === UPLOAD_DESK_KEY) {
+        setUploadDeskItems(loadUploadDeskItems());
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
   const currentMushafPage = useMemo(() => {
@@ -395,7 +437,7 @@ const Index = () => {
         <AppHeader />
 
         <div className="flex justify-center mb-4">
-          <PointsDisplay points={points} level={level} />
+          <PointsDisplay points={points} />
         </div>
 
         {/* مدخل ركن الأطفال (الألعاب) من داخل قسم التلاوات */}
@@ -417,27 +459,31 @@ const Index = () => {
 
         <main className={`mx-auto px-4 py-4 space-y-4 transition-all duration-300 animate-fade-up ${isSplitView && isDesktop ? 'max-w-7xl' : 'max-w-2xl'}`}>
           {/* Search + Shuffle */}
-          <div className="flex gap-2 items-center">
-            <div className="flex-1">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex-1 min-w-0">
               <SearchBar value={search} onChange={setSearch} />
             </div>
-            {/* عرض المصحف جانبياً — يُخفى ما دام المصحف قيد التطوير */}
-            {isDesktop && !shouldHideMushaf() && (
+            <div className="flex flex-wrap gap-2 items-center">
+              <Link to="/upload-desk" className="inline-flex items-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-bold text-black transition hover:brightness-95">
+                <FileText className="w-4 h-4" /> المكتب
+              </Link>
+              {/* عرض المصحف جانبياً — يُخفى ما دام المصحف قيد التطوير */}
+              {isDesktop && !shouldHideMushaf() && (
+                <button
+                  onClick={() => setIsSplitView(v => !v)}
+                  className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 border ${
+                    isSplitView
+                      ? "bg-sky-500/20 text-sky-700 border-sky-400/50 shadow-lg scale-105"
+                      : "bg-card border-border hover:border-sky-400/50 hover:shadow-md"
+                  }`}
+                  title={isSplitView ? "إغلاق التقسيم" : "عرض المصحف جانبياً"}
+                  aria-label={isSplitView ? "إغلاق التقسيم" : "عرض المصحف جانبياً"}
+                >
+                  <SplitSquareHorizontal className="w-5 h-5" />
+                </button>
+              )}
               <button
-                onClick={() => setIsSplitView(v => !v)}
-                className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 border ${
-                  isSplitView
-                    ? "bg-sky-500/20 text-sky-700 border-sky-400/50 shadow-lg scale-105"
-                    : "bg-card border-border hover:border-sky-400/50 hover:shadow-md"
-                }`}
-                title={isSplitView ? "إغلاق التقسيم" : "عرض المصحف جانبياً"}
-                aria-label={isSplitView ? "إغلاق التقسيم" : "عرض المصحف جانبياً"}
-              >
-                <SplitSquareHorizontal className="w-5 h-5" />
-              </button>
-            )}
-            <button
-              onClick={handleShuffle}
+                onClick={handleShuffle}
               className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 border ${
                 isShuffled
                   ? "bg-accent text-accent-foreground border-accent shadow-lg scale-105"
@@ -453,6 +499,7 @@ const Index = () => {
               )}
             </button>
           </div>
+        </div>
 
           {/* Shuffle indicator */}
           {isShuffled && (
@@ -467,6 +514,42 @@ const Index = () => {
               </button>
             </div>
           )}
+
+          <section className="rounded-3xl border border-border bg-card/80 p-4 shadow-soft animate-fade-up">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-lg font-bold">مكتب الملفات</h2>
+                <p className="text-sm text-muted-foreground">تنظيم الملفات الجديدة وعرضها بترقيم مباشر على الصفحة الرئيسية.</p>
+              </div>
+              <Link to="/upload-desk" className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-xs font-bold text-black transition hover:brightness-95">
+                <FileText className="w-4 h-4" /> افتح المكتب
+              </Link>
+            </div>
+
+            {uploadDeskItems.length === 0 ? (
+              <p className="mt-4 text-sm text-muted-foreground">لا توجد ملفات مرفوعة حتى الآن. ارفع ملفات في المكتب لترى هنا قائمة مرقمة.</p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {uploadDeskItems.slice(0, 6).map((item, index) => (
+                  <div key={item.id} className="flex items-center gap-3 rounded-3xl border border-border bg-background p-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary text-sm font-black text-muted-foreground">
+                      {index + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-bold text-foreground">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">{item.type || "ملف"}</p>
+                    </div>
+                    <span className="rounded-2xl bg-secondary px-3 py-1 text-xs font-bold text-muted-foreground">
+                      {getPreviewKind(item.type)}
+                    </span>
+                  </div>
+                ))}
+                {uploadDeskItems.length > 6 && (
+                  <p className="text-xs text-muted-foreground">عرضنا 6 ملفات من أصل {uploadDeskItems.length} ملف. افتح المكتب لرؤية القائمة كاملة.</p>
+                )}
+              </div>
+            )}
+          </section>
 
           {/* Update Checker Banner */}
           {updateInfo && (

@@ -60,7 +60,7 @@ function shuffleArray<T>(arr: T[]): T[] {
 }
 
 type Speaker = "teacher" | "kids";
-type PlayMode = "teacher" | "kids" | "both";
+type PlayMode = "teacher" | "kids";
 
 const STORAGE_KEY = "mushaf:lastPage";
 const MUSHAF_LAST_SURAH = "mushaf:lastSurah";
@@ -180,7 +180,7 @@ export default function QuranReader() {
   const [selectedSurahIdx, setSelectedSurahIdx] = useState(0);
   const [selectedAyah, setSelectedAyah] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playMode, _setPlayMode] = useState<PlayMode>("both");
+  const [playMode, _setPlayMode] = useState<PlayMode>("teacher");
   const [continuousPlay, _setContinuousPlay] = useState(true);
   const [repeatCount, _setRepeatCount] = useState(0);
 
@@ -233,7 +233,7 @@ export default function QuranReader() {
   // ركن الأطفال (قفل برمز) + لوحة التنقّل
   const [kidsMode, setKidsModeState] = useState(isKidsMode);
   const [kidsCorner, setKidsCorner] = useState(getKidsEnabled);   // ركن الأطفال مُفعَّل؟ (ليس وضع وليّ الأمر فقط)
-  const [pinAction, setPinAction] = useState<null | "enter" | "exit" | "settings" | "tools">(null);
+  const [pinAction, setPinAction] = useState<null | "enter" | "exit" | "settings" >(null);
   const [surahListOpen, setSurahListOpen] = useState(false);
   const [navTab, setNavTab] = useState<"surahs" | "bookmarks">("surahs");
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(getBookmarks);
@@ -262,7 +262,7 @@ export default function QuranReader() {
   const requestExitKids = () => setPinAction("exit");
   // الإعدادات محميّة: تتطلّب رمز ولي الأمر إن كان مضبوطاً
   const openSettings = () => { if (hasKidsPin()) setPinAction("settings"); else navigate("/settings"); };
-  const openTools = () => { if (hasKidsPin()) setPinAction("tools"); else navigate("/tools"); };
+  const openTools = () => { /* أدوات المعلّم معطّلة */ };
 
   // ── قائمة كل السور للانتقال المباشر ──
   const allSurahsList = useMemo(() => {
@@ -359,7 +359,6 @@ export default function QuranReader() {
   const lastSavedTimeRef = useRef(0);
   const stopAtRef = useRef<number | null>(null);
   const currentRepeatRef = useRef(0);
-  const bothPhaseRef = useRef<"teacher" | "kids">("teacher");
   const currentAyahRef = useRef(-1);
   const currentBoxIndexRef = useRef(-1);
   const currentSpeakerRef = useRef<Speaker>("teacher");
@@ -729,31 +728,6 @@ export default function QuranReader() {
         advanceSurah(sp);
       }
     };
-
-    // "both" mode: teacher then kids for same ayah
-    if (mode === "both" && hasKids) {
-      if (bothPhaseRef.current === "teacher") {
-        bothPhaseRef.current = "kids";
-        playAyah(activeSurah, currentAyahRef.current, "kids", currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
-        return;
-      } else {
-        bothPhaseRef.current = "teacher";
-        if (currentRepeatRef.current < repeat) {
-          currentRepeatRef.current++;
-          playAyah(activeSurah, currentAyahRef.current, "teacher", currentBoxIndexRef.current !== -1 ? currentBoxIndexRef.current : undefined);
-          return;
-        }
-
-        currentRepeatRef.current = 0;
-        if (continuous) {
-          advanceToNextSegment("teacher");
-        } else {
-          setIsPlaying(false);
-          clearAllHighlights();
-        }
-        return;
-      }
-    }
 
     // "teacher" or "kids" only mode
     const speakerForMode: Speaker = mode === "kids" ? "kids" : "teacher";
@@ -1175,7 +1149,6 @@ export default function QuranReader() {
                           if (sIdx !== -1) setSelectedSurahIdx(sIdx);
                           setSelectedAyah(box.ayah);
                           currentRepeatRef.current = 0;
-                          bothPhaseRef.current = "teacher";
                           setControlsOpen(true);
                           if (isSimultaneousPlaying) { stopSimultaneous(); }
                           // بلا فهرس صندوق: يجد الجزء الأول للآية بالرقم (يعالج الآيات متعددة الأجزاء)
@@ -1241,7 +1214,6 @@ export default function QuranReader() {
             kidsMode
               ? { key: "lock", icon: <Lock className="w-5 h-5 text-foreground" />, label: "خروج من ركن الأطفال", onClick: requestExitKids, active: true }
               : (kidsCorner && { key: "kids", icon: <Baby className="w-5 h-5 text-foreground" />, label: "ركن الأطفال", onClick: enterKids, active: false }),
-            !kidsMode && { key: "tools", icon: <Wrench className="w-5 h-5 text-foreground" />, label: "أدوات المعلّم", onClick: openTools, active: false },
             !kidsMode && { key: "settings", icon: <Settings className="w-5 h-5 text-foreground" />, label: "الإعدادات", onClick: openSettings, active: false },
           ].filter(Boolean) as { key: string; icon: JSX.Element; label: string; onClick: () => void; active: boolean }[]).map(b => (
             <button
@@ -1304,8 +1276,8 @@ export default function QuranReader() {
       {pinAction && (
         <PinModal
           mode={pinAction === "enter" ? "set" : "verify"}
-          title={pinAction === "enter" ? "اختر رمز ولي الأمر (٤ أرقام)" : pinAction === "settings" ? "أدخل الرمز للإعدادات" : pinAction === "tools" ? "أدخل الرمز لأدوات المعلّم" : "أدخل الرمز للخروج من ركن الأطفال"}
-          onSuccess={() => { if (pinAction === "enter") { setKidsLocked(true); navigate("/games"); } else if (pinAction === "settings") { navigate("/settings"); } else if (pinAction === "tools") { navigate("/tools"); } else { setKidsLocked(false); } setPinAction(null); }}
+          title={pinAction === "enter" ? "اختر رمز ولي الأمر (٤ أرقام)" : pinAction === "settings" ? "أدخل الرمز للإعدادات" : "أدخل الرمز للخروج من ركن الأطفال"}
+          onSuccess={() => { if (pinAction === "enter") { setKidsLocked(true); navigate("/games"); } else if (pinAction === "settings") { navigate("/settings"); } else { setKidsLocked(false); } setPinAction(null); }}
           onCancel={() => setPinAction(null)}
         />
       )}
@@ -1388,14 +1360,12 @@ export default function QuranReader() {
                 {([
                   { mode: "teacher" as PlayMode, label: "معلم فقط", Icon: Mic, desc: "تشغيل المعلم وحده", activeColor: "bg-amber-400/20 border-amber-400/50 text-amber-800" },
                   { mode: "kids" as PlayMode, label: "طفل فقط", Icon: Baby, desc: "تشغيل الطفل وحده", activeColor: "bg-sky-400/20 border-sky-400/50 text-sky-800" },
-                  { mode: "both" as PlayMode, label: "تصحيح", Icon: Headphones, desc: "المعلم ثم الطفل", activeColor: "bg-violet-400/20 border-violet-400/50 text-violet-800" },
                 ]).map(({ mode, label, Icon, desc, activeColor }) => (
                   <button
                     key={mode}
                     onClick={() => { 
                       if (isSimultaneousPlaying) { stopSimultaneous(); const a = audioRef.current; if (a) { a.pause(); } setIsPlaying(false); }
                       setPlayMode(mode); 
-                      bothPhaseRef.current = "teacher"; 
                     }}
                     className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all border flex flex-col items-center gap-0.5 ${
                       playMode === mode && !isSimultaneousPlaying
@@ -1416,7 +1386,7 @@ export default function QuranReader() {
                   if (!hasKids) return (
                     <div className="py-2.5 px-2 rounded-xl text-xs font-bold border border-dashed border-border/40 flex flex-col items-center gap-0.5 text-foreground/30 cursor-not-allowed" title="لا يتوفر صوت الطفل">
                       <VolumeX className="w-5 h-5 opacity-40" />
-                      <span>معاً</span>
+                      <span>تشغيل متزامن</span>
                     </div>
                   );
                   return (
@@ -1439,7 +1409,7 @@ export default function QuranReader() {
                       title="تشغيل المعلم والطفل في نفس الوقت"
                     >
                       <Volume2 className="w-5 h-5" />
-                      <span>معاً</span>
+                      <span>تشغيل متزامن</span>
                     </button>
                   );
                 })()}
@@ -1465,7 +1435,7 @@ export default function QuranReader() {
               {isSimultaneousPlaying && (
                 <div className="flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg mb-3 text-xs font-bold bg-emerald-100/50 text-emerald-700 border border-emerald-200/50 animate-fade-in">
                   <Volume2 className="w-4 h-4" />
-                  <span>المعلم والطفل معاً</span>
+                  <span>تشغيل المعلم والطفل المتزامن</span>
                   <div className="flex items-center gap-[2px] h-3">
                     {[0, 1, 2].map((i) => (
                       <span key={i} className="w-[2px] bg-current rounded-full animate-wave" style={{ animationDelay: `${i * 0.12}s` }} />

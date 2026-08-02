@@ -39,7 +39,7 @@ function getPageDisplayName(page: { name: string; src: string }): string {
 }
 
 type Speaker = "teacher" | "kids";
-type PlayMode = "teacher" | "kids" | "both"; // both = teacher then kids for the same ayah
+type PlayMode = "teacher" | "kids";
 
 const STORAGE_KEY = "mushaf:lastPage";
 const MUSHAF_LAST_SURAH = "mushaf:lastSurah";
@@ -101,7 +101,7 @@ const MushafPage = ({ onBack }: Props) => {
   const [selectedSurahIdx, setSelectedSurahIdx] = useState(0);
   const [selectedAyah, setSelectedAyah] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playMode, _setPlayMode] = useState<PlayMode>("both");
+  const [playMode, _setPlayMode] = useState<PlayMode>("teacher");
   const [continuousPlay, _setContinuousPlay] = useState(true);
   const [repeatCount, _setRepeatCount] = useState(0);
 
@@ -136,7 +136,6 @@ const MushafPage = ({ onBack }: Props) => {
   const lastSavedTimeRef = useRef(0);
   const stopAtRef = useRef<number | null>(null);
   const currentRepeatRef = useRef(0);
-  const bothPhaseRef = useRef<"teacher" | "kids">("teacher");
   const currentAyahRef = useRef(-1);
   const currentBoxIndexRef = useRef(-1);
   const currentSpeakerRef = useRef<Speaker>("teacher");
@@ -682,29 +681,6 @@ const MushafPage = ({ onBack }: Props) => {
         && b.kidsStart !== undefined && b.kidsEnd !== undefined);
     const hasKidsEffective = hasKids || boxHasKids;
 
-    if (mode === "both" && hasKidsEffective) {
-      if (bothPhaseRef.current === "teacher") {
-        bothPhaseRef.current = "kids";
-        playAyah(activeSurah, currentAyahRef.current, "kids");
-        return;
-      } else {
-        bothPhaseRef.current = "teacher";
-        if (currentRepeatRef.current < repeat) {
-          currentRepeatRef.current++;
-          playAyah(activeSurah, currentAyahRef.current, "teacher");
-          return;
-        }
-        currentRepeatRef.current = 0;
-        if (continuous) {
-          advanceToNextSegment("teacher");
-        } else {
-          setIsPlaying(false);
-          clearAllHighlights();
-        }
-        return;
-      }
-    }
-
     const speakerForMode: Speaker = mode === "kids" ? "kids" : "teacher";
 
     if (currentRepeatRef.current < repeat) {
@@ -741,7 +717,6 @@ const MushafPage = ({ onBack }: Props) => {
         const surahBoxes = pageBoxes.filter(b => b.surah === activeSurah.number).sort((a,b) => a.ayah - b.ayah);
         const firstAyah = surahBoxes[0]?.ayah ?? 1;
         currentRepeatRef.current = 0;
-        bothPhaseRef.current = "teacher";
         playAyah(activeSurah, firstAyah, playMode === "kids" ? "kids" : "teacher");
       } else {
         a.play().then(() => setIsPlaying(true)).catch(() => { });
@@ -969,18 +944,15 @@ const MushafPage = ({ onBack }: Props) => {
               <p className="text-xs font-bold mb-2 text-muted-foreground">وضع التشغيل</p>
               <div className="flex gap-1.5 mb-3">
                 {([
-                  { mode: "both" as PlayMode, label: "تصحيح", desc: "معلم ثم طفل" },
                   { mode: "teacher" as PlayMode, label: "معلم", desc: "صوت المعلم فقط" },
                   { mode: "kids" as PlayMode, label: "أطفال", desc: "صوت الأطفال فقط" },
                 ]).map(({ mode, label, desc }) => (
                   <button
                     key={mode}
-                    onClick={() => { setPlayMode(mode); bothPhaseRef.current = "teacher"; }}
+                    onClick={() => { setPlayMode(mode); }}
                     className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all border ${
                       playMode === mode
-                        ? mode === "both"
-                          ? "bg-gradient-to-br from-amber-400/30 to-sky-400/30 border-amber-400/60 text-foreground shadow"
-                          : mode === "teacher"
+                        ? mode === "teacher"
                             ? "bg-amber-400/20 border-amber-400/50 text-amber-800 shadow"
                             : "bg-sky-400/20 border-sky-400/50 text-sky-800 shadow"
                         : "bg-white/70 border-border/60 text-foreground/70"
@@ -1050,7 +1022,6 @@ const MushafPage = ({ onBack }: Props) => {
                     onClick={() => {
                       setSelectedAyah(n);
                       currentRepeatRef.current = 0;
-                      bothPhaseRef.current = "teacher";
                       const startSpeaker: Speaker = playMode === "kids" ? "kids" : "teacher";
                       const pageBoxes = getPageAyahBoxes(pages[currentPage].src);
                       const surahBoxes = pageBoxes.filter(b => b.surah === selectedSurah.number);
@@ -1134,7 +1105,6 @@ const MushafPage = ({ onBack }: Props) => {
                   setSelectedSurahIdx(currentPageSurahs.indexOf(activeMenuAyah.surah));
                   setSelectedAyah(activeMenuAyah.ayah);
                   currentRepeatRef.current = 0;
-                  bothPhaseRef.current = "teacher";
                   setPlayMode("teacher");
                   playAyah(activeMenuAyah.surah, activeMenuAyah.ayah, "teacher", activeMenuAyah.boxIndex);
                   setActiveMenuAyah(null);
@@ -1149,7 +1119,6 @@ const MushafPage = ({ onBack }: Props) => {
                   setSelectedSurahIdx(currentPageSurahs.indexOf(activeMenuAyah.surah));
                   setSelectedAyah(activeMenuAyah.ayah);
                   currentRepeatRef.current = 0;
-                  bothPhaseRef.current = "teacher";
                   setPlayMode("kids");
                   playAyah(activeMenuAyah.surah, activeMenuAyah.ayah, "kids", activeMenuAyah.boxIndex);
                   setActiveMenuAyah(null);
@@ -1164,21 +1133,14 @@ const MushafPage = ({ onBack }: Props) => {
                   setSelectedSurahIdx(currentPageSurahs.indexOf(activeMenuAyah.surah));
                   setSelectedAyah(activeMenuAyah.ayah);
                   currentRepeatRef.current = 0;
-                  bothPhaseRef.current = "teacher";
-                  setPlayMode("both");
+                  setPlayMode("teacher");
                   playAyah(activeMenuAyah.surah, activeMenuAyah.ayah, "teacher", activeMenuAyah.boxIndex);
                   setActiveMenuAyah(null);
                 }}
-                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-400/30 to-sky-400/30 hover:from-amber-400/40 hover:to-sky-400/40 border border-amber-400/40 text-slate-800 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-md"
+                className="w-full py-3 px-4 rounded-2xl bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/50 text-amber-900 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-sm"
               >
-                <Headphones className="w-4 h-4 inline-block" /> تصحيح (المعلم ثم الطفل)
+                <Headphones className="w-4 h-4 inline-block" /> تلاوة المعلم
               </button>
-
-              <div className="flex gap-2 mt-2 pt-2 border-t border-slate-200/50">
-                <button
-                  onClick={() => setActiveMenuAyah(null)}
-                  className="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all active:scale-95"
-                >
                   إغلاق
                 </button>
               </div>

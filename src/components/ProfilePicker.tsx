@@ -51,26 +51,26 @@ export default function ProfilePicker({ onPicked }: { onPicked?: () => void }) {
         <p className="animate-fade-up text-muted-foreground text-sm sm:text-base text-center mb-10">اختر ملفّك للمتابعة في رحلة النور</p>
 
         <div className="animate-fade-up flex flex-wrap items-start justify-center gap-6 sm:gap-8">
-          {profiles.map(p => (
-            <button key={p.id} onClick={() => pickChild(p.id)} className="group flex flex-col items-center gap-3 w-24 sm:w-28 active:scale-95 transition-transform">
-              <span className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center ring-2 ring-transparent ring-offset-2 ring-offset-background group-hover:ring-accent rounded-full transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl">
-                <Avatar name={p.avatar} className="w-24 h-24 sm:w-28 sm:h-28 drop-shadow-md" />
-              </span>
-              <span className="font-bold text-center truncate w-full text-foreground group-hover:text-accent transition-colors">{p.name || "طفلي"}</span>
-            </button>
-          ))}
+          {/* خيار: لي نفسي (المعلم/الوالد) */}
+          <button onClick={asParent} className="group flex flex-col items-center gap-3 w-24 sm:w-28 active:scale-95 transition-transform">
+            <span className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-secondary border border-border flex items-center justify-center ring-2 ring-transparent ring-offset-2 ring-offset-background group-hover:ring-accent shadow-soft transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl"><User className="w-12 h-12 text-accent" /></span>
+            <span className="font-bold text-center text-foreground group-hover:text-accent transition-colors">لي نفسي</span>
+          </button>
 
-          {appMode === "both" && (
-            <button onClick={asParent} className="group flex flex-col items-center gap-3 w-24 sm:w-28 active:scale-95 transition-transform">
-              <span className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-secondary border border-border flex items-center justify-center ring-2 ring-transparent ring-offset-2 ring-offset-background group-hover:ring-accent shadow-soft transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl"><User className="w-12 h-12 text-accent" /></span>
-              <span className="font-bold text-center text-foreground group-hover:text-accent transition-colors">وليّ الأمر</span>
+          {/* خيار: لي طفلي (الطفل الأول أو الوهمي) */}
+          {profiles.length > 0 ? (
+            <button onClick={() => pickChild(profiles[0].id)} className="group flex flex-col items-center gap-3 w-24 sm:w-28 active:scale-95 transition-transform">
+              <span className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center ring-2 ring-transparent ring-offset-2 ring-offset-background group-hover:ring-accent rounded-full transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl">
+                <Avatar name={profiles[0].avatar} className="w-24 h-24 sm:w-28 sm:h-28 drop-shadow-md" />
+              </span>
+              <span className="font-bold text-center truncate w-full text-foreground group-hover:text-accent transition-colors">لي طفلي</span>
+            </button>
+          ) : (
+            <button onClick={() => { manage(); }} className="group flex flex-col items-center gap-3 w-24 sm:w-28 active:scale-95 transition-transform">
+              <span className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-muted border border-dashed border-border flex items-center justify-center ring-2 ring-transparent ring-offset-2 ring-offset-background group-hover:ring-accent/60 shadow-soft transition-all duration-300 group-hover:-translate-y-1"><Plus className="w-12 h-12 text-muted-foreground group-hover:text-accent transition-colors" /></span>
+              <span className="font-bold text-center text-muted-foreground group-hover:text-accent transition-colors">لي طفلي</span>
             </button>
           )}
-
-          <button onClick={manage} className="group flex flex-col items-center gap-3 w-24 sm:w-28 active:scale-95 transition-transform">
-            <span className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-muted border border-dashed border-border flex items-center justify-center ring-2 ring-transparent ring-offset-2 ring-offset-background group-hover:ring-accent/60 shadow-soft transition-all duration-300 group-hover:-translate-y-1"><Plus className="w-12 h-12 text-muted-foreground group-hover:text-accent transition-colors" /></span>
-            <span className="font-bold text-center text-muted-foreground group-hover:text-accent transition-colors">إضافة / إدارة</span>
-          </button>
         </div>
 
         <button onClick={goSettings} className="animate-fade-up mt-12 inline-flex items-center gap-2 rounded-full bg-secondary border border-border px-5 py-2.5 text-sm font-bold text-secondary-foreground hover:brightness-95 shadow-soft active:scale-95 transition-all">

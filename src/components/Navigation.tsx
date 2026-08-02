@@ -7,7 +7,6 @@ export function Navigation() {
   const links = [
     { href: "/", label: "الرئيسية", icon: BookMarked },
     { href: "/calibrate", label: "معايرة", icon: Settings },
-    { href: "/recitation-methods", label: "الطرق", icon: Zap },
   ];
 
   return (

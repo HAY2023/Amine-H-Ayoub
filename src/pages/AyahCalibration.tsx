@@ -673,6 +673,7 @@ const AyahCalibration = () => {
             </div>
 
             {/* ④ ربط الصوت بالآيات (التقسيم ← الربط) — خطوة منظّمة بعد ضبط المربعات */}
+            {false && (
             <Link to="/link" className="block rounded-2xl bg-sky-950/30 border border-sky-500/30 p-3 hover:border-sky-400/50 active:scale-[0.99] transition-all">
               <div className="flex items-center gap-3">
                 <span className="w-11 h-11 rounded-xl bg-sky-500/20 text-sky-300 flex items-center justify-center shrink-0"><Link2 className="h-6 w-6" /></span>
@@ -683,6 +684,7 @@ const AyahCalibration = () => {
                 <ChevronLeft className="w-5 h-5 text-sky-300/70 shrink-0" />
               </div>
             </Link>
+            )}
 
             <button onClick={() => saveAll(false)} className="w-full p-3 rounded-2xl btn-gold font-extrabold flex items-center justify-center gap-2 active:scale-[0.98]">
               <Save className="h-5 w-5" /> حفظ الصفحة (مربعات + مناطق)

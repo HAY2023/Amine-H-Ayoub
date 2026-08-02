@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://8a2e8529.learn-quran-kids.pages.dev/",
+  "homepage": "https://learn-quran-kids.pages.dev",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
+    "@lovable.dev/cloud-auth-js": "^1.1.2",
+    "@lovable.dev/mcp-js": "^0.23.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-aspect-ratio": "^1.1.7",

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Youtube, Check, CloudDownload, Wrench, User, Baby, Users, Plus, Trash2, Minus, KeyRound, Shield } from "lucide-react";
+import { Youtube, Check, CloudDownload, Wrench, User, Baby, Plus, Trash2, Minus, KeyRound, Shield } from "lucide-react";
 import { TermsText, RECITER_URL } from "../pages/SettingsPage";
 import { downloadEverything } from "../data/offlineDownload";
 import { setAppMode, addProfile, setActiveProfile, kidsHidden, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
@@ -27,8 +27,8 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
 
   // إذا أخفى المالك ركن الأطفال: إطلاق بالسماع فقط — نتخطّى خطوات الأطفال ونثبّت وضع وليّ الأمر
   const kidsOff = kidsHidden();
-  const effMode: AppMode = kidsOff ? "parent" : (mode ?? "both");
-  // مفاتيح الخطوات: وضع وليّ الأمر لا يحتاج ملفّات أطفال؛ ركن الأطفال يعرض خطوة رمز اختيارية
+  const effMode: AppMode = kidsOff ? "parent" : (mode ?? "kids");
+  // مفاتيح الخطوات: وضع وليّ الأمر لا يحتاج ملفّات أطفال؛ وضع الأطفال يعرض خطوة ركن الأطفال ورمز وليّ الأمر الاختياري
   const stepKeys = kidsOff
     ? ["welcome", "terms", "subscribe", "download"]
     : effMode === "parent"
@@ -55,7 +55,7 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
     try { localStorage.setItem(ONBOARD_KEY, "1"); } catch { /* ignore */ }
   };
   const finish = () => { finalize(); onDone(); };
-  const finishToTools = () => { finalize(); onDone(); navigate("/tools"); };
+  const finishToTools = () => { /* أدوات المعلّم معطّلة */ };
 
   const startDownload = async () => {
     setDl(d => ({ ...d, busy: true, done: 0, total: 0, finished: false }));
@@ -132,9 +132,8 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
               <h2 className="text-xl font-extrabold text-accent text-center">لِمَن هذا التطبيق؟</h2>
               <p className="text-muted-foreground text-sm text-center leading-relaxed">اختر طريقة الاستخدام — يمكنك تغييرها لاحقاً من الإعدادات.</p>
               <div className="space-y-2 pt-1">
-                <ModeCard m="parent" Icon={User} title="لي أنا (وليّ الأمر / المعلّم)" desc="استخدام مباشر للمصحف والأدوات — بلا ركن أطفال." />
-                <ModeCard m="kids" Icon={Baby} title="لأطفالي" desc="ركن أطفال آمن: قراءة موجّهة وألعاب، مع ملفّ لكل طفل." />
-                <ModeCard m="both" Icon={Users} title="لي ولأطفالي معاً" desc="الوضعان معاً — تختار من يستخدم التطبيق عند كل فتح." />
+                <ModeCard m="parent" Icon={User} title="لي أنا " />
+                <ModeCard m="kids" Icon={Baby} title="لأطفالي" />
               </div>
             </div>
           )}
@@ -238,11 +237,7 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
                 <button onClick={startDownload} className="btn-emerald px-5 py-3"><CloudDownload className="w-5 h-5" /> حمّل كل شيء الآن</button>
               )}
               <p className="text-[11px] text-muted-foreground">يمكنك التحميل لاحقاً من الإعدادات.</p>
-              {effMode === "parent" && !kidsOff && (
-                <button onClick={finishToTools} className="mx-auto inline-flex items-center justify-center gap-2 rounded-xl bg-secondary border border-border text-accent font-bold px-4 py-2.5 text-sm hover:brightness-95 transition-all active:scale-95">
-                  <Wrench className="w-4 h-4" /> ابدأ بإعداد المحتوى (أدوات المعلّم)
-                </button>
-              )}
+              {/* زر الدخول لأدوات المعلّم مخفي */}
             </div>
           )}
         </div>

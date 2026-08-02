@@ -91,9 +91,11 @@ export default function LinkAudioPage() {
     <div className="min-h-screen page-nour text-foreground" dir="rtl">
       <div className="mx-auto max-w-md px-4 py-4 space-y-4">
         <header className="flex items-center justify-between">
+          {false && (
           <Link to="/recitation-methods" className="flex h-10 items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold hover:brightness-95 active:scale-95">
             <ArrowRight className="h-4 w-4" /> رجوع
           </Link>
+          )}
           <h1 className="font-extrabold text-lg text-gradient-gold flex items-center gap-1.5"><Link2 className="w-5 h-5 text-accent" /> ربط الصوت بالتظليل</h1>
           <span className="w-16" />
         </header>

@@ -48,7 +48,7 @@ export default function ParentDashboard() {
     if (!name) { toast({ title: "اكتب اسم الطفل", variant: "destructive" }); return; }
     const p = addProfile({ name, age: newKid.age, avatar: newKid.avatar, color: newKid.color });
     setActiveProfile(p.id);
-    if (getAppMode() === "parent") setAppMode("both");   // تفعيل ركن الأطفال عند إضافة أوّل طفل
+    if (getAppMode() === "parent") setAppMode("kids");   // تفعيل ركن الأطفال عند إضافة أوّل طفل
     setShowAdd(false);
     refresh();
     toast({ title: `أُضيف ${name}` });

@@ -8,8 +8,8 @@
 import { supabase, hasValidSupabaseKey } from "../lib/supabase";
 import { isMushafDevEnabled } from "../utils/tauriUtils";
 
-/** وضع التطبيق: لوليّ الأمر فقط، للأطفال فقط، أو معاً. */
-export type AppMode = "parent" | "kids" | "both";
+/** وضع التطبيق: لوليّ الأمر فقط أو للأطفال فقط. */
+export type AppMode = "parent" | "kids";
 
 export interface KidsProfile {
   id: string;
@@ -139,7 +139,7 @@ const ensureMigrated = () => {
     if (lp) localStorage.setItem(progKey(id), lp);
     const lh = localStorage.getItem(LEGACY_HISTORY_KEY);
     if (lh) localStorage.setItem(histKey(id), lh);
-    if (!localStorage.getItem(APPMODE_KEY)) localStorage.setItem(APPMODE_KEY, "both");
+    if (!localStorage.getItem(APPMODE_KEY)) localStorage.setItem(APPMODE_KEY, kidsHidden() ? "parent" : "kids");
     upsert(PROFILES_KEY, [prof]);
     upsert(ACTIVE_KEY, id);
   } catch { /* ignore */ }
@@ -147,9 +147,13 @@ const ensureMigrated = () => {
 
 /* ---------------- وضع التطبيق ---------------- */
 export const getAppMode = (): AppMode => {
-  if (typeof window === "undefined") return "both";
+  if (typeof window === "undefined") return "kids";
   ensureMigrated();
-  try { const m = localStorage.getItem(APPMODE_KEY); return (m === "parent" || m === "kids" || m === "both") ? m : "both"; } catch { return "both"; }
+  try {
+    const m = localStorage.getItem(APPMODE_KEY);
+    if (m === "parent" || m === "kids") return m;
+    return kidsHidden() ? "parent" : "kids";
+  } catch { return "kids"; }
 };
 export const setAppMode = (m: AppMode) => {
   if (typeof window === "undefined") return;

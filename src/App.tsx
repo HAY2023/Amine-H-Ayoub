@@ -8,28 +8,15 @@ import { useEffect, useState, useCallback } from "react";
 import SiteLinksOverlay from "./components/SiteLinksOverlay";
 import { syncCoordinatesFromServer } from "./data/ayahCoordinates";
 import { syncTimingsFromServer } from "./data/ayahTimings";
-import { syncSurahRegionsFromServer } from "./data/surahRegions";
-import { syncCustomPagesFromServer } from "./data/customPages";
-import { syncKidsProfileFromServer } from "./data/kidsProfile";
 import { syncBookmarksFromServer } from "./data/bookmarks";
 import { AudioContextProvider } from "./contexts/audioContext";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import TimingsRecorder from "./pages/TimingsRecorder.tsx";
-import AyahCalibration from "./pages/AyahCalibration.tsx";
-import RecitationMethods from "./pages/RecitationMethods.tsx";
 import QuranReader from "./pages/QuranReader.tsx";
-import AudioUploadPage from "./pages/AudioUploadPage.tsx";
-import LinkAudioPage from "./pages/LinkAudioPage.tsx";
 import KidsGames from "./pages/KidsGames.tsx";
 import SettingsPage, { applyTheme, getTheme } from "./pages/SettingsPage.tsx";
-import ParentDashboard from "./pages/ParentDashboard.tsx";
-import TeacherTools from "./pages/TeacherTools.tsx";
-import KidsShop from "./pages/KidsShop.tsx";
-import CustomAudioManager from "./pages/CustomAudioManager.tsx";
-import QuranStudent from "./pages/QuranStudent.tsx";
+import UploadDeskPage from "./pages/UploadDeskPage.tsx";
 import { getProfile, getAppMode, getProfiles, kidsEnabled } from "./data/kidsProfile";
-import { syncGameCatalogFromServer } from "./data/gameCatalog";
 import { toast } from "./hooks/use-toast";
 import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
 import ProfilePicker, { isPicked, markPicked } from "./components/ProfilePicker.tsx";
@@ -44,14 +31,13 @@ const App = () => {
   const [showSiteLinks, setShowSiteLinks] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !isOnboarded());
   // بوابة "من يتعلّم الآن؟" عند فتح التطبيق
-  // وضع "معاً": تظهر دائماً للاختيار بين الأطفال ووليّ الأمر. وضع "الأطفال": فقط إن كان هناك أكثر من طفل.
+  // وضع الأطفال: فقط إن كان هناك أكثر من طفل.
   const shouldGate = () => {
     try {
       if (!isOnboarded() || isPicked()) return false;
       if (!kidsEnabled()) return false;   // وضع وليّ الأمر أو إخفاء الأطفال بالكامل
-      const mode = getAppMode();
       const n = getProfiles().length;
-      return mode === "both" ? n >= 1 : n > 1;
+      return n > 1;
     } catch { return false; }
   };
   const [showPicker, setShowPicker] = useState(shouldGate);
@@ -60,11 +46,7 @@ const App = () => {
     applyTheme(getTheme());
     syncCoordinatesFromServer();
     syncTimingsFromServer();
-    syncSurahRegionsFromServer();
-    syncCustomPagesFromServer();
-    syncKidsProfileFromServer();
     syncBookmarksFromServer();
-    syncGameCatalogFromServer();
 
     // Send localStorage data to Vite plugin (dev-only, silent fail)
     const data = localStorage.getItem("mushaf:ayahCoordinates:v1");
@@ -112,23 +94,14 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <BrowserRouter basename={import.meta.env.BASE_URL} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
               <Route path="/" element={<HomeRoute />} />
               <Route path="/audio" element={<Index />} />
-              <Route path="/upload" element={<AudioUploadPage />} />
-              <Route path="/timings" element={<TimingsRecorder />} />
-              <Route path="/calibrate" element={<AyahCalibration />} />
-              <Route path="/recitation-methods" element={<RecitationMethods />} />
-              <Route path="/link" element={<LinkAudioPage />} />
               <Route path="/games" element={<KidsGames />} />
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/parent" element={<ParentDashboard />} />
-              <Route path="/tools" element={<TeacherTools />} />
+              <Route path="/upload-desk" element={<UploadDeskPage />} />
               <Route path="/profiles" element={<ProfilePicker />} />
-              <Route path="/shop" element={<KidsShop />} />
-              <Route path="/student" element={<QuranStudent />} />
-              <Route path="/custom-audio" element={<CustomAudioManager />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
