@@ -23,6 +23,7 @@ export interface KidsProfile {
   lessonTime: string;    // وقت تذكير الدرس "HH:MM" (فارغ = بلا تذكير)
   coins: number;         // النقاط (النجوم) المكتسبة من الألعاب
   inventory: string[];   // معرّفات عناصر المتجر المملوكة
+  currentSurah?: number; // السورة الحالية التي يحفظها الطفل (تُستخدم لتحديد نطاق الألعاب)
 }
 
 /** عنصر في متجر المكافآت — يُشترى بالنقاط. */
@@ -61,7 +62,7 @@ const LEGACY_HISTORY_KEY = "mushaf:kidsHistory:v1";
 const progKey = (id: string) => `${PROGRESS_BASE}:${id}`;
 const histKey = (id: string) => `${HISTORY_BASE}:${id}`;
 
-const DEFAULT_FIELDS = { goalMinutes: 5, playMinutes: 0, reward: "أحسنت، لقد فتحت الألعاب", lessonTime: "", coins: 0, inventory: [] as string[] };
+const DEFAULT_FIELDS = { goalMinutes: 5, playMinutes: 0, reward: "أحسنت، لقد فتحت الألعاب", lessonTime: "", coins: 0, inventory: [] as string[], currentSurah: 0 };
 const DEFAULT_PROFILE: KidsProfile = { id: "default", name: "", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0], ...DEFAULT_FIELDS };
 
 /** متجر المكافآت — وجوه (أيقونات) وألوان تُفتح بالنقاط (محتوى داخلي، بلا أي ملفات خارجية). */
@@ -119,6 +120,7 @@ const normalize = (p: Partial<KidsProfile>, i = 0): KidsProfile => ({
   color: p.color || KID_COLORS[i % KID_COLORS.length],
   coins: typeof p.coins === "number" ? p.coins : 0,
   inventory: Array.isArray(p.inventory) ? p.inventory : [],
+  currentSurah: typeof p.currentSurah === "number" ? p.currentSurah : 0,
 });
 
 /* ---------------- الترقية من النسخة القديمة (ملف واحد) ---------------- */
@@ -359,6 +361,14 @@ export const buyItem = (item: ShopItem): boolean => unlockItem(item.id, item.cos
 
 export const equipAvatar = (avatar: string) => { const id = getActiveId(); if (id) { updateProfile(id, { avatar }); if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:activeprofile")); } };
 export const equipColor = (color: string) => { const id = getActiveId(); if (id) { updateProfile(id, { color }); if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:activeprofile")); } };
+
+export const setCurrentSurah = (surahNumber: number) => {
+  const id = getActiveId();
+  if (id) {
+    updateProfile(id, { currentSurah: surahNumber });
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:activeprofile"));
+  }
+};
 
 /* ---------------- المزامنة من السيرفر ---------------- */
 export const syncKidsProfileFromServer = async () => {

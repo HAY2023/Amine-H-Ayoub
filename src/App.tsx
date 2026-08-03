@@ -10,12 +10,14 @@ import { syncCoordinatesFromServer } from "./data/ayahCoordinates";
 import { syncTimingsFromServer } from "./data/ayahTimings";
 import { syncBookmarksFromServer } from "./data/bookmarks";
 import { AudioContextProvider } from "./contexts/audioContext";
+import { preloadCorpusInBackground } from "./data/lazyCorpus";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import QuranReader from "./pages/QuranReader.tsx";
 import KidsGames from "./pages/KidsGames.tsx";
+import KidsShop from "./pages/KidsShop.tsx";
 import SettingsPage, { applyTheme, getTheme } from "./pages/SettingsPage.tsx";
-import UploadDeskPage from "./pages/UploadDeskPage.tsx";
+import ParentDashboard from "./pages/ParentDashboard.tsx";
 import { getProfile, getAppMode, getProfiles, kidsEnabled } from "./data/kidsProfile";
 import { toast } from "./hooks/use-toast";
 import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
@@ -47,6 +49,12 @@ const App = () => {
     syncCoordinatesFromServer();
     syncTimingsFromServer();
     syncBookmarksFromServer();
+
+    // Preload Quran corpus in background after initial render
+    // This improves performance when user navigates to reading/listening pages
+    setTimeout(() => {
+      preloadCorpusInBackground();
+    }, 500);
 
     // Send localStorage data to Vite plugin (dev-only, silent fail)
     const data = localStorage.getItem("mushaf:ayahCoordinates:v1");
@@ -99,8 +107,9 @@ const App = () => {
               <Route path="/" element={<HomeRoute />} />
               <Route path="/audio" element={<Index />} />
               <Route path="/games" element={<KidsGames />} />
+              <Route path="/shop" element={<KidsShop />} />
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/upload-desk" element={<UploadDeskPage />} />
+              <Route path="/parent" element={<ParentDashboard />} />
               <Route path="/profiles" element={<ProfilePicker />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

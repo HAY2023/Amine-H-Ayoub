@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { preloadImage } from "@/utils/lazyLoad";
 
 interface Props {
   selectedSurah: number | null;
@@ -7,6 +8,16 @@ interface Props {
 
 const AyahDisplay = ({ selectedSurah, selectedAyah }: Props) => {
   const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Preload image when surah/ayah changes
+  useEffect(() => {
+    if (selectedSurah && selectedAyah) {
+      const imageSrc = `/images/${selectedSurah}_${selectedAyah}.png`;
+      setIsLoading(true);
+      preloadImage(imageSrc).then(() => setIsLoading(false)).catch(() => setIsLoading(false));
+    }
+  }, [selectedSurah, selectedAyah]);
 
   if (!selectedSurah || !selectedAyah) {
     return (
@@ -29,12 +40,17 @@ const AyahDisplay = ({ selectedSurah, selectedAyah }: Props) => {
             <br />
             <span className="text-sm">({selectedSurah}_{selectedAyah}.png)</span>
           </p>
+        ) : isLoading ? (
+          <div className="flex items-center justify-center">
+            <div className="animate-pulse text-muted-foreground">جاري التحميل...</div>
+          </div>
         ) : (
           <img
             key={imageSrc}
             src={imageSrc}
             alt={`سورة ${selectedSurah} - الآية ${selectedAyah}`}
             className="max-w-full h-auto rounded-md"
+            loading="lazy"
             onError={() => setHasError(true)}
             onLoad={() => setHasError(false)}
           />

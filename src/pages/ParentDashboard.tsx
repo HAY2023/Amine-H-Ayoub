@@ -1,13 +1,25 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, BookOpen, Clock, Bell, Baby, Check, Gift, Plus, Trash2, Minus, Star, X } from "lucide-react";
+import { ArrowRight, BookOpen, Clock, Bell, Baby, Check, Gift, Plus, Trash2, Minus, Star, X, TrendingUp, Award, Zap, Target } from "lucide-react";
 import { getProfile, updateProfile, getProgress, getHistory, getProfiles, getActiveId, setActiveProfile, addProfile, removeProfile, getAppMode, setAppMode, kidsRouteBlocked, KID_AVATARS, KID_COLORS, KidsProfile, KidsProgress, DayLog } from "../data/kidsProfile";
 import { isKidsMode } from "../data/kidsLock";
 import Avatar from "../components/Avatar";
 import { toast } from "../hooks/use-toast";
 
 const Bar = ({ value, max, color }: { value: number; max: number; color: string }) => (
-  <div className="h-2.5 rounded-full bg-secondary overflow-hidden"><div className={`h-full ${color} transition-all`} style={{ width: `${Math.min(100, (value / Math.max(1, max)) * 100)}%` }} /></div>
+  <div className="h-2.5 rounded-full bg-secondary overflow-hidden"><div className={`h-full ${color} transition-all duration-500`} style={{ width: `${Math.min(100, (value / Math.max(1, max)) * 100)}%` }} /></div>
+);
+
+// إحصائيات متقدمة
+const StatCard = ({ icon: Icon, title, value, trend, color }: { icon: any; title: string; value: string | number; trend?: string; color: string }) => (
+  <div className={`flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br ${color} border border-border/40 shadow-soft`}>
+    <div className="p-2 rounded-lg bg-black/10"><Icon className="w-5 h-5" /></div>
+    <div className="flex-1 min-w-0">
+      <p className="text-[11px] text-muted-foreground">{title}</p>
+      <p className="text-lg font-extrabold text-foreground">{value}</p>
+      {trend && <p className="text-[10px] text-success flex items-center gap-0.5"><TrendingUp className="w-3 h-3" /> {trend}</p>}
+    </div>
+  </div>
 );
 
 export default function ParentDashboard() {
@@ -30,6 +42,24 @@ export default function ParentDashboard() {
     setDraft(getProfile());
     setProgress(getProgress());
     setHistory(getHistory().slice(0, 7).reverse());
+  };
+
+  // حساب الإحصائيات المتقدمة
+  const stats = {
+    totalMinutes: history.reduce((a, d) => a + d.minutes, 0),
+    avgMinutes: history.length > 0 ? Math.round(history.reduce((a, d) => a + d.minutes, 0) / history.length) : 0,
+    bestDay: Math.max(0, ...history.map(d => d.minutes)),
+    consecutiveDays: (() => {
+      let count = 0;
+      for (let i = history.length - 1; i >= 0; i--) {
+        if (history[i].minutes > 0) count++;
+        else break;
+      }
+      return count;
+    })(),
+    thisWeekReading: history.reduce((a, d) => a + d.minutes, 0),
+    completedDays: history.filter(d => d.minutes >= profile.goalMinutes).length,
+    percentComplete: Math.min(100, Math.round((progress.minutes / Math.max(1, profile.goalMinutes)) * 100)),
   };
 
   // يحفظ الحقول القابلة للتحرير فقط (دمج فوق التخزين الحيّ) حتى لا تُمحى النجوم/المخزون/وقت الدرس
@@ -138,34 +168,72 @@ export default function ParentDashboard() {
           <button onClick={saveChild} className="w-full p-2.5 rounded-xl btn-gold font-bold flex items-center justify-center gap-1 active:scale-95"><Check className="w-4 h-4" /> حفظ إعدادات الطفل</button>
         </div>
 
-        {/* اليوم */}
+        {/* الإحصائيات المتقدمة */}
         <div className="card-nour p-4 space-y-3">
-          <p className="font-bold text-accent">اليوم</p>
-          <div>
-            <div className="flex items-center justify-between text-sm mb-1"><span className="flex items-center gap-1 text-muted-foreground"><BookOpen className="w-4 h-4" /> القراءة</span><span className="text-muted-foreground">{progress.minutes} / {profile.goalMinutes} د</span></div>
-            <Bar value={progress.minutes} max={profile.goalMinutes} color="bg-emerald-500" />
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Gift className="w-4 h-4 text-accent" />
-            <span className={progress.unlocked ? "text-success" : "text-muted-foreground"}>{progress.unlocked ? "الألعاب مفتوحة" : "الألعاب مقفلة (لم يُكمل القراءة)"}</span>
+          <p className="font-bold text-accent flex items-center gap-2"><TrendingUp className="w-4 h-4" /> إحصائيات هذا الأسبوع</p>
+          <div className="grid grid-cols-2 gap-2">
+            <StatCard icon={BookOpen} title="إجمالي الدقائق" value={stats.totalMinutes} trend={`+${Math.max(0, stats.avgMinutes - (history[history.length - 2]?.minutes || 0))} أمس`} color="from-blue-500/20 to-blue-600/20" />
+            <StatCard icon={Target} title="المتوسط اليومي" value={`${stats.avgMinutes}د`} trend={stats.consecutiveDays > 0 ? `${stats.consecutiveDays} أيام متتالية` : "عدم الاستمرار"} color="from-emerald-500/20 to-emerald-600/20" />
+            <StatCard icon={Star} title="أفضل يوم" value={`${stats.bestDay}د`} trend="هذا الأسبوع" color="from-amber-500/20 to-amber-600/20" />
+            <StatCard icon={Award} title="الأيام المكتملة" value={stats.completedDays} trend={`من ${history.length}`} color="from-purple-500/20 to-purple-600/20" />
           </div>
         </div>
 
-        {/* السجلّ */}
+        {/* اليوم الحالي - محسّن */}
+        <div className="card-nour p-4 space-y-3">
+          <p className="font-bold text-accent flex items-center gap-2"><Zap className="w-4 h-4" /> اليوم</p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-1 text-muted-foreground"><BookOpen className="w-4 h-4" /> القراءة</span>
+              <span className="text-foreground font-bold">{stats.percentComplete}%</span>
+            </div>
+            <Bar value={progress.minutes} max={profile.goalMinutes} color="bg-gradient-to-r from-blue-500 to-emerald-500" />
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{progress.minutes} دقيقة</span>
+              <span>هدف: {profile.goalMinutes} دقيقة</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary/50">
+            <Gift className={`w-5 h-5 ${progress.unlocked ? "text-success" : "text-muted-foreground"}`} />
+            <span className={progress.unlocked ? "text-success font-bold" : "text-muted-foreground"}>{progress.unlocked ? "✓ الألعاب مفتوحة" : "✗ الألعاب مقفلة"}</span>
+          </div>
+        </div>
+
+        {/* تقرير الأسبوع مع رسوم بيانية أفضل */}
         <div className="card-nour p-4">
-          <p className="font-bold text-accent mb-3">سجلّ القراءة (آخر أيام)</p>
+          <p className="font-bold text-accent mb-4 flex items-center gap-2"><BookOpen className="w-4 h-4" /> تقرير القراءة الأسبوعي</p>
           {history.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-2">لا سجلّ بعد — سيظهر تقدّم الأيام السابقة هنا.</p>
+            <p className="text-xs text-muted-foreground text-center py-4">لا سجلّ بعد — سيظهر تقدّم الأيام السابقة هنا.</p>
           ) : (
-            <div className="flex items-end justify-between gap-2 h-28">
-              {history.map((d, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full bg-secondary rounded-md overflow-hidden flex items-end" style={{ height: "80px" }}>
-                    <div className="w-full bg-emerald-500" style={{ height: `${Math.min(100, (d.minutes / maxHist) * 100)}%` }} />
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">{d.date.split(" ")[2]}</span>
-                </div>
-              ))}
+            <div className="space-y-2">
+              {/* الرسم البياني العمودي */}
+              <div className="flex items-end justify-between gap-2 h-40 px-1">
+                {history.map((d, i) => {
+                  const isToday = i === history.length - 1;
+                  const percentage = (d.minutes / Math.max(1, stats.bestDay)) * 100;
+                  const completed = d.minutes >= profile.goalMinutes;
+                  return (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1.5 group cursor-help" title={`${d.date}: ${d.minutes} دقيقة`}>
+                      <div className="w-full bg-secondary rounded-md overflow-hidden flex items-end transition-all group-hover:bg-secondary/60" style={{ height: "100px", minHeight: "100%" }}>
+                        <div 
+                          className={`w-full transition-all duration-300 rounded-t-sm ${completed ? "bg-gradient-to-t from-emerald-500 to-emerald-400" : "bg-gradient-to-t from-blue-500 to-blue-400"} ${isToday ? "ring-2 ring-accent ring-offset-2 ring-offset-background" : ""}`} 
+                          style={{ height: `${Math.max(5, percentage)}%` }} 
+                        />
+                      </div>
+                      <div className="text-center">
+                        <span className="text-[10px] font-bold text-foreground block">{d.minutes}</span>
+                        <span className="text-[9px] text-muted-foreground">{d.date.split(" ")[2]}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* مؤشرات النجاح */}
+              <div className="flex items-center gap-2 text-xs mt-4 pt-3 border-t border-border">
+                <span className="flex items-center gap-1 text-emerald-500"><div className="w-3 h-3 rounded-sm bg-gradient-to-t from-emerald-500 to-emerald-400" /> مكتمل</span>
+                <span className="flex items-center gap-1 text-blue-500"><div className="w-3 h-3 rounded-sm bg-gradient-to-t from-blue-500 to-blue-400" /> لم يكتمل</span>
+              </div>
             </div>
           )}
         </div>

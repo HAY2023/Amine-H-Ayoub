@@ -52,6 +52,9 @@ export default function UploadDeskPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<UploadedItem[]>(loadItems);
   const [message, setMessage] = useState<string | null>(null);
+  const [serverUrl, setServerUrl] = useState<string>(() => localStorage.getItem("upload-desk:serverUrl") || "/api/upload-file");
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
@@ -63,10 +66,49 @@ export default function UploadDeskPage() {
   }, [items]);
 
   useEffect(() => {
+    localStorage.setItem("upload-desk:serverUrl", serverUrl);
+  }, [serverUrl]);
+
+  useEffect(() => {
     return () => {
       Object.values(fileUrls).forEach(url => URL.revokeObjectURL(url));
     };
   }, [fileUrls]);
+
+  const uploadFileToServer = async (file: File) => {
+    const target = serverUrl.trim() || "/api/upload-file";
+    setUploadStatus(`جاري الرفع إلى ${target}...`);
+    setIsUploading(true);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const url = new URL(target, window.location.origin);
+      url.searchParams.set("filename", file.name);
+      url.searchParams.set("contentType", file.type || "application/octet-stream");
+
+      const response = await fetch(url.toString(), {
+        method: "POST",
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+        },
+        body: arrayBuffer,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      setUploadStatus(`تم الرفع بنجاح: ${result.path || file.name}`);
+      return result;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setUploadStatus(`فشل الرفع: ${message}`);
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -85,6 +127,8 @@ export default function UploadDeskPage() {
 
     const url = URL.createObjectURL(file);
     setFileUrls(prev => ({ ...prev, [id]: url }));
+
+    await uploadFileToServer(file);
 
     if (getPreviewKind(item.type) === "text") {
       try {
@@ -174,14 +218,34 @@ export default function UploadDeskPage() {
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="mx-auto mb-4 h-12 w-12 text-accent" />
-              <p className="text-lg font-bold">اسحب الملف هنا أو اضغط للاختيار</p>
-              <p className="mt-2 text-sm text-muted-foreground">أي نوع ملف مقبول. سيظهر في مكتب الرفع بعد الاختيار.</p>
+              <p className="text-lg font-bold">اسحب الفيديو هنا أو اضغط للاختيار</p>
+              <p className="mt-2 text-sm text-muted-foreground">يمكنك رفع فيديو أو ملف آخر، وسيُحفظ على خادم الموقع بعد الاختيار.</p>
               <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
             </div>
 
-            {message && (
-              <div className="mt-4 rounded-2xl bg-success/10 border border-success/40 p-4 text-sm text-success">
-                <CheckCircle2 className="inline-block mr-2 mb-0.5" /> {message}
+            <div className="mt-4 space-y-3">
+              <label className="text-sm font-semibold">رابط موقع جديد لاستقبال الملف</label>
+              <input
+                value={serverUrl}
+                onChange={e => setServerUrl(e.target.value)}
+                placeholder="https://example.com/api/upload أو /api/upload-file"
+                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+              />
+              <p className="text-xs text-muted-foreground">ضع رابط API لموقع جديد يستقبل ملف الرفع. إذا تركته فارغًا، سيُستخدم خادم Vite المحلي في التطوير.</p>
+            </div>
+
+            {(message || uploadStatus) && (
+              <div className="mt-4 space-y-3">
+                {message && (
+                  <div className="rounded-2xl bg-success/10 border border-success/40 p-4 text-sm text-success">
+                    <CheckCircle2 className="inline-block mr-2 mb-0.5" /> {message}
+                  </div>
+                )}
+                {uploadStatus && (
+                  <div className="rounded-2xl bg-secondary/10 border border-border p-4 text-sm text-foreground">
+                    {uploadStatus}
+                  </div>
+                )}
               </div>
             )}
 

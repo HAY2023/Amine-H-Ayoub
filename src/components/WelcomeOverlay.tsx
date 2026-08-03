@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Youtube, Check, CloudDownload, Wrench, User, Baby, Plus, Trash2, Minus, KeyRound, Shield } from "lucide-react";
-import { TermsText, RECITER_URL } from "../pages/SettingsPage";
+import { RECITER_URL } from "../pages/SettingsPage";
 import { downloadEverything } from "../data/offlineDownload";
 import { setAppMode, addProfile, setActiveProfile, kidsHidden, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
 import { setKidsPin } from "../data/kidsLock";
@@ -18,7 +18,6 @@ interface NewKid { name: string; age: number; avatar: string; color: string; }
 export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
-  const [agreed, setAgreed] = useState(false);
   const [mode, setMode] = useState<AppMode | null>(null);
   const [kids, setKids] = useState<NewKid[]>([{ name: "", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0] }]);
   const [pin, setPin] = useState("");
@@ -30,10 +29,10 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
   const effMode: AppMode = kidsOff ? "parent" : (mode ?? "kids");
   // مفاتيح الخطوات: وضع وليّ الأمر لا يحتاج ملفّات أطفال؛ وضع الأطفال يعرض خطوة ركن الأطفال ورمز وليّ الأمر الاختياري
   const stepKeys = kidsOff
-    ? ["welcome", "terms", "subscribe", "download"]
+    ? ["welcome", "subscribe", "download"]
     : effMode === "parent"
-      ? ["welcome", "terms", "who", "subscribe", "download"]
-      : ["welcome", "terms", "who", "kids", "pin", "subscribe", "download"];
+      ? ["welcome", "who", "subscribe", "download"]
+      : ["welcome", "who", "kids", "pin", "subscribe", "download"];
   const cur = stepKeys[step];
   const lastIdx = stepKeys.length - 1;
   const pinValid = /^\d{4}$/.test(pin) && pin === pin2;
@@ -112,18 +111,6 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
               </div>
               <p className="text-muted-foreground leading-relaxed max-w-xs mx-auto">{kidsOff ? "استمع إلى تلاوات القرآن الكريم برواية ورش بصوت الشيخ حاج أيوب أمين — ويعمل دون إنترنت بعد التحميل." : "تطبيق تعليم القرآن للأطفال — يقرأ المعلّم وتُكرّر معه، مع ألعاب تعليمية وركن أطفال آمن، ويعمل دون إنترنت بعد التحميل."}</p>
               <div aria-hidden className="mx-auto w-24 h-px bg-gradient-to-l from-transparent via-accent/60 to-transparent" />
-            </div>
-          )}
-
-          {cur === "terms" && (
-            <div className="space-y-3 animate-fade-up">
-              <h2 className="text-xl font-extrabold text-accent text-center">بنود الاستخدام</h2>
-              <div aria-hidden className="mx-auto w-16 h-px bg-gradient-to-l from-transparent via-accent/50 to-transparent" />
-              <div className="card-nour p-4"><TermsText /></div>
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="w-5 h-5 accent-[hsl(var(--accent))]" />
-                <span className="font-bold text-foreground">أوافق على بنود الاستخدام</span>
-              </label>
             </div>
           )}
 
@@ -247,7 +234,7 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
           {step > 0 && <button onClick={() => setStep(s => s - 1)} className="px-5 py-3 rounded-xl bg-secondary text-secondary-foreground font-bold hover:brightness-95 transition-all active:scale-95">السابق</button>}
           {step < lastIdx ? (
             cur === "who" ? null : (
-              <button onClick={() => setStep(s => s + 1)} disabled={(cur === "terms" && !agreed) || (cur === "kids" && !kidsValid) || (cur === "pin" && !pinOk)}
+              <button onClick={() => setStep(s => s + 1)} disabled={(cur === "kids" && !kidsValid) || (cur === "pin" && !pinOk)}
                 className="btn-gold flex-1 px-5 py-3 disabled:opacity-40">{cur === "pin" && !pin && !pin2 ? "تخطّي" : "التالي"}</button>
             )
           ) : (

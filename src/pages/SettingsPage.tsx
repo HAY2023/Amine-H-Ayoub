@@ -48,7 +48,6 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const [theme, setTheme] = useState<"dark" | "light">(getTheme);
   const [appMode, setMode] = useState<AppMode>(getAppMode);
-  const [termsOpen, setTermsOpen] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [dlPct, setDlPct] = useState<number | null>(null);
   const [owner, setOwner] = useState(isMushafDevEnabled);
@@ -163,7 +162,6 @@ export default function SettingsPage() {
         <Section label="التطبيق">
           <Item icon={<RefreshCw className="w-5 h-5" />} title="تحقّق من التحديث" desc="جلب أحدث نسخة من التطبيق" onClick={checkUpdate} />
           <Item icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل للعمل دون إنترنت" desc="السور والتلاوات إلى جهازك" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-success w-12 text-center">{dlPct}%</span> : undefined} />
-          <Item icon={<FileText className="w-5 h-5" />} title="بنود الاستخدام" onClick={() => setTermsOpen(true)} />
         </Section>
 
         {/* ===== أدوات المالك (تظهر فقط في وضع المالك) ===== */}
@@ -202,34 +200,6 @@ export default function SettingsPage() {
       {pinFlow === "setNew" && (
         <PinModal mode="set" title="اختر كلمة مرور جديدة (٤ أرقام)" onSuccess={() => { setHasPin(true); setPinFlow(null); toast({ title: "تم حفظ كلمة المرور" }); }} onCancel={() => setPinFlow(null)} />
       )}
-
-      {termsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm p-4" dir="rtl" onClick={() => setTermsOpen(false)}>
-          <div className="w-full max-w-md max-h-[80vh] overflow-y-auto card-nour p-4 space-y-2 animate-fade-up" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-accent">بنود الاستخدام</h3>
-              <button onClick={() => setTermsOpen(false)} className="w-8 h-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center"><X className="w-4 h-4" /></button>
-            </div>
-            <TermsText />
-          </div>
-        </div>
-      )}
     </div>
-  );
-}
-
-export function TermsText() {
-  const items = [
-    "هذا التطبيق لتعليم القرآن الكريم للأطفال، ويُستخدم بإشراف وليّ الأمر.",
-    "لا يحق للمستخدم رفع أي محتوى مخالف أو مسيء أو غير متعلّق بتعليم القرآن.",
-    "المحتوى الذي ترفعه (صور صفحات/صوت) مسؤوليتك، وتقرّ بأن لديك الحق في استخدامه.",
-    "لا يجوز إساءة استخدام التطبيق أو محاولة تعطيله أو نشر دعايات غير لائقة.",
-    "قد تُحفظ بياناتك (التظليل والإعدادات) على السيرفر للمزامنة بين أجهزتك.",
-    "نسأل الله أن ينفع به، والاستخدام يعني موافقتك على هذه البنود.",
-  ];
-  return (
-    <ol className="space-y-2 text-sm text-foreground leading-relaxed list-decimal pr-5">
-      {items.map((t, i) => <li key={i}>{t}</li>)}
-    </ol>
   );
 }

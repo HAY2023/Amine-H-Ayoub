@@ -17,6 +17,28 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
+    warmup: {
+      clientFiles: ['./src/main.tsx', './src/App.tsx']
+    }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Split Quran data into separate chunk
+          if (id.includes('src/data/quranText.ts') || id.includes('src/data/surahs.ts')) {
+            return 'quran-data';
+          }
+        }
+      }
+    },
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+      }
+    },
+    chunkSizeWarningLimit: 1000,
   },
   plugins: [
     {

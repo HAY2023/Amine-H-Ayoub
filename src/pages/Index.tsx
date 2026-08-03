@@ -12,11 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
 
-import { Shuffle, ListOrdered, Loader2, SplitSquareHorizontal, BookOpen, Baby, ChevronLeft, Settings, Play, Pause, Mic, FileText, Image, Video, File } from "lucide-react";
+import { Shuffle, ListOrdered, Loader2, SplitSquareHorizontal, BookOpen, Baby, ChevronLeft, Settings } from "lucide-react";
 import { isTauri, shouldHideMushaf, checkOfflineStatus, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
 import { checkForUpdates, UpdateInfo } from "../utils/updateChecker";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
-import { kidsEnabled as getKidsEnabled, addReadingMinutes } from "@/data/kidsProfile";
+import { kidsEnabled as getKidsEnabled, addReadingMinutes, getProgress } from "@/data/kidsProfile";
 import { toast } from "@/hooks/use-toast";
 
 const LAST_SURAH_KEY = "audio:lastSurah";
@@ -42,36 +42,6 @@ const MUSHAF_PAGES = [
   { src: "/pages/604.jpg", surahs: [4, 3, 2] },
 ];
 
-interface UploadDeskItem {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  uploadedAt: number;
-}
-
-const UPLOAD_DESK_KEY = "upload-desk:items:v1";
-
-function getPreviewKind(type: string) {
-  if (type.startsWith("image/")) return "image";
-  if (type.startsWith("audio/")) return "audio";
-  if (type.startsWith("video/")) return "video";
-  if (type.startsWith("text/")) return "text";
-  return "file";
-}
-
-function loadUploadDeskItems(): UploadDeskItem[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(UPLOAD_DESK_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed;
-  } catch {
-    return [];
-  }
-}
 
 function getMushafPageForSurah(surahNumber: number): string | null {
   const page = MUSHAF_PAGES.find(p => p.surahs.includes(surahNumber));
@@ -91,7 +61,6 @@ const Index = () => {
   const [autoNext, setAutoNext] = useState(true);
   const [isShuffled, setIsShuffled] = useState(false);
   const [shuffledSurahs, setShuffledSurahs] = useState<SurahItem[]>([]);
-  const [uploadDeskItems, setUploadDeskItems] = useState<UploadDeskItem[]>(loadUploadDeskItems);
 
   // Desktop split view
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" ? window.innerWidth >= 1024 : false);
@@ -102,6 +71,18 @@ const Index = () => {
   const [kidsMode, setKidsMode] = useState(isKidsMode);
   const [pinAction, setPinAction] = useState<null | "enter" | "settings">(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(() => getProgress().unlocked);
+  
+  useEffect(() => {
+    const handleUnlock = () => setIsUnlocked(getProgress().unlocked);
+    window.addEventListener("mushaf:games_unlocked", handleUnlock);
+    window.addEventListener("mushaf:activeprofile", handleUnlock);
+    return () => {
+      window.removeEventListener("mushaf:games_unlocked", handleUnlock);
+      window.removeEventListener("mushaf:activeprofile", handleUnlock);
+    };
+  }, []);
+
   const isAudioPlayingRef = useRef(false);
   useEffect(() => { isAudioPlayingRef.current = isAudioPlaying; }, [isAudioPlaying]);
   useEffect(() => { const h = () => setKidsCorner(getKidsEnabled()); window.addEventListener("mushaf:appmode", h); return () => window.removeEventListener("mushaf:appmode", h); }, []);
@@ -141,15 +122,6 @@ const Index = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === UPLOAD_DESK_KEY) {
-        setUploadDeskItems(loadUploadDeskItems());
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
 
   const currentMushafPage = useMemo(() => {
     if (!currentSurah || currentSurah.revelationType === "custom") return null;
@@ -441,7 +413,7 @@ const Index = () => {
         </div>
 
         {/* مدخل ركن الأطفال (الألعاب) من داخل قسم التلاوات */}
-        {kidsCorner && (
+        {kidsCorner && isUnlocked && !isAudioPlaying && (
           <div className="max-w-2xl mx-auto px-4 mb-4" dir="rtl">
             <button
               onClick={kidsMode ? () => navigate("/games") : enterKids}
@@ -464,9 +436,6 @@ const Index = () => {
               <SearchBar value={search} onChange={setSearch} />
             </div>
             <div className="flex flex-wrap gap-2 items-center">
-              <Link to="/upload-desk" className="inline-flex items-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-bold text-black transition hover:brightness-95">
-                <FileText className="w-4 h-4" /> المكتب
-              </Link>
               {/* عرض المصحف جانبياً — يُخفى ما دام المصحف قيد التطوير */}
               {isDesktop && !shouldHideMushaf() && (
                 <button
@@ -515,41 +484,6 @@ const Index = () => {
             </div>
           )}
 
-          <section className="rounded-3xl border border-border bg-card/80 p-4 shadow-soft animate-fade-up">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="text-lg font-bold">مكتب الملفات</h2>
-                <p className="text-sm text-muted-foreground">تنظيم الملفات الجديدة وعرضها بترقيم مباشر على الصفحة الرئيسية.</p>
-              </div>
-              <Link to="/upload-desk" className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-xs font-bold text-black transition hover:brightness-95">
-                <FileText className="w-4 h-4" /> افتح المكتب
-              </Link>
-            </div>
-
-            {uploadDeskItems.length === 0 ? (
-              <p className="mt-4 text-sm text-muted-foreground">لا توجد ملفات مرفوعة حتى الآن. ارفع ملفات في المكتب لترى هنا قائمة مرقمة.</p>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {uploadDeskItems.slice(0, 6).map((item, index) => (
-                  <div key={item.id} className="flex items-center gap-3 rounded-3xl border border-border bg-background p-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary text-sm font-black text-muted-foreground">
-                      {index + 1}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-bold text-foreground">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.type || "ملف"}</p>
-                    </div>
-                    <span className="rounded-2xl bg-secondary px-3 py-1 text-xs font-bold text-muted-foreground">
-                      {getPreviewKind(item.type)}
-                    </span>
-                  </div>
-                ))}
-                {uploadDeskItems.length > 6 && (
-                  <p className="text-xs text-muted-foreground">عرضنا 6 ملفات من أصل {uploadDeskItems.length} ملف. افتح المكتب لرؤية القائمة كاملة.</p>
-                )}
-              </div>
-            )}
-          </section>
 
           {/* Update Checker Banner */}
           {updateInfo && (
