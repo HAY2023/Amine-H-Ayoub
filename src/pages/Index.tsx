@@ -8,14 +8,16 @@ import CustomPlayer, { CustomPlayerHandle } from "@/components/CustomPlayer";
 import MushafComingSoon from "@/components/MushafComingSoon";
 import PinModal from "@/components/PinModal";
 import BottomNav, { TabType } from "@/components/BottomNav";
+import NotificationsModal from "../components/NotificationsModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
 
-import { Shuffle, ListOrdered, Loader2, SplitSquareHorizontal, BookOpen, Baby, ChevronLeft, Settings } from "lucide-react";
+import { Shuffle, ListOrdered, Loader2, SplitSquareHorizontal, BookOpen, Baby, ChevronLeft, Settings, Bell } from "lucide-react";
 import { isTauri, shouldHideMushaf, checkOfflineStatus, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
 import { checkForUpdates, UpdateInfo } from "../utils/updateChecker";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
+import { isTimeAllowed } from "@/data/kidsSchedule";
 import { kidsEnabled as getKidsEnabled, addReadingMinutes, getProgress } from "@/data/kidsProfile";
 import { toast } from "@/hooks/use-toast";
 
@@ -70,6 +72,7 @@ const Index = () => {
   const [kidsCorner, setKidsCorner] = useState(getKidsEnabled);   // ركن الأطفال مُفعَّل؟ (ليس وضع وليّ الأمر فقط)
   const [kidsMode, setKidsMode] = useState(isKidsMode);
   const [pinAction, setPinAction] = useState<null | "enter" | "settings">(null);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(() => getProgress().unlocked);
   
@@ -89,7 +92,19 @@ const Index = () => {
   useEffect(() => { const h = () => setKidsMode(isKidsMode()); window.addEventListener("mushaf:kidsmode", h); return () => window.removeEventListener("mushaf:kidsmode", h); }, []);
 
   // ── ركن الأطفال: الدخول يقفل التطبيق برمز ولي الأمر (كما في القارئ) ──
-  const enterKids = () => { if (hasKidsPin()) { setKidsLocked(true); navigate("/games"); } else setPinAction("enter"); };
+  const enterKids = () => {
+    const timeCheck = isTimeAllowed();
+    if (!timeCheck.allowed) {
+      toast({
+        title: "غير مسموح الآن ⏰",
+        description: timeCheck.reason,
+        variant: "destructive"
+      });
+      return;
+    }
+    if (hasKidsPin()) { setPinAction("enter"); } else { setKidsLocked(true); navigate("/games"); }
+  };
+  
   // ── الإعدادات: محميّة برمز ولي الأمر إن وُجد (القارئ مخفيّ الآن، فمدخل الإعدادات هنا) ──
   const openSettings = () => { if (hasKidsPin()) setPinAction("settings"); else navigate("/settings"); };
 
@@ -397,14 +412,22 @@ const Index = () => {
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
 
       <div className="relative z-10 min-h-screen pb-40">
-        {/* مدخل الإعدادات — زرّ واضح بعنوان (يُخفى في وضع الطفل المقفل) */}
+        {/* مدخل الإعدادات والإشعارات — (يُخفى في وضع الطفل المقفل) */}
         {!kidsMode && (
-          <button
-            onClick={openSettings}
-            className="absolute top-3 left-3 z-20 h-10 px-3.5 rounded-full bg-card/85 backdrop-blur border border-accent/40 shadow-soft flex items-center gap-1.5 text-sm font-bold text-foreground/85 hover:text-foreground hover:border-accent/70 active:scale-95 transition-all"
-          >
-            <Settings className="w-4 h-4 text-accent" /> الإعدادات
-          </button>
+          <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
+            <button
+              onClick={() => setShowNotifications(true)}
+              className="h-10 w-10 rounded-full bg-card/85 backdrop-blur border border-accent/40 shadow-soft flex items-center justify-center text-foreground/85 hover:text-foreground hover:border-accent/70 active:scale-95 transition-all"
+            >
+              <Bell className="w-5 h-5 text-accent" />
+            </button>
+            <button
+              onClick={openSettings}
+              className="h-10 px-3.5 rounded-full bg-card/85 backdrop-blur border border-accent/40 shadow-soft flex items-center gap-1.5 text-sm font-bold text-foreground/85 hover:text-foreground hover:border-accent/70 active:scale-95 transition-all"
+            >
+              <Settings className="w-4 h-4 text-accent" /> الإعدادات
+            </button>
+          </div>
         )}
         <AppHeader />
 
@@ -416,7 +439,18 @@ const Index = () => {
         {kidsCorner && isUnlocked && !isAudioPlaying && (
           <div className="max-w-2xl mx-auto px-4 mb-4" dir="rtl">
             <button
-              onClick={kidsMode ? () => navigate("/games") : enterKids}
+              onClick={() => {
+                const timeCheck = isTimeAllowed();
+                if (!timeCheck.allowed) {
+                  toast({
+                    title: "غير مسموح الآن ⏰",
+                    description: timeCheck.reason,
+                    variant: "destructive"
+                  });
+                  return;
+                }
+                kidsMode ? navigate("/games") : enterKids();
+              }}
               className="w-full p-3.5 rounded-2xl bg-gradient-to-l from-accent/15 to-card border border-accent/40 shadow-soft flex items-center gap-3 active:scale-[0.99] transition-all"
             >
               <span className="w-11 h-11 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shrink-0"><Baby className="w-6 h-6" /></span>
@@ -648,8 +682,8 @@ const Index = () => {
       {/* رمز ولي الأمر: تعيينه عند دخول ركن الأطفال أوّل مرّة، أو التحقّق منه للإعدادات */}
       {pinAction && (
         <PinModal
-          mode={pinAction === "enter" ? "set" : "verify"}
-          title={pinAction === "enter" ? "اختر رمز ولي الأمر (٤ أرقام)" : "أدخل الرمز للإعدادات"}
+          mode="verify"
+          title={pinAction === "enter" ? "رمز وليّ الأمر (٤ أرقام)" : "أدخل الرمز للإعدادات"}
           onSuccess={() => {
             if (pinAction === "enter") { setKidsLocked(true); navigate("/games"); }
             else if (pinAction === "settings") { navigate("/settings"); }
@@ -658,6 +692,8 @@ const Index = () => {
           onCancel={() => setPinAction(null)}
         />
       )}
+
+      {showNotifications && <NotificationsModal onClose={() => setShowNotifications(false)} />}
     </div>
   );
 };

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Youtube, Check, CloudDownload, Wrench, User, Baby, Plus, Trash2, Minus, KeyRound, Shield } from "lucide-react";
+import { Youtube, Check, CloudDownload, Wrench, User, Baby, Plus, Trash2, Minus, KeyRound, Shield, BookOpen, Headphones, Settings, Star, Gamepad2, Puzzle, Trophy } from "lucide-react";
 import { RECITER_URL } from "../pages/SettingsPage";
 import { downloadEverything } from "../data/offlineDownload";
-import { setAppMode, addProfile, setActiveProfile, kidsHidden, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
+import { setAppMode, addProfile, setActiveProfile, kidsHidden, setKidsHidden, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
 import { setKidsPin } from "../data/kidsLock";
 import Avatar from "./Avatar";
 
@@ -40,6 +40,7 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
 
   const finalize = () => {
     setAppMode(effMode);
+    if (effMode === "parent") setKidsHidden(true);
     if (effMode !== "parent") {
       if (pinValid) setKidsPin(pin);
       const valid = kids.filter(k => k.name.trim());
@@ -62,7 +63,7 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
     setDl(d => ({ ...d, busy: false, finished: true, total: res.total, done: res.total }));
   };
 
-  const pick = (m: AppMode) => { setMode(m); setStep(3); };
+  const pick = (m: AppMode) => { setMode(m); setStep(2); };
   const addKid = () => setKids(k => [...k, { name: "", age: 6, avatar: KID_AVATARS[k.length % KID_AVATARS.length], color: KID_COLORS[k.length % KID_COLORS.length] }]);
   const delKid = (i: number) => setKids(k => (k.length > 1 ? k.filter((_, j) => j !== i) : k));
   const setKid = (i: number, patch: Partial<NewKid>) => setKids(k => k.map((x, j) => (j === i ? { ...x, ...patch } : x)));
@@ -70,14 +71,19 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
   const pct = dl.total ? Math.round((dl.done / dl.total) * 100) : 0;
   const kidsValid = kids.some(k => k.name.trim());
 
-  const ModeCard = ({ m, Icon, title, desc }: { m: AppMode; Icon: typeof User; title: string; desc: string }) => (
+  const ModeCard = ({ m, Icon, title, desc, children }: { m: AppMode; Icon: typeof User; title: string; desc: string; children: React.ReactNode }) => (
     <button onClick={() => pick(m)}
-      className={`group w-full flex items-center gap-3 rounded-2xl border p-4 text-right transition-all active:scale-[0.99] ${mode === m ? "border-accent bg-accent/15 shadow-gold" : "border-border bg-card hover:border-accent/50 shadow-soft"}`}>
-      <span className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-black flex items-center justify-center shrink-0 shadow-soft transition-transform group-hover:scale-105"><Icon className="w-6 h-6" /></span>
-      <span className="flex-1 min-w-0">
-        <span className="block font-extrabold text-foreground">{title}</span>
-        <span className="block text-[12px] text-muted-foreground leading-relaxed">{desc}</span>
-      </span>
+      className={`group w-full flex flex-col gap-3 rounded-2xl border p-4 text-right transition-all active:scale-[0.99] ${mode === m ? "border-accent bg-accent/15 shadow-gold" : "border-border bg-card hover:border-accent/50 shadow-soft"}`}>
+      <div className="flex items-center gap-3">
+        <span className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-black flex items-center justify-center shrink-0 shadow-soft transition-transform group-hover:scale-105"><Icon className="w-6 h-6" /></span>
+        <span className="flex-1 min-w-0">
+          <span className="block font-extrabold text-foreground">{title}</span>
+          <span className="block text-[12px] text-muted-foreground leading-relaxed">{desc}</span>
+        </span>
+      </div>
+      <div className="w-full h-24 mt-1 rounded-xl bg-background/50 border border-border/50 overflow-hidden relative flex items-center justify-center p-2 gap-2">
+        {children}
+      </div>
     </button>
   );
 
@@ -118,9 +124,38 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
             <div className="space-y-3 animate-fade-up">
               <h2 className="text-xl font-extrabold text-accent text-center">لِمَن هذا التطبيق؟</h2>
               <p className="text-muted-foreground text-sm text-center leading-relaxed">اختر طريقة الاستخدام — يمكنك تغييرها لاحقاً من الإعدادات.</p>
-              <div className="space-y-2 pt-1">
-                <ModeCard m="parent" Icon={User} title="لي أنا " />
-                <ModeCard m="kids" Icon={Baby} title="لأطفالي" />
+              <div className="space-y-4 pt-1">
+                <ModeCard m="parent" Icon={User} title="لي أنا" desc="تصفح المصحف، استمع للتلاوات بحرية، وإعدادات متقدمة. (بلا ركن أطفال)">
+                  <div className="flex-1 h-full rounded-lg bg-card border border-border/50 flex flex-col p-2 gap-1.5 shadow-sm">
+                    <div className="flex justify-between items-center">
+                      <div className="w-8 h-2 rounded bg-muted-foreground/30" />
+                      <div className="w-4 h-4 rounded-full bg-accent/50 flex items-center justify-center"><BookOpen className="w-2.5 h-2.5 text-accent-foreground" /></div>
+                    </div>
+                    <div className="flex-1 flex flex-col items-center justify-center gap-1.5 px-2">
+                      <div className="w-3/4 h-2 rounded bg-foreground/20" />
+                      <div className="w-full h-2 rounded bg-foreground/20" />
+                      <div className="w-5/6 h-2 rounded bg-foreground/20" />
+                    </div>
+                  </div>
+                  <div className="w-10 h-full flex flex-col gap-1.5 justify-end">
+                    <div className="w-full h-8 rounded-lg bg-accent/20 flex items-center justify-center"><Headphones className="w-4 h-4 text-accent" /></div>
+                    <div className="w-full h-8 rounded-lg bg-secondary flex items-center justify-center"><Settings className="w-4 h-4 text-muted-foreground" /></div>
+                  </div>
+                </ModeCard>
+                <ModeCard m="kids" Icon={Baby} title="لأطفالي" desc="واجهة مبسطة، ألعاب قرآنية، ومكافآت لكل طفل بملف منفصل.">
+                  <div className="w-full h-full flex flex-col gap-2 px-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-orange-400 flex items-center justify-center shadow-sm"><Baby className="w-5 h-5 text-white" /></div>
+                      <div className="flex-1 h-2 rounded bg-foreground/20" />
+                      <div className="w-10 h-4 rounded-full bg-accent/20 flex items-center justify-center gap-0.5"><Star className="w-2.5 h-2.5 text-accent fill-accent" /><div className="w-3 h-1.5 rounded bg-accent/50" /></div>
+                    </div>
+                    <div className="flex gap-2 flex-1 pb-1">
+                      <div className="flex-1 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shadow-sm"><Gamepad2 className="w-5 h-5 text-blue-500" /></div>
+                      <div className="flex-1 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center shadow-sm"><Puzzle className="w-5 h-5 text-green-500" /></div>
+                      <div className="flex-1 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center shadow-sm"><Trophy className="w-5 h-5 text-purple-500" /></div>
+                    </div>
+                  </div>
+                </ModeCard>
               </div>
             </div>
           )}

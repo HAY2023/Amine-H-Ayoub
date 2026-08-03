@@ -11,17 +11,21 @@ import { syncTimingsFromServer } from "./data/ayahTimings";
 import { syncBookmarksFromServer } from "./data/bookmarks";
 import { AudioContextProvider } from "./contexts/audioContext";
 import { preloadCorpusInBackground } from "./data/lazyCorpus";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
-import QuranReader from "./pages/QuranReader.tsx";
-import KidsGames from "./pages/KidsGames.tsx";
-import KidsShop from "./pages/KidsShop.tsx";
-import SettingsPage, { applyTheme, getTheme } from "./pages/SettingsPage.tsx";
-import ParentDashboard from "./pages/ParentDashboard.tsx";
+import { lazy, Suspense } from "react";
+const Index = lazy(() => import("./pages/Index.tsx"));
+const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+const QuranReader = lazy(() => import("./pages/QuranReader.tsx"));
+const KidsGames = lazy(() => import("./pages/KidsGames.tsx"));
+const KidsShop = lazy(() => import("./pages/KidsShop.tsx"));
+import { applyTheme, getTheme } from "./pages/SettingsPage.tsx";
+const SettingsPage = lazy(() => import("./pages/SettingsPage.tsx"));
+const ParentDashboard = lazy(() => import("./pages/ParentDashboard.tsx"));
 import { getProfile, getAppMode, getProfiles, kidsEnabled } from "./data/kidsProfile";
 import { toast } from "./hooks/use-toast";
 import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
 import ProfilePicker, { isPicked, markPicked } from "./components/ProfilePicker.tsx";
+import { logAppOpen } from "./utils/analytics.ts";
+import { useBackgroundNotifications } from "./utils/notifications.ts";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +48,8 @@ const App = () => {
   };
   const [showPicker, setShowPicker] = useState(shouldGate);
 
+  useBackgroundNotifications();
+
   useEffect(() => {
     applyTheme(getTheme());
     syncCoordinatesFromServer();
@@ -55,6 +61,9 @@ const App = () => {
     setTimeout(() => {
       preloadCorpusInBackground();
     }, 500);
+
+    // Log analytics
+    logAppOpen();
 
     // Send localStorage data to Vite plugin (dev-only, silent fail)
     const data = localStorage.getItem("mushaf:ayahCoordinates:v1");
@@ -103,17 +112,19 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter basename={import.meta.env.BASE_URL} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-            <Routes>
-              <Route path="/" element={<HomeRoute />} />
-              <Route path="/audio" element={<Index />} />
-              <Route path="/games" element={<KidsGames />} />
-              <Route path="/shop" element={<KidsShop />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/parent" element={<ParentDashboard />} />
-              <Route path="/profiles" element={<ProfilePicker />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin"></div></div>}>
+              <Routes>
+                <Route path="/" element={<HomeRoute />} />
+                <Route path="/audio" element={<Index />} />
+                <Route path="/games" element={<KidsGames />} />
+                <Route path="/shop" element={<KidsShop />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/parent" element={<ParentDashboard />} />
+                <Route path="/profiles" element={<ProfilePicker />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
             <SiteLinksOverlay open={showSiteLinks} onClose={() => setShowSiteLinks(false)} />
             {showWelcome && <WelcomeOverlay onDone={() => { markPicked(); setShowWelcome(false); setShowPicker(false); }} />}
             {!showWelcome && showPicker && <ProfilePicker onPicked={() => setShowPicker(false)} />}

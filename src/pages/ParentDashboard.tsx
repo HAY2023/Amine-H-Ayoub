@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, BookOpen, Clock, Bell, Baby, Check, Gift, Plus, Trash2, Minus, Star, X, TrendingUp, Award, Zap, Target } from "lucide-react";
 import { getProfile, updateProfile, getProgress, getHistory, getProfiles, getActiveId, setActiveProfile, addProfile, removeProfile, getAppMode, setAppMode, kidsRouteBlocked, KID_AVATARS, KID_COLORS, KidsProfile, KidsProgress, DayLog } from "../data/kidsProfile";
+import { getKidsSchedule, saveKidsSchedule, KidsSchedule } from "../data/kidsSchedule";
 import { isKidsMode } from "../data/kidsLock";
 import Avatar from "../components/Avatar";
 import { toast } from "../hooks/use-toast";
@@ -32,6 +33,8 @@ export default function ParentDashboard() {
   const [draft, setDraft] = useState<KidsProfile>(getProfile);
   const [showAdd, setShowAdd] = useState(false);
   const [newKid, setNewKid] = useState({ name: "", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0] });
+  const [schedule, setSchedule] = useState<KidsSchedule>(getKidsSchedule);
+
   useEffect(() => { if (isKidsMode()) navigate("/games"); }, [navigate]);
   useEffect(() => { if (kidsRouteBlocked()) navigate("/audio", { replace: true }); }, [navigate]);
 
@@ -238,14 +241,65 @@ export default function ParentDashboard() {
           )}
         </div>
 
-        {/* تذكير الدرس */}
-        <div className="card-nour p-4 space-y-2">
-          <p className="font-bold text-accent flex items-center gap-2"><Bell className="w-4 h-4" /> تذكير الدرس اليومي</p>
-          <div className="flex items-center gap-2">
-            <input type="time" value={profile.lessonTime} onChange={e => saveLesson(e.target.value)} className="flex-1 rounded-lg bg-secondary border border-border p-2 text-foreground" />
-            {profile.lessonTime && <button onClick={() => saveLesson("")} className="px-3 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-bold">إلغاء</button>}
+        {/* تذكير الدرس وجدول اللعب */}
+        <div className="card-nour p-4 space-y-4">
+          <div className="space-y-2">
+            <p className="font-bold text-accent flex items-center gap-2"><Bell className="w-4 h-4" /> تذكير الدرس اليومي</p>
+            <div className="flex items-center gap-2">
+              <input type="time" value={profile.lessonTime} onChange={e => saveLesson(e.target.value)} className="flex-1 rounded-lg bg-secondary border border-border p-2 text-foreground" />
+              {profile.lessonTime && <button onClick={() => saveLesson("")} className="px-3 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-bold">إلغاء</button>}
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed flex items-center gap-1"><Clock className="w-3 h-3" /> يظهر تنبيه عند الوقت المحدّد أثناء فتح التطبيق.</p>
           </div>
-          <p className="text-[11px] text-muted-foreground leading-relaxed flex items-center gap-1"><Clock className="w-3 h-3" /> يظهر تنبيه عند الوقت المحدّد أثناء فتح التطبيق.</p>
+
+          <div className="pt-4 border-t border-border/40 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="font-bold text-accent flex items-center gap-2"><Clock className="w-4 h-4" /> جدول اللعب (الألعاب)</p>
+              <button 
+                onClick={() => { const s = { ...schedule, enabled: !schedule.enabled }; setSchedule(s); saveKidsSchedule(s); toast({ title: s.enabled ? "تم تفعيل الجدول" : "تم إيقاف الجدول" }); }}
+                className={`w-11 h-6 rounded-full transition-colors relative ${schedule.enabled ? 'bg-accent' : 'bg-muted-foreground/30'}`}
+              >
+                <div className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${schedule.enabled ? 'left-0.5' : 'left-[22px]'}`} />
+              </button>
+            </div>
+            
+            {schedule.enabled && (
+              <div className="space-y-3 animate-fade-down">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground font-bold mb-1 block">من الساعة</label>
+                    <input type="time" value={schedule.startTime} onChange={e => { const s = { ...schedule, startTime: e.target.value }; setSchedule(s); saveKidsSchedule(s); }} className="w-full rounded-lg bg-secondary border border-border p-2 text-sm text-foreground" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground font-bold mb-1 block">إلى الساعة</label>
+                    <input type="time" value={schedule.endTime} onChange={e => { const s = { ...schedule, endTime: e.target.value }; setSchedule(s); saveKidsSchedule(s); }} className="w-full rounded-lg bg-secondary border border-border p-2 text-sm text-foreground" />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-[10px] text-muted-foreground font-bold mb-1 block">الأيام المسموحة</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"].map((day, idx) => (
+                      <button 
+                        key={idx}
+                        onClick={() => {
+                          const days = schedule.allowedDays.includes(idx) 
+                            ? schedule.allowedDays.filter(d => d !== idx)
+                            : [...schedule.allowedDays, idx];
+                          const s = { ...schedule, allowedDays: days };
+                          setSchedule(s); saveKidsSchedule(s);
+                        }}
+                        className={`px-2 py-1 rounded-md text-[10px] font-bold border transition-colors ${schedule.allowedDays.includes(idx) ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-muted-foreground border-transparent'}`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground leading-relaxed flex items-center gap-1">لن يتمكن الطفل من الدخول لركن الألعاب خارج هذه الأوقات.</p>
+          </div>
         </div>
 
         <button onClick={() => navigate("/games")} className="w-full p-3 rounded-2xl bg-secondary text-secondary-foreground hover:brightness-95 font-bold flex items-center justify-center gap-2 active:scale-95"><Baby className="w-5 h-5" /> فتح ركن الأطفال (الألعاب)</button>

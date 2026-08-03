@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, SplitSquareHorizontal, Volume2, Menu, Eye, EyeOff, List, Lock, Baby, Bookmark as BookmarkIcon, Trash2, Plus, Wrench } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, Bell, SplitSquareHorizontal, Volume2, Menu, Eye, EyeOff, List, Lock, Baby, Bookmark as BookmarkIcon, Trash2, Plus, Wrench } from "lucide-react";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase";
 import { isTauri, checkOfflineStatus, getOfflineAudioUrl, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
 import { useAudioContext } from "@/contexts/audioContext";
 import SplitViewPanel from "@/components/SplitViewPanel";
+import NotificationsModal from "@/components/NotificationsModal";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 
@@ -234,6 +235,7 @@ export default function QuranReader() {
   const [kidsMode, setKidsModeState] = useState(isKidsMode);
   const [kidsCorner, setKidsCorner] = useState(getKidsEnabled);   // ركن الأطفال مُفعَّل؟ (ليس وضع وليّ الأمر فقط)
   const [pinAction, setPinAction] = useState<null | "enter" | "exit" | "settings" >(null);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [surahListOpen, setSurahListOpen] = useState(false);
   const [navTab, setNavTab] = useState<"surahs" | "bookmarks">("surahs");
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(getBookmarks);
@@ -1214,6 +1216,7 @@ export default function QuranReader() {
             kidsMode
               ? { key: "lock", icon: <Lock className="w-5 h-5 text-foreground" />, label: "خروج من ركن الأطفال", onClick: requestExitKids, active: true }
               : (kidsCorner && { key: "kids", icon: <Baby className="w-5 h-5 text-foreground" />, label: "ركن الأطفال", onClick: enterKids, active: false }),
+            !kidsMode && { key: "notifications", icon: <Bell className="w-5 h-5 text-foreground" />, label: "الإشعارات", onClick: () => setShowNotifications(true), active: false },
             !kidsMode && { key: "settings", icon: <Settings className="w-5 h-5 text-foreground" />, label: "الإعدادات", onClick: openSettings, active: false },
           ].filter(Boolean) as { key: string; icon: JSX.Element; label: string; onClick: () => void; active: boolean }[]).map(b => (
             <button
@@ -1511,6 +1514,7 @@ export default function QuranReader() {
         </div>
       )}
 
+      {showNotifications && <NotificationsModal onClose={() => setShowNotifications(false)} />}
     </div>
   );
 }

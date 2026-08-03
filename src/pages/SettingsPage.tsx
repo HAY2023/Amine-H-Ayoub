@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, KeyRound, Settings as SettingsIcon } from "lucide-react";
+import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, KeyRound, Settings as SettingsIcon, MessageSquare } from "lucide-react";
 import { isMushafDevEnabled, setMushafDev } from "../utils/tauriUtils";
 import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHidden, type AppMode } from "../data/kidsProfile";
 import { syncCoordinatesFromServer } from "../data/ayahCoordinates";
@@ -10,6 +10,7 @@ import { syncCustomPagesFromServer } from "../data/customPages";
 import { downloadEverything } from "../data/offlineDownload";
 import { isKidsMode, hasKidsPin, setKidsPin } from "../data/kidsLock";
 import PinModal from "../components/PinModal";
+import SupportModal from "../components/SupportModal";
 import { toast } from "../hooks/use-toast";
 
 const THEME_KEY = "mushaf:theme";
@@ -51,20 +52,42 @@ export default function SettingsPage() {
   const [showPin, setShowPin] = useState(false);
   const [dlPct, setDlPct] = useState<number | null>(null);
   const [owner, setOwner] = useState(isMushafDevEnabled);
+  const [showSupport, setShowSupport] = useState(false);
   useEffect(() => { const h = () => setOwner(isMushafDevEnabled()); window.addEventListener("mushaf:ownermode", h); return () => window.removeEventListener("mushaf:ownermode", h); }, []);
   const disableOwner = () => { setMushafDev(false); setOwner(false); toast({ title: "أُوقف وضع المالك", description: "عادت رسالة التطوير للمستخدمين" }); };
   const [hideKids, setHideKids] = useState(kidsHidden);
-  const toggleHideKids = () => { const next = !kidsHidden(); setKidsHidden(next); setHideKids(next); toast({ title: next ? "أُخفي ركن الأطفال والألعاب بالكامل" : "أُعيد إظهار ركن الأطفال والألعاب" }); };
+  const [showSplash, setShowSplash] = useState<AppMode | false>(false);
+  const toggleHideKids = () => { 
+    const next = !kidsHidden(); 
+    setKidsHidden(next); 
+    setHideKids(next); 
+    if (next) {
+      toast({ title: "أُخفي ركن الأطفال والألعاب بالكامل" });
+    } else {
+      setShowSplash("kids");
+      setTimeout(() => navigate("/games"), 2500);
+    }
+  };
   // كلمة المرور (رمز وليّ الأمر): تعيين/تغيير/إزالة من الإعدادات
   const [hasPin, setHasPin] = useState(hasKidsPin);
   const [pinFlow, setPinFlow] = useState<null | "verifyOld" | "setNew">(null);
+  const [pendingMode, setPendingMode] = useState<AppMode | null>(null);
   const changePin = () => setPinFlow(hasKidsPin() ? "verifyOld" : "setNew");
   const removePin = () => { setKidsPin(""); setHasPin(false); toast({ title: "أُزيلت كلمة المرور" }); };
 
   const changeMode = (m: AppMode) => {
-    setMode(m); setAppMode(m);
-    if (m !== "parent" && getProfiles().length === 0) addProfile({ name: "طفلي" });   // ضمان وجود طفل واحد على الأقل
-    toast({ title: m === "parent" ? "وضع وليّ الأمر — بلا ركن أطفال" : "وضع الأطفال" });
+    setShowSplash(m);
+    setTimeout(() => {
+      setShowSplash(false);
+      if (m === "kids" && !hasKidsPin()) {
+         setPendingMode("kids");
+         setPinFlow("setNew");
+      } else {
+         setMode(m); setAppMode(m);
+         if (m === "kids" && getProfiles().length === 0) addProfile({ name: "طفلي" });
+         toast({ title: m === "parent" ? "وضع وليّ الأمر — بلا ركن أطفال" : "وضع الأطفال" });
+      }
+    }, 4000);
   };
 
   useEffect(() => { applyTheme(theme); try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ } }, [theme]);
@@ -92,6 +115,22 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen page-nour text-foreground" dir="rtl">
+      {showSplash && (
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-background/95 backdrop-blur-md animate-in fade-in duration-500">
+          <div className="w-24 h-24 mb-6 relative">
+            <div className="absolute inset-0 rounded-full border-4 border-accent border-t-transparent animate-spin" />
+            <div className="absolute inset-2 rounded-full bg-accent/20 flex items-center justify-center">
+              {showSplash === "kids" ? <Baby className="w-10 h-10 text-accent animate-pulse" /> : <User className="w-10 h-10 text-accent animate-pulse" />}
+            </div>
+          </div>
+          <h2 className="text-2xl font-extrabold text-foreground mb-2">
+            {showSplash === "kids" ? "جاري تجهيز ركن الأطفال..." : "جاري التبديل لوضع وليّ الأمر..."}
+          </h2>
+          <p className="text-muted-foreground">
+            {showSplash === "kids" ? "لحظات ونبدأ المرح والتعلم" : "جاري إعداد واجهة الاستخدام"}
+          </p>
+        </div>
+      )}
       {/* وهج ذهبي زخرفي علوي */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-accent/10 to-transparent" aria-hidden="true" />
 
@@ -125,41 +164,44 @@ export default function SettingsPage() {
 
         {/* ===== من يستخدم التطبيق؟ + الأطفال ===== */}
         {/* تُخفى عن المستخدمين عند الإخفاء، لكنها تبقى ظاهرة للمالك ليختبرها */}
-        {(!hideKids || owner) && (<>
-        <Section label="من يستخدم التطبيق؟">
-          <div className="p-3 space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              {([
-                { m: "parent" as AppMode, Icon: User, label: "لي" },
-                { m: "kids" as AppMode, Icon: Baby, label: "لأطفالي" },
-              ]).map(o => (
-                <button key={o.m} onClick={() => changeMode(o.m)}
-                  className={`flex flex-col items-center gap-1 rounded-xl py-3 text-xs font-bold border transition-all ${appMode === o.m ? "border-accent bg-accent/15 text-accent shadow-soft" : "border-border bg-muted text-muted-foreground hover:border-accent/40"}`}>
-                  <o.Icon className="w-5 h-5" /> {o.label}
-                </button>
-              ))}
+        {(!hideKids || owner) && (
+          <Section label="من يستخدم التطبيق؟">
+            <div className="p-3 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { m: "parent" as AppMode, Icon: User, label: "لي" },
+                  { m: "kids" as AppMode, Icon: Baby, label: "لأطفالي" },
+                ]).map(o => (
+                  <button key={o.m} onClick={() => changeMode(o.m)}
+                    className={`flex flex-col items-center gap-1 rounded-xl py-3 text-xs font-bold border transition-all ${appMode === o.m ? "border-accent bg-accent/15 text-accent shadow-soft" : "border-border bg-muted text-muted-foreground hover:border-accent/40"}`}>
+                    <o.Icon className="w-5 h-5" /> {o.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">«لي»: بلا ركن أطفال. «لأطفالي»: ركن أطفال آمن.</p>
             </div>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">«لي»: بلا ركن أطفال. «لأطفالي»: ركن أطفال آمن.</p>
-          </div>
-        </Section>
+          </Section>
+        )}
 
-        {/* ===== الأطفال وولي الأمر ===== */}
-        <Section label="الأطفال وولي الأمر">
-          <Item icon={<BarChart3 className="w-5 h-5" />} title="لوحة وليّ الأمر" desc="إعدادات كل طفل · التقدّم والسجلّ · تذكير الدرس" onClick={openParent} />
-          <Item icon={<Baby className="w-5 h-5" />} title="ركن الأطفال (الألعاب)" desc="دخول الألعاب والمكافآت" onClick={() => navigate("/games")} />
-        </Section>
-        </>)}
+        {(!hideKids || owner) && appMode !== "parent" && (
+          <>
+            {/* ===== الأطفال وولي الأمر ===== */}
+            <Section label="الأطفال وولي الأمر">
+              <Item icon={<BarChart3 className="w-5 h-5" />} title="لوحة وليّ الأمر" desc="إعدادات كل طفل · التقدّم والسجلّ · تذكير الدرس" onClick={openParent} />
+              <Item icon={<Baby className="w-5 h-5" />} title="ركن الأطفال (الألعاب)" desc="دخول الألعاب والمكافآت" onClick={() => navigate("/games")} />
+            </Section>
 
-
-
-        {/* ===== كلمة المرور (رمز وليّ الأمر) — متاحة دائماً ===== */}
-        <Section label="كلمة المرور">
-          <Item icon={<KeyRound className="w-5 h-5" />} title={hasPin ? "تغيير كلمة المرور" : "تعيين كلمة المرور"} desc="رمز من ٤ أرقام يحمي الإعدادات ولوحة وليّ الأمر والخروج من ركن الأطفال" onClick={changePin} />
-          {hasPin && <Item icon={<X className="w-5 h-5" />} title="إزالة كلمة المرور" desc="إلغاء الحماية بالرمز" onClick={removePin} />}
-        </Section>
+            {/* ===== كلمة المرور (رمز وليّ الأمر) ===== */}
+            <Section label="كلمة المرور">
+              <Item icon={<KeyRound className="w-5 h-5" />} title={hasPin ? "تغيير كلمة المرور" : "تعيين كلمة المرور"} desc="رمز من ٤ أرقام يحمي الإعدادات ولوحة وليّ الأمر والخروج من ركن الأطفال" onClick={changePin} />
+              {hasPin && <Item icon={<X className="w-5 h-5" />} title="إزالة كلمة المرور" desc="إلغاء الحماية بالرمز" onClick={removePin} />}
+            </Section>
+          </>
+        )}
 
         {/* ===== التطبيق ===== */}
         <Section label="التطبيق">
+          <Item icon={<MessageSquare className="w-5 h-5 text-accent" />} title="تواصل مع الدعم الفني" desc="محادثة مباشرة مع فريق الدعم" onClick={() => setShowSupport(true)} />
           <Item icon={<RefreshCw className="w-5 h-5" />} title="تحقّق من التحديث" desc="جلب أحدث نسخة من التطبيق" onClick={checkUpdate} />
           <Item icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل للعمل دون إنترنت" desc="السور والتلاوات إلى جهازك" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-success w-12 text-center">{dlPct}%</span> : undefined} />
         </Section>
@@ -198,8 +240,20 @@ export default function SettingsPage() {
         <PinModal mode="verify" title="أدخل كلمة المرور الحالية" onSuccess={() => setPinFlow("setNew")} onCancel={() => setPinFlow(null)} />
       )}
       {pinFlow === "setNew" && (
-        <PinModal mode="set" title="اختر كلمة مرور جديدة (٤ أرقام)" onSuccess={() => { setHasPin(true); setPinFlow(null); toast({ title: "تم حفظ كلمة المرور" }); }} onCancel={() => setPinFlow(null)} />
+        <PinModal mode="set" title="اختر كلمة مرور جديدة (٤ أرقام)" onSuccess={() => { 
+          setHasPin(true); 
+          setPinFlow(null); 
+          toast({ title: "تم حفظ كلمة المرور" });
+          if (pendingMode === "kids") {
+             setMode("kids"); setAppMode("kids");
+             if (getProfiles().length === 0) addProfile({ name: "طفلي" });
+             setPendingMode(null);
+             toast({ title: "وضع الأطفال" });
+          }
+        }} onCancel={() => { setPinFlow(null); setPendingMode(null); }} />
       )}
+
+      {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://zqnwhrvwovwdakuuxpkr.supabase.co";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://cjrwtzcgtiqsbrqplouy.supabase.co";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_HteeGJaZEmUIkzlEFr7lyg_qLHvOSNr";
 
 /** True when a real Supabase anon key is configured (not empty / placeholder). */
 export const hasValidSupabaseKey = (): boolean =>

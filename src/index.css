@@ -135,6 +135,9 @@
     direction: rtl;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   /* خلفية الصفحة الفاخرة — استعملها على حاوية الصفحة: class="page-nour" */
