@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { shouldHideMushaf } from "./utils/tauriUtils";
+import { isKidsMode } from "./data/kidsLock";
 import { Toaster as Sonner } from "./components/ui/sonner";
 import { Toaster } from "./components/ui/toaster";
 import { TooltipProvider } from "./components/ui/tooltip";
@@ -34,6 +35,19 @@ const queryClient = new QueryClient();
 // مسار الجذر: يُعاد تقييمه عند كل انتقال (كي يستجيب لتبديل وضع المطوّر أثناء التشغيل).
 // نسخة التطبيق تُخفي المصحف وتُحوّل للسماع، إلا إذا فعّل المطوّر إتاحته.
 const HomeRoute = () => (shouldHideMushaf() ? <Navigate to="/audio" replace /> : <QuranReader />);
+
+function KidsModeGuard() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isKidsMode() && location.pathname !== "/games") {
+      navigate("/games", { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
+  return null;
+}
 
 const App = () => {
   const [showSiteLinks, setShowSiteLinks] = useState(false);
@@ -114,6 +128,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter basename={import.meta.env.BASE_URL} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <KidsModeGuard />
             <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin"></div></div>}>
               <Routes>
                 <Route path="/" element={<HomeRoute />} />

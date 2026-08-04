@@ -701,6 +701,24 @@ export default function KidsGames() {
     };
     window.addEventListener("popstate", handlePopState);
 
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isKidsMode()) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isKidsMode()) return;
+      const blocked = event.key === "F5" || event.key === "F11" || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "r") || (event.altKey && event.key === "ArrowLeft");
+      if (blocked) {
+        event.preventDefault();
+        event.stopPropagation();
+        toast({ title: "الخروج مقفل", description: "يمكنك الخروج فقط برمز ولي الأمر من صفحة الألعاب", variant: "destructive" });
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
     // Enforce Schedule
     const checkSchedule = () => {
       const timeCheck = isTimeAllowed();
@@ -718,6 +736,8 @@ export default function KidsGames() {
     return () => { 
       exitKioskMode(); 
       window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("keydown", handleKeyDown);
       clearInterval(scheduleInterval);
     };
   }, [navigate]);

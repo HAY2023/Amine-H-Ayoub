@@ -4,11 +4,14 @@ import { getDeviceId } from "./deviceInfo";
 import { getKidsSchedule, isTimeAllowed } from "../data/kidsSchedule";
 import { toast } from "@/hooks/use-toast";
 
+let notificationPermissionRequested = false;
+
 // Request notification permission
 export async function requestNotificationPermission() {
-  if (!("Notification" in window)) return false;
+  if (typeof window === "undefined" || !("Notification" in window)) return false;
   if (Notification.permission === "granted") return true;
   if (Notification.permission !== "denied") {
+    notificationPermissionRequested = true;
     const permission = await Notification.requestPermission();
     return permission === "granted";
   }
@@ -16,12 +19,17 @@ export async function requestNotificationPermission() {
 }
 
 export function showLocalNotification(title: string, body: string) {
-  if ("Notification" in window && Notification.permission === "granted") {
-    new Notification(title, { body, icon: "/icon.png" });
-  } else {
-    // Fallback to toast
-    toast({ title, description: body });
+  if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification(title, { body, icon: "/icon.png", tag: title, renotify: true });
+      return;
+    } catch (err) {
+      console.error("Notification display failed", err);
+    }
   }
+
+  // Fallback to toast when native notifications are not available.
+  toast({ title, description: body });
 }
 
 export function useBackgroundNotifications() {
@@ -31,8 +39,8 @@ export function useBackgroundNotifications() {
     if (initialized.current) return;
     initialized.current = true;
 
-    // Ask for permission silently
-    requestNotificationPermission();
+    // Ask for permission silently when the app starts.
+    void requestNotificationPermission();
 
     const deviceId = getDeviceId();
 
@@ -93,7 +101,8 @@ export function useBackgroundNotifications() {
        const allowed = isTimeAllowed();
        
        if (isKids && !allowed) {
-         showLocalNotification("انتهى وقت اللعب ⏰", "لقد انتهى الوقت المخصص لك اليوم. نراك لاحقاً!");
+         const message = "لقد انتهى الوقت المخصص لك اليوم. نراك لاحقاً!";
+         showLocalNotification("انتهى وقت اللعب ⏰", message);
          // Optionally, we could force them out, but we handle that in KidsGames directly.
        }
     }, 60000); // Check every minute
