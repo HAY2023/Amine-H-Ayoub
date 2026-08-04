@@ -11,6 +11,7 @@ import { shouldHideMushaf } from "../utils/tauriUtils";
 import PinModal from "../components/PinModal";
 import Avatar from "../components/Avatar";
 import NotificationsModal from "../components/NotificationsModal";
+import MathChallengeModal from "../components/MathChallengeModal";
 import { toast } from "../hooks/use-toast";
 import { isTimeAllowed } from "../data/kidsSchedule";
 
@@ -874,14 +875,15 @@ export default function KidsGames() {
         )}
       </div>
 
-      {pinAction && (
-        <PinModal
-          mode={pinAction.startsWith("set") ? "set" : "verify"}
-          title={pinAction.startsWith("set") ? "اختر رمز ولي الأمر (٤ أرقام)" : pinAction === "exit" ? "أدخل الرمز للخروج" : "رمز ولي الأمر"}
-          onSuccess={onPinSuccess}
-          onCancel={() => setPinAction(null)}
-        />
-      )}
+      {pinAction && hasKidsPin() && pinAction !== "setparent" && pinAction !== "setread" ? (
+          <PinModal mode="verify" onSuccess={onPinSuccess} onCancel={() => setPinAction(null)} />
+        ) : pinAction && (pinAction === "setparent" || pinAction === "setread") ? (
+          <PinModal mode="set" onSuccess={onPinSuccess} onCancel={() => setPinAction(null)} />
+        ) : pinAction === "exit" && !hasKidsPin() ? (
+          <MathChallengeModal onSuccess={onPinSuccess} onCancel={() => setPinAction(null)} />
+        ) : pinAction === "parent" && !hasKidsPin() ? (
+           <MathChallengeModal onSuccess={onPinSuccess} onCancel={() => setPinAction(null)} />
+        ) : null}
       
       {showNotifications && <NotificationsModal onClose={() => setShowNotifications(false)} />}
     </div>

@@ -12,8 +12,9 @@ import NotificationsModal from "../components/NotificationsModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
+import { useNotifications } from "@/hooks/useNotifications";
 
-import { Shuffle, ListOrdered, Loader2, SplitSquareHorizontal, BookOpen, Baby, ChevronLeft, Settings, Bell } from "lucide-react";
+import { Shuffle, ListOrdered, Loader2, SplitSquareHorizontal, BookOpen, Baby, ChevronLeft, Settings, Bell, SlidersHorizontal, Upload } from "lucide-react";
 import { isTauri, shouldHideMushaf, checkOfflineStatus, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
 import { checkForUpdates, UpdateInfo } from "../utils/updateChecker";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
@@ -51,6 +52,7 @@ function getMushafPageForSurah(surahNumber: number): string | null {
 }
 
 const Index = () => {
+  useNotifications();
   const navigate = useNavigate();
   const { surahs, loading, error, retry } = useSurahData();
   const { points, recordAyah } = useProgress();
@@ -484,6 +486,11 @@ const Index = () => {
                 >
                   <SplitSquareHorizontal className="w-5 h-5" />
                 </button>
+              )}
+              {!kidsMode && (
+                <>
+                  {/* أزرار الإدارة تم إخفاؤها بناءً على طلب المستخدم لمنع عبث الأطفال */}
+                </>
               )}
               <button
                 onClick={handleShuffle}

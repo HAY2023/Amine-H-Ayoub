@@ -1,6 +1,8 @@
+import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { SupportErrorBoundary } from "./components/SupportErrorBoundary";
 
 // PWA: Guard against iframe/preview contexts
 const isInIframe = (() => {
@@ -21,4 +23,10 @@ if (isPreviewHost || isInIframe) {
   });
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <SupportErrorBoundary>
+      <App />
+    </SupportErrorBoundary>
+  </React.StrictMode>
+);

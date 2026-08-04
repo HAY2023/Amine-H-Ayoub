@@ -20,6 +20,8 @@ const KidsShop = lazy(() => import("./pages/KidsShop.tsx"));
 import { applyTheme, getTheme } from "./pages/SettingsPage.tsx";
 const SettingsPage = lazy(() => import("./pages/SettingsPage.tsx"));
 const ParentDashboard = lazy(() => import("./pages/ParentDashboard.tsx"));
+const CustomAudioManager = lazy(() => import("./pages/CustomAudioManager.tsx"));
+const AudioUploadPage = lazy(() => import("./pages/AudioUploadPage.tsx"));
 import { getProfile, getAppMode, getProfiles, kidsEnabled } from "./data/kidsProfile";
 import { toast } from "./hooks/use-toast";
 import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
@@ -121,6 +123,8 @@ const App = () => {
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/parent" element={<ParentDashboard />} />
                 <Route path="/profiles" element={<ProfilePicker />} />
+                <Route path="/manage-audio" element={<CustomAudioManager />} />
+                <Route path="/upload" element={<AudioUploadPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

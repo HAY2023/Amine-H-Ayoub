@@ -40,7 +40,6 @@ const SurahList = ({
                 : "bg-card border-border hover:border-accent/50 hover:shadow-md hover:scale-[1.01]"
             }`}
           >
-            {/* Number circle */}
             <div
               className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${
                 isActive
@@ -48,7 +47,7 @@ const SurahList = ({
                   : "bg-primary/10 text-primary"
               }`}
             >
-              {surah.revelationType === "custom" ? "🎤" : index + 1}
+              {surah.revelationType === "custom" ? "🎤" : surah.number}
             </div>
 
             {/* Surah name */}

@@ -275,27 +275,78 @@ export default function CustomAudioManager() {
           <ArrowLeft className="mr-2 h-4 w-4" /> العودة
         </Button>
         <h1 className="text-3xl font-bold text-primary">إدارة محتوى التطبيق</h1>
+        <Button 
+          variant="outline" 
+          className="text-amber-600 border-amber-200 hover:bg-amber-50"
+          onClick={async () => {
+            if (window.confirm("هل أنت متأكد من إعادة ترتيب جميع السور للوضع الافتراضي؟")) {
+              const newItems = [...items].sort((a, b) => {
+                // ترتيب مخصص: الفاتحة (1) أولاً، ثم ترتيب تصاعدي للبقية (النبأ 78، النازعات 79...)
+                const idA = typeof a.originalId === 'number' ? a.originalId : 999;
+                const idB = typeof b.originalId === 'number' ? b.originalId : 999;
+                if (idA === 1) return -1;
+                if (idB === 1) return 1;
+                return idA - idB;
+              });
+              newItems.forEach((item, idx) => item.order = idx);
+              setItems(newItems);
+              await savePlaylistConfig(newItems);
+              toast.success("تم إعادة الترتيب للوضع الافتراضي بنجاح");
+            }
+          }}
+        >
+          إعادة الترتيب الافتراضي
+        </Button>
       </div>
 
       <Card className="w-full max-w-3xl mb-8 border-2 border-primary/20 shadow-md">
         <CardHeader>
-          <CardTitle>إضافة تسجيل جديد</CardTitle>
+          <CardTitle>إضافة سورة مخصصة</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <Label htmlFor="audio-upload">اختر ملف صوتي (MP3, WAV, etc.)</Label>
-          <div className="flex gap-4">
-            <Input 
-              id="audio-upload"
-              type="file" 
-              accept="audio/*" 
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              disabled={uploading}
-              className="cursor-pointer"
-            />
-            <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-              {uploading ? "جاري الرفع..." : <><Upload className="ml-2 h-4 w-4" /> رفع ملف</>}
-            </Button>
+        <CardContent className="flex flex-col gap-6">
+          {/* إضافة سورة برقمها المخصص */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="manual-surah" className="font-bold">1. إضافة رقم سورة مخصصة (لتظهر مباشرة في الواجهة)</Label>
+            <div className="flex gap-4">
+              <Input 
+                id="manual-surah"
+                type="number"
+                placeholder="اكتب رقم السورة (مثلاً 50)"
+                min="1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const val = (e.target as HTMLInputElement).value;
+                    const num = parseInt(val, 10);
+                    if (!isNaN(num) && num > 0) {
+                      const current = JSON.parse(localStorage.getItem('MANUAL_SURAHS') || '[]');
+                      if (!current.includes(num)) {
+                        localStorage.setItem('MANUAL_SURAHS', JSON.stringify([...current, num]));
+                        toast.success(`تم إضافة السورة رقم ${num} للواجهة`);
+                        window.location.reload();
+                      } else {
+                        toast.error("هذا الرقم موجود بالفعل!");
+                      }
+                    }
+                  }
+                }}
+              />
+              <Button onClick={() => {
+                const input = document.getElementById('manual-surah') as HTMLInputElement;
+                const num = parseInt(input.value, 10);
+                if (!isNaN(num) && num > 0) {
+                  const current = JSON.parse(localStorage.getItem('MANUAL_SURAHS') || '[]');
+                  if (!current.includes(num)) {
+                    localStorage.setItem('MANUAL_SURAHS', JSON.stringify([...current, num]));
+                    toast.success(`تم إضافة السورة رقم ${num} للواجهة`);
+                    window.location.reload();
+                  } else {
+                    toast.error("هذا الرقم موجود بالفعل!");
+                  }
+                }
+              }}>
+                إضافة برقمها
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
