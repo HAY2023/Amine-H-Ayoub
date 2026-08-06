@@ -33,6 +33,12 @@ vite-log.txt
 # Supabase temporary files
 supabase/.temp/
 
+# Build outputs
+build/
+coverage/
+src-tauri/target/
+*.db
+
 # Claude Code local files
 .claude/
 

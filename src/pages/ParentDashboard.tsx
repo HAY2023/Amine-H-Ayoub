@@ -12,7 +12,7 @@ const Bar = ({ value, max, color }: { value: number; max: number; color: string 
 );
 
 // إحصائيات متقدمة
-const StatCard = ({ icon: Icon, title, value, trend, color }: { icon: any; title: string; value: string | number; trend?: string; color: string }) => (
+const StatCard = ({ icon: Icon, title, value, trend, color }: { icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; title: string; value: string | number; trend?: string; color: string }) => (
   <div className={`flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br ${color} border border-border/40 shadow-soft`}>
     <div className="p-2 rounded-lg bg-black/10"><Icon className="w-5 h-5" /></div>
     <div className="flex-1 min-w-0">
@@ -67,7 +67,7 @@ export default function ParentDashboard() {
 
   // يحفظ الحقول القابلة للتحرير فقط (دمج فوق التخزين الحيّ) حتى لا تُمحى النجوم/المخزون/وقت الدرس
   const saveChild = () => {
-    updateProfile(draft.id, { name: draft.name, avatar: draft.avatar, color: draft.color, age: draft.age, goalMinutes: draft.goalMinutes, reward: draft.reward });
+    updateProfile(draft.id, { name: draft.name, avatar: draft.avatar, color: draft.color, age: draft.age, goalMinutes: draft.goalMinutes, playMinutes: draft.playMinutes, reward: draft.reward });
     const np = getProfile(); setProfile(np); setDraft(np); setProfiles(getProfiles());
     toast({ title: "حُفظت إعدادات الطفل" });
   };
@@ -161,6 +161,10 @@ export default function ParentDashboard() {
 
           <label className="block text-xs font-bold text-muted-foreground">دقائق القراءة لفتح الألعاب
             <input type="number" min={0} max={120} value={draft.goalMinutes} onChange={e => setDraft({ ...draft, goalMinutes: parseInt(e.target.value, 10) || 0 })} className="w-full mt-1 rounded-lg bg-secondary border border-border p-2 text-foreground font-normal" />
+          </label>
+
+          <label className="block text-xs font-bold text-muted-foreground mt-2">وقت اللعب المسموح (بالدقائق، ٠ = بلا حد)
+            <input type="number" min={0} max={120} value={draft.playMinutes} onChange={e => setDraft({ ...draft, playMinutes: parseInt(e.target.value, 10) || 0 })} className="w-full mt-1 rounded-lg bg-secondary border border-border p-2 text-foreground font-normal" />
           </label>
 
           <label className="block text-sm font-bold text-muted-foreground">المكافأة (تظهر عند فتح الألعاب)

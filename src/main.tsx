@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { SupportErrorBoundary } from "./components/SupportErrorBoundary";
+import { registerSW } from "virtual:pwa-register";
 
 // PWA: Guard against iframe/preview contexts
 const isInIframe = (() => {
@@ -21,6 +22,11 @@ if (isPreviewHost || isInIframe) {
   navigator.serviceWorker?.getRegistrations().then((registrations) => {
     registrations.forEach((r) => r.unregister());
   });
+}
+
+// Register service worker in production
+if ('serviceWorker' in navigator && !isPreviewHost && !isInIframe) {
+  registerSW({ immediate: true });
 }
 
 createRoot(document.getElementById("root")!).render(

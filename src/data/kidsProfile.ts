@@ -279,7 +279,11 @@ export const getProgress = (): KidsProgress => {
   const id = getActiveId(); if (!id) return freshProgress();
   try {
     const r = localStorage.getItem(progKey(id)); const p = r ? JSON.parse(r) : null;
-    if (p && p.date === today()) return { ...freshProgress(), ...p };
+    if (p && p.date === today()) {
+      const limit = getProfile().playMinutes;
+      const playExpired = limit > 0 && p.played >= limit;
+      return { ...freshProgress(), ...p, playExpired };
+    }
     if (p && p.date && p.date !== today()) archive(id, { ...freshProgress(), ...p }); // أرشف يوم أمس
   } catch { /* ignore */ }
   return freshProgress();
@@ -310,7 +314,7 @@ export const addPlayMinutes = (mins: number): { progress: KidsProgress; justExpi
   const cur = getProgress();
   const limit = getProfile().playMinutes;
   const played = Math.round((cur.played + mins) * 10) / 10;
-  const playExpired = cur.playExpired || (limit > 0 && played >= limit);
+  const playExpired = limit > 0 && played >= limit;
   const justExpired = playExpired && !cur.playExpired;
   const progress: KidsProgress = { ...cur, played, playExpired };
   saveProgress(progress);

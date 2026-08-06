@@ -67,7 +67,7 @@
     --sidebar-ring: 39 86% 49%;
   }
 
-  .dark {
+  html[data-theme="dark"], .dark {
     /* ليل — نور (ليل زمردي دافئ، ذهبي متوهّج) */
     --background: 162 28% 6%;
     --foreground: 42 46% 93%;
@@ -121,6 +121,49 @@
     --sidebar-accent-foreground: 42 46% 93%;
     --sidebar-border: 160 15% 19%;
     --sidebar-ring: 44 86% 58%;
+  }
+  html[data-theme="light"] {
+    /* Override dark if forced by IDE */
+    --background: 37 40% 87%;
+    --foreground: 28 33% 12%;
+    --card: 42 60% 99%;
+    --card-foreground: 28 33% 12%;
+    --popover: 42 60% 99%;
+    --popover-foreground: 28 33% 12%;
+    --primary: 153 62% 18%;
+    --primary-foreground: 44 62% 98%;
+    --secondary: 38 34% 83%;
+    --secondary-foreground: 28 32% 15%;
+    --muted: 38 32% 86%;
+    --muted-foreground: 30 18% 34%;
+    --accent: 39 86% 45%;
+    --accent-foreground: 30 60% 10%;
+    --destructive: 0 72% 47%;
+    --destructive-foreground: 44 62% 98%;
+    --success: 150 60% 29%;
+    --success-foreground: 44 62% 98%;
+    --border: 35 30% 73%;
+    --input: 35 28% 79%;
+    --ring: 39 86% 49%;
+    --gold: 39 86% 45%;
+    --gold-light: 43 90% 60%;
+    --emerald: 153 62% 18%;
+    --emerald-light: 150 50% 33%;
+    --cream: 42 60% 99%;
+    --ink: 28 33% 12%;
+    --grad-page: radial-gradient(1100px 520px at 100% -8%, hsl(43 74% 79% / 0.95), transparent 56%),
+                 radial-gradient(950px 500px at -8% 10%, hsl(150 42% 77% / 0.6), transparent 55%),
+                 linear-gradient(180deg, hsl(40 48% 91%), hsl(35 36% 82%));
+    --shadow-soft: 0 2px 4px hsl(28 40% 16% / 0.08), 0 16px 40px hsl(28 40% 16% / 0.16);
+    --shadow-gold: 0 10px 30px hsl(var(--gold) / 0.45);
+    --sidebar-background: 40 46% 93%;
+    --sidebar-foreground: 28 32% 15%;
+    --sidebar-primary: 153 62% 18%;
+    --sidebar-primary-foreground: 44 62% 98%;
+    --sidebar-accent: 38 34% 86%;
+    --sidebar-accent-foreground: 28 32% 15%;
+    --sidebar-border: 35 30% 75%;
+    --sidebar-ring: 39 86% 49%;
   }
 }
 

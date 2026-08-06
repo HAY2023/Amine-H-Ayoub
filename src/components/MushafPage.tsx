@@ -1141,9 +1141,13 @@ const MushafPage = ({ onBack }: Props) => {
               >
                 <Headphones className="w-4 h-4 inline-block" /> تلاوة المعلم
               </button>
-                  إغلاق
-                </button>
-              </div>
+
+              <button
+                onClick={() => setActiveMenuAyah(null)}
+                className="w-full py-3 px-4 rounded-2xl bg-gray-200/60 hover:bg-gray-200/70 border text-slate-700 font-bold text-sm transition-all active:scale-95"
+              >
+                إغلاق
+              </button>
             </div>
           </div>
         </div>

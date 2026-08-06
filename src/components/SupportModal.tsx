@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { X, MessageSquare, Send, Loader2, Bot } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getDeviceId } from "@/utils/deviceInfo";
@@ -32,7 +33,7 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
   }, [messages, adminTyping]);
 
   useEffect(() => {
-    let subscription: any = null;
+    let subscription: RealtimeChannel | null = null;
 
     async function initChat() {
       try {
@@ -46,64 +47,78 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
           .maybeSingle();
 
         if (!conv) {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from("support_conversations")
             .insert({ device_id: deviceId, user_name: "مستخدم التطبيق" })
             .select("id")
             .single();
-          conv = data;
+          
+          if (error) {
+            console.error("Support chat init error:", error);
+            // Fallback for demo/unconfigured environments
+            conv = { id: "local_demo_conv" };
+          } else {
+            conv = data;
+          }
         }
 
         if (conv) {
           setConvId(conv.id);
 
-          // 2. Fetch messages
-          const { data: msgs } = await supabase
-            .from("support_messages")
-            .select("id, sender, body, created_at")
-            .eq("conversation_id", conv.id)
-            .order("created_at", { ascending: true });
+          // 2. Fetch messages (if real)
+          if (conv.id !== "local_demo_conv") {
+            const { data: msgs } = await supabase
+              .from("support_messages")
+              .select("id, sender, body, created_at")
+              .eq("conversation_id", conv.id)
+              .order("created_at", { ascending: true });
 
-          if (msgs) {
-            setMessages(msgs as SupportMessage[]);
+            if (msgs) {
+              setMessages(msgs as SupportMessage[]);
+            }
           }
 
           // 3. Subscribe to new messages (optional but recommended for chat)
-          subscription = supabase
-            .channel(`support_${conv.id}`)
-            .on(
-              "postgres_changes",
-              { event: "INSERT", schema: "public", table: "support_messages", filter: `conversation_id=eq.${conv.id}` },
-              (payload) => {
-                const newMsg = payload.new as SupportMessage;
-                // If it's from admin, clear typing indicator
-                if (newMsg.sender !== "user") {
-                  setAdminTyping(false);
-                }
-                setMessages((prev) => {
-                  // Prevent duplicate if we already added it optimistically
-                  if (prev.some(m => m.id === newMsg.id || (m.body === newMsg.body && m.sender === newMsg.sender))) {
-                    // Update the fake ID with the real one
-                    return prev.map(m => (m.body === newMsg.body && m.sender === newMsg.sender) ? newMsg : m);
+          if (conv.id !== "local_demo_conv") {
+            const channelName = `support_${conv.id}`;
+            const existingChannel = supabase.getChannels().find(c => c.topic === `realtime:${channelName}`);
+            if (existingChannel) {
+              await supabase.removeChannel(existingChannel);
+            }
+            const channel = supabase.channel(channelName);
+            channel
+              .on(
+                "postgres_changes",
+                { event: "INSERT", schema: "public", table: "support_messages", filter: `conversation_id=eq.${conv.id}` },
+                (payload) => {
+                  const newMsg = payload.new as SupportMessage;
+                  if (newMsg.sender !== "user") {
+                    setAdminTyping(false);
                   }
-                  return [...prev, newMsg];
-                });
-              }
-            )
-            .on(
-              "broadcast",
-              { event: "typing" },
-              (payload) => {
-                if (payload.payload?.isTyping) {
-                  setAdminTyping(true);
-                  if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
-                  typingTimeoutRef.current = window.setTimeout(() => setAdminTyping(false), 5000);
-                } else {
-                  setAdminTyping(false);
+                  setMessages((prev) => {
+                    // Replace optimistic message if it matches body and sender
+                    if (prev.some(m => m.id === newMsg.id || (m.body === newMsg.body && m.sender === newMsg.sender))) {
+                      return prev.map(m => (m.body === newMsg.body && m.sender === newMsg.sender) ? newMsg : m);
+                    }
+                    return [...prev, newMsg];
+                  });
                 }
-              }
-            )
-            .subscribe();
+              )
+              .on(
+                "broadcast",
+                { event: "typing" },
+                (payload) => {
+                  if (payload.payload?.isTyping) {
+                    setAdminTyping(true);
+                    if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
+                    typingTimeoutRef.current = window.setTimeout(() => setAdminTyping(false), 5000);
+                  } else {
+                    setAdminTyping(false);
+                  }
+                }
+              );
+            subscription = channel.subscribe();
+          }
         }
       } catch (err) {
         console.error("Failed to init support chat", err);
@@ -115,21 +130,28 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
 
     // Polling fallback
     const pollInterval = setInterval(async () => {
-      if (!convId) return;
+      if (!convId || convId === "local_demo_conv") return;
       try {
         const { data: msgs } = await supabase
           .from("support_messages")
           .select("id, sender, body, created_at")
           .eq("conversation_id", convId)
           .order("created_at", { ascending: true });
+          
         if (msgs) {
           setMessages(prev => {
-            // Only update if there's a new message to avoid unnecessary re-renders
-            if (prev.length !== msgs.length) {
-              // clear typing indicator if we received an admin message
+            // Find any optimistic messages that haven't been confirmed yet
+            const optimisticMessages = prev.filter(m => m.id.startsWith("optimistic-"));
+            
+            // Check if the confirmed messages have changed
+            const dbPrev = prev.filter(m => !m.id.startsWith("optimistic-"));
+            
+            if (dbPrev.length !== msgs.length) {
               const lastMsg = msgs[msgs.length - 1];
               if (lastMsg && lastMsg.sender !== "user") setAdminTyping(false);
-              return msgs as SupportMessage[];
+              
+              // Merge db messages with our local optimistic ones
+              return [...msgs as SupportMessage[], ...optimisticMessages];
             }
             return prev;
           });
@@ -153,23 +175,37 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
     setInput("");
     setSending(true);
 
+    const tempId = `optimistic-${Date.now()}`;
     try {
       // Optimistic UI update
       const tempMsg: SupportMessage = {
-        id: Date.now().toString(),
+        id: tempId,
         sender: "user",
         body: text,
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, tempMsg]);
 
-      await supabase.from("support_messages").insert({
-        conversation_id: convId,
-        sender: "user",
-        body: text,
-      });
+      if (convId !== "local_demo_conv") {
+        const { error, data } = await supabase.from("support_messages").insert({
+          conversation_id: convId,
+          sender: "user",
+          body: text,
+        }).select().single();
+
+        if (error) {
+          console.error("Failed to send message", error);
+          // Revert optimistic update on failure
+          setMessages(prev => prev.filter(m => m.id !== tempId));
+        } else if (data) {
+          // Replace optimistic message with actual data from db
+          setMessages(prev => prev.map(m => m.id === tempId ? data : m));
+        }
+      }
     } catch (err) {
       console.error("Failed to send message", err);
+      // Revert optimistic update on unexpected error
+      setMessages(prev => prev.filter(m => m.id !== tempId));
     } finally {
       setSending(false);
     }
@@ -221,6 +257,12 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
 
               {messages.map((msg, idx) => {
                 const isUser = msg.sender === "user";
+                const isImage = msg.body.startsWith("[IMAGE] ");
+                const isAudio = msg.body.startsWith("[AUDIO] ");
+                let cleanBody = msg.body;
+                if (isImage) cleanBody = msg.body.replace("[IMAGE] ", "");
+                if (isAudio) cleanBody = msg.body.replace("[AUDIO] ", "");
+
                 return (
                   <div key={msg.id || idx} className={`flex items-start gap-2 max-w-[85%] ${isUser ? 'mr-auto flex-row-reverse' : 'ml-auto'}`}>
                     {!isUser && (
@@ -228,8 +270,16 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
                         <Bot className="w-4 h-4 text-blue-600" />
                       </div>
                     )}
-                    <div className={`${isUser ? 'bg-accent text-accent-foreground rounded-tl-sm' : 'bg-white border text-foreground rounded-tr-sm'} shadow-sm rounded-2xl p-3`}>
-                      <p className="text-sm">{msg.body}</p>
+                    <div className={`${isUser ? 'bg-accent text-accent-foreground rounded-tl-sm' : 'bg-white border text-foreground rounded-tr-sm'} shadow-sm rounded-2xl p-3 overflow-hidden`}>
+                      {isImage ? (
+                        <img src={cleanBody} alt="مرفق" className="max-w-full rounded-lg" style={{ maxHeight: "200px" }} />
+                      ) : isAudio ? (
+                        <audio controls className="w-full h-10 max-w-[220px]">
+                          <source src={cleanBody} />
+                        </audio>
+                      ) : (
+                        <p className="text-sm whitespace-pre-wrap">{cleanBody}</p>
+                      )}
                       <span className={`text-[10px] opacity-70 mt-1 block ${isUser ? 'text-right' : 'text-left'}`}>
                         {new Date(msg.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
                       </span>

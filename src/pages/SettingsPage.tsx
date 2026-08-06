@@ -22,6 +22,7 @@ export const getTheme = (): "dark" | "light" => {
 export const applyTheme = (t: "dark" | "light") => {
   if (typeof document === "undefined") return;
   const el = document.documentElement;
+  el.setAttribute("data-theme", t);
   if (t === "light") el.classList.remove("dark"); else el.classList.add("dark");
 };
 
@@ -183,7 +184,7 @@ export default function SettingsPage() {
           </Section>
         )}
 
-        {(!hideKids || owner) && appMode !== "parent" && (
+        {(!hideKids || owner) && (
           <>
             {/* ===== الأطفال وولي الأمر ===== */}
             <Section label="الأطفال وولي الأمر">

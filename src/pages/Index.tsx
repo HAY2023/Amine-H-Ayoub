@@ -104,7 +104,8 @@ const Index = () => {
       });
       return;
     }
-    if (hasKidsPin()) { setPinAction("enter"); } else { setKidsLocked(true); navigate("/games"); }
+    setKidsLocked(true); 
+    navigate("/games");
   };
   
   // ── الإعدادات: محميّة برمز ولي الأمر إن وُجد (القارئ مخفيّ الآن، فمدخل الإعدادات هنا) ──
@@ -152,7 +153,7 @@ const Index = () => {
   useEffect(() => {
     if (loading || surahs.length === 0) return;
     
-    let objectUrls: string[] = [];
+    const objectUrls: string[] = [];
     let isMounted = true;
     
     const loadUnifiedList = async () => {
@@ -161,7 +162,7 @@ const Index = () => {
         const { syncPlaylist } = await import("@/data/playlistStore");
         
         const customAudios = await getAllCustomAudios();
-        const config = await syncPlaylist(surahs as any, customAudios as any);
+        const config = await syncPlaylist(surahs, customAudios.map((audio) => ({ id: audio.id })));
         
         if (!isMounted) return;
         
@@ -451,7 +452,11 @@ const Index = () => {
                   });
                   return;
                 }
-                kidsMode ? navigate("/games") : enterKids();
+                if (kidsMode) {
+                  navigate("/games");
+                } else {
+                  enterKids();
+                }
               }}
               className="w-full p-3.5 rounded-2xl bg-gradient-to-l from-accent/15 to-card border border-accent/40 shadow-soft flex items-center gap-3 active:scale-[0.99] transition-all"
             >
@@ -690,10 +695,9 @@ const Index = () => {
       {pinAction && (
         <PinModal
           mode="verify"
-          title={pinAction === "enter" ? "رمز وليّ الأمر (٤ أرقام)" : "أدخل الرمز للإعدادات"}
+          title="أدخل الرمز للإعدادات"
           onSuccess={() => {
-            if (pinAction === "enter") { setKidsLocked(true); navigate("/games"); }
-            else if (pinAction === "settings") { navigate("/settings"); }
+            if (pinAction === "settings") { navigate("/settings"); }
             setPinAction(null);
           }}
           onCancel={() => setPinAction(null)}

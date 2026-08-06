@@ -32,12 +32,7 @@ export default defineConfig(({ mode }) => ({
         }
       }
     },
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-      }
-    },
+    minify: false,
     chunkSizeWarningLimit: 1000,
   },
   plugins: [
@@ -62,14 +57,30 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      srcDir: "src",
+      filename: "service-worker.js",
+      strategies: "injectManifest",
+      injectManifest: {
+        swSrc: "service-worker.js",
+        globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff,woff2,webmanifest}"],
+      },
+      injectManifestBuildOptions: {
+        minify: false,
+        sourcemap: false,
+      },
+      injectManifestRollupOptions: {
+        rollupOptions: {
+          treeshake: false,
+        },
+      },
       devOptions: {
         enabled: false,
       },
-      includeAssets: ["favicon.ico", "my-photo.png", "background-kids.jpg"],
+      includeAssets: ["favicon.ico", "my-photo.png", "background-kids.jpg", "pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
-        name: "Quran Kids Teacher",
+        name: "Learn Quran Kids",
         short_name: "Quran Kids",
-        description: "Educational app for learning Quran by repetition",
+        description: "تطبيق تعليمي لترفيه الطفل بعد قراءة القرآن",
         theme_color: "#D2B48C",
         background_color: "#F5F5DC",
         display: "standalone",
@@ -78,12 +89,12 @@ export default defineConfig(({ mode }) => ({
         start_url: "/",
         icons: [
           {
-            src: "/my-photo.png",
+            src: "/pwa-192x192.png",
             sizes: "192x192",
             type: "image/png",
           },
           {
-            src: "/my-photo.png",
+            src: "/pwa-512x512.png",
             sizes: "512x512",
             type: "image/png",
           },

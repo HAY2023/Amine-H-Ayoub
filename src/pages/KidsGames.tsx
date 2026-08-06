@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Bell, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Hash, Grid3x3, Flame, Sparkles, Gamepad2, Puzzle } from "lucide-react";
 import { getAllSurahs } from "../data/quranData";
 import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
-import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked, setCurrentSurah } from "../data/kidsProfile";
+import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked, setCurrentSurah, addPlayMinutes } from "../data/kidsProfile";
 import { getGameCatalog, type GameDef, type GameEngine } from "../data/gameCatalog";
 import { ensureCorpus, type SurahText } from "../data/quranText";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
@@ -16,35 +16,11 @@ import { toast } from "../hooks/use-toast";
 import { isTimeAllowed } from "../data/kidsSchedule";
 
 async function enterKioskMode() {
-  try {
-    if (window.__TAURI_INTERNALS__) {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      const win = getCurrentWindow();
-      await win.setFullscreen(true);
-      await win.setClosable(false);
-    }
-    if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
-      await document.documentElement.requestFullscreen();
-    }
-  } catch (e) {
-    console.error("Kiosk Mode Error", e);
-  }
+  // تم إيقاف تكبير الشاشة التلقائي بناءً على طلب المستخدم
 }
 
 async function exitKioskMode() {
-  try {
-    if (window.__TAURI_INTERNALS__) {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      const win = getCurrentWindow();
-      await win.setFullscreen(false);
-      await win.setClosable(true);
-    }
-    if (document.exitFullscreen && document.fullscreenElement) {
-      await document.exitFullscreen();
-    }
-  } catch (e) {
-    console.error("Exit Kiosk Error", e);
-  }
+  // تم إيقاف تكبير الشاشة التلقائي بناءً على طلب المستخدم
 }
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 const shuffle = <T,>(a: T[]): T[] => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
@@ -129,7 +105,7 @@ function useRoundTimer(roundKey: unknown, seconds: number, onExpire: () => void,
       if (rem <= 0) { clearInterval(id); cb.current(); }
     }, 100);
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [roundKey, seconds, enabled]);
   return left;
 }
@@ -719,7 +695,7 @@ export default function KidsGames() {
     };
     window.addEventListener("keydown", handleKeyDown);
 
-    // Enforce Schedule
+    // Enforce Schedule and Play Duration
     const checkSchedule = () => {
       const timeCheck = isTimeAllowed();
       if (!timeCheck.allowed) {
@@ -728,9 +704,27 @@ export default function KidsGames() {
           setKidsLocked(false);
         }
         navigate("/");
+        return;
+      }
+      
+      if (isKidsMode()) {
+        const { justExpired, progress } = addPlayMinutes(1);
+        if (justExpired || progress.playExpired) {
+          toast({ title: "انتهى وقت اللعب ⏰", description: "لقد استنفدت وقت اللعب المخصص لك.", variant: "destructive" });
+          if (hasKidsPin()) {
+            setKidsLocked(false);
+          }
+          navigate("/");
+        }
       }
     };
-    checkSchedule(); // check immediately
+    // initial check on mount, without adding minutes yet
+    const initialCheck = isTimeAllowed();
+    if (!initialCheck.allowed || getProgress().playExpired) {
+        toast({ title: "انتهى وقت اللعب ⏰", description: initialCheck.reason || "لقد استنفدت وقت اللعب.", variant: "destructive" });
+        if (hasKidsPin()) setKidsLocked(false);
+        navigate("/");
+    }
     const scheduleInterval = setInterval(checkSchedule, 60000);
 
     return () => { 

@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
-import { supabase } from "@/lib/supabase";
 import { surahs as allSurahNames } from "@/data/surahs";
+
+interface HuggingFaceFile {
+  path: string;
+}
 
 export interface SurahItem {
   number: number;
@@ -69,14 +72,14 @@ export function useSurahData() {
       const data = await response.json();
 
       // استخراج أرقام السور من أسماء الملفات مثل 1.mp3، 2.mp3، إلخ.
-      const serverSurahNumbers = data
-        .filter((file: any) => file.path.endsWith('.mp3'))
-        .map((file: any) => {
+      const serverSurahNumbers = (data as HuggingFaceFile[])
+        .filter((file) => file.path.endsWith('.mp3'))
+        .map((file) => {
           const nameWithoutExt = file.path.replace(/\.[^/.]+$/, "");
           const num = parseInt(nameWithoutExt, 10);
           return isNaN(num) ? null : num;
         })
-        .filter((num: any): num is number => {
+        .filter((num: number | null): num is number => {
           // تجاهل الملفات القديمة التي تم رفعها بالترقيم القديم (من 2 إلى 77)
           // لأن رقم 4 قديماً كان سورة الإخلاص، ولكنه في المصحف هو سورة النساء!
           if (num !== null && num >= 2 && num <= 77) return false;
@@ -86,8 +89,16 @@ export function useSurahData() {
       // قراءة الأرقام المضافة يدوياً من الإعدادات
       let manualSurahs: number[] = [];
       try {
-        manualSurahs = JSON.parse(localStorage.getItem('MANUAL_SURAHS') || '[]');
-      } catch (e) { }
+        const stored = localStorage.getItem('MANUAL_SURAHS');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            manualSurahs = parsed.filter((n): n is number => typeof n === 'number');
+          }
+        }
+      } catch {
+        console.warn('Failed to parse MANUAL_SURAHS from localStorage');
+      }
 
       // دمج السور المحلية المضمنة مع المكتشفة من السيرفر والمضافة يدوياً
       const uniqueNumbers = Array.from(
@@ -116,8 +127,16 @@ export function useSurahData() {
 
       let manualSurahs: number[] = [];
       try {
-        manualSurahs = JSON.parse(localStorage.getItem('MANUAL_SURAHS') || '[]');
-      } catch (e) { }
+        const stored = localStorage.getItem('MANUAL_SURAHS');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            manualSurahs = parsed.filter((n): n is number => typeof n === 'number');
+          }
+        }
+      } catch {
+        console.warn('Failed to parse MANUAL_SURAHS from localStorage');
+      }
 
       const uniqueNumbers = Array.from(
         new Set([...LOCAL_SURAHS.map((s) => s.number), ...manualSurahs])

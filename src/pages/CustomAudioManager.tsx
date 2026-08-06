@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Trash2, ArrowUp, ArrowDown, Play, Pause, Upload, Pencil, Check, X, Eye, EyeOff, Music, GripVertical } from "lucide-react";
 import { CustomAudio, saveCustomAudio, getAllCustomAudios, deleteCustomAudio } from "@/data/customAudioStore";
 import { PlaylistConfigItem, syncPlaylist, savePlaylistConfig } from "@/data/playlistStore";
-import { useSurahData } from "@/hooks/useSurahData";
+import { SurahItem, useSurahData } from "@/hooks/useSurahData";
 import { toast } from "sonner";
 
 type ManagerItem = PlaylistConfigItem & {
@@ -31,20 +31,10 @@ export default function CustomAudioManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
 
-  useEffect(() => {
-    if (surahsLoading || surahs.length === 0) return;
-    loadContent();
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    };
-  }, [surahsLoading, surahs]);
-
-  const loadContent = async () => {
+  const loadContent = useCallback(async () => {
     try {
       const customAudios = await getAllCustomAudios();
-      const config = await syncPlaylist(surahs as any, customAudios as any);
+      const config = await syncPlaylist(surahs, customAudios.map((audio) => ({ id: audio.id })));
       
       const customMap = new Map(customAudios.map(a => [a.id, a]));
       const builtinMap = new Map(surahs.map(s => [s.number, s]));
@@ -83,7 +73,7 @@ export default function CustomAudioManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [surahs]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

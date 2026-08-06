@@ -281,7 +281,7 @@ function SearchTool() {
     catch { setErr("تعذّر تحميل نصّ القرآن — تأكّد من الاتصال بالإنترنت في المرّة الأولى، ثم يعمل لاحقاً دون إنترنت."); return null; }
     finally { setLoading(false); }
   };
-  useEffect(() => { if (isCorpusReady()) load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => { if (isCorpusReady()) load();   }, []);
 
   const run = async () => {
     if (!q.trim()) return;

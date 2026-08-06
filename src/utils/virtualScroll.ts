@@ -57,6 +57,6 @@ export function useVirtualScroll(
 /**
  * For use with React.lazy for dynamic imports
  */
-export const createLazyComponent = (importFn: () => Promise<any>) => {
+export const createLazyComponent = <T extends React.ComponentType<unknown>>(importFn: () => Promise<{ default: T }>) => {
   return React.lazy(importFn);
 };

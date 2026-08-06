@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { getDeviceId } from "./deviceInfo";
 import { getKidsSchedule, isTimeAllowed } from "../data/kidsSchedule";
@@ -40,7 +41,9 @@ export function useBackgroundNotifications() {
     initialized.current = true;
 
     // Ask for permission silently when the app starts.
-    void requestNotificationPermission();
+    void requestNotificationPermission().then((granted) => {
+      // Push notifications not yet fully implemented
+    });
 
     const deviceId = getDeviceId();
 
@@ -60,7 +63,7 @@ export function useBackgroundNotifications() {
       .subscribe();
 
     // 2. Listen for support replies
-    let supportSub: any = null;
+    let supportSub: RealtimeChannel | null = null;
     async function listenSupport() {
       try {
         const { data: conv } = await supabase

@@ -70,8 +70,9 @@ export default function Login() {
         if (error) throw error;
         toast({ title: "تحقق من بريدك الإلكتروني", description: "أرسلنا رسالة تأكيد" });
       }
-    } catch (err: any) {
-      toast({ title: "خطأ", description: err?.message ?? String(err) });
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      toast({ title: "خطأ", description: error.message });
     } finally {
       setBusy(false);
     }
