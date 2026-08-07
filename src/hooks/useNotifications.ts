@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { requestNotificationPermission, showLocalNotification } from '@/utils/notifications';
 
 // 1. وقت دراسة الطفل (بعد 10 دقائق من فتح التطبيق)

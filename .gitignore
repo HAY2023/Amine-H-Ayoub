@@ -29,6 +29,11 @@ dist-ssr
 cloudflared.exe
 vite-err.txt
 vite-log.txt
+release.zip
+ayah.js
+eslint-output.*
+build-output.txt
+lint-output.txt
 
 # Supabase temporary files
 supabase/.temp/
