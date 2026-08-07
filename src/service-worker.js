@@ -30,5 +30,4 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(self.clients.openWindow(String(url)));
 });
 
-// Workbox injection point
-self.__WB_MANIFEST = self.__WB_MANIFEST || [];
+self.__WB_MANIFEST = [];

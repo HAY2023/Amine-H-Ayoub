@@ -7,7 +7,7 @@
  */
 import { supabase, hasValidSupabaseKey } from "../lib/supabase";
 
-export type GameEngine = "order" | "memory" | "which" | "quiz" | "count" | "nextayah" | "prevayah" | "whichsurah" | "missingword";
+export type GameEngine = "order" | "memory" | "which" | "quiz" | "count" | "nextayah" | "prevayah" | "whichsurah" | "missingword" | "surahaudio";
 
 export interface GameDef {
   id: string;
@@ -25,6 +25,7 @@ const CATALOG_KEY = "mushaf:gameCatalog:v1";
 
 /** الألعاب المضمّنة (كلها مجانية) + نماذج مدفوعة توضّح الشراء بالنجوم. */
 export const BUILTIN_GAMES: GameDef[] = [
+  { id: "surahaudio", title: "اسمع السورة", engine: "surahaudio", ageMin: 5, cost: 0, tint: "bg-gradient-to-br from-sky-400 to-cyan-500 text-white shadow-cyan-500/30", icon: "Headphones", params: {} },
   { id: "whichsurah", title: "اكتشف السورة", engine: "whichsurah", ageMin: 5, cost: 0, tint: "bg-gradient-to-br from-pink-500 to-rose-400 text-white shadow-pink-500/30", icon: "Sparkles", params: {} },
   { id: "order", title: "ترتيب الآيات", engine: "order", ageMin: 5, cost: 0, tint: "bg-gradient-to-br from-sky-400 to-blue-500 text-white shadow-blue-500/30", icon: "ListOrdered", params: {} },
   { id: "memory_easy", title: "ذاكرة السور", engine: "memory", ageMin: 5, cost: 0, tint: "bg-gradient-to-br from-violet-400 to-purple-500 text-white shadow-purple-500/30", icon: "LayoutGrid", params: { pairs: 3 } },

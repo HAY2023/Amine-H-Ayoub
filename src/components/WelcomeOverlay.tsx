@@ -1,11 +1,13 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Youtube, Check, CloudDownload, Wrench, User, Baby, Plus, Trash2, Minus, KeyRound, Shield, BookOpen, Headphones, Settings, Star, Gamepad2, Puzzle, Trophy } from "lucide-react";
-import { RECITER_URL } from "../pages/SettingsPage";
+import { RECITER_PATH } from "../pages/SettingsPage";
 import { downloadEverything } from "../data/offlineDownload";
 import { setAppMode, addProfile, setActiveProfile, kidsHidden, setKidsHidden, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
-import { setKidsPin } from "../data/kidsLock";
+import { setKidsPin, setKidsLocked } from "../data/kidsLock";
 import Avatar from "./Avatar";
+
+const SUPPORT_CHANNEL_URL = "https://www.youtube.com/@ayoubamin";
 
 const ONBOARD_KEY = "mushaf:onboarded:v1";
 
@@ -40,8 +42,12 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
 
   const finalize = () => {
     setAppMode(effMode);
-    if (effMode === "parent") setKidsHidden(true);
-    if (effMode !== "parent") {
+    if (effMode === "parent") {
+      setKidsHidden(true);
+      setKidsLocked(false);
+    } else {
+      setKidsHidden(false);
+      setKidsLocked(true);
       if (pinValid) setKidsPin(pin);
       const valid = kids.filter(k => k.name.trim());
       const list = valid.length ? valid : [{ name: "طفلي", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0] }];
@@ -57,10 +63,21 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
   const finish = () => { finalize(); onDone(); };
   const finishToTools = () => { /* أدوات المعلّم معطّلة */ };
 
+  const downloadController = useRef<AbortController | null>(null);
   const startDownload = async () => {
+    if (downloadController.current) return;
+    const controller = new AbortController();
+    downloadController.current = controller;
     setDl(d => ({ ...d, busy: true, done: 0, total: 0, finished: false }));
-    const res = await downloadEverything((done, total) => setDl(d => ({ ...d, done, total })));
-    setDl(d => ({ ...d, busy: false, finished: true, total: res.total, done: res.total }));
+    const res = await downloadEverything((done, total) => setDl(d => ({ ...d, done, total })), controller.signal);
+    setDl(d => ({ ...d, busy: false, finished: !res.aborted, total: res.total, done: res.total }));
+    downloadController.current = null;
+  };
+  const cancelDownload = () => {
+    if (!downloadController.current) return;
+    downloadController.current.abort();
+    setDl(d => ({ ...d, busy: false }));
+    downloadController.current = null;
   };
 
   const pick = (m: AppMode) => { setMode(m); setStep(2); };
@@ -233,12 +250,13 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
           {cur === "subscribe" && (
             <div className="text-center space-y-4 animate-fade-up">
               <div className="relative mx-auto w-20 h-20">
-                <span aria-hidden className="absolute inset-0 rounded-3xl bg-red-500/30 blur-xl" />
-                <div className="relative w-20 h-20 rounded-3xl bg-red-600 text-white flex items-center justify-center shadow-soft"><Youtube className="w-11 h-11" /></div>
+                <span aria-hidden className="absolute inset-0 rounded-3xl bg-accent/25 blur-xl" />
+                <div className="relative w-20 h-20 rounded-3xl bg-accent text-white flex items-center justify-center shadow-soft"><BookOpen className="w-11 h-11" /></div>
               </div>
               <h2 className="text-xl font-extrabold text-accent">ادعم القارئ</h2>
-              <p className="text-muted-foreground leading-relaxed">اشترك بقناة القارئ <b className="text-foreground">حاج أيوب أمين</b> على يوتيوب — دعماً لاستمرار العمل.</p>
-              <a href={RECITER_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 text-white font-bold px-5 py-3 shadow-soft active:scale-95 transition-transform"><Youtube className="w-5 h-5" /> اشترك الآن</a>
+              <p className="text-muted-foreground leading-relaxed">اضغط الزر لفتح قناة القارئ ودعم المشروع، ثم أكمل الإعداد بعد العودة.</p>
+              <button onClick={() => window.open(SUPPORT_CHANNEL_URL, "_blank")} className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent text-white font-bold px-5 py-3 shadow-soft active:scale-95 transition-transform">اذهب إلى القناة</button>
+              <p className="text-[11px] text-muted-foreground">بعد الاشتراك، ارجع لإكمال إعداد التطبيق.</p>
             </div>
           )}
 
@@ -250,10 +268,16 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
               </div>
               <h2 className="text-xl font-extrabold text-accent">تحميل للعمل دون إنترنت</h2>
               <p className="text-muted-foreground leading-relaxed">حمّل كل السور والصوت والصفحات إلى جهازك ليعمل التطبيق بالكامل دون اتصال.</p>
-              {dl.busy || dl.finished ? (
-                <div className="space-y-2">
+              {dl.busy ? (
+                <div className="space-y-3">
                   <div className="h-3 rounded-full bg-muted overflow-hidden"><div className="h-full bg-gradient-to-l from-emerald-light to-emerald transition-all" style={{ width: `${pct}%` }} /></div>
-                  <p className="text-sm text-muted-foreground">{dl.finished ? "اكتمل التحميل" : `${dl.done} / ${dl.total} (${pct}%)`}</p>
+                  <p className="text-sm text-muted-foreground">{`${dl.done} / ${dl.total} (${pct}%)`}</p>
+                  <button onClick={cancelDownload} className="inline-flex items-center justify-center gap-2 rounded-xl bg-destructive text-white font-bold px-4 py-2 shadow-soft active:scale-95 transition-transform">إلغاء التحميل</button>
+                </div>
+              ) : dl.finished ? (
+                <div className="space-y-2">
+                  <div className="h-3 rounded-full bg-muted overflow-hidden"><div className="h-full bg-gradient-to-l from-emerald-light to-emerald" style={{ width: `100%` }} /></div>
+                  <p className="text-sm text-success">اكتمل التحميل</p>
                 </div>
               ) : (
                 <button onClick={startDownload} className="btn-emerald px-5 py-3"><CloudDownload className="w-5 h-5" /> حمّل كل شيء الآن</button>

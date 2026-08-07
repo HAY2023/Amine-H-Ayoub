@@ -23,17 +23,24 @@ export const isDownloaded = (): boolean => {
 };
 
 /** ينزّل كل الأصول، ويستدعي onProgress(done,total) بعد كل أصل. */
-export const downloadEverything = async (onProgress?: (done: number, total: number) => void): Promise<{ ok: number; fail: number; total: number }> => {
+export const downloadEverything = async (
+  onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal,
+): Promise<{ ok: number; fail: number; total: number; aborted?: boolean }> => {
   const urls = collectAssets();
   let done = 0, ok = 0, fail = 0;
   for (const url of urls) {
+    if (signal?.aborted) break;
     try {
-      const r = await fetch(url, { cache: "reload" });
+      const r = await fetch(url, { cache: "reload", signal });
       if (r.ok) ok++; else fail++;
-    } catch { fail++; }
+    } catch (error) {
+      if (signal?.aborted) break;
+      fail++;
+    }
     done++;
     onProgress?.(done, urls.length);
   }
   try { localStorage.setItem(DONE_KEY, new Date().toISOString()); } catch { /* ignore */ }
-  return { ok, fail, total: urls.length };
+  return { ok, fail, total: urls.length, aborted: signal?.aborted };
 };

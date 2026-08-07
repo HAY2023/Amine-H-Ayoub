@@ -19,7 +19,7 @@ import { isTauri, shouldHideMushaf, checkOfflineStatus, downloadSurah, listenToD
 import { checkForUpdates, UpdateInfo } from "../utils/updateChecker";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
 import { isTimeAllowed } from "@/data/kidsSchedule";
-import { kidsEnabled as getKidsEnabled, addReadingMinutes, getProgress } from "@/data/kidsProfile";
+import { kidsEnabled as getKidsEnabled, addReadingMinutes, getProgress, setAppMode } from "@/data/kidsProfile";
 import { toast } from "@/hooks/use-toast";
 
 const LAST_SURAH_KEY = "audio:lastSurah";
@@ -104,7 +104,8 @@ const Index = () => {
       });
       return;
     }
-    setKidsLocked(true); 
+    setAppMode("kids");
+    setKidsLocked(true);
     navigate("/games");
   };
   
@@ -419,8 +420,16 @@ const Index = () => {
         {!kidsMode && (
           <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
             <button
+              onClick={() => navigate("/announcements")}
+              className="h-10 px-3.5 rounded-full bg-card/85 backdrop-blur border border-accent/40 shadow-soft flex items-center gap-1.5 text-sm font-bold text-foreground/85 hover:text-foreground hover:border-accent/70 active:scale-95 transition-all"
+            >
+              <Bell className="w-4 h-4 text-accent" /> الإعلانات
+            </button>
+            <button
               onClick={() => setShowNotifications(true)}
               className="h-10 w-10 rounded-full bg-card/85 backdrop-blur border border-accent/40 shadow-soft flex items-center justify-center text-foreground/85 hover:text-foreground hover:border-accent/70 active:scale-95 transition-all"
+              title="الإشعارات"
+              aria-label="الإشعارات"
             >
               <Bell className="w-5 h-5 text-accent" />
             </button>
@@ -439,7 +448,7 @@ const Index = () => {
         </div>
 
         {/* مدخل ركن الأطفال (الألعاب) من داخل قسم التلاوات */}
-        {kidsCorner && isUnlocked && !isAudioPlaying && (
+        {kidsCorner && !isAudioPlaying && (
           <div className="max-w-2xl mx-auto px-4 mb-4" dir="rtl">
             <button
               onClick={() => {
@@ -463,7 +472,9 @@ const Index = () => {
               <span className="w-11 h-11 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shrink-0"><Baby className="w-6 h-6" /></span>
               <span className="flex-1 text-right">
                 <span className="block font-extrabold text-foreground">{kidsMode ? "الألعاب" : "ركن الأطفال"}</span>
-                <span className="block text-[11px] text-muted-foreground">{shouldHideMushaf() ? "استمع للتلاوات لتفتح الألعاب" : "ألعاب ومكافآت لتعلّم القرآن"}</span>
+                <span className="block text-[11px] text-muted-foreground">
+                  {isUnlocked ? "ألعاب ومكافآت لتعلّم القرآن" : shouldHideMushaf() ? "استمع للتلاوات لتفتح الألعاب" : "اقرأ القرآن لتفتح الألعاب"}
+                </span>
               </span>
               <ChevronLeft className="w-5 h-5 text-muted-foreground shrink-0" />
             </button>
@@ -499,20 +510,20 @@ const Index = () => {
               )}
               <button
                 onClick={handleShuffle}
-              className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 border ${
-                isShuffled
-                  ? "bg-accent text-accent-foreground border-accent shadow-lg scale-105"
-                  : "bg-card border-border hover:border-accent/50 hover:shadow-md"
-              }`}
-              title={isShuffled ? "العودة للترتيب الأصلي" : "ترتيب عشوائي"}
-              aria-label={isShuffled ? "العودة للترتيب الأصلي" : "ترتيب عشوائي"}
-            >
-              {isShuffled ? (
-                <ListOrdered className="w-5 h-5" />
-              ) : (
-                <Shuffle className="w-5 h-5" />
-              )}
-            </button>
+                className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 border ${
+                  isShuffled
+                    ? "bg-accent text-accent-foreground border-accent shadow-lg scale-105"
+                    : "bg-card border-border hover:border-accent/50 hover:shadow-md"
+                }`}
+                title={isShuffled ? "العودة للترتيب الأصلي" : "ترتيب عشوائي"}
+                aria-label={isShuffled ? "العودة للترتيب الأصلي" : "ترتيب عشوائي"}
+              >
+                {isShuffled ? (
+                  <ListOrdered className="w-5 h-5" />
+                ) : (
+                  <Shuffle className="w-5 h-5" />
+                )}
+              </button>
           </div>
         </div>
 

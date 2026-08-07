@@ -30,6 +30,6 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
   event.waitUntil(self.clients.openWindow(String(url)));
 });
 
-// Workbox injection point
-self["__WB_MANIFEST"] = self["__WB_MANIFEST"] || [];
-
+ type WorkboxManifestEntry = { url: string; revision?: string };
+const precacheManifest: WorkboxManifestEntry[] = (self as unknown as { __WB_MANIFEST?: WorkboxManifestEntry[] }).__WB_MANIFEST || [];
+void precacheManifest;

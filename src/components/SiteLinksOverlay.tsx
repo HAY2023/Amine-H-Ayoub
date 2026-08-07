@@ -10,6 +10,7 @@ interface Props {
 const links = [
   { path: "/", label: "المصحف المعلم", description: "قراءة القرآن مع التقسيم والتشغيل", icon: BookOpen, color: "from-amber-400 to-orange-500", glow: "shadow-amber-500/20" },
   { path: "/audio", label: "التلاوات", description: "قائمة السور الصوتية", icon: Headphones, color: "from-sky-400 to-blue-500", glow: "shadow-sky-500/20" },
+  { path: "/reciter", label: "صفحة القارئ", description: "عرض ميزات القارئ والتطبيق", icon: BookOpen, color: "from-amber-400 to-orange-500", glow: "shadow-amber-500/20" },
   { path: "/timings", label: "إعداد التوقيت", description: "معايرة توقيت الآيات الصوتية", icon: Timer, color: "from-emerald-400 to-teal-500", glow: "shadow-emerald-500/20" },
   { path: "/calibrate", label: "ضبط المواضع", description: "ضبط مواضع الآيات على الصفحات", icon: Target, color: "from-violet-400 to-purple-500", glow: "shadow-violet-500/20" },
 ];

@@ -1280,7 +1280,19 @@ export default function QuranReader() {
         <PinModal
           mode={pinAction === "enter" ? "set" : "verify"}
           title={pinAction === "enter" ? "اختر رمز ولي الأمر (٤ أرقام)" : pinAction === "settings" ? "أدخل الرمز للإعدادات" : "أدخل الرمز للخروج من ركن الأطفال"}
-          onSuccess={() => { if (pinAction === "enter") { setKidsLocked(true); navigate("/games"); } else if (pinAction === "settings") { navigate("/settings"); } else { setKidsLocked(false); } setPinAction(null); }}
+          onSuccess={() => {
+        if (pinAction === "enter") {
+          setAppMode("kids");
+          setKidsLocked(true);
+          navigate("/games");
+        } else if (pinAction === "settings") {
+          navigate("/settings");
+        } else {
+          setAppMode("parent");
+          setKidsLocked(false);
+        }
+        setPinAction(null);
+      }}
           onCancel={() => setPinAction(null)}
         />
       )}

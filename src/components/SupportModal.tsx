@@ -96,7 +96,6 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
                     setAdminTyping(false);
                   }
                   setMessages((prev) => {
-                    // Replace optimistic message if it matches body and sender
                     if (prev.some(m => m.id === newMsg.id || (m.body === newMsg.body && m.sender === newMsg.sender))) {
                       return prev.map(m => (m.body === newMsg.body && m.sender === newMsg.sender) ? newMsg : m);
                     }
@@ -137,21 +136,14 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
           .select("id, sender, body, created_at")
           .eq("conversation_id", convId)
           .order("created_at", { ascending: true });
-          
         if (msgs) {
           setMessages(prev => {
-            // Find any optimistic messages that haven't been confirmed yet
-            const optimisticMessages = prev.filter(m => m.id.startsWith("optimistic-"));
-            
-            // Check if the confirmed messages have changed
-            const dbPrev = prev.filter(m => !m.id.startsWith("optimistic-"));
-            
-            if (dbPrev.length !== msgs.length) {
+            // Only update if there's a new message to avoid unnecessary re-renders
+            if (prev.length !== msgs.length) {
+              // clear typing indicator if we received an admin message
               const lastMsg = msgs[msgs.length - 1];
               if (lastMsg && lastMsg.sender !== "user") setAdminTyping(false);
-              
-              // Merge db messages with our local optimistic ones
-              return [...msgs as SupportMessage[], ...optimisticMessages];
+              return msgs as SupportMessage[];
             }
             return prev;
           });
@@ -175,37 +167,23 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
     setInput("");
     setSending(true);
 
-    const tempId = `optimistic-${Date.now()}`;
     try {
       // Optimistic UI update
       const tempMsg: SupportMessage = {
-        id: tempId,
+        id: Date.now().toString(),
         sender: "user",
         body: text,
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, tempMsg]);
 
-      if (convId !== "local_demo_conv") {
-        const { error, data } = await supabase.from("support_messages").insert({
-          conversation_id: convId,
-          sender: "user",
-          body: text,
-        }).select().single();
-
-        if (error) {
-          console.error("Failed to send message", error);
-          // Revert optimistic update on failure
-          setMessages(prev => prev.filter(m => m.id !== tempId));
-        } else if (data) {
-          // Replace optimistic message with actual data from db
-          setMessages(prev => prev.map(m => m.id === tempId ? data : m));
-        }
-      }
+      await supabase.from("support_messages").insert({
+        conversation_id: convId,
+        sender: "user",
+        body: text,
+      });
     } catch (err) {
       console.error("Failed to send message", err);
-      // Revert optimistic update on unexpected error
-      setMessages(prev => prev.filter(m => m.id !== tempId));
     } finally {
       setSending(false);
     }
@@ -257,12 +235,6 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
 
               {messages.map((msg, idx) => {
                 const isUser = msg.sender === "user";
-                const isImage = msg.body.startsWith("[IMAGE] ");
-                const isAudio = msg.body.startsWith("[AUDIO] ");
-                let cleanBody = msg.body;
-                if (isImage) cleanBody = msg.body.replace("[IMAGE] ", "");
-                if (isAudio) cleanBody = msg.body.replace("[AUDIO] ", "");
-
                 return (
                   <div key={msg.id || idx} className={`flex items-start gap-2 max-w-[85%] ${isUser ? 'mr-auto flex-row-reverse' : 'ml-auto'}`}>
                     {!isUser && (
@@ -270,16 +242,8 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
                         <Bot className="w-4 h-4 text-blue-600" />
                       </div>
                     )}
-                    <div className={`${isUser ? 'bg-accent text-accent-foreground rounded-tl-sm' : 'bg-white border text-foreground rounded-tr-sm'} shadow-sm rounded-2xl p-3 overflow-hidden`}>
-                      {isImage ? (
-                        <img src={cleanBody} alt="مرفق" className="max-w-full rounded-lg" style={{ maxHeight: "200px" }} />
-                      ) : isAudio ? (
-                        <audio controls className="w-full h-10 max-w-[220px]">
-                          <source src={cleanBody} />
-                        </audio>
-                      ) : (
-                        <p className="text-sm whitespace-pre-wrap">{cleanBody}</p>
-                      )}
+                    <div className={`${isUser ? 'bg-accent text-accent-foreground rounded-tl-sm' : 'bg-white border text-foreground rounded-tr-sm'} shadow-sm rounded-2xl p-3`}>
+                      <p className="text-sm">{msg.body}</p>
                       <span className={`text-[10px] opacity-70 mt-1 block ${isUser ? 'text-right' : 'text-left'}`}>
                         {new Date(msg.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
                       </span>

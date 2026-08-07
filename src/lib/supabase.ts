@@ -1,11 +1,11 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://cjrwtzcgtiqsbrqplouy.supabase.co";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_HteeGJaZEmUIkzlEFr7lyg_qLHvOSNr";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
 
-/** True when a real Supabase anon key is configured (not empty / placeholder). */
+/** True when a real Supabase anon key is configured. */
 export const hasValidSupabaseKey = (): boolean =>
-  !!supabaseAnonKey && supabaseAnonKey !== "placeholder";
+  !!supabaseUrl && !!supabaseAnonKey && supabaseAnonKey !== "placeholder";
 
 /**
  * No-op query builder: every chained method returns itself, and

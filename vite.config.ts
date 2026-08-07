@@ -61,12 +61,15 @@ export default defineConfig(({ mode }) => ({
       filename: "service-worker.js",
       strategies: "injectManifest",
       injectManifest: {
-        swSrc: "service-worker.js",
+        swSrc: path.resolve(__dirname, "src/service-worker.js"),
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff,woff2,webmanifest}"],
+        maximumFileSizeToCacheInBytes: 5000000,
+        injectionPoint: "self.__WB_MANIFEST = [];",
       },
       injectManifestBuildOptions: {
         minify: false,
         sourcemap: false,
+        target: "esnext",
       },
       injectManifestRollupOptions: {
         rollupOptions: {

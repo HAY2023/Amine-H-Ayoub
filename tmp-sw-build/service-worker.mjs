@@ -29,3 +29,6 @@ self.addEventListener('notificationclick', (event) => {
   const url = event.notification.data || '/';
   event.waitUntil(self.clients.openWindow(String(url)));
 });
+
+// Workbox injection point
+self.__WB_MANIFEST = self.__WB_MANIFEST || [];

@@ -23,6 +23,10 @@ const SettingsPage = lazy(() => import("./pages/SettingsPage.tsx"));
 const ParentDashboard = lazy(() => import("./pages/ParentDashboard.tsx"));
 const CustomAudioManager = lazy(() => import("./pages/CustomAudioManager.tsx"));
 const AudioUploadPage = lazy(() => import("./pages/AudioUploadPage.tsx"));
+const SupportPage = lazy(() => import("./pages/SupportPage.tsx"));
+const ReciterPage = lazy(() => import("./pages/ReciterPage.tsx"));
+const AnnouncementsPage = lazy(() => import("./pages/AnnouncementsPage.tsx"));
+const ErrorPage = lazy(() => import("./pages/ErrorPage.tsx"));
 import { getProfile, getAppMode, getProfiles, kidsEnabled } from "./data/kidsProfile";
 import { toast } from "./hooks/use-toast";
 import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
@@ -41,9 +45,18 @@ function KidsModeGuard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isKidsMode() && location.pathname !== "/games") {
-      navigate("/games", { replace: true });
-    }
+    const checkMode = () => {
+      if (isKidsMode() && location.pathname !== "/games") {
+        navigate("/games", { replace: true });
+      }
+    };
+    checkMode();
+    window.addEventListener("mushaf:kidsmode", checkMode);
+    window.addEventListener("mushaf:appmode", checkMode);
+    return () => {
+      window.removeEventListener("mushaf:kidsmode", checkMode);
+      window.removeEventListener("mushaf:appmode", checkMode);
+    };
   }, [location.pathname, navigate]);
 
   return null;
@@ -140,6 +153,10 @@ const App = () => {
                 <Route path="/profiles" element={<ProfilePicker />} />
                 <Route path="/manage-audio" element={<CustomAudioManager />} />
                 <Route path="/upload" element={<AudioUploadPage />} />
+                <Route path="/reciter" element={<ReciterPage />} />
+                <Route path="/announcements" element={<AnnouncementsPage />} />
+                <Route path="/support" element={<SupportPage />} />
+                <Route path="/error" element={<ErrorPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Bell, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Hash, Grid3x3, Flame, Sparkles, Gamepad2, Puzzle } from "lucide-react";
 import { getAllSurahs } from "../data/quranData";
 import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
-import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked, setCurrentSurah, addPlayMinutes } from "../data/kidsProfile";
+import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked, setCurrentSurah, addPlayMinutes, setAppMode } from "../data/kidsProfile";
 import { getGameCatalog, type GameDef, type GameEngine } from "../data/gameCatalog";
 import { ensureCorpus, type SurahText } from "../data/quranText";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
@@ -570,6 +570,95 @@ function WhichSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: G
   );
 }
 
+function SurahAudioEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
+  const [source, setSource] = useState<HTMLAudioElement | null>(null);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [question, setQuestion] = useState<{ surah: { number: number; name: string }; options: { number: number; name: string }[] } | null>(null);
+  const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
+  const [round, setRound] = useState(1);
+  const g = useGame();
+  const pool = poolFor(def, minSurah).filter(s => hasCloudAudio(s.number) || s.number === 1);
+  const makeQuestion = () => {
+    const candidates = shuffle(pool).slice(0, 4);
+    const correct = candidates[0];
+    return {
+      surah: correct,
+      options: shuffle(candidates.map((s) => ({ number: s.number, name: s.name }))),
+    };
+  };
+
+  useEffect(() => {
+    setQuestion(makeQuestion());
+    setSelected(null);
+    setFeedback(null);
+    setRound(1);
+  }, [minSurah, def.engine]);
+
+  useEffect(() => {
+    if (!question) return;
+    const audio = new Audio(audioPath(question.surah.number));
+    audio.preload = "auto";
+    audio.onended = () => audio.pause();
+    setSource(audio);
+    return () => {
+      audio.pause();
+      audio.src = "";
+    };
+  }, [question]);
+
+  const playAudio = () => {
+    source?.play().catch(() => {
+      toast({ title: "تعذّر تشغيل الصوت", description: "تأكد من اتصال الإنترنت أو جرب سورة أخرى.", variant: "destructive" });
+    });
+  };
+
+  const choose = (number: number) => {
+    if (!question || feedback) return;
+    setSelected(number);
+    const correct = number === question.surah.number;
+    if (correct) g.correct(); else g.miss();
+    setFeedback(correct ? "correct" : "wrong");
+    window.setTimeout(() => {
+      setQuestion(makeQuestion());
+      setSelected(null);
+      setFeedback(null);
+      setRound(r => Math.min(ROUNDS, r + 1));
+    }, 1200);
+  };
+
+  if (!question) return <div className="text-center py-8 text-sm text-muted-foreground">جارٍ تحضير اللعبة...</div>;
+  const finished = round > ROUNDS;
+  if (finished) return <ResultCard g={g} onReplay={() => {
+    g.reset(); setQuestion(makeQuestion()); setSelected(null); setFeedback(null); setRound(1);
+  }} />;
+
+  return (
+    <div className="space-y-4 text-center">
+      <SessionBar q={round} />
+      <p className="text-foreground text-lg font-bold">اسمع السورة واختر اسمها</p>
+      <button onClick={playAudio} className="btn-emerald mx-auto px-5 py-3 rounded-2xl font-bold flex items-center gap-2 active:scale-95">
+        <Play className="w-4 h-4" /> استمع الآن
+      </button>
+      <div className="grid gap-2">
+        {question.options.map((opt) => {
+          const isCorrect = feedback && opt.number === question.surah.number;
+          const isWrong = feedback && opt.number === selected && selected !== question.surah.number;
+          const cls = isCorrect ? "bg-success/20 border-success/60 text-success"
+            : isWrong ? "bg-destructive/20 border-destructive/60 text-destructive"
+            : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
+          return (
+            <button key={opt.number} onClick={() => choose(opt.number)} disabled={!!feedback}
+              className={`p-4 rounded-xl border font-bold text-lg active:scale-95 transition-colors ${cls}`}>
+              {opt.name}
+            </button>
+          );
+        })}
+      </div>
+      <GameHud g={g} />
+    </div>
+  );
+}
+
 function MissingWordEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const { corpus, failed, retry } = useCorpus();
   if (!corpus) return <CorpusGate failed={failed} retry={retry} />;
@@ -646,7 +735,7 @@ function MissingWordPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: 
 
 const ENGINES: Record<GameEngine, (p: { def: GameDef; minSurah: number }) => JSX.Element> = {
   order: OrderEngine, memory: MemoryEngine, which: WhichEngine, quiz: QuizEngine, count: CountEngine,
-  nextayah: NextAyahEngine, prevayah: PrevAyahEngine, whichsurah: WhichSurahEngine, missingword: MissingWordEngine,
+  nextayah: NextAyahEngine, prevayah: PrevAyahEngine, whichsurah: WhichSurahEngine, missingword: MissingWordEngine, surahaudio: SurahAudioEngine,
 };
 const ICONS: Record<string, typeof Headphones> = { Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Hash, Grid3x3, Gamepad2, BookOpen, Sparkles, Puzzle };
 const iconFor = (key: string) => ICONS[key] || Gamepad2;
@@ -759,13 +848,13 @@ export default function KidsGames() {
   const inApp = shouldHideMushaf();   // المصحف مخفيّ → الاستماع (لا القراءة) هو ما يفتح الألعاب
 
   const onPinSuccess = () => {
-    if (pinAction === "parent" || pinAction === "setparent") { setKidsLocked(false); setPinAction(null); navigate("/parent"); return; }
-    if (pinAction === "exit") { setKidsLocked(false); setPinAction(null); navigate("/"); return; }
-    if (pinAction === "setread") { setKidsLocked(true); setPinAction(null); navigate("/"); return; }
+    if (pinAction === "parent" || pinAction === "setparent") { setAppMode("parent"); setKidsLocked(false); setPinAction(null); navigate("/parent"); return; }
+    if (pinAction === "exit") { setAppMode("parent"); setKidsLocked(false); setPinAction(null); navigate("/"); return; }
+    if (pinAction === "setread") { setAppMode("kids"); setKidsLocked(true); setPinAction(null); navigate("/"); return; }
     setPinAction(null);
   };
 
-  const lockAndRead = () => { if (hasKidsPin()) { setKidsLocked(true); navigate("/"); } else setPinAction("setread"); };
+  const lockAndRead = () => { if (hasKidsPin()) { setAppMode("kids"); setKidsLocked(true); navigate("/"); } else setPinAction("setread"); };
   const openParent = () => { if (hasKidsPin()) setPinAction("parent"); else setPinAction("setparent"); };
   const headerBack = () => { if (active) setActive(null); else if (kidsMode) setPinAction("exit"); else navigate("/"); };
   const tapGame = (id: string) => { if (canPlay) setActive(id); else toast({ title: "أكمِل قراءتك أولاً لتُفتح الألعاب", variant: "destructive" }); };
@@ -833,7 +922,17 @@ export default function KidsGames() {
                   <p className="text-sm text-destructive flex items-center justify-center gap-1"><Lock className="w-4 h-4" /> الألعاب مقفلة — {inApp ? "استمع" : "اقرأ"} {profile.goalMinutes} دقيقة لفتحها</p>
                   <div className="h-2.5 rounded-full bg-secondary overflow-hidden"><div className="h-full bg-success transition-all" style={{ width: `${pct}%` }} /></div>
                   <p className="text-xs text-muted-foreground">{progress.minutes} / {profile.goalMinutes} دقيقة</p>
-                  <button onClick={() => navigate("/")} className="btn-emerald w-full p-3 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95">{inApp ? <Headphones className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />} {inApp ? "استمع الآن لفتح الألعاب" : "اقرأ الآن لفتح الألعاب"}</button>
+                  <button
+                    onClick={() => {
+                      if (!kidsMode) {
+                        navigate("/");
+                      }
+                    }}
+                    disabled={kidsMode}
+                    className={`btn-emerald w-full p-3 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 ${kidsMode ? "cursor-not-allowed opacity-50" : ""}`}
+                  >
+                    {inApp ? <Headphones className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />} {inApp ? "استمع الآن لفتح الألعاب" : "اقرأ الآن لفتح الألعاب"}
+                  </button>
                 </>
               ) : (
                 <p className="text-sm text-success flex items-center justify-center gap-1"><Gift className="w-4 h-4" /> {profile.reward}</p>

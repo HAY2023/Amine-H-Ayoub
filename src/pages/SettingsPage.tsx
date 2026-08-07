@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, Youtube, FileText, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, KeyRound, Settings as SettingsIcon, MessageSquare } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, FileText, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete } from "lucide-react";
 import { isMushafDevEnabled, setMushafDev } from "../utils/tauriUtils";
 import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHidden, type AppMode } from "../data/kidsProfile";
 import { syncCoordinatesFromServer } from "../data/ayahCoordinates";
@@ -8,13 +8,13 @@ import { syncTimingsFromServer } from "../data/ayahTimings";
 import { syncSurahRegionsFromServer } from "../data/surahRegions";
 import { syncCustomPagesFromServer } from "../data/customPages";
 import { downloadEverything } from "../data/offlineDownload";
-import { isKidsMode, hasKidsPin, setKidsPin } from "../data/kidsLock";
+import { isKidsMode, hasKidsPin, setKidsLocked, setKidsPin } from "../data/kidsLock";
 import PinModal from "../components/PinModal";
 import SupportModal from "../components/SupportModal";
 import { toast } from "../hooks/use-toast";
 
 const THEME_KEY = "mushaf:theme";
-export const RECITER_URL = "https://www.youtube.com/@aminehadjyoub";
+export const RECITER_PATH = "/reciter";
 
 export const getTheme = (): "dark" | "light" => {
   try { return (localStorage.getItem(THEME_KEY) as "dark" | "light") || "light"; } catch { return "light"; }
@@ -77,6 +77,10 @@ export default function SettingsPage() {
   const removePin = () => { setKidsPin(""); setHasPin(false); toast({ title: "أُزيلت كلمة المرور" }); };
 
   const changeMode = (m: AppMode) => {
+    if (m === "kids" && kidsHidden()) {
+      setKidsHidden(false);
+      setHideKids(false);
+    }
     setShowSplash(m);
     setTimeout(() => {
       setShowSplash(false);
@@ -85,6 +89,8 @@ export default function SettingsPage() {
          setPinFlow("setNew");
       } else {
          setMode(m); setAppMode(m);
+         if (m === "kids") setKidsLocked(true);
+         if (m === "parent") setKidsLocked(false);
          if (m === "kids" && getProfiles().length === 0) addProfile({ name: "طفلي" });
          toast({ title: m === "parent" ? "وضع وليّ الأمر — بلا ركن أطفال" : "وضع الأطفال" });
       }
@@ -92,8 +98,20 @@ export default function SettingsPage() {
   };
 
   useEffect(() => { applyTheme(theme); try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ } }, [theme]);
-  // حماية: لا يدخل الإعدادات أثناء قفل ركن الأطفال
-  useEffect(() => { if (isKidsMode()) navigate("/games"); }, [navigate]);
+  useEffect(() => {
+    const handleAppMode = () => setMode(getAppMode());
+    window.addEventListener("mushaf:appmode", handleAppMode);
+    return () => window.removeEventListener("mushaf:appmode", handleAppMode);
+  }, []);
+  // حماية: إذا كان التطبيق في وضع الأطفال وتوجد كلمة مرور، نطلب التحقق أولاً قبل عرض الإعدادات.
+  useEffect(() => {
+    if (!isKidsMode()) return;
+    if (!hasKidsPin()) {
+      navigate("/games");
+      return;
+    }
+    setShowPin(true);
+  }, [navigate]);
 
   const checkUpdate = async () => {
     toast({ title: "يجري البحث عن تحديث..." });
@@ -110,9 +128,6 @@ export default function SettingsPage() {
     toast({ title: "اكتمل التحميل للعمل دون إنترنت", description: `${res.ok} ملف محفوظ على الجهاز` });
     setTimeout(() => setDlPct(null), 1500);
   };
-
-  // دخول لوحة وليّ الأمر — بنافذة رمز أنيقة بدل نافذة المتصفّح (وإن لم يوجد رمز يدخل مباشرة)
-  const openParent = () => { if (hasKidsPin()) setShowPin(true); else navigate("/parent"); };
 
   return (
     <div className="min-h-screen page-nour text-foreground" dir="rtl">
@@ -166,7 +181,7 @@ export default function SettingsPage() {
         {/* ===== من يستخدم التطبيق؟ + الأطفال ===== */}
         {/* تُخفى عن المستخدمين عند الإخفاء، لكنها تبقى ظاهرة للمالك ليختبرها */}
         {(!hideKids || owner) && (
-          <Section label="من يستخدم التطبيق؟">
+          <Section label="أوضاع التطبيق">
             <div className="p-3 space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 {([
@@ -184,27 +199,34 @@ export default function SettingsPage() {
           </Section>
         )}
 
-        {(!hideKids || owner) && (
-          <>
-            {/* ===== الأطفال وولي الأمر ===== */}
-            <Section label="الأطفال وولي الأمر">
-              <Item icon={<BarChart3 className="w-5 h-5" />} title="لوحة وليّ الأمر" desc="إعدادات كل طفل · التقدّم والسجلّ · تذكير الدرس" onClick={openParent} />
-              <Item icon={<Baby className="w-5 h-5" />} title="ركن الأطفال (الألعاب)" desc="دخول الألعاب والمكافآت" onClick={() => navigate("/games")} />
-            </Section>
-
-            {/* ===== كلمة المرور (رمز وليّ الأمر) ===== */}
-            <Section label="كلمة المرور">
-              <Item icon={<KeyRound className="w-5 h-5" />} title={hasPin ? "تغيير كلمة المرور" : "تعيين كلمة المرور"} desc="رمز من ٤ أرقام يحمي الإعدادات ولوحة وليّ الأمر والخروج من ركن الأطفال" onClick={changePin} />
-              {hasPin && <Item icon={<X className="w-5 h-5" />} title="إزالة كلمة المرور" desc="إلغاء الحماية بالرمز" onClick={removePin} />}
-            </Section>
-          </>
-        )}
-
         {/* ===== التطبيق ===== */}
         <Section label="التطبيق">
           <Item icon={<MessageSquare className="w-5 h-5 text-accent" />} title="تواصل مع الدعم الفني" desc="محادثة مباشرة مع فريق الدعم" onClick={() => setShowSupport(true)} />
           <Item icon={<RefreshCw className="w-5 h-5" />} title="تحقّق من التحديث" desc="جلب أحدث نسخة من التطبيق" onClick={checkUpdate} />
           <Item icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل للعمل دون إنترنت" desc="السور والتلاوات إلى جهازك" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-success w-12 text-center">{dlPct}%</span> : undefined} />
+        </Section>
+
+        <Section label="حماية ركن الأطفال">
+          <Item
+            icon={<Lock className="w-5 h-5 text-accent" />}
+            title={hasPin ? "تغيير رمز وليّ الأمر" : "تعيين رمز وليّ الأمر"}
+            desc={hasPin ? "غير رمز الوصول إلى إعدادات ولي الأمر." : "عيّن رمزاً لحماية الإعدادات والانتقال إلى وضع الأطفال."}
+            onClick={changePin}
+          />
+          {hasPin && (
+            <Item
+              icon={<Delete className="w-5 h-5 text-destructive" />}
+              title="إزالة رمز وليّ الأمر"
+              desc="لن يُطلب الرمز بعد ذلك للوصول إلى الإعدادات." 
+              onClick={removePin}
+            />
+          )}
+          <Item
+            icon={<User className="w-5 h-5 text-accent" />}
+            title="لوحة ولي الأمر"
+            desc="اطّلع على تقدّم الأطفال وإعداداتهم." 
+            onClick={() => navigate("/parent")}
+          />
         </Section>
 
         {/* ===== أدوات المالك (تظهر فقط في وضع المالك) ===== */}
@@ -223,12 +245,12 @@ export default function SettingsPage() {
           </Section>
         )}
 
-        {/* اشتراك القارئ — بطاقة مميّزة */}
-        <a href={RECITER_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-2xl bg-gradient-to-l from-red-600/25 to-card border border-red-500/40 p-3 hover:border-red-400 active:scale-[0.99] transition-all shadow-soft">
-          <span className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0"><Youtube className="w-5 h-5" /></span>
-          <span className="flex-1 min-w-0"><span className="block font-bold text-foreground">اشترك بقناة القارئ</span><span className="block text-[11px] text-muted-foreground">حاج أيوب أمين على يوتيوب</span></span>
+        {/* صفحة القارئ الداخلية */}
+        <Link to={RECITER_PATH} className="flex items-center gap-3 rounded-2xl bg-gradient-to-l from-accent/15 to-card border border-accent/40 p-3 hover:border-accent/50 active:scale-[0.99] transition-all shadow-soft">
+          <span className="w-10 h-10 rounded-xl bg-accent text-white flex items-center justify-center shrink-0"><BookOpen className="w-5 h-5" /></span>
+          <span className="flex-1 min-w-0"><span className="block font-bold text-foreground">صفحة القارئ</span><span className="block text-[11px] text-muted-foreground">ميزات القارئ داخل التطبيق</span></span>
           <ChevronLeft className="w-5 h-5 text-muted-foreground" />
-        </a>
+        </Link>
 
         <p className="text-[11px] text-muted-foreground text-center pt-1 leading-relaxed">العمل الكامل دون إنترنت قيد التوسعة تدريجياً.</p>
       </div>
@@ -247,6 +269,7 @@ export default function SettingsPage() {
           toast({ title: "تم حفظ كلمة المرور" });
           if (pendingMode === "kids") {
              setMode("kids"); setAppMode("kids");
+             setKidsLocked(true);
              if (getProfiles().length === 0) addProfile({ name: "طفلي" });
              setPendingMode(null);
              toast({ title: "وضع الأطفال" });

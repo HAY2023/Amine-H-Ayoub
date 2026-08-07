@@ -1,8 +1,10 @@
-import React, { useState, useRef, useMemo } from "react";
-import { Upload, Play, AlertCircle, CheckCircle2, Clock, ArrowRight, FileAudio, Image as ImageIcon } from "lucide-react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
+import { Upload, Play, AlertCircle, CheckCircle2, Clock, ArrowRight, FileAudio, Image as ImageIcon, Home } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../integrations/supabase/client";
 import { useAudioSegmentation } from "../hooks/useAudioSegmentation";
 import { getSurahName, getSurahAyahCount, getAllSurahs } from "../data/quranData";
+import { savePageImage } from "../data/customPages";
 
 interface SegmentResult {
   start: number;
@@ -23,12 +25,22 @@ interface ProcessingState {
 export function AudioUploadPage() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [surahNumber, setSurahNumber] = useState<number>(1);
   const [state, setState] = useState<ProcessingState>({ status: "idle", progress: 0, segments: [] });
   const audioInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const { processAudio } = useAudioSegmentation();
   const surahs = getAllSurahs();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    return () => {
+      if (audioPreviewUrl) URL.revokeObjectURL(audioPreviewUrl);
+      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    };
+  }, [audioPreviewUrl, imagePreviewUrl]);
 
   // Get surah name and ayah count automatically
   const currentSurah = useMemo(() => {
@@ -65,6 +77,7 @@ export function AudioUploadPage() {
       }
       setAudioFile(file);
       setState({ status: "idle", progress: 0, segments: [] });
+      setAudioPreviewUrl(URL.createObjectURL(file));
 
       // حفظ في السيرفر
       await saveToServer("audio", {
@@ -83,6 +96,7 @@ export function AudioUploadPage() {
         return;
       }
       setImageFile(file);
+      setImagePreviewUrl(URL.createObjectURL(file));
 
       // حفظ في السيرفر
       await saveToServer("image", {
@@ -106,7 +120,12 @@ export function AudioUploadPage() {
     e.preventDefault();
     e.currentTarget.classList.remove("border-blue-500", "bg-blue-50");
     if (e.dataTransfer.files?.[0]) {
-      setAudioFile(e.dataTransfer.files[0]);
+      const file = e.dataTransfer.files[0];
+      if (["audio/mpeg", "audio/wav", "audio/mp3"].includes(file.type)) {
+        setAudioFile(file);
+        setState({ status: "idle", progress: 0, segments: [] });
+        setAudioPreviewUrl(URL.createObjectURL(file));
+      }
     }
   };
 
@@ -114,7 +133,11 @@ export function AudioUploadPage() {
     e.preventDefault();
     e.currentTarget.classList.remove("border-blue-500", "bg-blue-50");
     if (e.dataTransfer.files?.[0]) {
-      setImageFile(e.dataTransfer.files[0]);
+      const file = e.dataTransfer.files[0];
+      if (["image/jpeg", "image/png", "image/jpg"].includes(file.type)) {
+        setImageFile(file);
+        setImagePreviewUrl(URL.createObjectURL(file));
+      }
     }
   };
 
@@ -138,6 +161,31 @@ export function AudioUploadPage() {
 
       if (uploadError) {
         throw new Error(`فشل الرفع: ${uploadError.message}`);
+      }
+
+      if (imageFile) {
+        try {
+          // Upload image to storage
+          const imageFilepath = `audio-uploads/${sessionId}/${sessionId}_${imageFile.name}`;
+          const { error: imageUploadError } = await supabase.storage
+            .from("quran-audio")
+            .upload(imageFilepath, imageFile, { cacheControl: "3600", upsert: false });
+          
+          if (imageUploadError) console.error("فشل رفع الصورة للسيرفر:", imageUploadError);
+
+          // Convert to base64 and save locally to work with the app
+          const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          const base64 = await toBase64(imageFile);
+          localStorage.setItem("mushaf:customPageImage:" + surahNumber, base64);
+          await savePageImage(surahNumber.toString(), base64);
+        } catch (err) {
+          console.error("Error processing image:", err);
+        }
       }
 
       setState(prev => ({ ...prev, progress: 30 }));
@@ -236,6 +284,11 @@ export function AudioUploadPage() {
                   <p className="text-success text-sm font-medium">✅ {audioFile.name}</p>
                 </div>
               )}
+              {audioPreviewUrl && (
+                <div className="mt-4 rounded-xl border border-border bg-secondary/80 p-4">
+                  <audio controls src={audioPreviewUrl} className="w-full" />
+                </div>
+              )}
             </div>
           </div>
 
@@ -265,6 +318,11 @@ export function AudioUploadPage() {
               {imageFile && (
                 <div className="mt-4 p-3 bg-success/10 border border-success/40 rounded-lg">
                   <p className="text-success text-sm font-medium">✅ {imageFile.name}</p>
+                </div>
+              )}
+              {imagePreviewUrl && (
+                <div className="mt-4 rounded-xl border border-border bg-secondary/80 p-4">
+                  <img src={imagePreviewUrl} alt="معاينة الصورة" className="mx-auto max-h-52 object-contain" />
                 </div>
               )}
             </div>
@@ -344,9 +402,18 @@ export function AudioUploadPage() {
         {/* Success Message */}
         {state.status === "completed" && (
           <div className="bg-success/10 border border-success/40 rounded-xl p-4 mb-6">
-            <div className="flex items-center gap-3 mb-4">
-              <CheckCircle2 className="w-5 h-5 text-success" />
-              <span className="text-success font-bold">✅ تمت المعالجة بنجاح!</span>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-success" />
+                <span className="text-success font-bold">✅ تمت المعالجة بنجاح!</span>
+              </div>
+              <button 
+                onClick={() => navigate("/")} 
+                className="bg-accent text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-accent/90 transition-colors"
+              >
+                <Home className="w-4 h-4" />
+                الذهاب للبداية
+              </button>
             </div>
             <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
               <div>
