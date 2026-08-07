@@ -47,7 +47,7 @@ jobs:
       - run: npm ci
 
       - name: Generate app icon from my-photo
-        run: npx --yes @tauri-apps/cli@^2 icon public/my-photo.png
+        run: npx --yes @tauri-apps/cli@^2 icon public/pwa-512x512.png
 
       - name: Build desktop app (Tauri)
         uses: tauri-apps/tauri-action@v0
@@ -113,7 +113,7 @@ jobs:
         run: npm install -D @tauri-apps/cli@^2
 
       - name: Generate app icon from my-photo
-        run: npx tauri icon public/my-photo.png
+        run: npx tauri icon public/pwa-512x512.png
 
       - name: Build frontend
         run: npm run build
