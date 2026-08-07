@@ -1,0 +1,42 @@
+{
+  "site_settings": {
+    "site_title": "تحميل التطبيق",
+    "auto_detect_platform": true,
+    "show_qr_for_mobile": true,
+    "maintenance_mode": false
+  },
+  "platforms": {
+    "windows": {
+      "latest_version": "",
+      "active": false,
+      "min_supported_version": "",
+      "force_update": false,
+      "rollout_percentage": 100,
+      "releases": []
+    },
+    "macos": {
+      "latest_version": "",
+      "active": false,
+      "min_supported_version": "",
+      "force_update": false,
+      "rollout_percentage": 100,
+      "releases": []
+    },
+    "android": {
+      "latest_version": "",
+      "active": false,
+      "min_supported_version": "",
+      "force_update": false,
+      "rollout_percentage": 100,
+      "releases": []
+    },
+    "linux": {
+      "latest_version": "",
+      "active": false,
+      "min_supported_version": "",
+      "force_update": false,
+      "rollout_percentage": 100,
+      "releases": []
+    }
+  }
+}

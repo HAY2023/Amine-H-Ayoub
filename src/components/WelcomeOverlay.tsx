@@ -7,7 +7,7 @@ import { setAppMode, addProfile, setActiveProfile, kidsHidden, setKidsHidden, KI
 import { setKidsPin, setKidsLocked } from "../data/kidsLock";
 import Avatar from "./Avatar";
 
-const SUPPORT_CHANNEL_URL = "https://www.youtube.com/@ayoubamin";
+const SUPPORT_CHANNEL_URL = "https://www.youtube.com/@aminehadjyoub";
 
 const ONBOARD_KEY = "mushaf:onboarded:v1";
 

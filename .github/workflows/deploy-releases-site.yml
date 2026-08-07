@@ -1,0 +1,59 @@
+name: Deploy Releases Site & Updater
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  deploy-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Generate updater.json
+        run: |
+          # Fetch the latest release from GitHub API
+          LATEST_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest)
+          VERSION=$(echo $LATEST_RELEASE | jq -r .tag_name)
+          PUB_DATE=$(echo $LATEST_RELEASE | jq -r .published_at)
+          NOTES=$(echo $LATEST_RELEASE | jq -r .body)
+          
+          # We need the signature files (they should be uploaded as assets ending in .sig)
+          # For this basic setup, we'll point to the download URLs
+          WINDOWS_URL=$(echo $LATEST_RELEASE | jq -r '.assets[] | select(.name | endswith(".msi.zip")) | .browser_download_url' || echo "")
+          WINDOWS_SIG=$(echo $LATEST_RELEASE | jq -r '.assets[] | select(.name | endswith(".msi.zip.sig")) | .browser_download_url' || echo "")
+          
+          cat <<EOF > releases-site/updater.json
+          {
+            "version": "$VERSION",
+            "notes": "$NOTES",
+            "pub_date": "$PUB_DATE",
+            "platforms": {
+              "windows-x86_64": {
+                "signature": "SIGNATURE_HERE",
+                "url": "$WINDOWS_URL"
+              }
+            }
+          }
+          EOF
+          # Note: Real signature fetching requires downloading the .sig file and reading its contents into the JSON,
+          # or using crabnebula-dev/cloud-release action.
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './releases-site'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

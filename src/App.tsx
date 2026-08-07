@@ -27,6 +27,7 @@ const SupportPage = lazy(() => import("./pages/SupportPage.tsx"));
 const ReciterPage = lazy(() => import("./pages/ReciterPage.tsx"));
 const AnnouncementsPage = lazy(() => import("./pages/AnnouncementsPage.tsx"));
 const ErrorPage = lazy(() => import("./pages/ErrorPage.tsx"));
+const AdminReleasesPanel = lazy(() => import("./pages/AdminReleasesPanel.tsx"));
 import { getProfile, getAppMode, getProfiles, kidsEnabled } from "./data/kidsProfile";
 import { toast } from "./hooks/use-toast";
 import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
@@ -157,6 +158,7 @@ const App = () => {
                 <Route path="/announcements" element={<AnnouncementsPage />} />
                 <Route path="/support" element={<SupportPage />} />
                 <Route path="/error" element={<ErrorPage />} />
+                <Route path="/admin/releases" element={<AdminReleasesPanel />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
