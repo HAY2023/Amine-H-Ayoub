@@ -33,8 +33,8 @@ function isMobile() {
 }
 
 const PLATFORM_INFO = {
-    'android': { name: 'Android', icon: '📱' },
-    'windows': { name: 'Windows', icon: '💻' },
+    'android': { name: 'Android (للهاتف)', icon: '📱' },
+    'windows': { name: 'Windows (للحاسوب)', icon: '💻' },
     'macos': { name: 'macOS', icon: '🍎' },
     'linux': { name: 'Linux', icon: '🐧' },
     'unknown': { name: 'تطبيق', icon: '📦' }
@@ -60,21 +60,63 @@ function createElement(tag, attributes = {}, ...children) {
 
 async function loadReleases() {
     try {
-        const response = await fetch('releases.json?v=' + Date.now());
-        const data = await response.json();
+        let data;
+        try {
+            const response = await fetch('releases.json?v=' + Date.now());
+            if (!response.ok) throw new Error("Network response was not ok");
+            data = await response.json();
+        } catch (fetchError) {
+            console.warn('Fetch failed, using local fallback data:', fetchError);
+            data = {
+              "site_settings": {
+                "site_title": "تحميل التطبيق",
+                "auto_detect_platform": true,
+                "show_qr_for_mobile": true,
+                "maintenance_mode": false
+              },
+              "platforms": {
+                "windows": {
+                  "active": true,
+                  "rollout_percentage": 100,
+                  "releases": [{
+                      "version": "v1.0.0",
+                      "date": "2026-08-07",
+                      "url": "#",
+                      "size": "50MB",
+                      "active": true
+                  }]
+                },
+                "android": {
+                  "active": true,
+                  "rollout_percentage": 100,
+                  "releases": [{
+                      "version": "v1.0.0",
+                      "date": "2026-08-07",
+                      "url": "#",
+                      "size": "30MB",
+                      "active": true
+                  }]
+                }
+              }
+            };
+        }
         
-        document.getElementById('site-title').innerText = data.site_settings.site_title;
-
         // 1. التحقق من الصيانة
         if (data.site_settings.maintenance_mode) {
             document.getElementById('maintenance-msg').classList.remove('hidden');
+            document.getElementById('hero-section').classList.add('hidden');
             return;
         }
 
         const userScore = getRolloutScore();
         let currentKey = detectPlatform();
         
-        // إذا كان النظام غير مدعوم، لا نجعله الرئيسي بل نعرض القائمة فقط
+        // إذا كان النظام غير مدعوم، نعرض ويندوز بشكل افتراضي
+        if (currentKey === 'unknown' || !data.platforms[currentKey] || !data.platforms[currentKey].active) {
+            if (data.platforms['windows'].active) currentKey = 'windows';
+            else if (data.platforms['android'].active) currentKey = 'android';
+        }
+        
         if (currentKey !== 'unknown' && data.platforms[currentKey] && data.platforms[currentKey].active) {
             renderPrimary(data, currentKey, userScore);
         }
@@ -83,7 +125,7 @@ async function loadReleases() {
 
     } catch (e) {
         console.error('Error loading releases:', e);
-        document.getElementById('site-title').innerText = 'حدث خطأ في تحميل البيانات';
+        // Fallback title handled in HTML
     }
 }
 
@@ -105,63 +147,58 @@ function renderPrimary(data, key, userScore) {
     const container = document.getElementById('primary-platform');
     container.innerHTML = ''; // تنظيف
 
-    const card = createElement('div', { className: 'card' });
+    const titleDiv = createElement('div', { style: 'display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;' });
+    titleDiv.appendChild(createElement('div', { style: 'font-size: 3rem;' }, info.icon));
     
-    card.appendChild(createElement('div', { style: 'font-size: 4rem; margin-bottom: 1rem;' }, info.icon));
-    
-    const title = createElement('h2', {}, `نسخة ${info.name} ${release.version}`);
+    const h2 = createElement('h2', { style: 'font-size: 1.8rem; font-family: "Cairo", sans-serif;' }, `النسخة المقترحة لجهازك`);
     
     if (platform.force_update) {
-        title.appendChild(createElement('span', { className: 'badge-force' }, 'تحديث إجباري'));
+        h2.appendChild(createElement('span', { style: 'background: #ef4444; color: white; padding: 0.2rem 0.8rem; border-radius: 1rem; font-size: 0.8rem; margin-right: 0.5rem; vertical-align: middle;' }, 'هام'));
     }
-    card.appendChild(title);
+    titleDiv.appendChild(h2);
+    container.appendChild(titleDiv);
     
-    card.appendChild(createElement('p', { style: 'color: var(--text-muted); font-size: 0.9rem;' }, `تاريخ الإصدار: ${release.date}`));
+    const detailsDiv = createElement('div', { style: 'margin-bottom: 1.5rem; color: var(--text-muted); line-height: 1.8;' });
+    detailsDiv.appendChild(createElement('p', {}, `نسخة ${info.name} - إصدار ${release.version}`));
+    detailsDiv.appendChild(createElement('p', {}, `تاريخ الإصدار: ${release.date} | الحجم: ${release.size || 'غير محدد'}`));
+    container.appendChild(detailsDiv);
 
     if (platform.min_supported_version) {
-        card.appendChild(createElement('span', { className: 'note-min' }, `الحد الأدنى المدعوم: ${platform.min_supported_version}`));
+        container.appendChild(createElement('span', { className: 'note-min' }, `* الحد الأدنى المدعوم: ${platform.min_supported_version}`));
     }
 
     if (isAllowedByRollout) {
-        const btnContainer = createElement('div', {});
+        const btnContainer = createElement('div', { style: 'margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;' });
+        
         const btn = createElement('a', { 
             href: release.url, 
-            className: 'btn' 
-        }, `تحميل التطبيق الآن (${release.size || 'مجهول'})`);
+            className: 'btn-magic' 
+        });
+        btn.appendChild(createElement('span', { className: 'icon' }, '✨'));
+        btn.appendChild(createElement('span', {}, `حمّل الآن مجاناً`));
+        
         btnContainer.appendChild(btn);
-        card.appendChild(btnContainer);
+        container.appendChild(btnContainer);
 
         if (key === 'android' && !isMobile() && data.site_settings.show_qr_for_mobile) {
             const qrWrapper = createElement('div', { id: 'qrcode-container' });
-            qrWrapper.appendChild(createElement('p', { style: 'font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;' }, 'امسح الرمز لتحميل التطبيق مباشرة على هاتفك'));
+            qrWrapper.appendChild(createElement('p', { style: 'font-size: 1rem; color: var(--text-main); font-weight: bold; margin-bottom: 0.5rem;' }, 'أو امسح الرمز بكاميرا هاتفك'));
+            qrWrapper.appendChild(createElement('p', { style: 'font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;' }, 'لتحميل التطبيق مباشرة على الهاتف'));
             const qrTarget = createElement('div', { id: 'qrcode' });
             qrWrapper.appendChild(qrTarget);
-            card.appendChild(qrWrapper);
+            container.appendChild(qrWrapper);
         }
     } else {
-        const waitBox = createElement('div', { className: 'rollout-wait' });
-        waitBox.appendChild(createElement('h3', { style: 'margin-bottom: 0.5rem' }, 'التحديث سيصلك قريبًا ⏳'));
-        waitBox.appendChild(createElement('p', {}, 'يتم الآن توزيع هذا التحديث تدريجياً. تفقد الصفحة لاحقاً.'));
-        card.appendChild(waitBox);
+        const waitBox = createElement('div', { style: 'background: rgba(245, 158, 11, 0.1); padding: 1.5rem; border-radius: 1rem; border: 1px dashed #f59e0b; margin-top: 1rem; color: #b45309;' });
+        waitBox.appendChild(createElement('h3', { style: 'margin-bottom: 0.5rem; font-family: "Cairo", sans-serif;' }, 'التحديث سيصلك قريبًا ⏳'));
+        waitBox.appendChild(createElement('p', {}, 'يتم الآن توزيع هذا التحديث تدريجياً لضمان الجودة. تفقد الصفحة لاحقاً.'));
+        container.appendChild(waitBox);
     }
 
-    // بناء سجل التغييرات بأمان
-    if (release.changelog && release.changelog.length > 0) {
-        const changeDiv = createElement('div', { className: 'changelog' });
-        changeDiv.appendChild(createElement('strong', {}, 'ما الجديد؟'));
-        const ul = createElement('ul', {});
-        release.changelog.forEach(change => {
-            ul.appendChild(createElement('li', {}, change)); // حماية من الحقن
-        });
-        changeDiv.appendChild(ul);
-        card.appendChild(changeDiv);
-    }
-
-    container.appendChild(card);
     container.classList.remove('hidden');
 
     if (isAllowedByRollout && key === 'android' && !isMobile() && data.site_settings.show_qr_for_mobile) {
-        new QRCode(document.getElementById("qrcode"), { text: release.url, width: 150, height: 150 });
+        new QRCode(document.getElementById("qrcode"), { text: release.url, width: 160, height: 160, colorDark : "#064e3b", colorLight : "#ffffff" });
     }
 }
 
@@ -184,7 +221,7 @@ function renderOthers(data, currentKey, userScore) {
 
         const a = createElement('a', { 
             href: isAllowedByRollout ? release.url : '#',
-            className: 'platform-card'
+            className: 'glass-card platform-card'
         });
         
         if (!isAllowedByRollout) {
@@ -193,15 +230,11 @@ function renderOthers(data, currentKey, userScore) {
 
         a.appendChild(createElement('div', { className: 'platform-icon' }, info.icon));
         
-        const textDiv = createElement('div', {});
-        const h4 = createElement('h4', { style: 'margin-bottom: 0.2rem;' }, info.name);
-        if (platform.force_update) {
-            h4.appendChild(createElement('span', { className: 'badge-force' }, 'إجباري'));
-        }
-        textDiv.appendChild(h4);
-        textDiv.appendChild(createElement('p', { style: 'font-size: 0.8rem; color: var(--text-muted);' }, `${release.version} ${isAllowedByRollout ? '' : '(قريباً)'}`));
+        const h4 = createElement('h4', {}, info.name);
+        a.appendChild(h4);
         
-        a.appendChild(textDiv);
+        a.appendChild(createElement('p', {}, `${release.version} ${isAllowedByRollout ? '' : '(قريباً)'}`));
+        
         container.appendChild(a);
     }
 

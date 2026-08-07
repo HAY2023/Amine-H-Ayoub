@@ -3,76 +3,296 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تنزيل التطبيق</title>
-    <!-- CSS عادي ونظيف بدون إطارات عمل -->
+    <title>تنزيل التطبيق - قرآن أطفال</title>
+    <!-- خطوط جوجل الجميلة -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #10b981; /* Emerald */
+            --primary: #10b981;
             --primary-dark: #059669;
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --danger: #ef4444;
-            --warning: #f59e0b;
+            --accent: #f59e0b;
+            --accent-dark: #d97706;
+            --bg-color: #f0fdf4;
+            --text-main: #064e3b;
+            --text-muted: #475569;
+            --surface: rgba(255, 255, 255, 0.85);
+            --border: rgba(16, 185, 129, 0.2);
+            --glass-shadow: 0 8px 32px 0 rgba(16, 185, 129, 0.15);
         }
+        
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        
         body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #dcfce7 0%, #ecfdf5 50%, #fef3c7 100%);
             color: var(--text-main);
-            line-height: 1.6;
-            padding-bottom: 4rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
         }
-        .container { margin: 0 auto; padding: 0 1rem; max-width: 800px; }
-        header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1.5rem; text-align: center; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        h1 { font-size: 1.75rem; }
+
+        /* خلفية مزخرفة إسلامية (اختياري) */
+        .bg-pattern {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M54.627 0l.83.83-5.5 5.5h-1.66l-5.5-5.5.83-.83 4.67 4.67 4.67-4.67zM30 0l4.67 4.67-4.67 4.67L25.33 4.67 30 0zm0 11.31L36.69 18l-6.69 6.69L23.31 18 30 11.31zM0 30l4.67-4.67 4.67 4.67-4.67 4.67L0 30zm11.31 0L18 23.31l6.69 6.69L18 36.69 11.31 30zm37.38 0L53.36 25.33l4.67 4.67-4.67 4.67-4.67-4.67z" fill="%2310b981" fill-opacity="0.03" fill-rule="evenodd"/%3E%3C/svg%3E');
+            z-index: -1;
+        }
+
+        header {
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.4);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .logo-text {
+            font-family: 'Cairo', sans-serif;
+            font-weight: 800;
+            font-size: 1.8rem;
+            color: var(--primary-dark);
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+        }
+
+        .container {
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        .hero-section {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            gap: 4rem;
+            margin-bottom: 4rem;
+        }
+
+        .hero-content {
+            flex: 1;
+            max-width: 600px;
+            animation: slideInRight 1s ease-out;
+        }
+
+        .hero-title {
+            font-family: 'Cairo', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--primary-dark), var(--accent-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+        }
+
+        .hero-image {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: slideInLeft 1s ease-out;
+        }
+
+        .hero-image img {
+            width: 100%;
+            max-width: 450px;
+            border-radius: 2rem;
+            box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3);
+            border: 4px solid white;
+            transition: transform 0.5s ease;
+        }
         
+        .hero-image img:hover {
+            transform: translateY(-10px) scale(1.02);
+        }
+
+        .glass-card {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            box-shadow: var(--glass-shadow);
+            margin-bottom: 2rem;
+            width: 100%;
+        }
+
         .hidden { display: none !important; }
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; padding: 2rem; text-align: center; margin-bottom: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+
+        /* الأزرار الخرافية */
+        .btn-magic {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            background: linear-gradient(135deg, var(--primary), #34d399);
+            color: white;
+            text-decoration: none;
+            padding: 1.2rem 2.5rem;
+            border-radius: 100px;
+            font-weight: 800;
+            font-size: 1.3rem;
+            font-family: 'Cairo', sans-serif;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.5);
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .btn-magic::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent);
+            transform: skewX(-20deg);
+            animation: shine 3s infinite;
+        }
+
+        .btn-magic:hover {
+            transform: translateY(-5px) scale(1.03);
+            box-shadow: 0 20px 30px -10px rgba(16, 185, 129, 0.7);
+        }
+
+        .btn-magic .icon { font-size: 2rem; }
+
+        .note-min { font-size: 0.9rem; color: var(--accent-dark); margin-top: 1rem; display: block; font-weight: 700; }
         
-        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--primary); color: white; text-decoration: none; padding: 1rem 2rem; border-radius: 0.75rem; font-weight: bold; font-size: 1.2rem; transition: transform 0.2s, background 0.2s; border: none; cursor: pointer; margin-top: 1rem; }
-        .btn:hover { background: var(--primary-dark); transform: translateY(-2px); }
-        
-        .badge-force { background: var(--danger); color: white; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 1rem; margin-right: 0.5rem; vertical-align: middle; }
-        .note-min { font-size: 0.85rem; color: var(--warning); margin-top: 0.5rem; display: block; }
-        
-        .other-platforms { border-top: 1px solid var(--border); padding-top: 2rem; margin-top: 2rem; }
-        .other-platforms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
-        .platform-card { display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: 0.75rem; text-decoration: none; color: var(--text-main); background: var(--surface); transition: border-color 0.2s; }
-        .platform-card:hover { border-color: var(--primary); }
-        .platform-icon { font-size: 2rem; }
-        
-        .changelog { text-align: right; background: var(--bg); padding: 1rem; border-radius: 0.75rem; margin-top: 1.5rem; border: 1px solid var(--border); }
-        .changelog ul { margin-right: 1.5rem; margin-top: 0.5rem; color: var(--text-muted); font-size: 0.95rem; }
-        
-        #qrcode-container { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px dashed var(--border); }
-        #qrcode { display: inline-block; padding: 1rem; background: white; border: 1px solid var(--border); border-radius: 0.5rem; }
-        
-        .maintenance-box { text-align: center; padding: 3rem 1rem; background: #fffbeb; border: 1px solid #fde68a; border-radius: 1rem; color: #92400e; }
-        .rollout-wait { background: var(--bg); padding: 1.5rem; border-radius: 1rem; border: 1px dashed var(--border); margin-top: 1rem; color: var(--text-muted); }
+        /* المنصات الأخرى */
+        .other-platforms-header {
+            text-align: center;
+            font-family: 'Cairo', sans-serif;
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            color: var(--primary-dark);
+            margin-top: 4rem;
+        }
+
+        .other-platforms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .platform-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+            text-decoration: none;
+            color: var(--text-main);
+            transition: all 0.3s ease;
+        }
+
+        .platform-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--primary);
+            box-shadow: 0 15px 30px rgba(16, 185, 129, 0.2);
+        }
+
+        .platform-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+        .platform-card h4 { font-size: 1.5rem; font-family: 'Cairo', sans-serif; margin-bottom: 0.5rem;}
+        .platform-card p { color: var(--text-muted); }
+
+        #qrcode-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 2.5rem;
+            padding-top: 2rem;
+            border-top: 2px dashed rgba(16, 185, 129, 0.3);
+        }
+
+        #qrcode {
+            padding: 1rem;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        #qrcode:hover { transform: scale(1.05); }
+
+        /* Animations */
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes shine {
+            0% { left: -100%; }
+            20% { left: 200%; }
+            100% { left: 200%; }
+        }
+
+        @media (max-width: 860px) {
+            .hero-section { flex-direction: column-reverse; text-align: center; gap: 2rem; }
+            .hero-title { font-size: 2.5rem; }
+            .btn-magic { margin: 0 auto; }
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
+    <div class="bg-pattern"></div>
+    
     <header>
-        <h1 id="site-title">تحميل التطبيق...</h1>
+        <div class="logo-text">✨ قرآن أطفال</div>
     </header>
 
     <main class="container">
         <!-- رسالة الصيانة -->
-        <div id="maintenance-msg" class="maintenance-box hidden">
-            <h2 style="font-size: 2rem; margin-bottom: 0.5rem;">🚧 الموقع تحت الصيانة حاليًا 🚧</h2>
-            <p>نعمل على تحديث النظام، يرجى العودة لاحقاً.</p>
+        <div id="maintenance-msg" class="glass-card hidden" style="text-align: center; border-color: #f59e0b;">
+            <h2 style="font-size: 2.5rem; margin-bottom: 1rem; color: #b45309;">🚧 الموقع تحت الصيانة حاليًا 🚧</h2>
+            <p style="font-size: 1.2rem;">نعمل على إضافة ميزات رائعة، يرجى العودة قريباً جداً.</p>
         </div>
 
-        <!-- المنصة الرئيسية المقترحة -->
-        <div id="primary-platform" class="hidden"></div>
+        <div class="hero-section" id="hero-section">
+            <div class="hero-content">
+                <h1 class="hero-title" id="site-title">رحلة ممتعة في رحاب القرآن</h1>
+                <p class="hero-subtitle">تطبيق تفاعلي يجمع بين التلاوة، التعلم، والألعاب المفيدة لزرع حب القرآن في قلوب أطفالنا.</p>
+                
+                <div id="primary-platform" class="glass-card hidden">
+                    <!-- سيتم حقن زر التحميل الرئيسي هنا -->
+                </div>
+            </div>
+            
+            <div class="hero-image">
+                <!-- اطلب من المستخدم وضع صورته هنا -->
+                <img src="hero.png" alt="طفل يقرأ القرآن" onerror="this.src='https://images.unsplash.com/photo-1601662528567-526cd06f6582?q=80&w=600&auto=format&fit=crop';">
+            </div>
+        </div>
 
         <!-- المنصات الأخرى -->
-        <div id="other-platforms" class="other-platforms hidden">
-            <h3>تحميل لمنصات أخرى:</h3>
+        <div id="other-platforms" class="hidden" style="width: 100%;">
+            <h3 class="other-platforms-header">📱 متوفر أيضاً على الأجهزة الأخرى 💻</h3>
             <div id="other-platforms-grid" class="other-platforms-grid"></div>
         </div>
     </main>
