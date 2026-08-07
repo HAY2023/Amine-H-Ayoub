@@ -7,12 +7,21 @@
   },
   "platforms": {
     "windows": {
-      "latest_version": "",
-      "active": false,
+      "latest_version": "v1.0.0",
+      "active": true,
       "min_supported_version": "",
       "force_update": false,
       "rollout_percentage": 100,
-      "releases": []
+      "releases": [
+        {
+          "version": "v1.0.0",
+          "date": "2026-08-07",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/LearnQuranKids-Setup.exe",
+          "size": "50MB",
+          "changelog": ["الإطلاق الأول للتطبيق"],
+          "active": true
+        }
+      ]
     },
     "macos": {
       "latest_version": "",
@@ -23,12 +32,21 @@
       "releases": []
     },
     "android": {
-      "latest_version": "",
-      "active": false,
+      "latest_version": "v1.0.0",
+      "active": true,
       "min_supported_version": "",
       "force_update": false,
       "rollout_percentage": 100,
-      "releases": []
+      "releases": [
+        {
+          "version": "v1.0.0",
+          "date": "2026-08-07",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/app-release.apk",
+          "size": "30MB",
+          "changelog": ["الإطلاق الأول للتطبيق"],
+          "active": true
+        }
+      ]
     },
     "linux": {
       "latest_version": "",
