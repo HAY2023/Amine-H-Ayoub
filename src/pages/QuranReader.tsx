@@ -12,6 +12,7 @@ import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
 import PinModal from "@/components/PinModal";
 import { toast } from "@/hooks/use-toast";
 import { Headphones, Mic, VolumeX, Repeat, Download } from "lucide-react";
+import MathChallengeModal from "../components/MathChallengeModal";
 import { supabase } from "@/lib/supabase";
 import { isTauri, checkOfflineStatus, getOfflineAudioUrl, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
 import { useAudioContext } from "@/contexts/audioContext";
@@ -1276,23 +1277,45 @@ export default function QuranReader() {
       )}
 
       {/* رمز ركن الأطفال (لوحة رقمية) */}
-      {pinAction && (
+      {pinAction && pinAction !== "exit" && (
         <PinModal
           mode={pinAction === "enter" ? "set" : "verify"}
           title={pinAction === "enter" ? "اختر رمز ولي الأمر (٤ أرقام)" : pinAction === "settings" ? "أدخل الرمز للإعدادات" : "أدخل الرمز للخروج من ركن الأطفال"}
           onSuccess={() => {
-        if (pinAction === "enter") {
-          setAppMode("kids");
-          setKidsLocked(true);
-          navigate("/games");
-        } else if (pinAction === "settings") {
-          navigate("/settings");
-        } else {
-          setAppMode("parent");
-          setKidsLocked(false);
-        }
-        setPinAction(null);
-      }}
+            if (pinAction === "enter") {
+              setAppMode("kids");
+              setKidsLocked(true);
+              navigate("/games");
+            } else if (pinAction === "settings") {
+              navigate("/settings");
+            } else {
+              setAppMode("parent");
+              setKidsLocked(false);
+            }
+            setPinAction(null);
+          }}
+          onCancel={() => setPinAction(null)}
+        />
+      )}
+      {pinAction === "exit" && hasKidsPin() && (
+        <PinModal
+          mode="verify"
+          title="أدخل الرمز للخروج من ركن الأطفال"
+          onSuccess={() => {
+            setAppMode("parent");
+            setKidsLocked(false);
+            setPinAction(null);
+          }}
+          onCancel={() => setPinAction(null)}
+        />
+      )}
+      {pinAction === "exit" && !hasKidsPin() && (
+        <MathChallengeModal
+          onSuccess={() => {
+            setAppMode("parent");
+            setKidsLocked(false);
+            setPinAction(null);
+          }}
           onCancel={() => setPinAction(null)}
         />
       )}

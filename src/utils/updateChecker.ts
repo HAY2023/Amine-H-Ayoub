@@ -16,12 +16,12 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
   const defaultResult: UpdateInfo = {
     hasUpdate: false,
     latestVersion: CURRENT_VERSION,
-    downloadUrl: "https://github.com/nedjmamine2-code/learn-quran-kids/releases",
+    downloadUrl: "https://github.com/HAY2023/Amine-H-Ayoub/releases",
   };
 
   try {
     const response = await fetch(
-      "https://api.github.com/repos/nedjmamine2-code/learn-quran-kids/releases/latest",
+      "https://api.github.com/repos/HAY2023/Amine-H-Ayoub/releases/latest",
       {
         headers: {
           Accept: "application/vnd.github.v3+json",

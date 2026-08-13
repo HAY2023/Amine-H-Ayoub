@@ -6,7 +6,7 @@ const AppHeader = () => {
           <img
             src="/my-photo.png"
             alt="القارئ أمين حاج أيوب"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-[center_top]"
           />
         </div>
         <h1 className="text-xl md:text-2xl font-bold text-gold text-center leading-relaxed">

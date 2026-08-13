@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 export const isTauri = (): boolean => {
@@ -45,7 +45,8 @@ export async function checkOfflineStatus(surahNumber: number): Promise<boolean> 
 export async function getOfflineAudioUrl(surahNumber: number): Promise<string | null> {
   if (!isTauri()) return null;
   try {
-    return await invoke<string>("get_offline_audio_url", { surahNumber });
+    const path = await invoke<string>("get_offline_audio_url", { surahNumber });
+    return convertFileSrc(path);
   } catch (e) {
     console.error("get_offline_audio_url error:", e);
     return null;

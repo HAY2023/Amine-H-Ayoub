@@ -40,7 +40,7 @@ export interface KidsProgress {
 }
 
 /** وجوه (أيقونات lucide — لا إيموجي) وألوان جاهزة لبطاقات الأطفال. القيم مفاتيح تُربط في components/Avatar.tsx */
-export const KID_AVATARS = ["default"];
+export const KID_AVATARS = ["img-boy-1", "img-girl-1", "img-boy-2", "img-girl-2"];
 export const KID_COLORS = [
   "from-amber-400 to-orange-500",
   "from-sky-400 to-blue-500",
@@ -108,6 +108,7 @@ const newId = (): string => {
 };
 
 const upsert = (key: string, value: unknown) => {
+  if (typeof navigator !== "undefined" && !navigator.onLine) return;
   if (hasValidSupabaseKey()) supabase.from("store").upsert({ key, value }).then(() => {}, () => {});
 };
 

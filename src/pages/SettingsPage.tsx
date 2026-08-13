@@ -179,9 +179,8 @@ export default function SettingsPage() {
         </Section>
 
         {/* ===== من يستخدم التطبيق؟ + الأطفال ===== */}
-        {/* تُخفى عن المستخدمين عند الإخفاء، لكنها تبقى ظاهرة للمالك ليختبرها */}
-        {(!hideKids || owner) && (
-          <Section label="أوضاع التطبيق">
+        {/* ظاهرة للجميع ليتمكنوا من التحكم بركن الأطفال */}
+        <Section label="أوضاع التطبيق">
             <div className="p-3 space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 {([
@@ -196,8 +195,7 @@ export default function SettingsPage() {
               </div>
               <p className="text-[11px] text-muted-foreground leading-relaxed">«لي»: بلا ركن أطفال. «لأطفالي»: ركن أطفال آمن.</p>
             </div>
-          </Section>
-        )}
+        </Section>
 
         {/* ===== التطبيق ===== */}
         <Section label="التطبيق">

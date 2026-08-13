@@ -22,8 +22,7 @@ async fn get_offline_audio_url(app: AppHandle, surah_number: u32) -> Result<Stri
     let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let path = app_dir.join("audio").join(format!("{}.mp3", surah_number));
     if path.exists() {
-        let path_str = path.to_string_lossy().replace("\\", "/");
-        Ok(format!("asset://localhost/{}", path_str))
+        Ok(path.to_string_lossy().into_owned())
     } else {
         Err("File does not exist".to_string())
     }

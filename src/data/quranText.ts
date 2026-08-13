@@ -92,6 +92,9 @@ let inflight: Promise<SurahText[]> | null = null;
 export async function ensureCorpus(): Promise<SurahText[]> {
   const cached = cacheRead();
   if (cached) return cached;
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    return [];
+  }
   if (inflight) return inflight;
   const targets = getAllSurahs()
     .map(s => ({ app: s.number, name: s.name, std: STD_BY_NAME[s.name] }))

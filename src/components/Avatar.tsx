@@ -142,7 +142,7 @@ export default function Avatar({ name, className }: { name: string; className?: 
     );
   }
   if (name.startsWith("img-")) {
-    return <img src={`/avatars/${name}.png`} alt={name} className={cn("object-cover rounded-full shadow-sm", className)} loading="lazy" />;
+    return <img src={`/avatars/${name}.png`} alt={name} className={cn("object-cover object-top rounded-full shadow-sm", className)} loading="lazy" />;
   }
   const cfg = AVATAR_CONFIG[name] || AVATAR_CONFIG.boy;
   const showHair = cfg.acc !== "gradcap" && cfg.acc !== "helmet" && cfg.acc !== "detective" && cfg.acc !== "beret";

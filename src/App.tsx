@@ -33,8 +33,9 @@ import { toast } from "./hooks/use-toast";
 import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
 import ProfilePicker, { isPicked, markPicked } from "./components/ProfilePicker.tsx";
 import { logAppOpen } from "./utils/analytics.ts";
-import { useBackgroundNotifications } from "./utils/notifications.ts";
-
+import { useBackgroundNotifications, showLocalNotification } from "./utils/notifications.ts";
+import { checkForUpdates } from "./utils/updateChecker.ts";
+import { ToastAction } from "./components/ui/toast.tsx";
 const queryClient = new QueryClient();
 
 // مسار الجذر: يُعاد تقييمه عند كل انتقال (كي يستجيب لتبديل وضع المطوّر أثناء التشغيل).
@@ -100,6 +101,26 @@ const App = () => {
     if (data) {
       fetch('/api/save-boxes', { method: 'POST', body: data }).catch(() => {});
     }
+
+    // Check for updates
+    checkForUpdates().then((info) => {
+      if (info.hasUpdate) {
+        showLocalNotification("تحديث جديد متاح 🚀", `تحديث جديد (${info.latestVersion}) جاهز للتحميل.`);
+        toast({
+          title: "تحديث جديد متاح 🚀",
+          description: `نسخة ${info.latestVersion} متاحة الآن.`,
+          duration: Number.MAX_SAFE_INTEGER,
+          action: (
+            <ToastAction 
+              altText="تحميل التحديث" 
+              onClick={() => window.open(info.downloadUrl, "_blank")}
+            >
+              تحميل الآن
+            </ToastAction>
+          )
+        });
+      }
+    });
   }, []);
 
   // تذكير الدرس اليومي (أثناء فتح التطبيق)

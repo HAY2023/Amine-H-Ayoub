@@ -14,7 +14,14 @@ interface SupportMessage {
 export default function SupportModal({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [convId, setConvId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<SupportMessage[]>([]);
+  const [messages, setMessages] = useState<SupportMessage[]>(() => {
+    try {
+      const saved = localStorage.getItem("mushaf:support_cache");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [adminTyping, setAdminTyping] = useState(false);
@@ -75,6 +82,7 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
 
             if (msgs) {
               setMessages(msgs as SupportMessage[]);
+              try { localStorage.setItem("mushaf:support_cache", JSON.stringify(msgs)); } catch {}
             }
           }
 
@@ -97,9 +105,13 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
                   }
                   setMessages((prev) => {
                     if (prev.some(m => m.id === newMsg.id || (m.body === newMsg.body && m.sender === newMsg.sender))) {
-                      return prev.map(m => (m.body === newMsg.body && m.sender === newMsg.sender) ? newMsg : m);
+                      const next = prev.map(m => (m.body === newMsg.body && m.sender === newMsg.sender) ? newMsg : m);
+                      try { localStorage.setItem("mushaf:support_cache", JSON.stringify(next)); } catch {}
+                      return next;
                     }
-                    return [...prev, newMsg];
+                    const next = [...prev, newMsg];
+                    try { localStorage.setItem("mushaf:support_cache", JSON.stringify(next)); } catch {}
+                    return next;
                   });
                 }
               )
@@ -143,6 +155,7 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
               // clear typing indicator if we received an admin message
               const lastMsg = msgs[msgs.length - 1];
               if (lastMsg && lastMsg.sender !== "user") setAdminTyping(false);
+              try { localStorage.setItem("mushaf:support_cache", JSON.stringify(msgs)); } catch {}
               return msgs as SupportMessage[];
             }
             return prev;
@@ -175,7 +188,11 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
         body: text,
         created_at: new Date().toISOString()
       };
-      setMessages(prev => [...prev, tempMsg]);
+      setMessages(prev => {
+        const next = [...prev, tempMsg];
+        try { localStorage.setItem("mushaf:support_cache", JSON.stringify(next)); } catch {}
+        return next;
+      });
 
       await supabase.from("support_messages").insert({
         conversation_id: convId,
@@ -281,6 +298,7 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
             />
             <button
               type="submit"
+              onClick={sendMessage}
               disabled={!input.trim() || loading || sending}
               className="w-11 h-11 shrink-0 rounded-full bg-accent flex items-center justify-center text-accent-foreground hover:brightness-105 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
             >

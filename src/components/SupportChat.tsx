@@ -459,6 +459,7 @@ export default function SupportChat({
               />
               <button
                 type="submit"
+                onClick={sendMessage}
                 disabled={!input.trim() || loading || sending}
                 className="w-11 h-11 shrink-0 rounded-full bg-accent flex items-center justify-center text-accent-foreground hover:brightness-105 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
               >
