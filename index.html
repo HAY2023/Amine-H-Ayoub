@@ -1,82 +1,42 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تنزيل التطبيق</title>
-    <!-- CSS عادي ونظيف بدون إطارات عمل -->
-    <style>
-        :root {
-            --primary: #10b981; /* Emerald */
-            --primary-dark: #059669;
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text-main);
-            line-height: 1.6;
-            padding-bottom: 4rem;
-        }
-        .container { margin: 0 auto; padding: 0 1rem; max-width: 800px; }
-        header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1.5rem; text-align: center; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        h1 { font-size: 1.75rem; }
-        
-        .hidden { display: none !important; }
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; padding: 2rem; text-align: center; margin-bottom: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        
-        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--primary); color: white; text-decoration: none; padding: 1rem 2rem; border-radius: 0.75rem; font-weight: bold; font-size: 1.2rem; transition: transform 0.2s, background 0.2s; border: none; cursor: pointer; margin-top: 1rem; }
-        .btn:hover { background: var(--primary-dark); transform: translateY(-2px); }
-        
-        .badge-force { background: var(--danger); color: white; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 1rem; margin-right: 0.5rem; vertical-align: middle; }
-        .note-min { font-size: 0.85rem; color: var(--warning); margin-top: 0.5rem; display: block; }
-        
-        .other-platforms { border-top: 1px solid var(--border); padding-top: 2rem; margin-top: 2rem; }
-        .other-platforms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
-        .platform-card { display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: 0.75rem; text-decoration: none; color: var(--text-main); background: var(--surface); transition: border-color 0.2s; }
-        .platform-card:hover { border-color: var(--primary); }
-        .platform-icon { font-size: 2rem; }
-        
-        .changelog { text-align: right; background: var(--bg); padding: 1rem; border-radius: 0.75rem; margin-top: 1.5rem; border: 1px solid var(--border); }
-        .changelog ul { margin-right: 1.5rem; margin-top: 0.5rem; color: var(--text-muted); font-size: 0.95rem; }
-        
-        #qrcode-container { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px dashed var(--border); }
-        #qrcode { display: inline-block; padding: 1rem; background: white; border: 1px solid var(--border); border-radius: 0.5rem; }
-        
-        .maintenance-box { text-align: center; padding: 3rem 1rem; background: #fffbeb; border: 1px solid #fde68a; border-radius: 1rem; color: #92400e; }
-        .rollout-wait { background: var(--bg); padding: 1.5rem; border-radius: 1rem; border: 1px dashed var(--border); margin-top: 1rem; color: var(--text-muted); }
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-</head>
-<body>
-    <header>
-        <h1 id="site-title">تحميل التطبيق...</h1>
-    </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>حاج أيوب أمين</title>
+    <link rel="icon" type="image/x-icon" href="/my-photo.png" />
+    <link rel="apple-touch-icon" href="/my-photo.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#D2B48C" />
+    <meta name="description" content="تطبيق تعليمي لحفظ القرآن الكريم بالتكرار">
+    <meta name="author" content="حاج أيوب أمين" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="application-name" content="حاج أيوب أمين" />
 
-    <main class="container">
-        <!-- رسالة الصيانة -->
-        <div id="maintenance-msg" class="maintenance-box hidden">
-            <h2 style="font-size: 2rem; margin-bottom: 0.5rem;">🚧 الموقع تحت الصيانة حاليًا 🚧</h2>
-            <p>نعمل على تحديث النظام، يرجى العودة لاحقاً.</p>
-        </div>
+    
+    
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1cc400d9-8dad-4f09-b94b-55d947c28fcf/id-preview-4a0b46f1--0edba720-ce34-46df-a858-47b864ec5f41.lovable.app-1775598140983.png">
 
-        <!-- المنصة الرئيسية المقترحة -->
-        <div id="primary-platform" class="hidden"></div>
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1cc400d9-8dad-4f09-b94b-55d947c28fcf/id-preview-4a0b46f1--0edba720-ce34-46df-a858-47b864ec5f41.lovable.app-1775598140983.png">
+    <meta property="og:title" content="حاج أيوب أمين">
+  <meta name="twitter:title" content="حاج أيوب أمين">
+  <meta property="og:description" content="تطبيق تعليمي لحفظ القرآن الكريم بالتكرار">
+  <meta name="twitter:description" content="تطبيق تعليمي لحفظ القرآن الكريم بالتكرار">
+  <script type="module" crossorigin src="/assets/index-CT8mhFbs.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/vendor-react-C2ApxXXr.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-tanstack-CQbQmEG0.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-radix-Deq06rkB.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-icons-D0BR9xZ0.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-supabase-C8W5_S3P.js">
+  <link rel="modulepreload" crossorigin href="/assets/quran-data-CTONJCcA.js">
+  <link rel="stylesheet" crossorigin href="/assets/index-37Y6N63n.css">
+<link rel="manifest" href="/manifest.webmanifest"></head>
 
-        <!-- المنصات الأخرى -->
-        <div id="other-platforms" class="other-platforms hidden">
-            <h3>تحميل لمنصات أخرى:</h3>
-            <div id="other-platforms-grid" class="other-platforms-grid"></div>
-        </div>
-    </main>
-
-    <script src="script.js"></script>
-</body>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>
