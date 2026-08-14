@@ -14,19 +14,7 @@ import { toast } from "../hooks/use-toast";
 import { checkForUpdates, CURRENT_VERSION, triggerDirectDownload } from "../utils/updateChecker";
 import { hasKidsPin, setKidsPin, setKidsLocked, isKidsMode } from "../data/kidsLock";
 import { isBackgroundAudioEnabled, setBackgroundAudioEnabled } from "../utils/backgroundAudio";
-
-const THEME_KEY = "mushaf:theme";
-export const RECITER_PATH = "/reciter";
-
-export const getTheme = (): "dark" | "light" => {
-  try { return (localStorage.getItem(THEME_KEY) as "dark" | "light") || "light"; } catch { return "light"; }
-};
-export const applyTheme = (t: "dark" | "light") => {
-  if (typeof document === "undefined") return;
-  const el = document.documentElement;
-  el.setAttribute("data-theme", t);
-  if (t === "light") el.classList.remove("dark"); else el.classList.add("dark");
-};
+import { applyTheme, getTheme, RECITER_PATH } from "../utils/theme";
 
 /** عنوان قسم صغير فوق مجموعة مرتّبة. */
 const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (

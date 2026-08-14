@@ -25,14 +25,28 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // Split Quran data into separate chunk
           if (id.includes('src/data/quranText.ts') || id.includes('src/data/surahs.ts')) {
             return 'quran-data';
+          }
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom/')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/@radix-ui/')) {
+            return 'vendor-radix';
+          }
+          if (id.includes('node_modules/@supabase/')) {
+            return 'vendor-supabase';
+          }
+          if (id.includes('node_modules/@tanstack/')) {
+            return 'vendor-tanstack';
+          }
+          if (id.includes('node_modules/lucide-react/')) {
+            return 'vendor-icons';
           }
         }
       }
     },
-    minify: false,
+    minify: 'esbuild',
     chunkSizeWarningLimit: 1000,
   },
   plugins: [
@@ -62,9 +76,9 @@ export default defineConfig(({ mode }) => ({
       strategies: "injectManifest",
       injectManifest: {
         swSrc: path.resolve(__dirname, "src/service-worker.js"),
-        globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff,woff2,webmanifest}"],
+        globPatterns: ["**/*.{js,css,html,ico,webmanifest}"],
         maximumFileSizeToCacheInBytes: 5000000,
-        injectionPoint: "self.__WB_MANIFEST = [];",
+        injectionPoint: "self.__WB_MANIFEST",
       },
       injectManifestBuildOptions: {
         minify: false,

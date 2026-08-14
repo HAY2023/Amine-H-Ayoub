@@ -17,7 +17,7 @@ const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const QuranReader = lazy(() => import("./pages/QuranReader.tsx"));
 const KidsGames = lazy(() => import("./pages/KidsGames.tsx"));
 const KidsShop = lazy(() => import("./pages/KidsShop.tsx"));
-import { applyTheme, getTheme } from "./pages/SettingsPage.tsx";
+import { applyTheme, getTheme } from "./utils/theme";
 const SettingsPage = lazy(() => import("./pages/SettingsPage.tsx"));
 const ParentDashboard = lazy(() => import("./pages/ParentDashboard.tsx"));
 const CustomAudioManager = lazy(() => import("./pages/CustomAudioManager.tsx"));
