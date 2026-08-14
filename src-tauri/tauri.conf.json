@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "حاج أيوب أمين",
+  "productName": "Learn Quran Kids",
   "version": "1.0.0",
-  "identifier": "com.learnqurankids.app",
+  "identifier": "com.learnqurankids.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -40,3 +40,4 @@
     }
   }
 }
+
