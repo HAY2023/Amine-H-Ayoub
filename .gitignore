@@ -49,3 +49,12 @@ src-tauri/target/
 
 testsprite_tests/tmp/
 testsprite_tests/tmp/config.json
+
+# Temporary build dumps & test scratch files
+tmp-*/
+tmp_*
+sw-*.js
+test-*.js
+test-*.mjs
+test.mjs
+tmp-sw.js

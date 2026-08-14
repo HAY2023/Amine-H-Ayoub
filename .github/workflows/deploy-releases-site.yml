@@ -1,6 +1,11 @@
 name: Deploy Releases Site & Updater
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'releases-site/**'
+      - '.github/workflows/deploy-releases-site.yml'
   release:
     types: [published]
   workflow_dispatch:
