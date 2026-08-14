@@ -1,6 +1,6 @@
 {
   "site_settings": {
-    "site_title": "تحميل التطبيق",
+    "site_title": "المصحف المرتل - حاج أيوب أمين",
     "auto_detect_platform": true,
     "show_qr_for_mobile": true,
     "maintenance_mode": false
@@ -16,20 +16,29 @@
         {
           "version": "v1.0.0",
           "date": "2026-08-07",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/LearnQuranKids-Setup.exe",
-          "size": "50MB",
-          "changelog": ["الإطلاق الأول للتطبيق"],
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/learn-quran-kids_1.0.0_x64-setup.exe",
+          "size": "74.9MB",
+          "changelog": ["الإطلاق الأول للتطبيق بنظام التلاوة وركن الأطفال"],
           "active": true
         }
       ]
     },
     "macos": {
-      "latest_version": "",
-      "active": false,
+      "latest_version": "v1.0.0",
+      "active": true,
       "min_supported_version": "",
       "force_update": false,
       "rollout_percentage": 100,
-      "releases": []
+      "releases": [
+        {
+          "version": "v1.0.0",
+          "date": "2026-08-07",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/learn-quran-kids_1.0.0_aarch64.dmg",
+          "size": "79.4MB",
+          "changelog": ["نسخة نظام macOS معمارية Apple Silicon"],
+          "active": true
+        }
+      ]
     },
     "android": {
       "latest_version": "v1.0.0",
@@ -41,20 +50,29 @@
         {
           "version": "v1.0.0",
           "date": "2026-08-07",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/app-release.apk",
-          "size": "30MB",
-          "changelog": ["الإطلاق الأول للتطبيق"],
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/app-universal-debug.apk",
+          "size": "225MB",
+          "changelog": ["تطبيق الأندرويد الشامل Universal APK"],
           "active": true
         }
       ]
     },
     "linux": {
-      "latest_version": "",
-      "active": false,
+      "latest_version": "v1.0.0",
+      "active": true,
       "min_supported_version": "",
       "force_update": false,
       "rollout_percentage": 100,
-      "releases": []
+      "releases": [
+        {
+          "version": "v1.0.0",
+          "date": "2026-08-07",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/learn-quran-kids_1.0.0_amd64.AppImage",
+          "size": "150MB",
+          "changelog": ["حزمة Linux AppImage المستقلة"],
+          "active": true
+        }
+      ]
     }
   }
 }

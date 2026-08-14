@@ -122,8 +122,8 @@ export function useSurahData() {
       });
 
       setSurahs(mergedSurahs);
-    } catch (err) {
-      console.error("Error loading surahs:", err);
+    } catch {
+      // Fallback silently to local surahs if offline
 
       let manualSurahs: number[] = [];
       try {

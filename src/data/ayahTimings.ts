@@ -59,7 +59,7 @@ export const syncTimingsFromServer = async () => {
   if (typeof window === "undefined") return;
   if (!hasValidSupabaseKey()) return; // skip sync when no valid API key
   try {
-    const { data, error } = await supabase.from("store").select("value").eq("key", TIMINGS_STORAGE_KEY).single();
+    const { data, error } = await supabase.from("store").select("value").eq("key", TIMINGS_STORAGE_KEY).maybeSingle();
     if (data && data.value) {
       localStorage.setItem(TIMINGS_STORAGE_KEY, JSON.stringify(data.value));
       window.dispatchEvent(new Event("mushaf:sync_complete"));

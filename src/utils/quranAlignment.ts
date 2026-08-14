@@ -1,3 +1,5 @@
+import localCorpus from "../data/localQuranCorpus.json";
+
 export interface SpeechRegion {
   start: number;
   end: number;
@@ -11,17 +13,26 @@ export async function alignAyahsViterbi(
   ayahCount: number,
   onProgress?: (msg: string) => void
 ): Promise<{ teacherRegions: SpeechRegion[]; kidsRegions: SpeechRegion[] }> {
-  // 1. Fetch text to estimate durations
-  const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahId}`);
-  const surahData = await response.json();
-  const ayahs = surahData.data.ayahs;
+  // 1. Get text locally to estimate durations
+  const localMatch = (localCorpus as Array<{ std: number; ayahs: Array<{ n: number; text: string }> }>).find(s => s.std === surahId);
+  let ayahs = localMatch ? localMatch.ayahs : [];
   
-  if (ayahs.length !== ayahCount) {
-    console.warn(`Mismatch in ayah count: API says ${ayahs.length}, expected ${ayahCount}`);
+  if (!ayahs.length) {
+    try {
+      const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahId}`);
+      if (response.ok) {
+        const surahData = await response.json();
+        ayahs = surahData?.data?.ayahs || [];
+      }
+    } catch {
+      // ignore network errors
+    }
   }
 
   // Calculate character length of each ayah to estimate expected relative duration
-  const ayahLengths = ayahs.slice(0, ayahCount).map((a: { text: string }) => a.text.length);
+  const ayahLengths = ayahs.length >= ayahCount 
+    ? ayahs.slice(0, ayahCount).map((a: { text: string }) => a.text.length)
+    : Array(ayahCount).fill(30);
   
   // We assume the audio format is: Teacher Ayah 1, Kids Ayah 1, Teacher Ayah 2, Kids Ayah 2...
   // Or Teacher entire Surah, then Kids entire Surah.

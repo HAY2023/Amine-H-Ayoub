@@ -266,8 +266,8 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
                 <span aria-hidden className="absolute inset-0 rounded-3xl bg-primary/25 blur-xl" />
                 <div className="relative w-20 h-20 rounded-3xl btn-emerald !p-0 flex items-center justify-center"><CloudDownload className="w-11 h-11" /></div>
               </div>
-              <h2 className="text-xl font-extrabold text-accent">تحميل للعمل دون إنترنت</h2>
-              <p className="text-muted-foreground leading-relaxed">حمّل كل السور والصوت والصفحات إلى جهازك ليعمل التطبيق بالكامل دون اتصال.</p>
+              <h2 className="text-xl font-extrabold text-accent">تحميل التلاوات دون إنترنت</h2>
+              <p className="text-muted-foreground leading-relaxed">حمّل التلاوات الصوتية العذبة ومصحف جزء عمّ إلى جهازك ليعمل التطبيق بالكامل دون الحاجة إلى اتصال بالإنترنت.</p>
               {dl.busy ? (
                 <div className="space-y-3">
                   <div className="h-3 rounded-full bg-muted overflow-hidden"><div className="h-full bg-gradient-to-l from-emerald-light to-emerald transition-all" style={{ width: `${pct}%` }} /></div>
@@ -277,12 +277,12 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
               ) : dl.finished ? (
                 <div className="space-y-2">
                   <div className="h-3 rounded-full bg-muted overflow-hidden"><div className="h-full bg-gradient-to-l from-emerald-light to-emerald" style={{ width: `100%` }} /></div>
-                  <p className="text-sm text-success">اكتمل التحميل</p>
+                  <p className="text-sm text-success font-bold">اكتمل التحميل بنجاح ✅</p>
                 </div>
               ) : (
-                <button onClick={startDownload} className="btn-emerald px-5 py-3"><CloudDownload className="w-5 h-5" /> حمّل كل شيء الآن</button>
+                <button onClick={startDownload} className="btn-emerald px-5 py-3 shadow-md"><CloudDownload className="w-5 h-5" /> بدء تحميل التلاوات والمصحف</button>
               )}
-              <p className="text-[11px] text-muted-foreground">يمكنك التحميل لاحقاً من الإعدادات.</p>
+              <p className="text-[11px] text-muted-foreground">يمكنك تحميل التلاوات في أي وقت لاحقاً من صفحة الإعدادات.</p>
               {/* زر الدخول لأدوات المعلّم مخفي */}
             </div>
           )}

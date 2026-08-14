@@ -2,6 +2,7 @@ import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "re
 import { X, Play, Pause, Music, Repeat, SkipForward, SkipBack, RotateCcw } from "lucide-react";
 import { isTauri, checkOfflineStatus, getOfflineAudioUrl } from "../utils/tauriUtils";
 import { useAudioContext } from "@/contexts/audioContext";
+import { updateMediaSession, setMediaPlaybackState, isBackgroundAudioEnabled } from "@/utils/backgroundAudio";
 
 interface Props {
   surahName: string;
@@ -114,6 +115,34 @@ const formatTime = (s: number) => {
       }, [registerAudio, unregisterAudio]);
 
       useEffect(() => {
+        if (isPlaying) {
+          updateMediaSession({
+            title: `سورة ${surahName}`,
+            artist: "القارئ حاج أيوب أمين",
+            album: "المصحف المرتل برواية ورش",
+            onPlay: () => { audioRef.current?.play().catch(() => {}); },
+            onPause: () => { audioRef.current?.pause(); },
+            onNext: onPlayNext,
+            onPrev: onPlayPrev,
+            onSeek: (t) => { if (audioRef.current) audioRef.current.currentTime = t; }
+          });
+          setMediaPlaybackState("playing");
+        } else {
+          setMediaPlaybackState("paused");
+        }
+      }, [isPlaying, surahName, onPlayNext, onPlayPrev]);
+
+      useEffect(() => {
+        const handleVisibility = () => {
+          if (document.hidden && !isBackgroundAudioEnabled()) {
+            audioRef.current?.pause();
+          }
+        };
+        document.addEventListener("visibilitychange", handleVisibility);
+        return () => document.removeEventListener("visibilitychange", handleVisibility);
+      }, []);
+
+      useEffect(() => {
         const a = audioRef.current;
         if (!a) return;
         const handlePause = () => {
@@ -128,9 +157,14 @@ const formatTime = (s: number) => {
         if (!audio) return;
         setError(false);
         setLoading(true);
+        setFallbackToCloud(true);
+        audio.src = audioSrc;
         audio.load();
         requestPlay("audio-list", audio);
-        audio.play().catch(() => {});
+        audio.play().catch(() => {
+          setError(true);
+          setLoading(false);
+        });
       };
 
       const togglePlay = async () => {
@@ -146,8 +180,12 @@ const formatTime = (s: number) => {
           }
         } catch (e) {
           console.error("Audio play error:", e);
-          if (!fallbackToCloud) setFallbackToCloud(true);
-          else setError(true);
+          if (!fallbackToCloud) {
+            setFallbackToCloud(true);
+          } else {
+            setError(true);
+            setLoading(false);
+          }
         }
       };
 

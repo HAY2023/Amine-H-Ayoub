@@ -18,6 +18,7 @@ import { isTauri, checkOfflineStatus, getOfflineAudioUrl, downloadSurah, listenT
 import { useAudioContext } from "@/contexts/audioContext";
 import SplitViewPanel from "@/components/SplitViewPanel";
 import NotificationsModal from "@/components/NotificationsModal";
+import { updateMediaSession, setMediaPlaybackState, isBackgroundAudioEnabled } from "@/utils/backgroundAudio";
 
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 
@@ -242,6 +243,18 @@ export default function QuranReader() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(getBookmarks);
   useEffect(() => { const h = () => setKidsModeState(isKidsMode()); window.addEventListener("mushaf:kidsmode", h); return () => window.removeEventListener("mushaf:kidsmode", h); }, []);
   useEffect(() => { const h = () => setKidsCorner(getKidsEnabled()); window.addEventListener("mushaf:appmode", h); return () => window.removeEventListener("mushaf:appmode", h); }, []);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden && !isBackgroundAudioEnabled() && isPlaying) {
+        audioRef.current?.pause();
+        setIsPlaying(false);
+        setMediaPlaybackState("paused");
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [isPlaying]);
 
   // Simultaneous playback (teacher + kids together)
   const audioRef2 = useRef<HTMLAudioElement>(null);
@@ -646,6 +659,14 @@ export default function QuranReader() {
       requestPlay("mushaf", a);
       a.play().then(() => {
         setIsPlaying(true);
+        updateMediaSession({
+          title: `سورة ${surah.name} - آية ${ayahNum}`,
+          artist: "القارئ حاج أيوب أمين",
+          album: "المصحف المرتل برواية ورش",
+          onPlay: () => { const aud = audioRef.current; if (aud) aud.play().catch(() => {}); },
+          onPause: () => { const aud = audioRef.current; if (aud) aud.pause(); },
+        });
+        setMediaPlaybackState("playing");
         // ضمان إعادة تشغيل حلقة التتبع لكل مقطع جديد (تكرار/طفل/آية تالية)
         if (requestRef.current) cancelAnimationFrame(requestRef.current);
         requestRef.current = requestAnimationFrame(trackAudio);
@@ -1080,20 +1101,32 @@ export default function QuranReader() {
 
   return (
     <div className="fixed inset-0 w-screen h-screen z-50 bg-background overflow-hidden select-none">
-      <audio ref={audioRef} onEnded={() => {
-        setIsPlaying(false);
-        stopSimultaneous();
-        if (segmentEndGuardRef.current) {
-          segmentEndGuardRef.current = false;
-          return;
-        }
-        handleAyahSegmentEndRef.current();
-      }} onSeeked={() => {
-        const a = audioRef.current;
-        if (a && Math.abs(a.currentTime - expectedStartTimeRef.current) < 0.15) {
-          isSeekingRef.current = false;
-        }
-      }} />
+      <audio
+        ref={audioRef}
+        onEnded={() => {
+          setIsPlaying(false);
+          stopSimultaneous();
+          if (segmentEndGuardRef.current) {
+            segmentEndGuardRef.current = false;
+            return;
+          }
+          handleAyahSegmentEndRef.current();
+        }}
+        onSeeked={() => {
+          const a = audioRef.current;
+          if (a && Math.abs(a.currentTime - expectedStartTimeRef.current) < 0.15) {
+            isSeekingRef.current = false;
+          }
+        }}
+        onError={() => {
+          console.warn("QuranReader audio error, falling back to network stream...");
+          if (selectedSurah && audioRef.current && audioRef.current.src !== selectedSurah.src) {
+            audioRef.current.src = selectedSurah.src;
+            audioRef.current.load();
+            audioRef.current.play().catch(() => {});
+          }
+        }}
+      />
       {/* Second audio for simultaneous teacher+kids playback */}
       <audio ref={audioRef2} />
 

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -133,7 +134,9 @@ function Face({ acc }: { acc: Acc }) {
 
 /** يعرض وجه الطفل كرسم SVG يملأ الصندوق المُمرَّر عبر className (w-N h-N). */
 export default function Avatar({ name, className }: { name: string; className?: string }) {
-  if (name === "default") {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  if (!name || name === "default") {
     return (
       <svg viewBox="0 0 100 100" className={cn("select-none bg-secondary/50", className)} role="img" aria-label="default">
         <circle cx="50" cy="40" r="20" fill="#a0a0a0" opacity="0.5" />
@@ -141,21 +144,50 @@ export default function Avatar({ name, className }: { name: string; className?: 
       </svg>
     );
   }
-  if (name.startsWith("img-")) {
-    return <img src={`/avatars/${name}.png`} alt={name} className={cn("object-cover object-top rounded-full shadow-sm", className)} loading="lazy" />;
+
+  const cleanName = name.startsWith("av-") ? name.replace(/^av-/, "") : name;
+  const cfg = AVATAR_CONFIG[cleanName];
+
+  if (imgFailed) {
+    if (cfg) {
+      return (
+        <svg viewBox="0 0 100 100" className={cn("select-none bg-secondary/30 rounded-full", className)} role="img" aria-label={name}>
+          <BackHair hair={cfg.hair} hc={cfg.hc} />
+          <circle cx="50" cy="54" r="28" fill={cfg.skin} />
+          <FrontHair hair={cfg.hair} hc={cfg.hc} />
+          <Face acc={cfg.acc} />
+          <Accessory acc={cfg.acc} />
+        </svg>
+      );
+    }
+    return (
+      <svg viewBox="0 0 100 100" className={cn("select-none bg-secondary/50 rounded-full", className)} role="img" aria-label="default">
+        <circle cx="50" cy="40" r="20" fill="#a0a0a0" opacity="0.5" />
+        <path d="M20 90 Q50 60 80 90" stroke="#a0a0a0" strokeWidth="15" strokeLinecap="round" fill="none" opacity="0.5" />
+      </svg>
+    );
   }
-  const cfg = AVATAR_CONFIG[name] || AVATAR_CONFIG.boy;
-  const showHair = cfg.acc !== "gradcap" && cfg.acc !== "helmet" && cfg.acc !== "detective" && cfg.acc !== "beret";
+
+  const legacyMap: Record<string, string> = {
+    boy: "img-boy-1",
+    girl: "img-girl-1",
+    child: "img-boy-2",
+    baby: "img-girl-2",
+    hero: "img-boy-3",
+    ninja: "img-boy-4",
+    king: "img-boy-5",
+    queen: "img-girl-3",
+  };
+
+  const imageFile = cleanName.startsWith("img-") ? cleanName : (legacyMap[cleanName] || "img-boy-1");
+
   return (
-    <svg viewBox="0 0 100 100" className={cn("select-none", className)} role="img" aria-label={name}>
-      <BackHair hair={cfg.hair} hc={cfg.hc} />
-      {/* الأذنان ثم الرأس */}
-      <circle cx="19" cy="56" r="6" fill={cfg.skin} />
-      <circle cx="81" cy="56" r="6" fill={cfg.skin} />
-      <circle cx="50" cy="54" r="30" fill={cfg.skin} />
-      {showHair && <FrontHair hair={cfg.hair} hc={cfg.hc} />}
-      <Face acc={cfg.acc} />
-      <Accessory acc={cfg.acc} />
-    </svg>
+    <img
+      src={`/avatars/${imageFile}.png`}
+      alt={imageFile}
+      className={cn("object-contain rounded-full shadow-sm w-full h-full bg-accent/10 p-0.5", className)}
+      loading="lazy"
+      onError={() => setImgFailed(true)}
+    />
   );
 }

@@ -81,8 +81,8 @@ export default defineConfig(({ mode }) => ({
       },
       includeAssets: ["favicon.ico", "my-photo.png", "background-kids.jpg", "pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
-        name: "Learn Quran Kids",
-        short_name: "Quran Kids",
+        name: "حاج أيوب أمين",
+        short_name: "حاج أيوب أمين",
         description: "تطبيق تعليمي لترفيه الطفل بعد قراءة القرآن",
         theme_color: "#D2B48C",
         background_color: "#F5F5DC",

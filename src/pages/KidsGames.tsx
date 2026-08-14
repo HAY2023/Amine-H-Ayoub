@@ -799,20 +799,16 @@ export default function KidsGames() {
       if (isKidsMode()) {
         const { justExpired, progress } = addPlayMinutes(1);
         if (justExpired || progress.playExpired) {
-          toast({ title: "انتهى وقت اللعب ⏰", description: "لقد استنفدت وقت اللعب المخصص لك.", variant: "destructive" });
-          if (hasKidsPin()) {
-            setKidsLocked(false);
-          }
-          navigate("/");
+          toast({ title: "انتهى وقت اللعب ⏰", description: "لقد استنفدت وقت اللعب المخصص لك. يلزم رمز ولي الأمر للخروج.", variant: "destructive" });
+          setPinAction("exit");
         }
       }
     };
     // initial check on mount, without adding minutes yet
     const initialCheck = isTimeAllowed();
     if (!initialCheck.allowed || getProgress().playExpired) {
-        toast({ title: "انتهى وقت اللعب ⏰", description: initialCheck.reason || "لقد استنفدت وقت اللعب.", variant: "destructive" });
-        if (hasKidsPin()) setKidsLocked(false);
-        navigate("/");
+        toast({ title: "انتهى وقت اللعب ⏰", description: initialCheck.reason || "لقد استنفدت وقت اللعب. يلزم رمز ولي الأمر للخروج.", variant: "destructive" });
+        setPinAction("exit");
     }
     const scheduleInterval = setInterval(checkSchedule, 60000);
 
@@ -919,17 +915,14 @@ export default function KidsGames() {
               </div>
               {!unlocked ? (
                 <>
-                  <p className="text-sm text-destructive flex items-center justify-center gap-1"><Lock className="w-4 h-4" /> الألعاب مقفلة — {inApp ? "استمع" : "اقرأ"} {profile.goalMinutes} دقيقة لفتحها</p>
+                  <p className="text-sm text-destructive flex items-center justify-center gap-1 font-bold">
+                    <Lock className="w-4 h-4" /> الألعاب مقفلة — {inApp ? "استمع" : "اقرأ"} {profile.goalMinutes >= 3 && profile.goalMinutes <= 10 ? `${profile.goalMinutes} دقائق` : `${profile.goalMinutes} دقيقة`} لفتحها
+                  </p>
                   <div className="h-2.5 rounded-full bg-secondary overflow-hidden"><div className="h-full bg-success transition-all" style={{ width: `${pct}%` }} /></div>
-                  <p className="text-xs text-muted-foreground">{progress.minutes} / {profile.goalMinutes} دقيقة</p>
+                  <p className="text-xs text-muted-foreground font-bold">{progress.minutes} / {profile.goalMinutes} {profile.goalMinutes >= 3 && profile.goalMinutes <= 10 ? "دقائق" : "دقيقة"}</p>
                   <button
-                    onClick={() => {
-                      if (!kidsMode) {
-                        navigate("/");
-                      }
-                    }}
-                    disabled={kidsMode}
-                    className={`btn-emerald w-full p-3 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 ${kidsMode ? "cursor-not-allowed opacity-50" : ""}`}
+                    onClick={() => navigate("/")}
+                    className="btn-emerald w-full p-3 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 shadow-md"
                   >
                     {inApp ? <Headphones className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />} {inApp ? "استمع الآن لفتح الألعاب" : "اقرأ الآن لفتح الألعاب"}
                   </button>

@@ -19,13 +19,32 @@ export async function requestNotificationPermission() {
   return false;
 }
 
-export function showLocalNotification(title: string, body: string) {
-  if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-    try {
-      new Notification(title, { body, icon: "/icon.png", tag: title, renotify: true });
-      return;
-    } catch (err) {
-      console.error("Notification display failed", err);
+export async function showLocalNotification(title: string, body: string) {
+  if (typeof window !== "undefined" && "Notification" in window) {
+    if (Notification.permission === "default") {
+      await requestNotificationPermission();
+    }
+
+    if (Notification.permission === "granted") {
+      try {
+        if ("serviceWorker" in navigator) {
+          const reg = await navigator.serviceWorker.ready;
+          if (reg && reg.showNotification) {
+            await reg.showNotification(title, {
+              body,
+              icon: "/pwa-192x192.png",
+              badge: "/pwa-192x192.png",
+              tag: title,
+            });
+            return;
+          }
+        }
+
+        new Notification(title, { body, icon: "/pwa-192x192.png", tag: title });
+        return;
+      } catch (err) {
+        console.error("Native notification display failed", err);
+      }
     }
   }
 

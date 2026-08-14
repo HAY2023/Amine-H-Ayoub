@@ -18,11 +18,16 @@ export async function logAppOpen() {
       localStorage.setItem("mushaf:isNotNewUser", "true");
     }
 
-    const { data: row } = await supabase
+    const { data: row, error } = await supabase
       .from("app_analytics")
       .select("*")
       .eq("day", today)
       .maybeSingle();
+
+    if (error) {
+      // Table doesn't exist or offline - skip silently
+      return;
+    }
 
     if (row) {
       await supabase
@@ -44,6 +49,6 @@ export async function logAppOpen() {
       });
     }
   } catch (error) {
-    console.error("Failed to log analytics:", error);
+    // Silent fail for non-critical analytics
   }
 }

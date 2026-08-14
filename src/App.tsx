@@ -34,7 +34,7 @@ import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
 import ProfilePicker, { isPicked, markPicked } from "./components/ProfilePicker.tsx";
 import { logAppOpen } from "./utils/analytics.ts";
 import { useBackgroundNotifications, showLocalNotification } from "./utils/notifications.ts";
-import { checkForUpdates } from "./utils/updateChecker.ts";
+import { checkForUpdates, triggerDirectDownload } from "./utils/updateChecker.ts";
 import { ToastAction } from "./components/ui/toast.tsx";
 const queryClient = new QueryClient();
 
@@ -48,7 +48,8 @@ function KidsModeGuard() {
 
   useEffect(() => {
     const checkMode = () => {
-      if (isKidsMode() && location.pathname !== "/games") {
+      const allowedPaths = ["/games", "/", "/audio", "/shop", "/profiles", "/reciter"];
+      if (isKidsMode() && !allowedPaths.includes(location.pathname)) {
         navigate("/games", { replace: true });
       }
     };
@@ -60,6 +61,33 @@ function KidsModeGuard() {
       window.removeEventListener("mushaf:appmode", checkMode);
     };
   }, [location.pathname, navigate]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isKidsMode()) {
+        e.preventDefault();
+        e.returnValue = "وضع الأطفال مقفل لحماية طفلك.";
+        return e.returnValue;
+      }
+    };
+
+    const handlePopState = () => {
+      if (isKidsMode()) {
+        const allowedPaths = ["/games", "/", "/audio", "/shop", "/profiles", "/reciter"];
+        if (!allowedPaths.includes(window.location.pathname)) {
+          window.history.pushState(null, "", "/games");
+          navigate("/games", { replace: true });
+        }
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [navigate]);
 
   return null;
 }
@@ -113,7 +141,10 @@ const App = () => {
           action: (
             <ToastAction 
               altText="تحميل التحديث" 
-              onClick={() => window.open(info.downloadUrl, "_blank")}
+              onClick={() => {
+                toast({ title: "جاري بدء التحميل المباشر 📥", description: `الملف: ${info.assetName || info.latestVersion}` });
+                triggerDirectDownload(info.directDownloadUrl || info.downloadUrl, info.assetName);
+              }}
             >
               تحميل الآن
             </ToastAction>

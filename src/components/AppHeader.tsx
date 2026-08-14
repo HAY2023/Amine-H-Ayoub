@@ -5,14 +5,15 @@ const AppHeader = () => {
         <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-gold shadow-lg">
           <img
             src="/my-photo.png"
-            alt="القارئ أمين حاج أيوب"
-            className="w-full h-full object-cover object-[center_top]"
+            alt="القارئ حاج أيوب أمين"
+            className="w-full h-full object-cover"
+            style={{ objectPosition: "50% 22%" }}
           />
         </div>
         <h1 className="text-xl md:text-2xl font-bold text-gold text-center leading-relaxed">
           المصحف المرتل برواية ورش
           <br />
-          القارئ أمين حاج أيوب
+          القارئ حاج أيوب أمين
         </h1>
       </div>
     </header>

@@ -21,9 +21,6 @@ const STD_BY_NAME: Record<string, number> = {
   "عبس": 80, "النازعات": 79, "النبأ": 78,
 };
 
-const CORPUS_KEY = "mushaf:quranTextCorpus:v2";
-const API = (std: number) => `https://api.alquran.cloud/v1/surah/${std}/quran-uthmani`;
-
 // التطبيع يتمّ بأكواد يونيكود صريحة (لا تعابير نمطية بحروف عربية) لتجنّب أي لبس في الترميز.
 const A_HAMZA = 0x0621, Y_NORM = 0x064A; // ء … ي (نطاق الحروف العربية)
 const isDiacritic = (cp: number): boolean =>
@@ -71,42 +68,17 @@ function stripLeadingBasmala(text: string): string {
   return text;
 }
 
-const cacheRead = (): SurahText[] | null => {
-  try { const r = localStorage.getItem(CORPUS_KEY); const v = r ? JSON.parse(r) : null; return Array.isArray(v) && v.length ? v : null; } catch { return null; }
-};
-const cacheWrite = (c: SurahText[]) => { try { localStorage.setItem(CORPUS_KEY, JSON.stringify(c)); } catch { /* ignore */ } };
+import localCorpus from "./localQuranCorpus.json";
 
-async function fetchSurah(app: number, std: number, name: string): Promise<SurahText> {
-  const res = await fetch(API(std));
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  const ayahs: Ayah[] = (json?.data?.ayahs || []).map((a: { numberInSurah: number; text: string }) => ({ n: a.numberInSurah, text: String(a.text || "").trim() }));
-  if (!ayahs.length) throw new Error("نصّ فارغ");
-  if (std !== 1 && ayahs[0]) ayahs[0] = { ...ayahs[0], text: stripLeadingBasmala(ayahs[0].text) };
-  return { app, std, name, ayahs };
-}
+const LOCAL_BUNDLED_CORPUS: SurahText[] = localCorpus as SurahText[];
 
-let inflight: Promise<SurahText[]> | null = null;
-
-/** يضمن توفّر نصّ كل سور التطبيق (من الكاش أو بجلبه مرّة وتخزينه). */
+/** يضمن توفّر نصّ كل سور التطبيق (محلياً 100% بدون أي طلبات خارجية). */
 export async function ensureCorpus(): Promise<SurahText[]> {
-  const cached = cacheRead();
-  if (cached) return cached;
-  if (typeof navigator !== "undefined" && !navigator.onLine) {
-    return [];
-  }
-  if (inflight) return inflight;
-  const targets = getAllSurahs()
-    .map(s => ({ app: s.number, name: s.name, std: STD_BY_NAME[s.name] }))
-    .filter(t => t.std);
-  inflight = Promise.all(targets.map(t => fetchSurah(t.app, t.std, t.name)))
-    .then(corpus => { const sorted = corpus.sort((a, b) => a.app - b.app); cacheWrite(sorted); inflight = null; return sorted; })
-    .catch(e => { inflight = null; throw e; });
-  return inflight;
+  return LOCAL_BUNDLED_CORPUS;
 }
 
 /** هل النصّ مُخزَّن محلياً (يعمل دون إنترنت)؟ */
-export const isCorpusReady = (): boolean => !!cacheRead();
+export const isCorpusReady = (): boolean => true;
 
 export interface SearchHit { app: number; name: string; ayah: number; text: string; count: number }
 

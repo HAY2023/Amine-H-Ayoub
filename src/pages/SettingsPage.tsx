@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, FileText, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete } from "lucide-react";
+import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, FileText, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete, Headphones } from "lucide-react";
 import { isMushafDevEnabled, setMushafDev } from "../utils/tauriUtils";
 import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHidden, type AppMode } from "../data/kidsProfile";
 import { syncCoordinatesFromServer } from "../data/ayahCoordinates";
@@ -8,10 +8,12 @@ import { syncTimingsFromServer } from "../data/ayahTimings";
 import { syncSurahRegionsFromServer } from "../data/surahRegions";
 import { syncCustomPagesFromServer } from "../data/customPages";
 import { downloadEverything } from "../data/offlineDownload";
-import { isKidsMode, hasKidsPin, setKidsLocked, setKidsPin } from "../data/kidsLock";
 import PinModal from "../components/PinModal";
 import SupportModal from "../components/SupportModal";
 import { toast } from "../hooks/use-toast";
+import { checkForUpdates, CURRENT_VERSION, triggerDirectDownload } from "../utils/updateChecker";
+import { hasKidsPin, setKidsPin, setKidsLocked, isKidsMode } from "../data/kidsLock";
+import { isBackgroundAudioEnabled, setBackgroundAudioEnabled } from "../utils/backgroundAudio";
 
 const THEME_KEY = "mushaf:theme";
 export const RECITER_PATH = "/reciter";
@@ -73,6 +75,7 @@ export default function SettingsPage() {
   const [hasPin, setHasPin] = useState(hasKidsPin);
   const [pinFlow, setPinFlow] = useState<null | "verifyOld" | "setNew">(null);
   const [pendingMode, setPendingMode] = useState<AppMode | null>(null);
+  const [bgAudio, setBgAudio] = useState(isBackgroundAudioEnabled);
   const changePin = () => setPinFlow(hasKidsPin() ? "verifyOld" : "setNew");
   const removePin = () => { setKidsPin(""); setHasPin(false); toast({ title: "أُزيلت كلمة المرور" }); };
 
@@ -113,10 +116,41 @@ export default function SettingsPage() {
     setShowPin(true);
   }, [navigate]);
 
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+
   const checkUpdate = async () => {
+    if (checkingUpdate) return;
+    setCheckingUpdate(true);
     toast({ title: "يجري البحث عن تحديث..." });
-    try { if ("serviceWorker" in navigator) { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.update())); } } catch { /* ignore */ }
-    setTimeout(() => window.location.reload(), 600);
+    try {
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.update()));
+      }
+      const info = await checkForUpdates();
+      if (info.hasUpdate) {
+        toast({
+          title: `تحديث جديد متوفر: v${info.latestVersion} 🚀`,
+          description: `جاري تحميل ملف التثبيت المباشر (${info.assetName})...`,
+          duration: 10000,
+        });
+        triggerDirectDownload(info.directDownloadUrl || info.downloadUrl, info.assetName);
+      } else {
+        toast({
+          title: "التطبيق في أحدث نسخة ✅",
+          description: `أنت تستخدم النسخة الحالية v${CURRENT_VERSION}.`,
+        });
+      }
+    } catch (e) {
+      console.error("Update check error:", e);
+      toast({
+        title: "تعذّر التحقّق من التحديثات",
+        description: "يرجى التثبّت من الاتصال بالإنترنت والإعادة.",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckingUpdate(false);
+    }
   };
 
   const downloadAll = async () => {
@@ -197,14 +231,49 @@ export default function SettingsPage() {
             </div>
         </Section>
 
+        {/* ===== الصوت والتلاوة ===== */}
+        <Section label="الصوت والتلاوة">
+          <div className="flex items-center justify-between p-3">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-secondary text-accent flex items-center justify-center">
+                <Headphones className="w-5 h-5" />
+              </span>
+              <div>
+                <span className="block font-bold">تشغيل في الخلفية</span>
+                <span className="block text-[11px] text-muted-foreground">مواصلة التلاوة عند قفل الشاشة أو الخروج من التطبيق</span>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                const next = !bgAudio;
+                setBgAudio(next);
+                setBackgroundAudioEnabled(next);
+                toast({ title: next ? "تم تفعيل التشغيل في الخلفية ✅" : "تم تعطيل التشغيل في الخلفية" });
+              }}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all active:scale-95 ${
+                bgAudio ? "bg-accent text-accent-foreground shadow-soft" : "bg-secondary text-muted-foreground"
+              }`}
+            >
+              {bgAudio ? "مفعّل ✓" : "معطّل ✗"}
+            </button>
+          </div>
+        </Section>
+
         {/* ===== التطبيق ===== */}
         <Section label="التطبيق">
           <Item icon={<MessageSquare className="w-5 h-5 text-accent" />} title="تواصل مع الدعم الفني" desc="محادثة مباشرة مع فريق الدعم" onClick={() => setShowSupport(true)} />
-          <Item icon={<RefreshCw className="w-5 h-5" />} title="تحقّق من التحديث" desc="جلب أحدث نسخة من التطبيق" onClick={checkUpdate} />
+          <Item icon={<RefreshCw className={`w-5 h-5 ${checkingUpdate ? "animate-spin text-accent" : ""}`} />} title="تحقّق من التحديث" desc={`النسخة الحالية v${CURRENT_VERSION} — جلب أحدث نسخة`} onClick={checkUpdate} />
           <Item icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل للعمل دون إنترنت" desc="السور والتلاوات إلى جهازك" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-success w-12 text-center">{dlPct}%</span> : undefined} />
         </Section>
 
-        <Section label="حماية ركن الأطفال">
+        <Section label="حماية وركن الأطفال">
+          <Item
+            icon={<Baby className="w-5 h-5 text-accent" />}
+            title={hideKids ? "إظهار ركن الأطفال والألعاب" : "إخفاء ركن الأطفال والألعاب"}
+            desc={hideKids ? "ركن الأطفال مخفيّ حالياً عن الواجهة — اضغط لإظهاره" : "تفعيل/إخفاء ركن الأطفال والألعاب من جميع الواجهات"}
+            onClick={toggleHideKids}
+            right={<span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${hideKids ? "bg-destructive/15 text-destructive" : "bg-success/15 text-success"}`}>{hideKids ? "مخفيّ" : "ظاهر"}</span>}
+          />
           <Item
             icon={<Lock className="w-5 h-5 text-accent" />}
             title={hasPin ? "تغيير رمز وليّ الأمر" : "تعيين رمز وليّ الأمر"}
@@ -231,14 +300,6 @@ export default function SettingsPage() {
         {owner && (
           <Section label="أدوات المالك (قيد التطوير)">
             <Item icon={<BookOpen className="w-5 h-5" />} title="المصحف التفاعلي" desc="القارئ — غير مُطلق للمستخدمين بعد" onClick={() => navigate("/")} />
-            {/* أُخفِيَت الروابط إلى أدوات المحتوى وتقسيم الصوت */}
-            <Item
-              icon={<Baby className="w-5 h-5" />}
-              title={hideKids ? "إظهار ركن الأطفال والألعاب" : "إخفاء ركن الأطفال والألعاب"}
-              desc={hideKids ? "ظاهر الآن للمستخدمين" : "يُخفي كل ما يخصّ الأطفال تماماً — للإطلاق بالسماع فقط"}
-              onClick={toggleHideKids}
-              right={<span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${hideKids ? "bg-destructive/15 text-destructive" : "bg-success/15 text-success"}`}>{hideKids ? "مخفيّ" : "ظاهر"}</span>}
-            />
             <Item icon={<Lock className="w-5 h-5" />} title="إيقاف وضع المالك" desc="إظهار رسالة التطوير للمستخدمين" onClick={disableOwner} />
           </Section>
         )}

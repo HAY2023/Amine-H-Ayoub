@@ -1,6 +1,6 @@
 {
-  "short_name": "QuranKids",
-  "name": "Learn Quran Kids",
+  "short_name": "حاج أيوب أمين",
+  "name": "المصحف المرتل - حاج أيوب أمين",
   "icons": [
     {
       "src": "/pwa-192x192.png",
@@ -16,5 +16,5 @@
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#0f172a"
+  "theme_color": "#D2B48C"
 }
