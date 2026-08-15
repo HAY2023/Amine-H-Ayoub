@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
+import { getSurahAudioUrl } from "@/data/audioUrls";
 import { surahs as allSurahNames } from "@/data/surahs";
 
 interface HuggingFaceFile {
@@ -12,8 +12,8 @@ export interface SurahItem {
   audioSrc: string;
 }
 
-// تستخدم الروابط السحابية إن توفّرت، وتقع على الملفات المحلية كاحتياط
-const url = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
+// جميع السور متوفرة على السحابة — لا حاجة لملفات محلية
+const url = (n: number) => getSurahAudioUrl(n);
 
 const LOCAL_SURAHS: SurahItem[] = [
   { number: 1,   name: "الفاتحة",   audioSrc: url(1)  },
@@ -56,6 +56,9 @@ const LOCAL_SURAHS: SurahItem[] = [
   { number: 114, name: "الناس",     audioSrc: url(2)  },
 ];
 
+const HF_CACHE_KEY = "mushaf:hf-surahs-cache";
+const HF_CACHE_TTL = 1000 * 60 * 60; // ساعة واحدة
+
 export function useSurahData() {
   const [surahs, setSurahs] = useState<SurahItem[]>(LOCAL_SURAHS);
   const [loading, setLoading] = useState(true);
@@ -65,26 +68,49 @@ export function useSurahData() {
     setLoading(true);
     setError(null);
     try {
-      // جلب قائمة الملفات من Hugging Face مباشرة
-      const response = await fetch("https://huggingface.co/api/datasets/hammoualiyoucef20/quran-audio/tree/main");
-      if (!response.ok) throw new Error("فشل الاتصال بـ Hugging Face");
+      // محاولة قراءة النتيجة المخزّنة أولاً
+      let serverSurahNumbers: number[] = [];
+      let usedCache = false;
+      try {
+        const cached = localStorage.getItem(HF_CACHE_KEY);
+        if (cached) {
+          const { data, ts } = JSON.parse(cached);
+          if (Date.now() - ts < HF_CACHE_TTL) {
+            serverSurahNumbers = data;
+            usedCache = true;
+          }
+        }
+      } catch { /* ignore */ }
 
-      const data = await response.json();
+      if (!usedCache) {
+        // جلب قائمة الملفات من Hugging Face مباشرة
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        const response = await fetch("https://huggingface.co/api/datasets/hammoualiyoucef20/quran-audio/tree/main", { signal: controller.signal });
+        clearTimeout(timeout);
+        if (!response.ok) throw new Error("فشل الاتصال بـ Hugging Face");
 
-      // استخراج أرقام السور من أسماء الملفات مثل 1.mp3، 2.mp3، إلخ.
-      const serverSurahNumbers = (data as HuggingFaceFile[])
-        .filter((file) => file.path.endsWith('.mp3'))
-        .map((file) => {
-          const nameWithoutExt = file.path.replace(/\.[^/.]+$/, "");
-          const num = parseInt(nameWithoutExt, 10);
-          return isNaN(num) ? null : num;
-        })
-        .filter((num: number | null): num is number => {
-          // تجاهل الملفات القديمة التي تم رفعها بالترقيم القديم (من 2 إلى 77)
-          // لأن رقم 4 قديماً كان سورة الإخلاص، ولكنه في المصحف هو سورة النساء!
-          if (num !== null && num >= 2 && num <= 77) return false;
-          return num !== null;
-        });
+        const data = await response.json();
+
+        // استخراج أرقام السور من أسماء الملفات مثل 1.mp3، 2.mp3، إلخ.
+        serverSurahNumbers = (data as HuggingFaceFile[])
+          .filter((file) => file.path.endsWith('.mp3'))
+          .map((file) => {
+            const nameWithoutExt = file.path.replace(/\.[^/.]+$/, "");
+            const num = parseInt(nameWithoutExt, 10);
+            return isNaN(num) ? null : num;
+          })
+          .filter((num: number | null): num is number => {
+            // تجاهل الملفات القديمة التي تم رفعها بالترقيم القديم (من 2 إلى 77)
+            if (num !== null && num >= 2 && num <= 77) return false;
+            return num !== null;
+          });
+
+        // حفظ النتيجة في localStorage للمرّات القادمة
+        try {
+          localStorage.setItem(HF_CACHE_KEY, JSON.stringify({ data: serverSurahNumbers, ts: Date.now() }));
+        } catch { /* ignore */ }
+      }
 
       // قراءة الأرقام المضافة يدوياً من الإعدادات
       let manualSurahs: number[] = [];

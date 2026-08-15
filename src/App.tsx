@@ -23,7 +23,7 @@ const ParentDashboard = lazy(() => import("./pages/ParentDashboard.tsx"));
 const CustomAudioManager = lazy(() => import("./pages/CustomAudioManager.tsx"));
 const AudioUploadPage = lazy(() => import("./pages/AudioUploadPage.tsx"));
 const SupportPage = lazy(() => import("./pages/SupportPage.tsx"));
-const ReciterPage = lazy(() => import("./pages/ReciterPage.tsx"));
+
 const AnnouncementsPage = lazy(() => import("./pages/AnnouncementsPage.tsx"));
 const ErrorPage = lazy(() => import("./pages/ErrorPage.tsx"));
 const AdminReleasesPanel = lazy(() => import("./pages/AdminReleasesPanel.tsx"));
@@ -47,7 +47,7 @@ function KidsModeGuard() {
 
   useEffect(() => {
     const checkMode = () => {
-      const allowedPaths = ["/games", "/", "/audio", "/shop", "/profiles", "/reciter"];
+      const allowedPaths = ["/games", "/", "/audio", "/shop", "/profiles"];
       if (isKidsMode() && !allowedPaths.includes(location.pathname)) {
         navigate("/games", { replace: true });
       }
@@ -72,7 +72,7 @@ function KidsModeGuard() {
 
     const handlePopState = () => {
       if (isKidsMode()) {
-        const allowedPaths = ["/games", "/", "/audio", "/shop", "/profiles", "/reciter"];
+        const allowedPaths = ["/games", "/", "/audio", "/shop", "/profiles"];
         if (!allowedPaths.includes(window.location.pathname)) {
           window.history.pushState(null, "", "/games");
           navigate("/games", { replace: true });
@@ -150,6 +150,8 @@ const App = () => {
           )
         });
       }
+    }).catch(() => {
+      // تجاهل الأخطاء عند بدء التطبيق — لا حاجة لإزعاج المستخدم
     });
   }, []);
 
@@ -205,7 +207,7 @@ const App = () => {
                 <Route path="/profiles" element={<ProfilePicker />} />
                 <Route path="/manage-audio" element={<CustomAudioManager />} />
                 <Route path="/upload" element={<AudioUploadPage />} />
-                <Route path="/reciter" element={<ReciterPage />} />
+
                 <Route path="/announcements" element={<AnnouncementsPage />} />
                 <Route path="/support" element={<SupportPage />} />
                 <Route path="/error" element={<ErrorPage />} />

@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useTVNavigation } from "@/hooks/useTVNavigation";
 
 import { Shuffle, ListOrdered, Loader2, SplitSquareHorizontal, BookOpen, Baby, ChevronLeft, Settings, Bell, SlidersHorizontal, Upload } from "lucide-react";
 import { isTauri, shouldHideMushaf, checkOfflineStatus, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
@@ -395,6 +396,22 @@ const Index = () => {
       localStorage.setItem(LAST_TIME_KEY, "0");
     }
   };
+
+  // دعم جهاز التحكم عن بُعد والتلفاز الذكي (Android TV Remote & D-pad Navigation)
+  useTVNavigation({
+    onPlayPause: () => {
+      if (playerRef.current) {
+        if (isAudioPlaying) playerRef.current.pause();
+        else playerRef.current.play();
+      }
+    },
+    onNext: handlePlayNext,
+    onPrev: handlePlayPrev,
+    onBack: () => {
+      if (currentSurah) handleClose();
+      else if (showNotifications) setShowNotifications(false);
+    },
+  });
 
   if (activeTab === "mushaf") {
     // نسخة التطبيق فقط: المصحف قيد التطوير — رسالة اعتذار مع إبقاء شريط التنقّل

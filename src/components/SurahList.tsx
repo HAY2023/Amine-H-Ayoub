@@ -34,7 +34,7 @@ const SurahList = ({
           <button
             key={surah.number}
             onClick={() => onSelect(surah)}
-            className={`flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 text-right ${
+            className={`flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 text-right focus-visible:ring-4 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:outline-none focus-visible:scale-[1.02] ${
               isActive
                 ? "bg-accent/20 border-accent shadow-lg scale-[1.02]"
                 : "bg-card border-border hover:border-accent/50 hover:shadow-md hover:scale-[1.01]"

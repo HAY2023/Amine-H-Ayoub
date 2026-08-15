@@ -150,6 +150,17 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
+            // صوت السور من HuggingFace — يُحفظ بعد أول تشغيل للعمل دون إنترنت
+            urlPattern: ({ url }) => url.hostname.includes("huggingface.co") && url.pathname.endsWith(".mp3"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "hf-audio-cache",
+              rangeRequests: true,
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             // صور صفحات المصحف
             urlPattern: /\/pages\/.*\.(?:jpg|jpeg|png)$/,
             handler: "CacheFirst",

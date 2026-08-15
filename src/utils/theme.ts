@@ -3,9 +3,7 @@
  * لتجنّب سحب SettingsPage بالكامل إلى الحزمة الرئيسية.
  */
 
-const THEME_KEY = "mushaf:theme";
-
-export const RECITER_PATH = "/reciter";
+export const THEME_KEY = "mushaf:theme";
 
 export const getTheme = (): "dark" | "light" => {
   try { return (localStorage.getItem(THEME_KEY) as "dark" | "light") || "light"; } catch { return "light"; }

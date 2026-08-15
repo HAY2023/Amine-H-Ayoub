@@ -4,12 +4,12 @@
  * فتعمل دون اتصال بعد التنزيل. (الصور المرفوعة محفوظة أصلاً في IndexedDB.)
  */
 import { getAllSurahs } from "./quranData";
-import { getSurahAudioUrl, hasCloudAudio } from "./audioUrls";
+import { getSurahAudioUrl } from "./audioUrls";
 import { getAllPageSources } from "./ayahCoordinates";
 
 const DONE_KEY = "mushaf:offlineDownloaded";
 
-const audioUrl = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
+const audioUrl = (n: number) => getSurahAudioUrl(n);
 
 export const collectAssets = (): string[] => {
   const urls = new Set<string>();

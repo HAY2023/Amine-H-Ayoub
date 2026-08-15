@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = "1.0.0";
+export const CURRENT_VERSION = "1.0.0-15";
 
 export interface UpdateInfo {
   hasUpdate: boolean;
@@ -67,18 +67,29 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
     assetName: "",
   };
 
+  // فحص الاتصال بالإنترنت أولاً
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    throw new Error("لا يوجد اتصال بالإنترنت. يرجى الاتصال والمحاولة مجدداً.");
+  }
+
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10 ثواني كحد أقصى
+
     const response = await fetch(
       "https://api.github.com/repos/HAY2023/Amine-H-Ayoub/releases/latest",
       {
         headers: {
           Accept: "application/vnd.github.v3+json",
         },
+        signal: controller.signal,
       }
     );
 
+    clearTimeout(timeout);
+
     if (!response.ok) {
-      throw new Error(`Failed to fetch updates: ${response.statusText}`);
+      throw new Error(`فشل الاتصال بالخادم: ${response.status}`);
     }
 
     const release = await response.json();
@@ -104,8 +115,11 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
       releaseNotes,
     };
   } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("انتهت مهلة الاتصال. يرجى التأكد من سرعة الإنترنت والمحاولة مجدداً.");
+    }
     console.error("Error checking for updates:", error);
-    return defaultResult;
+    throw error;
   }
 }
 

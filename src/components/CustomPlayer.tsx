@@ -248,7 +248,7 @@ const formatTime = (s: number) => {
                     <Music className="w-3.5 h-3.5 text-muted-foreground" />
                   )}
                   <span className="text-xs text-muted-foreground">
-                    {loading ? "جاري التحميل..." : error ? "تعذّر التحميل — اضغط للإعادة" : isPlaying ? "جاري التشغيل" : "جاهز"}
+                    {loading ? "جاري التحميل..." : error ? (navigator.onLine ? "تعذّر التحميل — اضغط للإعادة" : "لا يوجد إنترنت — حمّل التلاوات من الإعدادات") : isPlaying ? "جاري التشغيل" : "جاهز"}
                   </span>
                 </div>
               </div>

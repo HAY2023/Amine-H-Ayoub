@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Youtube, Check, CloudDownload, Wrench, User, Baby, Plus, Trash2, Minus, KeyRound, Shield, BookOpen, Headphones, Settings, Star, Gamepad2, Puzzle, Trophy } from "lucide-react";
-import { RECITER_PATH } from "../utils/theme";
 import { downloadEverything } from "../data/offlineDownload";
 import { setAppMode, addProfile, setActiveProfile, kidsHidden, setKidsHidden, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
 import { setKidsPin, setKidsLocked } from "../data/kidsLock";
@@ -255,7 +254,14 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
               </div>
               <h2 className="text-xl font-extrabold text-accent">ادعم القارئ</h2>
               <p className="text-muted-foreground leading-relaxed">اضغط الزر لفتح قناة القارئ ودعم المشروع، ثم أكمل الإعداد بعد العودة.</p>
-              <button onClick={() => window.open(SUPPORT_CHANNEL_URL, "_blank")} className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent text-white font-bold px-5 py-3 shadow-soft active:scale-95 transition-transform">اذهب إلى القناة</button>
+              <a
+                href={SUPPORT_CHANNEL_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent text-white font-bold px-5 py-3 shadow-soft active:scale-95 transition-transform hover:brightness-110"
+              >
+                اذهب إلى القناة
+              </a>
               <p className="text-[11px] text-muted-foreground">بعد الاشتراك، ارجع لإكمال إعداد التطبيق.</p>
             </div>
           )}

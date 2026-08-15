@@ -243,6 +243,14 @@
     color: transparent;
   }
   .font-quran { font-family: 'Amiri', serif; }
+
+  /* نمط التركيز لتلفاز أندرويد ولوحة المفاتيح */
+  :focus-visible {
+    outline: 3px solid hsl(var(--accent));
+    outline-offset: 3px;
+    border-radius: var(--radius);
+    transition: outline 0.15s ease, transform 0.15s ease;
+  }
 }
 
 /* ============================================================

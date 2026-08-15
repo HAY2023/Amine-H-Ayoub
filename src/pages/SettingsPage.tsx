@@ -14,7 +14,8 @@ import { toast } from "../hooks/use-toast";
 import { checkForUpdates, CURRENT_VERSION, triggerDirectDownload } from "../utils/updateChecker";
 import { hasKidsPin, setKidsPin, setKidsLocked, isKidsMode } from "../data/kidsLock";
 import { isBackgroundAudioEnabled, setBackgroundAudioEnabled } from "../utils/backgroundAudio";
-import { applyTheme, getTheme, RECITER_PATH } from "../utils/theme";
+import { applyTheme, getTheme } from "../utils/theme";
+const THEME_KEY = "mushaf:theme";
 
 /** عنوان قسم صغير فوق مجموعة مرتّبة. */
 const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -292,12 +293,7 @@ export default function SettingsPage() {
           </Section>
         )}
 
-        {/* صفحة القارئ الداخلية */}
-        <Link to={RECITER_PATH} className="flex items-center gap-3 rounded-2xl bg-gradient-to-l from-accent/15 to-card border border-accent/40 p-3 hover:border-accent/50 active:scale-[0.99] transition-all shadow-soft">
-          <span className="w-10 h-10 rounded-xl bg-accent text-white flex items-center justify-center shrink-0"><BookOpen className="w-5 h-5" /></span>
-          <span className="flex-1 min-w-0"><span className="block font-bold text-foreground">صفحة القارئ</span><span className="block text-[11px] text-muted-foreground">ميزات القارئ داخل التطبيق</span></span>
-          <ChevronLeft className="w-5 h-5 text-muted-foreground" />
-        </Link>
+
 
         <p className="text-[11px] text-muted-foreground text-center pt-1 leading-relaxed">العمل الكامل دون إنترنت قيد التوسعة تدريجياً.</p>
       </div>
