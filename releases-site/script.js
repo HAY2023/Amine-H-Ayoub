@@ -2,46 +2,46 @@
 // Luxury App Portal Logic - Sheikh Hajj Ayoub Amine Quran App
 // ==============================================================================
 
-// Data for Interactive Showcase Tabs
+// Real In-App Screenshots and Features
 const SHOWCASE_TABS = {
-    mushaf: {
-        title: "المصحف المرتل برواية ورش والتظليل التفاعلي",
-        desc: "صفحات المصحف الشريف بخط واضح وعالي الدقة مع نظام التظليل الذكي للآيات المتزامن لحظياً مع صوت الشيخ حاج أيوب أمين لمساعدة الكبار والأطفال على الحفظ المتقن.",
-        img: "assets/fatiha.jpg",
+    recitations: {
+        title: "المصحف المرتل وقائمة التلاوات",
+        desc: "واجهة أنيقة وسلسة تعرض سور القرآن الكريم برواية ورش، مع إمكانية البحث الفوري، وزر تحميل السور أوفلاين للتشغيل بدون إنترنت، ونظام جمع النقاط التشجيعي.",
+        img: "assets/screen-desktop-home.png",
         features: [
-            "تظليل لحظي لكل آية أثناء القراءة بصوت القارئ",
-            "إمكانية تكرار الآية وتحديد عدد مرات الإعادة للحفظ والترسيخ",
-            "وضعان مخصصان: وضع الكبار المفتوح ووضع ركن الأطفال المقفل"
-        ]
-    },
-    tv: {
-        title: "نسخة التلفاز الذكي Android TV & Smart TV",
-        desc: "واجهة فائقة الدقة 4K مكبرة ومريحة مخصصة لشاشات التلفاز الذكية وأجهزة TV Box، متوافقة 100% مع أزرار الريموت كنترول لاجتماع العائلة حول تلاوة القرآن الكريم.",
-        img: "assets/surah-nas.jpg",
-        features: [
-            "تحكم كامل عبر ريموت التلفاز والتنقل السهل بين السور والآيات",
-            "عرض مكبر ومريح للعين يناسب الجلوس العائلي في غرفة المعيشة",
-            "إمكانية تشغيل التلاوات المتتالية تلقائياً دون انقطاع"
+            "تلاوة كاملة بصوت القارئ حاج أيوب أمين برواية ورش",
+            "زر (تحميل الكل / جاهز أوفلاين) للتشغيل دون نت",
+            "ركن ألعاب الأطفال مدمج مع حماية ولي الأمر"
         ]
     },
     kids: {
-        title: "ركن ألعاب وتحديات الأطفال الهادف",
-        desc: "بيئة آمنة وجذابة لربط قلوب الناشئة بالقرآن الكريم من خلال ألعاب ترتيب الآيات، واكتشاف بدايات السور، وجمع النجوم وشجرة الحسنات مع قفل ولي الأمر الصارم.",
-        img: "assets/kids-bg.jpg",
+        title: "ركن ألعاب وتحديات الأطفال الأسطورية",
+        desc: "ألعاب تفاعلية هادفة تشمل: اسمع السورة، اكتشف السورة، ترتيب الآيات، ذاكرة السور، الكلمة الضائعة، وأكمل الآية لربط الطفل بالقرآن الكريم وحفظه.",
+        img: "assets/screen-mobile-kids.png",
         features: [
-            "لعبة ترتيب الآيات القرآنية وحفظ ترتيب السور",
-            "شجرة الحسنات التفاعلية وجوائز تشجيعية عند إكمال ورد القراءة",
-            "قفل أمان إلزامي بكلمة مرور الوالدين لمنع إغلاق أو مغادرة التطبيق"
+            "ألعاب قرآنية متنوعة تناسب مختلف الفئات العمرية",
+            "تحدي ترتيب الآيات وذاكرة السور لترسيخ الحفظ",
+            "قفل أمان الوالدين لمنع الخروج إلا بإذن مسبق"
         ]
     },
-    offline: {
-        title: "تشغيل أوفلاين 100% بدون إنترنت",
-        desc: "محرك تخزين محلي ذكي يعطي الأولوية الدائمة للسور المحملة؛ حتى مع وجود الإنترنت، يُشغل التطبيق التلاوة من جهازك فوراً بدون أي تأخير وبدون استهلاك باقة البيانات.",
-        img: "assets/surah-nas.jpg",
+    desktop_kids: {
+        title: "ملف الطفل ونظام النجوم والجوائز",
+        desc: "ملف شخصي لكل طفل مع نظام جمع النجوم ومكافآت فتح الألعاب، وإمكانية تخصيص الشخصية والألوان تشجيعاً للمداومة على قراءة القرآن.",
+        img: "assets/screen-desktop-kids.png",
         features: [
-            "تنزيل السور الكاملة بضغطة واحدة إلى الذاكرة المحلية",
-            "أولوية التشغيل المحلي الفوري (0 ثانية تحميل و0 استهلاك بيانات)",
-            "استقرار كامل في السفر والأماكن ضعيفة أو منعدمة التغطية"
+            "تخصيص شخصية الطفل وفتح وجوه وألوان جديدة بالنجوم",
+            "متابعة دقيقة لتقدم الطفل في الحفظ والتلاوة",
+            "مناسب للشاشات الكبيرة وأجهزة التابلت والتلفاز"
+        ]
+    },
+    settings: {
+        title: "إعدادات التطبيق والتحكم الأبوي",
+        desc: "تحكم كامل بالمظهر (نهاري/ليلي)، التشغيل في الخلفية عند قفل الشاشة، زر الدعم الفني المباشر، وتعيين رمز حماية الوالدين (PIN) لمنع الخروج غير المصرح به.",
+        img: "assets/screen-desktop-settings.png",
+        features: [
+            "التشغيل في الخلفية عند قفل الشاشة أو الخروج",
+            "محادثة الدعم الفني المباشر وإرسال لقطات الشاشة",
+            "رمز سري للوالدين لحماية إغلاق التطبيق في وضع الأطفال"
         ]
     }
 };
@@ -113,14 +113,13 @@ async function fetchLiveGitHubAssets() {
     }
 }
 
-// Initialize Tabs
+// Initialize Showcase Tabs
 function initShowcaseTabs() {
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabTitle = document.getElementById('tab-title');
     const tabDesc = document.getElementById('tab-desc');
     const tabFeatures = document.getElementById('tab-features');
     const tabMediaImg = document.getElementById('tab-media-img');
-    const mainMockupImg = document.getElementById('main-mockup-img');
 
     tabButtons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -134,7 +133,6 @@ function initShowcaseTabs() {
             if (tabTitle) tabTitle.textContent = data.title;
             if (tabDesc) tabDesc.textContent = data.desc;
             if (tabMediaImg) tabMediaImg.src = data.img;
-            if (mainMockupImg) mainMockupImg.src = data.img;
 
             if (tabFeatures) {
                 tabFeatures.innerHTML = data.features.map(f => `
@@ -174,7 +172,7 @@ function initAudioPreview() {
     });
 }
 
-// Initialize Portal Downloads
+// Initialize Portal
 async function initPortal() {
     initShowcaseTabs();
     initAudioPreview();

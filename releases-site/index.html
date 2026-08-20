@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تطبيق حاج أيوب أمين | المصحف المرتل برواية ورش وركن الأطفال</title>
+    <title>تطبيق حاج أيوب أمين | المصحف المرتل برواية ورش وركن ألعاب الأطفال</title>
     <meta name="description" content="الموقع الرسمي لتنزيل تطبيق حاج أيوب أمين للقرآن الكريم برواية ورش للكمبيوتر، الهواتف الذكية، وشاشات التلفاز Android TV. يعمل 100% بدون إنترنت.">
     
     <!-- Favicon -->
@@ -18,16 +18,14 @@
         :root {
             --primary-emerald: #059669;
             --emerald-glow: #10b981;
-            --emerald-deep: #022c22;
             --gold-light: #fef08a;
             --gold: #f59e0b;
             --gold-deep: #d97706;
             --gold-gradient: linear-gradient(135deg, #fef08a 0%, #f59e0b 50%, #d97706 100%);
             --dark-bg: #030712;
-            --dark-surface: rgba(15, 23, 42, 0.75);
-            --card-glass: rgba(255, 255, 255, 0.05);
-            --card-border: rgba(245, 158, 11, 0.2);
-            --card-hover: rgba(245, 158, 11, 0.5);
+            --dark-surface: rgba(15, 23, 42, 0.85);
+            --card-border: rgba(245, 158, 11, 0.25);
+            --card-hover: rgba(245, 158, 11, 0.6);
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
         }
@@ -53,7 +51,6 @@
             line-height: 1.6;
         }
 
-        /* Subtle Geometric Background Pattern */
         .bg-grid-pattern {
             position: fixed;
             inset: 0;
@@ -64,7 +61,7 @@
             z-index: 0;
         }
 
-        /* Top Navigation Header */
+        /* Header */
         header {
             position: sticky;
             top: 0;
@@ -164,7 +161,7 @@
         /* Hero Section */
         .hero-section {
             display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
+            grid-template-columns: 1.1fr 0.9fr;
             gap: 3.5rem;
             align-items: center;
             margin-bottom: 6rem;
@@ -187,7 +184,7 @@
 
         .hero-headline {
             font-family: 'Cairo', sans-serif;
-            font-size: 3.4rem;
+            font-size: 3.2rem;
             font-weight: 900;
             line-height: 1.2;
             margin-bottom: 1.25rem;
@@ -199,14 +196,14 @@
             -webkit-text-fill-color: transparent;
         }
 
-        .hero-description {
+        .hero-desc {
             font-size: 1.2rem;
             color: var(--text-muted);
             line-height: 1.8;
             margin-bottom: 2.5rem;
         }
 
-        /* Main Download Dynamic Card */
+        /* Primary Download Dynamic Card */
         .primary-download-card {
             background: rgba(15, 23, 42, 0.85);
             backdrop-filter: blur(24px);
@@ -256,7 +253,7 @@
             animation: shine-sweep 3.5s infinite;
         }
 
-        /* Live Audio Recitation Preview Card on Landing Page */
+        /* Recitation Audio Preview Bar */
         .audio-preview-bar {
             margin-top: 1.5rem;
             background: rgba(255, 255, 255, 0.04);
@@ -314,7 +311,7 @@
             50% { transform: scaleY(1); }
         }
 
-        /* 3D App Showcase Phone / Screen Frame */
+        /* 3D Realistic Phone Mockup Displaying REAL App Screenshot */
         .mockup-3d-showcase {
             position: relative;
             display: flex;
@@ -324,21 +321,21 @@
 
         .phone-frame {
             width: 100%;
-            max-width: 370px;
+            max-width: 340px;
             background: #020617;
             border-radius: 3rem;
-            border: 5px solid #1e293b;
+            border: 6px solid #1e293b;
             box-shadow: 
-                0 0 0 1px rgba(245, 158, 11, 0.3),
+                0 0 0 2px rgba(245, 158, 11, 0.35),
                 0 30px 70px rgba(0, 0, 0, 0.8),
                 0 0 40px rgba(16, 185, 129, 0.25);
-            padding: 0.85rem;
+            padding: 0.5rem;
             position: relative;
             overflow: hidden;
         }
 
         .phone-screen {
-            border-radius: 2.25rem;
+            border-radius: 2.4rem;
             overflow: hidden;
             background: #0f172a;
             position: relative;
@@ -349,25 +346,8 @@
             width: 100%;
             height: auto;
             display: block;
-            border-radius: 2.25rem;
-            transition: transform 0.4s ease;
-        }
-
-        .phone-floating-glow {
-            position: absolute;
-            bottom: 1rem;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            background: rgba(3, 7, 18, 0.85);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(245, 158, 11, 0.4);
-            border-radius: 1.25rem;
-            padding: 0.75rem 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+            border-radius: 2.4rem;
+            transition: all 0.4s ease;
         }
 
         /* Interactive Showcase Tabs Section */
@@ -433,10 +413,10 @@
             backdrop-filter: blur(20px);
             border: 1.5px solid var(--card-border);
             border-radius: 2.5rem;
-            padding: 3rem;
+            padding: 2.5rem;
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 3rem;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 2.5rem;
             align-items: center;
             box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
         }
@@ -482,12 +462,11 @@
         }
 
         .showcase-media-frame {
-            border-radius: 2rem;
+            border-radius: 1.5rem;
             overflow: hidden;
             border: 3px solid rgba(245, 158, 11, 0.3);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
             background: #020617;
-            max-height: 420px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -495,8 +474,10 @@
 
         .showcase-media-frame img {
             width: 100%;
-            height: 100%;
-            object-fit: cover;
+            height: auto;
+            max-height: 480px;
+            object-fit: contain;
+            display: block;
         }
 
         /* All Platforms Download Hub Section */
@@ -637,7 +618,7 @@
 <body>
     <div class="bg-grid-pattern"></div>
 
-    <!-- Sticky Luxury Header -->
+    <!-- Sticky Header -->
     <header>
         <a href="#" class="brand-container">
             <img src="assets/my-photo.png" alt="القارئ الشيخ حاج أيوب أمين" class="brand-avatar">
@@ -648,7 +629,7 @@
         </a>
 
         <div class="nav-actions">
-            <a href="#showcase" class="nav-link">شاشات التطبيق</a>
+            <a href="#showcase" class="nav-link">شاشات التطبيق الحقيقية</a>
             <a href="#platforms-hub" class="nav-link">تحميل الأجهزة</a>
             <a href="https://learn-quran-kids.pages.dev" target="_blank" class="btn-pwa-top">
                 <span>🌐 تشغيل الويب الفوري (PWA)</span>
@@ -663,10 +644,10 @@
                 <div class="hero-badge">✨ رواية ورش عن نافع — إصدار جديد رسمي v1.0.0-100</div>
                 <h1 class="hero-headline">
                     المصحف المرتل <br>
-                    <span class="highlight-gold">للشيخ حاج أيوب أمين</span>
+                    <span class="highlight-gold">للقارئ حاج أيوب أمين</span>
                 </h1>
                 <p class="hero-desc">
-                    التطبيق القرآني الأول المخصص للعائلة والأطفال: تلاوة خاشعة برواية ورش مع تظليل الآيات المتزامن، ركن ألعاب وتحديات هادف، وتشغيل أوفلاين 100% دون الحاجة للإنترنت.
+                    تطبيق قرآني متكامل يجمع بين التلاوة المرتلة برواية ورش، ركن ألعاب وتحديات هادف للأطفال، نظام النقاط والنجوم، والتشغيل أوفلاين 100% بدون إنترنت.
                 </p>
 
                 <!-- Primary Device Auto-Detection Card -->
@@ -696,49 +677,42 @@
                 </div>
             </div>
 
-            <!-- Realistic 3D App Mockup Frame -->
+            <!-- Realistic 3D App Mockup Frame displaying REAL app mobile screenshot -->
             <div class="mockup-3d-showcase">
                 <div class="phone-frame">
                     <div class="phone-screen">
-                        <img id="main-mockup-img" src="assets/fatiha.jpg" alt="تطبيق المصحف المرتل">
-                    </div>
-                    <div class="phone-floating-glow">
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span style="font-size: 1.1rem; color: var(--gold);">⭐</span>
-                            <span style="font-size: 0.85rem; font-weight: 800; color: #fff;">سورة الفاتحة — الآية 1</span>
-                        </div>
-                        <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.3); color: #6ee7b7; padding: 0.2rem 0.6rem; border-radius: 20px;">تلاوة متزامنة</span>
+                        <img id="main-mockup-img" src="assets/screen-mobile-home.png" alt="واجهة تطبيق حاج أيوب أمين الحقيقية">
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Interactive App Showcase Section -->
+        <!-- Interactive App Showcase Section (Real In-App Screenshots) -->
         <section id="showcase" class="showcase-section">
-            <h2 class="section-header-title">شاشات ومميزات التطبيق الحية</h2>
-            <p class="section-header-subtitle">استكشف الواجهة الحقيقية للمصحف، ركن ألعاب الأطفال، ومشغل التلاوات</p>
+            <h2 class="section-header-title">شاشات التطبيق الحقيقية</h2>
+            <p class="section-header-subtitle">لقطات حية ومباشرة من داخل تطبيق حاج أيوب أمين للأجهزة والهواتف</p>
 
             <div class="showcase-tabs-nav">
-                <button class="tab-btn active" data-tab="mushaf">📖 المصحف والتظليل التفاعلي</button>
-                <button class="tab-btn" data-tab="tv">📺 نسخة التلفاز الذكي Android TV</button>
-                <button class="tab-btn" data-tab="kids">🎮 ركن ألعاب الأطفال</button>
-                <button class="tab-btn" data-tab="offline">⚡ التشغيل دون إنترنت 100%</button>
+                <button class="tab-btn active" data-tab="recitations">🎧 قائمة التلاوات والتحميل</button>
+                <button class="tab-btn" data-tab="kids">🎮 ركن ألعاب الأطفال الأسطورية</button>
+                <button class="tab-btn" data-tab="desktop_kids">🌟 ملف الطفل والنجوم</button>
+                <button class="tab-btn" data-tab="settings">⚙️ الإعدادات وقفل الوالدين</button>
             </div>
 
             <div class="showcase-display-card" id="showcase-card">
                 <div class="showcase-info">
-                    <h3 id="tab-title">المصحف المرتل برواية ورش</h3>
+                    <h3 id="tab-title">المصحف المرتل وقائمة التلاوات</h3>
                     <p id="tab-desc">
-                        صفحات المصحف الشريف بخط واضح وعالي الدقة مع نظام التظليل الذكي للآيات المتزامن مع صوت الشيخ حاج أيوب أمين لمساعدة الأطفال والكبار على الحفظ المتقن.
+                        واجهة أنيقة وسلسة تعرض سور القرآن الكريم برواية ورش، مع إمكانية البحث الفوري، وزر تحميل السور أوفلاين للتشغيل بدون إنترنت، ونظام جمع النقاط التشجيعي.
                     </p>
                     <ul class="showcase-features-list" id="tab-features">
-                        <li><span class="check-icon">✓</span> تظليل لحظي لكل آية أثناء القراءة بصوت القارئ</li>
-                        <li><span class="check-icon">✓</span> إمكانية تكرار الآية وتحديد عدد مرات الإعادة للحفظ</li>
-                        <li><span class="check-icon">✓</span> وضعان مخصصان: وضع الكبار ووضع ركن الأطفال الآمن</li>
+                        <li><span class="check-icon">✓</span> تلاوة كاملة بصوت القارئ حاج أيوب أمين</li>
+                        <li><span class="check-icon">✓</span> زر (تحميل الكل / جاهز أوفلاين) للتشغيل دون نت</li>
+                        <li><span class="check-icon">✓</span> ركن ألعاب الأطفال مدمج مع حماية ولي الأمر</li>
                     </ul>
                 </div>
                 <div class="showcase-media-frame">
-                    <img id="tab-media-img" src="assets/fatiha.jpg" alt="واجهة المصحف">
+                    <img id="tab-media-img" src="assets/screen-desktop-home.png" alt="لقطة حية من تطبيق حاج أيوب أمين">
                 </div>
             </div>
         </section>
