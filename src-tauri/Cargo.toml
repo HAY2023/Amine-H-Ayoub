@@ -1,10 +1,10 @@
 [package]
-name = "app"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
+name = "hajj_ayoub_amine"
+version = "1.0.0"
+description = "تطبيق تعليم القرآن الكريم برواية ورش - القارئ حاج أيوب أمين"
+authors = ["Hajj Ayoub Amine <contact@hay2023.org>"]
+license = "MIT"
+repository = "https://github.com/HAY2023/Amine-H-Ayoub"
 edition = "2021"
 rust-version = "1.77.2"
 

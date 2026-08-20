@@ -35,6 +35,15 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "copyright": "Copyright © 2026 حاج أيوب أمين. All rights reserved.",
+    "category": "Education",
+    "shortDescription": "تطبيق تعليم القرآن الكريم برواية ورش بصوت القارئ الشيخ حاج أيوب أمين للأطفال والكبار",
+    "longDescription": "تطبيق قرآني تفاعلي تعليمي يتيح تلاوة القرآن الكريم برواية ورش عن نافع بصوت الشيخ حاج أيوب أمين مع إمكانية العمل دون اتصال بالإنترنت وحفظ التقدم وركن آمن للأطفال.",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com"
+    },
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }
