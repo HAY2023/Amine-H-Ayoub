@@ -16,23 +16,15 @@
         {
           "version": "v1.0.0-100",
           "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-100/hajj-ayoub-amine_1.0.0-100_x64-setup.exe",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/learn-quran-kids_1.0.0_x64-setup.exe",
           "size": "74.9MB",
           "changelog": [
-            "أولوية التشغيل المحلي للتلاوات المحملة حتى مع وجود الإنترنت (تشغيل فوري دون استهلاك بيانات)",
+            "أولوية التشغيل المحلي للتلاوات المحملة حتى مع وجود الإنترنت",
             "حفظ التلاوات المحملة في مجلد التطبيق المخصص وقواعد البيانات المحلية",
             "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية عند الإغلاق أو الخروج على كافة الأجهزة",
             "إعادة تصميم وتوسيع نافذة الدعم الفني كلوحة جانبية كاملة وإصلاح زر الإرسال",
             "توحيد الهوية والأيقونات الرسمية لجميع المنصات"
           ],
-          "active": true
-        },
-        {
-          "version": "v1.0.0",
-          "date": "2026-08-07",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/learn-quran-kids_1.0.0_x64-setup.exe",
-          "size": "74.9MB",
-          "changelog": ["الإطلاق الأول للتطبيق بنظام التلاوة وركن الأطفال"],
           "active": true
         }
       ]
@@ -47,7 +39,7 @@
         {
           "version": "v1.0.0-100",
           "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-100/hajj-ayoub-amine_1.0.0-100_aarch64.dmg",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
           "size": "79.4MB",
           "changelog": [
             "أولوية التشغيل المحلي للتلاوات المحملة حتى مع وجود الإنترنت",
@@ -68,7 +60,7 @@
         {
           "version": "v1.0.0-100",
           "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-100/app-universal-debug.apk",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/app-universal-debug.apk",
           "size": "225MB",
           "changelog": [
             "أولوية التشغيل المحلي للتلاوات المحملة حتى مع وجود الإنترنت",
@@ -89,7 +81,7 @@
         {
           "version": "v1.0.0-100",
           "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-100/hajj-ayoub-amine_1.0.0-100_amd64.AppImage",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
           "size": "150MB",
           "changelog": [
             "أولوية التشغيل المحلي للتلاوات المحملة حتى مع وجود الإنترنت",
