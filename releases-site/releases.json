@@ -17,6 +17,16 @@
     "macos": {
       "releases": [
         {
+          "version": "v1.0.0-99",
+          "date": "2026-08-20",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-99/hajj-ayoub-amine_1.0.0-99_aarch64.dmg",
+          "size": "",
+          "changelog": [
+            "إصدار جديد"
+          ],
+          "active": false
+        },
+        {
           "version": "v1.0.15",
           "date": "2026-08-15",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.15/hajj-ayoub-amine_1.0.15_aarch64.dmg",
