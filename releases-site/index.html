@@ -4,24 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تطبيق حاج أيوب أمين | المصحف المرتل برواية ورش وركن الأطفال</title>
-    <meta name="description" content="حمّل تطبيق حاج أيوب أمين الرسمي للقرآن الكريم برواية ورش عن نافع للكمبيوتر، الهواتف، وشاشات التلفاز الذكية Android TV. يعمل 100% دون إنترنت.">
+    <meta name="description" content="الموقع الرسمي لتنزيل تطبيق حاج أيوب أمين للقرآن الكريم برواية ورش للكمبيوتر، الهواتف الذكية، وشاشات التلفاز Android TV. يعمل 100% بدون إنترنت.">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="assets/app-icon.png">
+    
+    <!-- Google Fonts: Cairo & Tajawal -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+
     <style>
         :root {
-            --primary: #059669;
-            --primary-light: #10b981;
-            --primary-dark: #064e3b;
-            --accent: #f59e0b;
-            --accent-gold: #d97706;
-            --bg-gradient: linear-gradient(145deg, #022c22 0%, #064e3b 40%, #0f172a 100%);
-            --card-bg: rgba(255, 255, 255, 0.07);
-            --card-border: rgba(245, 158, 11, 0.25);
-            --card-hover-border: rgba(245, 158, 11, 0.6);
-            --text-light: #f8fafc;
-            --text-muted: #cbd5e1;
-            --glass-glow: 0 12px 40px rgba(0, 0, 0, 0.4);
+            --primary-emerald: #059669;
+            --emerald-glow: #10b981;
+            --emerald-deep: #022c22;
+            --gold-light: #fef08a;
+            --gold: #f59e0b;
+            --gold-deep: #d97706;
+            --gold-gradient: linear-gradient(135deg, #fef08a 0%, #f59e0b 50%, #d97706 100%);
+            --dark-bg: #030712;
+            --dark-surface: rgba(15, 23, 42, 0.75);
+            --card-glass: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(245, 158, 11, 0.2);
+            --card-hover: rgba(245, 158, 11, 0.5);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
         }
 
         * {
@@ -32,8 +40,12 @@
 
         body {
             font-family: 'Tajawal', sans-serif;
-            background: var(--bg-gradient);
-            color: var(--text-light);
+            background-color: var(--dark-bg);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(5, 150, 105, 0.25) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(217, 119, 6, 0.2) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(2, 44, 34, 0.5) 0px, transparent 50%);
+            color: var(--text-main);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -41,87 +53,70 @@
             line-height: 1.6;
         }
 
-        /* Islamic Pattern Overlay */
-        .bg-pattern {
+        /* Subtle Geometric Background Pattern */
+        .bg-grid-pattern {
             position: fixed;
             inset: 0;
-            background-image: radial-gradient(rgba(245, 158, 11, 0.08) 1px, transparent 1px);
-            background-size: 32px 32px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
             pointer-events: none;
             z-index: 0;
         }
 
-        /* Glow effects */
-        .glow-orb {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(100px);
-            pointer-events: none;
-            z-index: 0;
-        }
-        .glow-orb-1 {
-            top: -100px;
-            right: -100px;
-            width: 450px;
-            height: 450px;
-            background: rgba(16, 185, 129, 0.18);
-        }
-        .glow-orb-2 {
-            bottom: -150px;
-            left: -150px;
-            width: 500px;
-            height: 500px;
-            background: rgba(245, 158, 11, 0.15);
-        }
-
-        /* Header */
+        /* Top Navigation Header */
         header {
             position: sticky;
             top: 0;
-            z-index: 50;
-            backdrop-filter: blur(16px);
-            background: rgba(2, 44, 34, 0.75);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 1rem 2rem;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+            background: rgba(3, 7, 18, 0.85);
+            border-bottom: 1px solid rgba(245, 158, 11, 0.15);
+            padding: 0.9rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .logo {
+        .brand-container {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.85rem;
             text-decoration: none;
             color: inherit;
         }
 
-        .logo-icon {
-            width: 44px;
-            height: 44px;
+        .brand-avatar {
+            width: 46px;
+            height: 46px;
             border-radius: 14px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-gold));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.4rem;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.35);
+            object-fit: cover;
+            object-position: center top;
+            border: 2px solid var(--gold);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
         }
 
-        .logo-title {
+        .brand-text-title {
             font-family: 'Cairo', sans-serif;
             font-weight: 900;
-            font-size: 1.4rem;
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #ffffff 40%, #fef08a 100%);
+            font-size: 1.35rem;
+            background: var(--gold-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            display: block;
+            line-height: 1.2;
         }
 
-        .header-nav {
+        .brand-text-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .nav-actions {
             display: flex;
             align-items: center;
-            gap: 1.5rem;
+            gap: 1.25rem;
         }
 
         .nav-link {
@@ -129,241 +124,398 @@
             text-decoration: none;
             font-weight: 700;
             font-size: 0.95rem;
-            transition: color 0.2s;
+            transition: all 0.2s;
         }
         .nav-link:hover {
-            color: var(--accent);
+            color: var(--gold);
         }
 
-        .btn-header-pwa {
+        .btn-pwa-top {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            padding: 0.5rem 1.2rem;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--emerald-glow);
+            color: #6ee7b7;
+            padding: 0.5rem 1.25rem;
             border-radius: 50px;
-            font-weight: 700;
+            font-weight: 800;
             font-size: 0.9rem;
             text-decoration: none;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .btn-header-pwa:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: var(--accent);
+        .btn-pwa-top:hover {
+            background: var(--emerald-glow);
+            color: #022c22;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
             transform: translateY(-2px);
         }
 
-        /* Container */
+        /* Main Container */
         main {
             position: relative;
             z-index: 1;
-            max-width: 1200px;
+            max-width: 1240px;
             margin: 0 auto;
-            padding: 3rem 1.5rem 5rem;
+            padding: 2.5rem 1.5rem 6rem;
             width: 100%;
         }
 
         /* Hero Section */
-        .hero {
+        .hero-section {
             display: grid;
-            grid-template-columns: 1.1fr 0.9fr;
-            gap: 3rem;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 3.5rem;
             align-items: center;
-            margin-bottom: 5rem;
+            margin-bottom: 6rem;
+            padding-top: 1rem;
         }
 
-        .badge-tag {
+        .hero-badge {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            background: rgba(245, 158, 11, 0.15);
-            border: 1px solid rgba(245, 158, 11, 0.35);
-            color: #fde047;
-            padding: 0.4rem 1rem;
+            gap: 0.6rem;
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: var(--gold-light);
+            padding: 0.4rem 1.1rem;
             border-radius: 50px;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             font-weight: 800;
-            margin-bottom: 1.25rem;
+            margin-bottom: 1.5rem;
         }
 
-        .hero-title {
+        .hero-headline {
             font-family: 'Cairo', sans-serif;
-            font-size: 3.2rem;
+            font-size: 3.4rem;
             font-weight: 900;
             line-height: 1.2;
             margin-bottom: 1.25rem;
         }
 
-        .hero-title span {
-            background: linear-gradient(135deg, #fde047, #f59e0b, #34d399);
+        .hero-headline .highlight-gold {
+            background: var(--gold-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        .hero-desc {
-            font-size: 1.15rem;
+        .hero-description {
+            font-size: 1.2rem;
             color: var(--text-muted);
-            margin-bottom: 2.25rem;
             line-height: 1.8;
+            margin-bottom: 2.5rem;
         }
 
-        /* Primary Download Card */
-        .primary-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--card-border);
+        /* Main Download Dynamic Card */
+        .primary-download-card {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(24px);
+            border: 1.5px solid var(--card-border);
             border-radius: 2rem;
             padding: 2rem;
-            box-shadow: var(--glass-glow);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(245, 158, 11, 0.15);
+            margin-bottom: 2rem;
             transition: all 0.3s ease;
         }
-        .primary-card:hover {
-            border-color: var(--card-hover-border);
+        .primary-download-card:hover {
+            border-color: var(--card-hover);
         }
 
-        .btn-magic {
+        .btn-download-master {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 1rem;
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: #0f172a;
+            background: var(--gold-gradient);
+            color: #090d16;
             text-decoration: none;
-            padding: 1.25rem 2rem;
-            border-radius: 1.25rem;
-            font-weight: 900;
-            font-size: 1.25rem;
+            padding: 1.3rem 2rem;
+            border-radius: 1.3rem;
             font-family: 'Cairo', sans-serif;
-            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.45);
+            font-size: 1.3rem;
+            font-weight: 900;
+            box-shadow: 0 12px 30px rgba(245, 158, 11, 0.4);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
-            cursor: pointer;
             border: none;
+            cursor: pointer;
             width: 100%;
         }
-
-        .btn-magic:hover {
+        .btn-download-master:hover {
             transform: translateY(-4px) scale(1.02);
-            box-shadow: 0 16px 35px rgba(245, 158, 11, 0.6);
+            box-shadow: 0 18px 45px rgba(245, 158, 11, 0.6);
             color: #000;
         }
-
-        .btn-magic::after {
+        .btn-download-master::after {
             content: '';
             position: absolute;
             top: 0; left: -100%; width: 50%; height: 100%;
-            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.5), transparent);
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.6), transparent);
             transform: skewX(-20deg);
-            animation: shine 3s infinite;
+            animation: shine-sweep 3.5s infinite;
         }
 
-        .pwa-alt {
-            text-align: center;
-            margin-top: 1rem;
-            font-size: 0.95rem;
+        /* Live Audio Recitation Preview Card on Landing Page */
+        .audio-preview-bar {
+            margin-top: 1.5rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1.25rem;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
         }
 
-        .pwa-alt a {
-            color: #fde047;
-            text-decoration: underline;
-            font-weight: 700;
-            transition: opacity 0.2s;
+        .btn-play-preview {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--primary-emerald);
+            border: none;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.4);
+            flex-shrink: 0;
         }
-        .pwa-alt a:hover {
-            opacity: 0.8;
+        .btn-play-preview:hover {
+            background: var(--emerald-glow);
+            transform: scale(1.08);
         }
 
-        /* Hero App Mockup Visual */
-        .hero-mockup-wrapper {
+        .audio-wave-anim {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 24px;
+        }
+        .wave-bar {
+            width: 4px;
+            height: 100%;
+            background: var(--gold);
+            border-radius: 4px;
+            animation: wave 1.2s ease-in-out infinite;
+        }
+        .wave-bar:nth-child(1) { animation-delay: 0.1s; height: 35%; }
+        .wave-bar:nth-child(2) { animation-delay: 0.3s; height: 75%; }
+        .wave-bar:nth-child(3) { animation-delay: 0.5s; height: 100%; }
+        .wave-bar:nth-child(4) { animation-delay: 0.2s; height: 50%; }
+        .wave-bar:nth-child(5) { animation-delay: 0.4s; height: 80%; }
+
+        @keyframes wave {
+            0%, 100% { transform: scaleY(0.4); }
+            50% { transform: scaleY(1); }
+        }
+
+        /* 3D App Showcase Phone / Screen Frame */
+        .mockup-3d-showcase {
             position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
-        .app-mockup {
+        .phone-frame {
             width: 100%;
-            max-width: 380px;
-            border-radius: 2.5rem;
-            background: #090d16;
-            border: 4px solid rgba(245, 158, 11, 0.4);
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(16, 185, 129, 0.25);
-            padding: 1.25rem;
+            max-width: 370px;
+            background: #020617;
+            border-radius: 3rem;
+            border: 5px solid #1e293b;
+            box-shadow: 
+                0 0 0 1px rgba(245, 158, 11, 0.3),
+                0 30px 70px rgba(0, 0, 0, 0.8),
+                0 0 40px rgba(16, 185, 129, 0.25);
+            padding: 0.85rem;
             position: relative;
+            overflow: hidden;
         }
 
-        .mockup-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        .phone-screen {
+            border-radius: 2.25rem;
+            overflow: hidden;
+            background: #0f172a;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .mockup-body {
-            padding: 1.5rem 0.5rem;
-            text-align: center;
-            space-y: 1rem;
+        .phone-screen img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 2.25rem;
+            transition: transform 0.4s ease;
         }
 
-        .ayah-box-preview {
-            background: rgba(245, 158, 11, 0.15);
+        .phone-floating-glow {
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            background: rgba(3, 7, 18, 0.85);
+            backdrop-filter: blur(12px);
             border: 1px solid rgba(245, 158, 11, 0.4);
             border-radius: 1.25rem;
-            padding: 1.25rem 1rem;
-            font-family: 'Cairo', sans-serif;
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #fef08a;
-            margin-bottom: 1rem;
-        }
-
-        .player-bar-preview {
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 1rem;
             padding: 0.75rem 1rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
         }
 
-        /* Platforms Grid Section */
-        .section-header {
+        /* Interactive Showcase Tabs Section */
+        .showcase-section {
+            margin-bottom: 6rem;
+        }
+
+        .section-header-title {
             text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        .section-title {
             font-family: 'Cairo', sans-serif;
-            font-size: 2.2rem;
+            font-size: 2.5rem;
             font-weight: 900;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(135deg, #ffffff, #fef08a);
+            margin-bottom: 0.75rem;
+            background: linear-gradient(135deg, #ffffff 40%, #fef08a 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        .section-subtitle {
+        .section-header-subtitle {
+            text-align: center;
             color: var(--text-muted);
-            font-size: 1.05rem;
+            font-size: 1.15rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .showcase-tabs-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            padding: 0.75rem 1.6rem;
+            border-radius: 50px;
+            font-family: 'Cairo', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .tab-btn:hover {
+            border-color: var(--gold);
+            color: #fff;
+        }
+        .tab-btn.active {
+            background: var(--gold-gradient);
+            color: #090d16;
+            font-weight: 900;
+            border-color: transparent;
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+        }
+
+        .showcase-display-card {
+            background: var(--dark-surface);
+            backdrop-filter: blur(20px);
+            border: 1.5px solid var(--card-border);
+            border-radius: 2.5rem;
+            padding: 3rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .showcase-info h3 {
+            font-family: 'Cairo', sans-serif;
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--gold-light);
+            margin-bottom: 1rem;
+        }
+
+        .showcase-info p {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+        }
+
+        .showcase-features-list {
+            list-style: none;
+            space-y: 0.75rem;
+        }
+        .showcase-features-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 0.6rem;
+        }
+        .showcase-features-list li span.check-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+        }
+
+        .showcase-media-frame {
+            border-radius: 2rem;
+            overflow: hidden;
+            border: 3px solid rgba(245, 158, 11, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+            background: #020617;
+            max-height: 420px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .showcase-media-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* All Platforms Download Hub Section */
+        .platforms-hub-section {
+            margin-bottom: 6rem;
         }
 
         .platforms-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5rem;
-            margin-bottom: 5rem;
         }
 
-        .platform-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(14px);
-            border: 1px solid var(--card-border);
-            border-radius: 1.5rem;
-            padding: 2rem 1.5rem;
+        .platform-action-card {
+            background: var(--dark-surface);
+            backdrop-filter: blur(16px);
+            border: 1.5px solid var(--card-border);
+            border-radius: 2rem;
+            padding: 2rem 1.75rem;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -372,138 +524,109 @@
             color: inherit;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            overflow: hidden;
         }
 
-        .platform-card:hover {
+        .platform-action-card:hover {
             transform: translateY(-8px);
-            border-color: var(--accent);
-            background: rgba(255, 255, 255, 0.12);
-            box-shadow: 0 16px 35px rgba(245, 158, 11, 0.2);
+            border-color: var(--gold);
+            background: rgba(30, 41, 59, 0.8);
+            box-shadow: 0 20px 40px rgba(245, 158, 11, 0.25);
         }
 
-        .platform-icon-box {
-            width: 70px;
-            height: 70px;
+        .platform-logo-badge {
+            width: 72px;
+            height: 72px;
             border-radius: 1.5rem;
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.06);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.4rem;
+            font-size: 2.5rem;
             margin-bottom: 1.25rem;
             border: 1px solid rgba(255, 255, 255, 0.15);
             transition: transform 0.3s ease;
         }
-        .platform-card:hover .platform-icon-box {
+        .platform-action-card:hover .platform-logo-badge {
             transform: scale(1.1);
-            background: rgba(245, 158, 11, 0.2);
-            border-color: var(--accent);
+            background: rgba(245, 158, 11, 0.15);
+            border-color: var(--gold);
         }
 
-        .platform-title {
+        .platform-name {
             font-family: 'Cairo', sans-serif;
-            font-size: 1.35rem;
+            font-size: 1.4rem;
             font-weight: 800;
             margin-bottom: 0.35rem;
         }
 
-        .platform-info {
-            font-size: 0.85rem;
+        .platform-desc {
+            font-size: 0.88rem;
             color: var(--text-muted);
-            margin-bottom: 1.25rem;
+            margin-bottom: 1.5rem;
         }
 
-        .platform-btn {
+        .platform-action-btn {
             margin-top: auto;
             width: 100%;
-            padding: 0.75rem 1rem;
-            border-radius: 0.75rem;
-            background: rgba(255, 255, 255, 0.1);
+            padding: 0.85rem 1.25rem;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.2);
+            font-family: 'Cairo', sans-serif;
             font-weight: 800;
-            font-size: 0.95rem;
+            font-size: 1rem;
             transition: all 0.2s;
         }
-        .platform-card:hover .platform-btn {
-            background: var(--accent);
-            color: #0f172a;
-            border-color: var(--accent);
+        .platform-action-card:hover .platform-action-btn {
+            background: var(--gold-gradient);
+            color: #090d16;
+            border-color: transparent;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
         }
 
-        .tv-badge {
+        .tag-tv-special {
             position: absolute;
             top: 1rem;
             left: 1rem;
             background: #ef4444;
             color: #fff;
-            padding: 0.2rem 0.6rem;
+            padding: 0.25rem 0.75rem;
             border-radius: 50px;
             font-size: 0.75rem;
-            font-weight: 800;
-        }
-
-        /* Features Section */
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 5rem;
-        }
-
-        .feature-card {
-            background: var(--card-bg);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1.5rem;
-            padding: 2rem;
-            backdrop-filter: blur(12px);
-        }
-
-        .feature-icon {
-            font-size: 2.2rem;
-            margin-bottom: 1rem;
-        }
-
-        .feature-card h3 {
-            font-family: 'Cairo', sans-serif;
-            font-size: 1.3rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-            color: #fef08a;
-        }
-
-        .feature-card p {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            line-height: 1.7;
+            font-weight: 900;
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
         }
 
         /* Footer */
         footer {
             margin-top: auto;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(2, 44, 34, 0.9);
-            padding: 2rem;
+            background: rgba(3, 7, 18, 0.95);
+            padding: 2.5rem 1.5rem;
             text-align: center;
             color: var(--text-muted);
-            font-size: 0.9rem;
+            font-size: 0.95rem;
         }
 
-        @keyframes shine {
+        @keyframes shine-sweep {
             0% { left: -100%; }
             20% { left: 200%; }
             100% { left: 200%; }
         }
 
-        .hidden { display: none !important; }
-
-        @media (max-width: 900px) {
-            .hero {
+        @media (max-width: 960px) {
+            .hero-section {
                 grid-template-columns: 1fr;
                 text-align: center;
                 gap: 3rem;
             }
-            .hero-title {
-                font-size: 2.4rem;
+            .hero-headline {
+                font-size: 2.6rem;
+            }
+            .showcase-display-card {
+                grid-template-columns: 1fr;
+                padding: 2rem 1.5rem;
             }
             .header-nav {
                 display: none;
@@ -512,165 +635,176 @@
     </style>
 </head>
 <body>
-    <div class="bg-pattern"></div>
-    <div class="glow-orb glow-orb-1"></div>
-    <div class="glow-orb glow-orb-2"></div>
+    <div class="bg-grid-pattern"></div>
 
+    <!-- Sticky Luxury Header -->
     <header>
-        <a href="#" class="logo">
-            <div class="logo-icon">📖</div>
-            <span class="logo-title">حاج أيوب أمين</span>
+        <a href="#" class="brand-container">
+            <img src="assets/my-photo.png" alt="القارئ الشيخ حاج أيوب أمين" class="brand-avatar">
+            <div>
+                <span class="brand-text-title">حاج أيوب أمين</span>
+                <span class="brand-text-subtitle">المصحف المرتل برواية ورش وركن الأطفال</span>
+            </div>
         </a>
-        <div class="header-nav">
-            <a href="#platforms" class="nav-link">المنصات والأجهزة</a>
-            <a href="#features" class="nav-link">المميزات</a>
-            <a href="https://learn-quran-kids.pages.dev" target="_blank" class="btn-header-pwa">
-                <span>🌐 تشغيل فوري (PWA)</span>
+
+        <div class="nav-actions">
+            <a href="#showcase" class="nav-link">شاشات التطبيق</a>
+            <a href="#platforms-hub" class="nav-link">تحميل الأجهزة</a>
+            <a href="https://learn-quran-kids.pages.dev" target="_blank" class="btn-pwa-top">
+                <span>🌐 تشغيل الويب الفوري (PWA)</span>
             </a>
         </div>
     </header>
 
     <main>
         <!-- Hero Section -->
-        <section class="hero">
+        <section class="hero-section">
             <div>
-                <div class="badge-tag">✨ رواية ورش عن نافع — إصدار جديد v1.0.0-100</div>
-                <h1 class="hero-title">المصحف المرتل <span>حاج أيوب أمين</span></h1>
+                <div class="hero-badge">✨ رواية ورش عن نافع — إصدار جديد رسمي v1.0.0-100</div>
+                <h1 class="hero-headline">
+                    المصحف المرتل <br>
+                    <span class="highlight-gold">للشيخ حاج أيوب أمين</span>
+                </h1>
                 <p class="hero-desc">
-                    تطبيق قرآني تفاعلي يجمع بين التلاوة المرتلة بصوت الشيخ حاج أيوب أمين، والتعلم بالتكرار، مع ركن ألعاب وتحديات هادف للأطفال، ونظام تشغيل كامل دون اتصال بالإنترنت.
+                    التطبيق القرآني الأول المخصص للعائلة والأطفال: تلاوة خاشعة برواية ورش مع تظليل الآيات المتزامن، ركن ألعاب وتحديات هادف، وتشغيل أوفلاين 100% دون الحاجة للإنترنت.
                 </p>
 
-                <!-- Primary Platform Detection Box -->
-                <div id="primary-platform" class="primary-card">
-                    <!-- Dynamic injection via script.js -->
+                <!-- Primary Device Auto-Detection Card -->
+                <div class="primary-download-card">
+                    <div id="primary-card-content">
+                        <!-- Populated via script.js -->
+                    </div>
+
+                    <!-- Embedded Recitation Audio Preview Player -->
+                    <div class="audio-preview-bar">
+                        <button id="btn-audio-toggle" class="btn-play-preview" title="استمع لنموذج التلاوة">▶</button>
+                        <div style="flex: 1; text-align: right;">
+                            <p style="font-size: 0.95rem; font-weight: 800; color: #fef08a;">نموذج تلاوة: سورة الفاتحة</p>
+                            <p style="font-size: 0.8rem; color: var(--text-muted);">بصوت القارئ الشيخ حاج أيوب أمين</p>
+                        </div>
+                        <div class="audio-wave-anim" id="wave-bars" style="opacity: 0.4;">
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                        </div>
+                        <audio id="preview-audio-elem" preload="none">
+                            <source src="https://huggingface.co/datasets/HAY2023/quran-kids-audio/resolve/main/audio/1.mp3" type="audio/mpeg">
+                        </audio>
+                    </div>
                 </div>
             </div>
 
-            <div class="hero-mockup-wrapper">
-                <div class="app-mockup">
-                    <div class="mockup-header">
-                        <span style="font-size: 1.1rem; font-weight: bold; color: #fde047;">سورة الفاتحة</span>
-                        <span style="font-size: 0.8rem; background: rgba(16,185,129,0.3); color:#34d399; padding: 0.2rem 0.6rem; border-radius: 20px;">تلاوة ورش</span>
+            <!-- Realistic 3D App Mockup Frame -->
+            <div class="mockup-3d-showcase">
+                <div class="phone-frame">
+                    <div class="phone-screen">
+                        <img id="main-mockup-img" src="assets/fatiha.jpg" alt="تطبيق المصحف المرتل">
                     </div>
-                    <div class="mockup-body">
-                        <div class="ayah-box-preview">
-                            بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ ﴿١﴾
+                    <div class="phone-floating-glow">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.1rem; color: var(--gold);">⭐</span>
+                            <span style="font-size: 0.85rem; font-weight: 800; color: #fff;">سورة الفاتحة — الآية 1</span>
                         </div>
-                        <div class="ayah-box-preview" style="background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.4); color:#a7f3d0;">
-                            ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ ﴿٢﴾
-                        </div>
-                        <div class="player-bar-preview">
-                            <span style="font-size: 0.85rem; color:#cbd5e1;">القارئ: حاج أيوب أمين</span>
-                            <span style="font-size: 1.3rem;">▶️ 🔊</span>
-                        </div>
+                        <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.3); color: #6ee7b7; padding: 0.2rem 0.6rem; border-radius: 20px;">تلاوة متزامنة</span>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- All Supported Platforms Section -->
-        <section id="platforms">
-            <div class="section-header">
-                <h2 class="section-title">الأجهزة والمنصات المدعومة</h2>
-                <p class="section-subtitle">حمّل النسخة المخصصة لجهازك أو شغّل التطبيق فورياً عبر الويب</p>
+        <!-- Interactive App Showcase Section -->
+        <section id="showcase" class="showcase-section">
+            <h2 class="section-header-title">شاشات ومميزات التطبيق الحية</h2>
+            <p class="section-header-subtitle">استكشف الواجهة الحقيقية للمصحف، ركن ألعاب الأطفال، ومشغل التلاوات</p>
+
+            <div class="showcase-tabs-nav">
+                <button class="tab-btn active" data-tab="mushaf">📖 المصحف والتظليل التفاعلي</button>
+                <button class="tab-btn" data-tab="tv">📺 نسخة التلفاز الذكي Android TV</button>
+                <button class="tab-btn" data-tab="kids">🎮 ركن ألعاب الأطفال</button>
+                <button class="tab-btn" data-tab="offline">⚡ التشغيل دون إنترنت 100%</button>
             </div>
 
+            <div class="showcase-display-card" id="showcase-card">
+                <div class="showcase-info">
+                    <h3 id="tab-title">المصحف المرتل برواية ورش</h3>
+                    <p id="tab-desc">
+                        صفحات المصحف الشريف بخط واضح وعالي الدقة مع نظام التظليل الذكي للآيات المتزامن مع صوت الشيخ حاج أيوب أمين لمساعدة الأطفال والكبار على الحفظ المتقن.
+                    </p>
+                    <ul class="showcase-features-list" id="tab-features">
+                        <li><span class="check-icon">✓</span> تظليل لحظي لكل آية أثناء القراءة بصوت القارئ</li>
+                        <li><span class="check-icon">✓</span> إمكانية تكرار الآية وتحديد عدد مرات الإعادة للحفظ</li>
+                        <li><span class="check-icon">✓</span> وضعان مخصصان: وضع الكبار ووضع ركن الأطفال الآمن</li>
+                    </ul>
+                </div>
+                <div class="showcase-media-frame">
+                    <img id="tab-media-img" src="assets/fatiha.jpg" alt="واجهة المصحف">
+                </div>
+            </div>
+        </section>
+
+        <!-- All Platforms Download Hub -->
+        <section id="platforms-hub" class="platforms-hub-section">
+            <h2 class="section-header-title">مركز التحميل لكافة الأجهزة</h2>
+            <p class="section-header-subtitle">اختر النسخة المخصصة لجهازك بروابط مباشرة وسريعة</p>
+
             <div class="platforms-grid">
-                <!-- Windows -->
-                <a id="link-windows" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-card">
-                    <div class="platform-icon-box">💻</div>
-                    <h3 class="platform-title">Windows</h3>
-                    <p class="platform-info">لأجهزة الكمبيوتر واللابتوب (Win 10/11)</p>
-                    <div class="platform-btn">تحميل حزمة .EXE المباشرة</div>
+                <!-- Windows PC -->
+                <a id="card-dl-windows" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/learn-quran-kids_1.0.0_x64-setup.exe" class="platform-action-card">
+                    <div class="platform-logo-badge">💻</div>
+                    <h3 class="platform-name">Windows PC</h3>
+                    <p class="platform-desc">لأجهزة الكمبيوتر واللابتوب (Win 10/11) بحزمة EXE المستقلة</p>
+                    <div class="platform-action-btn">تحميل حزمة .EXE المباشرة</div>
                 </a>
 
                 <!-- Android TV / Smart TV -->
-                <a id="link-android-tv" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-card">
-                    <span class="tv-badge">شاشات التلفاز</span>
-                    <div class="platform-icon-box">📺</div>
-                    <h3 class="platform-title">Android TV</h3>
-                    <p class="platform-info">شاشات التلفاز الذكية وأجهزة TV Box</p>
-                    <div class="platform-btn">تحميل APK المخصص للتلفاز</div>
+                <a id="card-dl-tv" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/app-universal-debug.apk" class="platform-action-card">
+                    <span class="tag-tv-special">نسخة التلفاز</span>
+                    <div class="platform-logo-badge">📺</div>
+                    <h3 class="platform-name">Android TV</h3>
+                    <p class="platform-desc">شاشات التلفاز الذكية وأجهزة TV Box مع دعم كامل للريموت كنترول</p>
+                    <div class="platform-action-btn">تحميل APK مخصص للتلفاز</div>
                 </a>
 
-                <!-- Android Mobile -->
-                <a id="link-android" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-card">
-                    <div class="platform-icon-box">📱</div>
-                    <h3 class="platform-title">Android</h3>
-                    <p class="platform-info">هواتف وأجهزة أندرويد اللوحية (APK)</p>
-                    <div class="platform-btn">تحميل APK مباشر للهاتف</div>
+                <!-- Android Mobile & Tablet -->
+                <a id="card-dl-android" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/app-universal-debug.apk" class="platform-action-card">
+                    <div class="platform-logo-badge">📱</div>
+                    <h3 class="platform-name">Android Phone</h3>
+                    <p class="platform-desc">هواتف وأجهزة أندرويد اللوحية بحزمة Universal APK</p>
+                    <div class="platform-action-btn">تحميل APK مباشر للهاتف</div>
                 </a>
 
-                <!-- macOS / Apple -->
-                <a id="link-macos" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-card">
-                    <div class="platform-icon-box">🍎</div>
-                    <h3 class="platform-title">macOS</h3>
-                    <p class="platform-info">أجهزة ماك (Apple Silicon & Intel DMG)</p>
-                    <div class="platform-btn">تحميل حزمة DMG للماك</div>
+                <!-- macOS -->
+                <a id="card-dl-macos" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-action-card">
+                    <div class="platform-logo-badge">🍎</div>
+                    <h3 class="platform-name">macOS</h3>
+                    <p class="platform-desc">أجهزة آبل ماك بمعمارية Apple Silicon و Intel بحزمة DMG</p>
+                    <div class="platform-action-btn">تحميل حزمة DMG للماك</div>
                 </a>
 
                 <!-- Linux -->
-                <a id="link-linux" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-card">
-                    <div class="platform-icon-box">🐧</div>
-                    <h3 class="platform-title">Linux</h3>
-                    <p class="platform-info">حزمة AppImage المستقلة وتوزيعات دبيان</p>
-                    <div class="platform-btn">تحميل حزمة Linux</div>
+                <a id="card-dl-linux" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-action-card">
+                    <div class="platform-logo-badge">🐧</div>
+                    <h3 class="platform-name">Linux</h3>
+                    <p class="platform-desc">توزيعات لينكس بحزمة AppImage المستقلة وحزم DEB</p>
+                    <div class="platform-action-btn">تحميل حزمة Linux</div>
                 </a>
 
-                <!-- Web App (PWA) -->
-                <a href="https://learn-quran-kids.pages.dev" target="_blank" class="platform-card" style="border-color: rgba(16,185,129,0.5);">
-                    <div class="platform-icon-box" style="background: rgba(16,185,129,0.2);">🌐</div>
-                    <h3 class="platform-title">تطبيق الويب (PWA)</h3>
-                    <p class="platform-info">تشغيل فوري بالمتصفح مع تثبيت بنقرة واحدة</p>
-                    <div class="platform-btn" style="background: var(--primary-light); color:#0f172a;">فتح التطبيق فوراً الآن</div>
+                <!-- Instant Web App (PWA) -->
+                <a href="https://learn-quran-kids.pages.dev" target="_blank" class="platform-action-card" style="border-color: var(--emerald-glow);">
+                    <div class="platform-logo-badge" style="background: rgba(16, 185, 129, 0.2);">🌐</div>
+                    <h3 class="platform-name">تطبيق الويب الفوري</h3>
+                    <p class="platform-desc">تشغيل فوري في المتصفح مع إمكانية التثبيت بنقرة واحدة بدون تنزيل ملفات</p>
+                    <div class="platform-action-btn" style="background: var(--emerald-glow); color: #022c22;">فتح التطبيق الآن فوراً</div>
                 </a>
-            </div>
-        </section>
-
-        <!-- Features Showcase Section -->
-        <section id="features">
-            <div class="section-header">
-                <h2 class="section-title">أبرز مميزات التطبيق</h2>
-                <p class="section-subtitle">صُمم ليكون رفيقك القرآني الأمثل في البيت والمسجد والسفر</p>
-            </div>
-
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🎙️</div>
-                    <h3>تلاوة ورش وتظليل الآيات</h3>
-                    <p>تلاوة عذبة بصوت القارئ حاج أيوب أمين مع تظليل تفاعلي متزامن لكل آية يسهل المتابعة والحفظ.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🎮</div>
-                    <h3>ركن ألعاب الأطفال الهادف</h3>
-                    <p>ألعاب تفاعلية لترتيب الآيات، واكتشاف بدايات السور، وشجرة الحسنات لتحفيز الأطفال على المداومة.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
-                    <h3>تشغيل أوفلاين 100% بدون إنترنت</h3>
-                    <p>تخزين محلي ذكي يتيح لك تنزيل السور والاستماع إليها في أي وقت دون استهلاك باقة البيانات.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
-                    <h3>قفل وضع الأطفال وحماية الوالدين</h3>
-                    <p>منع إغلاق أو مغادرة التطبيق في وضع الأطفال إلا بعد إدخال كلمة مرور الوالدين لحماية تامة للطفل.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📺</div>
-                    <h3>دعم شاشات التلفاز الذكية</h3>
-                    <p>واجهة مكبرة ومريحة متوافقة مع شاشات Android TV وأجهزة الريموت كنترول لاجتماع العائلة حول القرآن.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">💬</div>
-                    <h3>دعم فني وتواصل مباشر</h3>
-                    <p>محادثة مباشرة مع مشرف التطبيق مع إمكانية إرسال الملاحظات ولقطات الشاشة لحل أي استفسار فوراً.</p>
-                </div>
             </div>
         </section>
     </main>
 
+    <!-- Footer -->
     <footer>
         <p>جميع الحقوق محفوظة © 2026 — تطبيق المصحف المرتل للشيخ حاج أيوب أمين</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem; color: #64748b;">تلاوة القرآن الكريم برواية ورش عن نافع من طريق الأزرق</p>
     </footer>
 
     <script src="script.js"></script>
