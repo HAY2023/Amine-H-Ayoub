@@ -14,6 +14,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
 
+    <!-- Supabase JS Client for Real-time Support -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
         :root {
             --primary-emerald: #059669;
@@ -579,6 +582,217 @@
             box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
         }
 
+        /* Floating Live Support Widget */
+        .floating-support-btn-wrapper {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            z-index: 99;
+        }
+
+        .floating-support-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--gold-gradient);
+            color: #090d16;
+            border: none;
+            border-radius: 50px;
+            padding: 0.9rem 1.5rem;
+            font-family: 'Cairo', sans-serif;
+            font-weight: 900;
+            font-size: 1.05rem;
+            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.4);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .floating-support-btn:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 15px 35px rgba(245, 158, 11, 0.6);
+        }
+
+        .online-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 10px #10b981;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.3); }
+        }
+
+        /* Site Support Chat Drawer */
+        .site-support-drawer {
+            position: fixed;
+            inset: 0;
+            z-index: 150;
+            display: flex;
+            justify-content: flex-start;
+        }
+        .site-support-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(6px);
+        }
+        .site-support-panel {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 440px;
+            height: 100%;
+            background: #090d16;
+            border-left: 1.5px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -15px 0 50px rgba(0, 0, 0, 0.8);
+            animation: slideInDrawer 0.3s ease-out;
+        }
+
+        @keyframes slideInDrawer {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+        }
+
+        .support-header {
+            padding: 1.25rem 1.5rem;
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .btn-close-chat {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #fff;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .btn-close-chat:hover {
+            background: rgba(239, 68, 68, 0.4);
+            transform: scale(1.05);
+        }
+
+        .support-messages-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            background: #030712;
+        }
+
+        .msg-bubble {
+            max-width: 85%;
+            padding: 0.75rem 1.1rem;
+            border-radius: 1.25rem;
+            font-size: 0.92rem;
+            line-height: 1.6;
+            position: relative;
+        }
+        .msg-user {
+            align-self: flex-start;
+            background: var(--gold-gradient);
+            color: #090d16;
+            font-weight: 700;
+            border-bottom-right-radius: 0.25rem;
+        }
+        .msg-admin {
+            align-self: flex-end;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #f8fafc;
+            border-bottom-left-radius: 0.25rem;
+        }
+        .msg-time {
+            font-size: 0.7rem;
+            opacity: 0.75;
+            margin-top: 0.25rem;
+            text-align: left;
+        }
+
+        .support-input-bar {
+            padding: 1rem 1.25rem;
+            background: rgba(15, 23, 42, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .support-input-bar textarea {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 1rem;
+            padding: 0.75rem 1rem;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.9rem;
+            resize: none;
+            outline: none;
+            max-height: 90px;
+            min-height: 42px;
+        }
+        .support-input-bar textarea:focus {
+            border-color: var(--gold);
+        }
+
+        .btn-attach {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fef08a;
+            width: 42px;
+            height: 42px;
+            border-radius: 1rem;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .btn-attach:hover {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: var(--gold);
+        }
+
+        .btn-send-msg {
+            background: var(--gold-gradient);
+            border: none;
+            color: #090d16;
+            width: 42px;
+            height: 42px;
+            border-radius: 1rem;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .btn-send-msg:hover {
+            transform: scale(1.05);
+        }
+
         /* Footer */
         footer {
             margin-top: auto;
@@ -596,6 +810,8 @@
             100% { left: 200%; }
         }
 
+        .hidden { display: none !important; }
+
         @media (max-width: 960px) {
             .hero-section {
                 grid-template-columns: 1fr;
@@ -611,6 +827,14 @@
             }
             .header-nav {
                 display: none;
+            }
+            .floating-support-btn-wrapper {
+                bottom: 1.25rem;
+                left: 1.25rem;
+            }
+            .floating-support-btn {
+                padding: 0.75rem 1.2rem;
+                font-size: 0.95rem;
             }
         }
     </style>
@@ -706,7 +930,7 @@
                         واجهة أنيقة وسلسة تعرض سور القرآن الكريم برواية ورش، مع إمكانية البحث الفوري، وزر تحميل السور أوفلاين للتشغيل بدون إنترنت، ونظام جمع النقاط التشجيعي.
                     </p>
                     <ul class="showcase-features-list" id="tab-features">
-                        <li><span class="check-icon">✓</span> تلاوة كاملة بصوت القارئ حاج أيوب أمين</li>
+                        <li><span class="check-icon">✓</span> تلاوة كاملة بصوت القارئ حاج أيوب أمين برواية ورش</li>
                         <li><span class="check-icon">✓</span> زر (تحميل الكل / جاهز أوفلاين) للتشغيل دون نت</li>
                         <li><span class="check-icon">✓</span> ركن ألعاب الأطفال مدمج مع حماية ولي الأمر</li>
                     </ul>
@@ -724,7 +948,7 @@
 
             <div class="platforms-grid">
                 <!-- Windows PC -->
-                <a id="card-dl-windows" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/learn-quran-kids_1.0.0_x64-setup.exe" class="platform-action-card">
+                <a id="card-dl-windows" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-100/hajj-ayoub-amine_1.0.0-100_x64-setup.exe" class="platform-action-card">
                     <div class="platform-logo-badge">💻</div>
                     <h3 class="platform-name">Windows PC</h3>
                     <p class="platform-desc">لأجهزة الكمبيوتر واللابتوب (Win 10/11) بحزمة EXE المستقلة</p>
@@ -732,7 +956,7 @@
                 </a>
 
                 <!-- Android TV / Smart TV -->
-                <a id="card-dl-tv" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/app-universal-debug.apk" class="platform-action-card">
+                <a id="card-dl-tv" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-100/app-universal-debug.apk" class="platform-action-card">
                     <span class="tag-tv-special">نسخة التلفاز</span>
                     <div class="platform-logo-badge">📺</div>
                     <h3 class="platform-name">Android TV</h3>
@@ -741,7 +965,7 @@
                 </a>
 
                 <!-- Android Mobile & Tablet -->
-                <a id="card-dl-android" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/app-universal-debug.apk" class="platform-action-card">
+                <a id="card-dl-android" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-100/app-universal-debug.apk" class="platform-action-card">
                     <div class="platform-logo-badge">📱</div>
                     <h3 class="platform-name">Android Phone</h3>
                     <p class="platform-desc">هواتف وأجهزة أندرويد اللوحية بحزمة Universal APK</p>
@@ -749,7 +973,7 @@
                 </a>
 
                 <!-- macOS -->
-                <a id="card-dl-macos" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-action-card">
+                <a id="card-dl-macos" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-100/hajj-ayoub-amine_1.0.0-100_aarch64.dmg" class="platform-action-card">
                     <div class="platform-logo-badge">🍎</div>
                     <h3 class="platform-name">macOS</h3>
                     <p class="platform-desc">أجهزة آبل ماك بمعمارية Apple Silicon و Intel بحزمة DMG</p>
@@ -757,7 +981,7 @@
                 </a>
 
                 <!-- Linux -->
-                <a id="card-dl-linux" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-action-card">
+                <a id="card-dl-linux" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-100/hajj-ayoub-amine_1.0.0-100_amd64.AppImage" class="platform-action-card">
                     <div class="platform-logo-badge">🐧</div>
                     <h3 class="platform-name">Linux</h3>
                     <p class="platform-desc">توزيعات لينكس بحزمة AppImage المستقلة وحزم DEB</p>
@@ -774,6 +998,43 @@
             </div>
         </section>
     </main>
+
+    <!-- Floating Live Support Widget Button -->
+    <div class="floating-support-btn-wrapper">
+        <button id="btn-open-site-support" class="floating-support-btn" title="تواصل مع المشرف والدعم الفني">
+            <span>💬</span>
+            <span>الدعم الفني المباشر</span>
+            <span class="online-dot"></span>
+        </button>
+    </div>
+
+    <!-- Live Support Chat Drawer on Website -->
+    <div id="site-support-drawer" class="site-support-drawer hidden">
+        <div class="site-support-overlay" id="site-support-overlay"></div>
+        <div class="site-support-panel">
+            <div class="support-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <img src="assets/my-photo.png" alt="القارئ الشيخ حاج أيوب أمين" style="width: 42px; height: 42px; border-radius: 12px; object-fit: cover; border: 2px solid var(--gold);">
+                    <div>
+                        <h3 style="font-family: 'Cairo', sans-serif; font-size: 1.1rem; font-weight: 800; color: #fff;">الدعم الفني المباشر</h3>
+                        <p style="font-size: 0.75rem; color: #34d399; font-weight: bold;">🟢 تواصل مباشر مع المشرف</p>
+                    </div>
+                </div>
+                <button id="btn-close-site-support" class="btn-close-chat">✕</button>
+            </div>
+
+            <div id="site-support-messages" class="support-messages-body">
+                <!-- Live messages -->
+            </div>
+
+            <div class="support-input-bar">
+                <input type="file" id="site-file-input" accept="image/*" style="display: none;">
+                <button type="button" id="btn-site-attach" class="btn-attach" title="إرفاق صورة أو لقطة شاشة">📎</button>
+                <textarea id="site-support-input" placeholder="اكتب رسالتك للمشرف... (Enter للإرسال)" rows="1"></textarea>
+                <button type="button" id="btn-site-send" class="btn-send-msg" title="إرسال">➤</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer>

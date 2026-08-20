@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { X, MessageSquare, Send, Loader2, Bot, Paperclip, UploadCloud, CheckCheck, RefreshCw } from "lucide-react";
+import { X, MessageSquare, Send, Loader2, Paperclip, UploadCloud, CheckCheck, RefreshCw, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getDeviceId } from "@/utils/deviceInfo";
 import { toast } from "@/hooks/use-toast";
 
-type SupportMessage = {
+export type SupportMessage = {
   id: string;
-  sender: "user" | "admin" | "bot";
+  sender: "user" | "admin";
   body: string;
   created_at: string;
 };
 
-const CACHE_KEY = "mushaf:support_cache_v2";
+const CACHE_KEY = "mushaf:support_cache_v3";
 
 export default function SupportChat({
   pageMode = false,
@@ -35,28 +35,21 @@ export default function SupportChat({
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {
       /* ignore */
     }
-    return [
-      {
-        id: "welcome-bot-1",
-        sender: "bot",
-        body: "مرحباً بك في الدعم الفني لتطبيق حاج أيوب أمين! كيف يمكننا مساعدتك اليوم؟ يمكنك كتابة استفسارك أو إرفاق لقطة شاشة مباشرة.",
-        created_at: new Date().toISOString(),
-      },
-    ];
+    return [];
   });
 
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [adminTyping, setAdminTyping] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<number | null>(null);
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
@@ -77,8 +70,8 @@ export default function SupportChat({
 
     async function initChat() {
       try {
-        const deviceId = getDeviceId();
-        if (!deviceId) return;
+        setLoading(true);
+        const deviceId = getDeviceId() || `device_${Date.now()}`;
 
         let { data: conv } = await supabase
           .from("support_conversations")
@@ -106,16 +99,12 @@ export default function SupportChat({
             .order("created_at", { ascending: true });
 
           if (msgs && msgs.length > 0) {
-            setMessages((prev) => {
-              const combined = [...prev.filter((p) => p.id === "welcome-bot-1"), ...msgs];
-              const unique = Array.from(new Map(combined.map((m) => [m.id, m])).values());
-              try {
-                localStorage.setItem(CACHE_KEY, JSON.stringify(unique));
-              } catch {
-                /* ignore */
-              }
-              return unique as SupportMessage[];
-            });
+            setMessages(msgs as SupportMessage[]);
+            try {
+              localStorage.setItem(CACHE_KEY, JSON.stringify(msgs));
+            } catch {
+              /* ignore */
+            }
           }
 
           const channelName = `support_${conv.id}`;
@@ -126,7 +115,7 @@ export default function SupportChat({
               { event: "INSERT", schema: "public", table: "support_messages", filter: `conversation_id=eq.${conv.id}` },
               (payload) => {
                 const newMsg = payload.new as SupportMessage;
-                if (newMsg.sender !== "user") setAdminTyping(false);
+                if (newMsg.sender === "admin") setAdminTyping(false);
                 setMessages((prev) => {
                   if (prev.some((m) => m.id === newMsg.id || (m.body === newMsg.body && m.sender === newMsg.sender))) {
                     return prev;
@@ -140,16 +129,7 @@ export default function SupportChat({
                   return next;
                 });
               }
-            )
-            .on("broadcast", { event: "typing" }, (payload) => {
-              if (payload.payload?.isTyping) {
-                setAdminTyping(true);
-                if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
-                typingTimeoutRef.current = window.setTimeout(() => setAdminTyping(false), 5000);
-              } else {
-                setAdminTyping(false);
-              }
-            });
+            );
           subscription = channel.subscribe();
         }
       } catch (err) {
@@ -201,19 +181,22 @@ export default function SupportChat({
         return next;
       });
 
-      const filename = `support/${convId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9_.-]/g, "_")}`;
-      await supabase.storage.from("quran-audio").upload(filename, file, { cacheControl: "3600", upsert: false });
+      if (convId && convId !== "user_device") {
+        await supabase.from("support_messages").insert({
+          conversation_id: convId,
+          sender: "user",
+          body: `[IMAGE] ${base64}`,
+        });
+        await supabase
+          .from("support_conversations")
+          .update({ last_message: "📷 صورة مرفقة", last_message_at: new Date().toISOString() })
+          .eq("id", convId);
+      }
 
-      await supabase.from("support_messages").insert({
-        conversation_id: convId,
-        sender: "user",
-        body: `[IMAGE] ${filename}`,
-      });
-
-      toast({ title: "تم رفع الصورة بنجاح ✅", description: "تم إرسال لقطة الشاشة إلى فريق الدعم." });
+      toast({ title: "تم إرسال الصورة بنجاح ✅", description: "وصلت لقطة الشاشة إلى المشرف." });
     } catch (err) {
       console.debug("Upload note:", err);
-      toast({ title: "تم تسليم الصورة محلياً ✅", description: "تم حفظ الصورة وسيتم مراجعتها من فريق الدعم." });
+      toast({ title: "تم حفظ الصورة محلياً", description: "سيتم إرسالها للمشرف عند استقرار الاتصال." });
     } finally {
       setSending(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -258,254 +241,214 @@ export default function SupportChat({
           .update({ last_message: text, last_message_at: new Date().toISOString() })
           .eq("id", convId);
       }
-
-      // Auto-reply simulation for instant user reassurance
-      setTimeout(() => {
-        const botReply: SupportMessage = {
-          id: `bot-reply-${Date.now()}`,
-          sender: "bot",
-          body: "شكراً لتواصلك معنا! تم تسجيل رسالتك بنجاح وسيتواصل معك مشرف التطبيق قريباً للإجابة عن استفسارك.",
-          created_at: new Date().toISOString(),
-        };
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === botReply.id)) return prev;
-          const next = [...prev, botReply];
-          try {
-            localStorage.setItem(CACHE_KEY, JSON.stringify(next));
-          } catch {
-            /* ignore */
-          }
-          return next;
-        });
-      }, 1200);
-
-      toast({ title: "تم تسليم الرسالة بنجاح ✅", description: "وصلت رسالتك لفريق الدعم وسيجيبك المشرف قريباً." });
     } catch (err) {
       console.debug("Send note:", err);
-      toast({ title: "تم حفظ الرسالة ✅", description: "تم استلام رسالتك محلياً." });
     } finally {
       setSending(false);
     }
   };
 
-  const handleQuickQuestion = (q: string) => {
-    setInput(q);
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   };
 
-  const content = (
-    <div className="flex flex-col h-full bg-card text-card-foreground overflow-hidden shadow-2xl" dir="rtl">
-      {/* Header */}
-      <header className="flex items-center justify-between px-5 py-4 border-b border-border bg-card/95 backdrop-blur shrink-0">
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleImageUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const isImageBody = (body: string) => body.startsWith("[IMAGE] ");
+  const getImageSrc = (body: string) => body.replace("[IMAGE] ", "").trim();
+
+  const chatUI = (
+    <div
+      className={`flex flex-col h-full bg-card text-card-foreground border-l border-border/50 shadow-2xl relative select-text ${
+        isDragging ? "ring-2 ring-accent" : ""
+      }`}
+      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+      onDragLeave={() => setIsDragging(false)}
+      onDrop={handleDrop}
+    >
+      {/* Drawer Header */}
+      <div className="flex items-center justify-between p-4 border-b border-border/40 bg-card/95 backdrop-blur z-10 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner">
-            <MessageSquare className="w-5 h-5" />
+          <div className="relative">
+            <div className="w-10 h-10 rounded-2xl bg-accent text-accent-foreground flex items-center justify-center shadow-soft">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-card" />
           </div>
           <div>
-            <h2 className="text-base font-extrabold text-foreground flex items-center gap-2">
-              الدعم الفني المباشر
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                متصل
-              </span>
-            </h2>
-            <p className="text-xs text-muted-foreground">خدمة المستمعين والمتابعة الفنية</p>
+            <h2 className="font-extrabold text-base text-foreground">الدعم الفني المباشر</h2>
+            <p className="text-[11px] text-muted-foreground">تواصل مباشر مع مشرف التطبيق</p>
           </div>
         </div>
-
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           {onClose && (
             <button
               onClick={onClose}
-              className="p-2 rounded-full text-muted-foreground hover:bg-muted active:scale-95 transition-all"
-              aria-label="إغلاق"
+              className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center hover:brightness-95 active:scale-95 text-secondary-foreground transition-all"
+              title="إغلاق النافذة"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>
-      </header>
+      </div>
+
+      {/* Drag Overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-30 bg-accent/20 backdrop-blur-sm border-2 border-dashed border-accent flex flex-col items-center justify-center text-accent gap-2">
+          <UploadCloud className="w-12 h-12 animate-bounce" />
+          <p className="font-bold text-sm">أفلت لقطة الشاشة هنا للإرسال</p>
+        </div>
+      )}
 
       {/* Messages Scroll Area */}
-      <div
-        ref={scrollRef}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setIsDragging(true);
-        }}
-        onDragLeave={(e) => {
-          e.preventDefault();
-          setIsDragging(false);
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          setIsDragging(false);
-          if (e.dataTransfer.files?.[0]) handleImageUpload(e.dataTransfer.files[0]);
-        }}
-        className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/20 relative"
-      >
-        {isDragging && (
-          <div className="absolute inset-0 z-50 bg-amber-500/10 backdrop-blur-sm flex flex-col items-center justify-center text-amber-600 border-2 border-dashed border-amber-500 rounded-2xl m-2">
-            <UploadCloud className="w-12 h-12 animate-bounce" />
-            <span className="font-bold text-sm mt-2">أفلت لقطة الشاشة هنا للرفع المباشر</span>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-muted/20">
+        {loading && messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 text-muted-foreground gap-2">
+            <Loader2 className="w-6 h-6 animate-spin text-accent" />
+            <span className="text-xs">جاري تحميل المحادثة...</span>
           </div>
-        )}
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-3">
+            <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center text-accent">
+              <MessageSquare className="w-8 h-8" />
+            </div>
+            <h3 className="font-bold text-foreground text-base">مرحباً بك في الدعم الفني!</h3>
+            <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
+              اكتب استفسارك أو ملاحظتك وسيرد عليك المشرف في أقرب وقت. يمكنك أيضاً إرفاق صور ولقطات شاشة.
+            </p>
+          </div>
+        ) : (
+          messages.map((m) => {
+            const isUser = m.sender === "user";
+            const isImg = isImageBody(m.body);
 
-        {/* Info Banner */}
-        <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-foreground/80 leading-relaxed">
-          <p className="font-bold text-amber-700 dark:text-amber-400 mb-1">💡 أهلاً بك في خدمة المساعدة والتواصل</p>
-          <p className="text-muted-foreground">
-            يمكنك كتابة مشكلتك بالتفصيل أو إرفاق لقطة شاشة بالضغط على أيقونة المشبك 📎 أدناه لتسريع حلها.
-          </p>
-        </div>
+            return (
+              <div key={m.id} className={`flex flex-col ${isUser ? "items-start" : "items-end"}`}>
+                <div
+                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm transition-all ${
+                    isUser
+                      ? "bg-accent text-accent-foreground rounded-br-none shadow-accent/15"
+                      : "bg-card border border-border/60 text-foreground rounded-bl-none"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 mb-1 text-[11px] opacity-85 font-bold">
+                    <span>{isUser ? "أنت" : "المشرف"}</span>
+                  </div>
 
-        {/* Quick Question Chips */}
-        <div className="flex flex-wrap gap-1.5 py-1">
-          {["السلام عليكم", "مشكلة في تشغيل التلاوة", "كيفية تفعيل وضع الأطفال؟", "طلب إضافة تلاوة جديدة"].map((q) => (
-            <button
-              key={q}
-              type="button"
-              onClick={() => handleQuickQuestion(q)}
-              className="text-[11px] px-3 py-1.5 rounded-full bg-card hover:bg-muted text-foreground border border-border/80 transition-all hover:border-amber-500/50 active:scale-95"
-            >
-              {q}
-            </button>
-          ))}
-        </div>
+                  {isImg ? (
+                    <div className="mt-1 rounded-xl overflow-hidden cursor-pointer" onClick={() => setSelectedImage(getImageSrc(m.body))}>
+                      <img
+                        src={getImageSrc(m.body)}
+                        alt="مرفق صورة"
+                        className="max-h-56 max-w-full rounded-xl object-contain bg-black/20 hover:opacity-95 transition-opacity"
+                      />
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap select-text">{m.body}</p>
+                  )}
 
-        {/* Message List */}
-        {messages.map((msg) => {
-          const isUser = msg.sender === "user";
-          const isImage = msg.body.startsWith("[IMAGE] ");
-          const cleanBody = isImage ? msg.body.replace("[IMAGE] ", "") : msg.body;
-
-          return (
-            <div
-              key={msg.id}
-              className={`flex items-end gap-2 max-w-[88%] ${isUser ? "mr-auto flex-row-reverse" : "ml-auto"}`}
-            >
-              {!isUser && (
-                <div className="w-7 h-7 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mb-1">
-                  <Bot className="w-4 h-4" />
-                </div>
-              )}
-
-              <div
-                className={`p-3.5 rounded-2xl shadow-sm text-sm break-words ${
-                  isUser
-                    ? "bg-amber-500 text-white rounded-br-none"
-                    : "bg-card border border-border text-foreground rounded-bl-none"
-                }`}
-              >
-                {isImage ? (
-                  <img
-                    src={cleanBody}
-                    alt="لقطة شاشة مرفقة"
-                    className="max-w-full rounded-xl max-h-60 object-contain my-1"
-                  />
-                ) : (
-                  <p className="whitespace-pre-wrap leading-relaxed">{cleanBody}</p>
-                )}
-
-                <div className={`flex items-center gap-1 mt-1 text-[10px] ${isUser ? "text-amber-100 justify-end" : "text-muted-foreground justify-start"}`}>
-                  <span>
-                    {new Date(msg.created_at).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                  {isUser && <CheckCheck className="w-3.5 h-3.5 inline text-amber-200" />}
+                  <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-70">
+                    <span>
+                      {new Date(m.created_at).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    {isUser && <CheckCheck className="w-3 h-3 text-current" />}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
 
         {adminTyping && (
-          <div className="flex items-center gap-2 mr-auto flex-row-reverse animate-in fade-in">
-            <div className="p-3 bg-card border border-border rounded-2xl rounded-tr-none flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: "300ms" }} />
-            </div>
-            <div className="w-7 h-7 rounded-full bg-amber-500/15 text-amber-600 flex items-center justify-center shrink-0">
-              <Bot className="w-4 h-4" />
-            </div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-card border border-border/40 px-3 py-1.5 rounded-full w-fit animate-pulse">
+            <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
+            <span>المشرف يكتب الآن...</span>
           </div>
         )}
       </div>
 
-      {/* Input Footer */}
-      <footer className="p-3 border-t border-border bg-card/95 backdrop-blur shrink-0">
-        <input
-          type="file"
-          accept="image/*"
-          ref={fileInputRef}
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files?.[0]) handleImageUpload(e.target.files[0]);
-          }}
-        />
+      {/* Input Bar */}
+      <div className="p-3 border-t border-border/40 bg-card/95 backdrop-blur shrink-0">
+        <form onSubmit={sendMessage} className="flex items-end gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files && e.target.files[0]) {
+                handleImageUpload(e.target.files[0]);
+              }
+            }}
+          />
 
-        <form onSubmit={sendMessage} className="flex items-center gap-2">
-          {/* Attachment button */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={sending}
+            className="w-10 h-10 rounded-xl bg-secondary text-secondary-foreground hover:bg-accent/15 hover:text-accent flex items-center justify-center shrink-0 transition-colors active:scale-95 disabled:opacity-50"
             title="إرفاق صورة أو لقطة شاشة"
-            className="w-11 h-11 shrink-0 rounded-2xl bg-muted hover:bg-muted/80 active:scale-95 flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"
           >
             <Paperclip className="w-5 h-5" />
           </button>
 
-          {/* Text Input */}
-          <input
-            type="text"
+          <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            placeholder="اكتب رسالتك أو استفسارك هنا..."
-            className="flex-1 h-11 bg-muted/60 hover:bg-muted/80 focus:bg-background border border-transparent focus:border-amber-500/50 rounded-2xl px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-all"
+            onKeyDown={handleKeyDown}
+            placeholder="اكتب رسالتك للمشرف... (Enter للإرسال)"
+            rows={1}
+            disabled={sending}
+            className="flex-1 max-h-28 min-h-[42px] py-2.5 px-3.5 rounded-xl bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none leading-relaxed"
           />
 
-          {/* Send Button */}
           <button
-            type="button"
-            onClick={sendMessage}
+            type="submit"
             disabled={!input.trim() || sending}
+            className="w-10 h-10 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shrink-0 transition-all hover:brightness-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none shadow-soft"
             title="إرسال الرسالة"
-            className="w-11 h-11 shrink-0 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none shadow-md shadow-amber-500/25"
           >
-            {sending ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5 -rotate-90 rtl:rotate-90" />
-            )}
+            {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 rtl:rotate-180" />}
           </button>
         </form>
-      </footer>
+      </div>
+
+      {/* Fullscreen Image Lightbox Modal */}
+      {selectedImage && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setSelectedImage(null)}>
+          <div className="relative max-w-3xl max-h-[85vh]">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute -top-10 left-0 bg-white/20 hover:bg-white/40 text-white rounded-full p-1.5 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img src={selectedImage} alt="عرض الصورة المكبرة" className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl" />
+          </div>
+        </div>
+      )}
     </div>
   );
 
-  // Full Page Mode
   if (pageMode) {
-    return <div className="min-h-screen bg-background">{content}</div>;
+    return <div className="h-full w-full">{chatUI}</div>;
   }
 
-  // Desktop Side-Drawer / Modal Mode
   return (
-    <div
-      className="fixed inset-0 z-[200] flex justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && onClose) onClose();
-      }}
-    >
-      <div
-        className="w-full max-w-lg md:max-w-md h-full bg-card shadow-2xl border-r md:border-l border-border animate-in slide-in-from-right duration-300 flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {content}
+    <div className="fixed inset-0 z-[150] flex justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" dir="rtl">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="relative w-full max-w-lg md:max-w-md h-full shadow-2xl animate-in slide-in-from-right duration-300 z-10">
+        {chatUI}
       </div>
     </div>
   );
