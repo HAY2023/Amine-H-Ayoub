@@ -13,6 +13,7 @@ import ParentalGateModal from "@/components/ParentalGateModal";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { isTauri, checkOfflineStatus, getOfflineAudioUrl, downloadSurah, listenToDownloadProgress } from "../utils/tauriUtils";
+import { resolvePlayableAudioUrl } from "@/data/offlineAudioCache";
 import { useAudioContext } from "@/contexts/audioContext";
 import SplitViewPanel from "@/components/SplitViewPanel";
 import NotificationsModal from "@/components/NotificationsModal";
@@ -357,12 +358,11 @@ export default function QuranReader() {
   }, []);
 
   const resolveAudioSrc = useCallback(async (surah: SurahAudio) => {
-    if (isTauri()) {
-      const offline = await checkOfflineStatus(surah.number);
-      if (offline) {
-        const localUrl = await getOfflineAudioUrl(surah.number);
-        if (localUrl) return localUrl;
-      }
+    try {
+      const resolved = await resolvePlayableAudioUrl(surah.number, surah.src);
+      if (resolved) return resolved;
+    } catch (e) {
+      console.warn("Offline audio resolution fallback:", e);
     }
     return surah.src;
   }, []);

@@ -7,25 +7,23 @@
   },
   "platforms": {
     "windows": {
-      "latest_version": "v1.0.0-99",
+      "latest_version": "v1.0.0-100",
       "active": true,
       "min_supported_version": "",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-99",
+          "version": "v1.0.0-100",
           "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-99/hajj-ayoub-amine_1.0.0-99_x64-setup.exe",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-100/hajj-ayoub-amine_1.0.0-100_x64-setup.exe",
           "size": "74.9MB",
           "changelog": [
-            "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية",
-            "منع إغلاق أو الخروج من التطبيق أثناء وضع الأطفال إلا بعد إدخال كلمة المرور",
-            "إصلاح زر إرسال الدعم الفني وتوصيله بالمزامنة اللحظية",
-            "إصلاح تشغيل التلاوات أوفلاين دون إنترنت بنسبة 100%",
-            "حذف أخطاء الاتصال والمزامنة عند انقطاع الشبكة",
-            "توحيد الهوية والأيقونات الرسمية لجميع المنصات",
-            "إضافة شهادة التوقيع الرقمي الآلي وتوثيق الحزم"
+            "أولوية التشغيل المحلي للتلاوات المحملة حتى مع وجود الإنترنت (تشغيل فوري دون استهلاك بيانات)",
+            "حفظ التلاوات المحملة في مجلد التطبيق المخصص وقواعد البيانات المحلية",
+            "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية عند الإغلاق أو الخروج على كافة الأجهزة",
+            "إعادة تصميم وتوسيع نافذة الدعم الفني كلوحة جانبية كاملة وإصلاح زر الإرسال",
+            "توحيد الهوية والأيقونات الرسمية لجميع المنصات"
           ],
           "active": true
         },
@@ -40,66 +38,63 @@
       ]
     },
     "macos": {
-      "latest_version": "v1.0.0-99",
+      "latest_version": "v1.0.0-100",
       "active": true,
       "min_supported_version": "",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-99",
+          "version": "v1.0.0-100",
           "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-99/hajj-ayoub-amine_1.0.0-99_aarch64.dmg",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-100/hajj-ayoub-amine_1.0.0-100_aarch64.dmg",
           "size": "79.4MB",
           "changelog": [
+            "أولوية التشغيل المحلي للتلاوات المحملة حتى مع وجود الإنترنت",
             "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية",
-            "منع إغلاق أو الخروج من التطبيق أثناء وضع الأطفال إلا بعد إدخال كلمة المرور",
-            "إصلاح محادثة الدعم الفني والإرسال الفوري",
-            "تشغيل التلاوات أوفلاين دون إنترنت 100%"
+            "إصلاح محادثة الدعم الفني والإرسال الفوري"
           ],
           "active": true
         }
       ]
     },
     "android": {
-      "latest_version": "v1.0.0-99",
+      "latest_version": "v1.0.0-100",
       "active": true,
       "min_supported_version": "",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-99",
+          "version": "v1.0.0-100",
           "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-99/app-universal-debug.apk",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-100/app-universal-debug.apk",
           "size": "225MB",
           "changelog": [
+            "أولوية التشغيل المحلي للتلاوات المحملة حتى مع وجود الإنترنت",
             "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية",
-            "منع الخروج من التطبيق بزر الرجوع إلا بعد إدخال كلمة المرور",
-            "إصلاح محادثة الدعم الفني والإرسال الفوري",
-            "تشغيل التلاوات أوفلاين دون إنترنت 100%"
+            "إصلاح محادثة الدعم الفني والإرسال الفوري"
           ],
           "active": true
         }
       ]
     },
     "linux": {
-      "latest_version": "v1.0.0-99",
+      "latest_version": "v1.0.0-100",
       "active": true,
       "min_supported_version": "",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-99",
+          "version": "v1.0.0-100",
           "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-99/hajj-ayoub-amine_1.0.0-99_amd64.AppImage",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-100/hajj-ayoub-amine_1.0.0-100_amd64.AppImage",
           "size": "150MB",
           "changelog": [
+            "أولوية التشغيل المحلي للتلاوات المحملة حتى مع وجود الإنترنت",
             "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية",
-            "منع إغلاق أو الخروج من التطبيق أثناء وضع الأطفال إلا بعد إدخال كلمة المرور",
-            "إصلاح محادثة الدعم الفني والإرسال الفوري",
-            "تشغيل التلاوات أوفلاين دون إنترنت 100%"
+            "إصلاح محادثة الدعم الفني والإرسال الفوري"
           ],
           "active": true
         }
