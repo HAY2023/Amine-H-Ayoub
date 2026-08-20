@@ -85,6 +85,7 @@ export const removeGameDef = (id: string) => {
 
 export const syncGameCatalogFromServer = async () => {
   if (typeof window === "undefined" || !hasValidSupabaseKey()) return;
+  if (typeof navigator !== "undefined" && !navigator.onLine) return; // offline
   try {
     const { data } = await supabase.from("store").select("value").eq("key", CATALOG_KEY).maybeSingle();
     if (data && Array.isArray(data.value)) {

@@ -1,6 +1,7 @@
 import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
 import { X, Play, Pause, Music, Repeat, SkipForward, SkipBack, RotateCcw } from "lucide-react";
-import { isTauri, checkOfflineStatus, getOfflineAudioUrl } from "../utils/tauriUtils";
+import { isTauri } from "../utils/tauriUtils";
+import { resolvePlayableAudioUrl } from "@/data/offlineAudioCache";
 import { useAudioContext } from "@/contexts/audioContext";
 import { updateMediaSession, setMediaPlaybackState, isBackgroundAudioEnabled } from "@/utils/backgroundAudio";
 
@@ -70,13 +71,11 @@ const formatTime = (s: number) => {
           initialTimeApplied.current = false;
 
           let finalSrc = audioSrc;
-          if (isTauri() && !audioSrc.startsWith("blob:") && !fallbackToCloud) {
-            const offline = await checkOfflineStatus(surahNumber);
-            if (offline) {
-              const localUrl = await getOfflineAudioUrl(surahNumber);
-              if (localUrl) {
-                finalSrc = localUrl;
-              }
+          if (!audioSrc.startsWith("blob:") && !fallbackToCloud) {
+            try {
+              finalSrc = await resolvePlayableAudioUrl(surahNumber, audioSrc);
+            } catch (e) {
+              console.warn("Offline audio resolution fallback:", e);
             }
           }
 

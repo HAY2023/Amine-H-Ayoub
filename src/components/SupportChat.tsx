@@ -263,9 +263,10 @@ export default function SupportChat({
           created_at: new Date().toISOString(),
         },
       ]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to upload image", err);
-      toast({ title: "خطأ", description: err?.message || "فشل رفع الصورة", variant: "destructive" });
+      const msg = err instanceof Error ? err.message : "فشل رفع الصورة";
+      toast({ title: "خطأ", description: msg, variant: "destructive" });
     } finally {
       setSending(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -290,7 +291,7 @@ export default function SupportChat({
       };
       setMessages((prev) => {
         const next = [...prev, tempMsg];
-        try { localStorage.setItem("mushaf:support_cache", JSON.stringify(next)); } catch {}
+        try { localStorage.setItem("mushaf:support_cache", JSON.stringify(next)); } catch { /* ignore */ }
         return next;
       });
 
@@ -316,13 +317,13 @@ export default function SupportChat({
           };
           setMessages(prev => {
             const next = [...prev, autoReply];
-            try { localStorage.setItem("mushaf:support_cache", JSON.stringify(next)); } catch {}
+            try { localStorage.setItem("mushaf:support_cache", JSON.stringify(next)); } catch { /* ignore */ }
             return next;
           });
         }, 1000);
       }
       toast({ title: "تم تسليم الرسالة ✅", description: "وصلت رسالتك بنجاح وسيردّ عليك الدعم الفني قريباً." });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Exception sending message", err);
       toast({ title: "تم حفظ الرسالة محلياً", description: "سيتم إرسالها فور توفر اتصال بالإنترنت." });
     } finally {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Bell, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Hash, Grid3x3, Flame, Sparkles, Gamepad2, Puzzle } from "lucide-react";
 import { getAllSurahs } from "../data/quranData";
@@ -8,10 +8,9 @@ import { getGameCatalog, type GameDef, type GameEngine } from "../data/gameCatal
 import { ensureCorpus, type SurahText } from "../data/quranText";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
 import { shouldHideMushaf } from "../utils/tauriUtils";
-import PinModal from "../components/PinModal";
+import ParentalGateModal from "../components/ParentalGateModal";
 import Avatar from "../components/Avatar";
 import NotificationsModal from "../components/NotificationsModal";
-import MathChallengeModal from "../components/MathChallengeModal";
 import { toast } from "../hooks/use-toast";
 import { isTimeAllowed } from "../data/kidsSchedule";
 
@@ -25,12 +24,10 @@ async function exitKioskMode() {
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 const shuffle = <T,>(a: T[]): T[] => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
 const SURAHS = getAllSurahs();
-const CLOUD = SURAHS.filter(s => hasCloudAudio(s.number));
 
 /** بِركة السور لِلعبة حسب معاملاتها (نطاق السورة/عدد الآيات) — يتيح ألعاباً جديدة بمحتوى مختلف. */
 const poolFor = (def: GameDef, minSurahOverride: number = 38) => {
   const { maxSurah, minAyah, maxAyah } = def.params || {};
-  // minS هنا هو أقصى رقم سورة في الترقيم المخصص (مثال: النبأ = 38)
   const maxS = def.params?.minSurah || minSurahOverride;
   const out = SURAHS.filter(s =>
     s.number !== 1 && s.number <= maxS &&
@@ -41,20 +38,19 @@ const poolFor = (def: GameDef, minSurahOverride: number = 38) => {
 };
 
 /* ───────────────── نواة الحماس ───────────────── */
-// نتيجة + سلسلة (combo) تضاعف النجوم + ومضة احتفال؛ كل إجابة صحيحة تُكسب نجوماً للملف النشِط.
 function useGame() {
   const [score, setScore] = useState(0);
-  const [answers, setAnswers] = useState(0);   // عدد الأسئلة المُجابة (للنتيجة النهائية)
-  const [earned, setEarned] = useState(0);     // نجوم هذه الجلسة
+  const [answers, setAnswers] = useState(0);
+  const [earned, setEarned] = useState(0);
   const [streak, setStreak] = useState(0);
   const [flash, setFlash] = useState(0);
   const [gain, setGain] = useState(0);
   const correct = () => {
     const ns = streak + 1;
-    const bonus = ns >= 5 ? 30 : ns >= 3 ? 20 : 10;   // مضاعِف السلسلة لجمع نقاط أسرع
+    const bonus = ns >= 5 ? 30 : ns >= 3 ? 20 : 10;
     addCoins(bonus); setGain(bonus); setEarned(e => e + bonus);
     setScore(s => s + 1); setAnswers(a => a + 1); setStreak(ns); setFlash(f => f + 1);
-    window.setTimeout(() => setGain(0), 900);   // ومضة "+N" لحظية فقط
+    window.setTimeout(() => setGain(0), 900);
   };
   const miss = () => { setStreak(0); setGain(0); setAnswers(a => a + 1); };
   const reset = () => { setScore(0); setAnswers(0); setEarned(0); setStreak(0); setGain(0); };
@@ -78,7 +74,6 @@ const GameHud = ({ g }: { g: Game }) => {
       <span className="inline-flex items-center gap-1 text-accent font-extrabold"><Star className="w-4 h-4 fill-current" /> {g.score}</span>
       {g.streak >= 2 && <span className="inline-flex items-center gap-1 text-orange-400 font-bold"><Flame className="w-4 h-4" /> {g.streak}× سلسلة</span>}
       {g.gain > 0 && <span key={g.flash} className="inline-flex items-center gap-0.5 text-success font-extrabold animate-bounce">+{g.gain}<Star className="w-3.5 h-3.5 fill-current" /></span>}
-      {/* بهجة: كلمة تشجيع تطفو عند كل إجابة صحيحة (أكبر مع السلسلة) */}
       {g.flash > 0 && (
         <span key={`p-${g.flash}`} className="pointer-events-none fixed left-1/2 top-1/3 z-[60] -translate-x-1/2 font-extrabold text-accent drop-shadow animate-celebrate"
           style={{ fontSize: g.streak >= 5 ? "2.2rem" : g.streak >= 3 ? "1.8rem" : "1.4rem" }}>
@@ -89,8 +84,6 @@ const GameHud = ({ g }: { g: Game }) => {
   );
 };
 
-// مؤقّت جولة: شريط متناقص يخلق إثارة؛ عند انتهائه يستدعي onExpire (تقدّم لطيف بلا عقاب قاسٍ).
-// enabled=false يوقفه (أثناء كشف الإجابة أو بعد انتهاء الجلسة) حتى لا يقفز سؤالاً أثناء التعلّم.
 function useRoundTimer(roundKey: unknown, seconds: number, onExpire: () => void, enabled = true) {
   const [left, setLeft] = useState(seconds);
   const cb = useRef(onExpire); cb.current = onExpire;
@@ -105,7 +98,6 @@ function useRoundTimer(roundKey: unknown, seconds: number, onExpire: () => void,
       if (rem <= 0) { clearInterval(id); cb.current(); }
     }, 100);
     return () => clearInterval(id);
-     
   }, [roundKey, seconds, enabled]);
   return left;
 }
@@ -119,7 +111,6 @@ const TimerBar = ({ left, seconds }: { left: number; seconds: number }) => {
   );
 };
 
-/* جلسة أسئلة: بداية ونهاية واضحتان (١٠ أسئلة ثم نتيجة) بدل التكرار اللانهائي */
 const ROUNDS = 20;
 const SessionBar = ({ q }: { q: number }) => (
   <p className="text-[11px] text-muted-foreground font-bold">السؤال {Math.min(q, ROUNDS)} من {ROUNDS}</p>
@@ -138,7 +129,6 @@ const ResultCard = ({ g, onReplay }: { g: Game; onReplay: () => void }) => {
   );
 };
 
-// نصوص السور الحقيقية (تُجلب مرّة وتُخزَّن محلياً) — أساس الألعاب النصّية
 function useCorpus() {
   const [corpus, setCorpus] = useState<SurahText[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -159,10 +149,6 @@ const CorpusGate = ({ failed, retry }: { failed: boolean; retry: () => void }) =
   </div>
 );
 
-/* ───────────────── المحرّكات (يُعاد استخدامها لألعاب متعددة بمحتوى مختلف) ───────────────── */
-
-// ٢) رتّب الآيات — بنصّ الآيات الحقيقي: الطفل يقرأ ويرتّب حسب حفظه (لا أرقام ظاهرة تُرتَّب آلياً).
-// إن لم تتوفّر النصوص بعد (أوّل تشغيل دون إنترنت) نعود لنمط الأرقام مؤقتاً.
 function OrderEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const { corpus } = useCorpus();
   const pool = (def.params?.minAyah || def.params?.maxAyah || def.params?.minSurah || def.params?.maxSurah) ? poolFor(def, minSurah) : SURAHS.filter(s => s.ayahCount >= 3 && s.ayahCount <= 8 && s.number >= minSurah);
@@ -212,7 +198,6 @@ function OrderEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   );
 }
 
-// ٣) الذاكرة
 function MemoryEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const pairs = def.params?.pairs ?? 4;
   const pool = poolFor(def, minSurah);
@@ -246,7 +231,6 @@ function MemoryEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   );
 }
 
-// ٤) أيّهما أكثر آيات (مؤقّت) — السورتان مختلفتان دائماً في العدد، وبعد الإجابة يُكشف العددان (تعلّم لا تخمين)
 function WhichEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const pool = poolFor(def, minSurah);
   const orderRef = useRef(shuffle(pool));
@@ -294,7 +278,6 @@ function WhichEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   );
 }
 
-// ٥) اختبار قرآني (مؤقّت) — الخيارات قريبة من العدد الصحيح (معقولة، لا أرقام عشوائية بعيدة تسهّل الاستبعاد)
 function QuizEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const pool = poolFor(def, minSurah);
   const orderRef = useRef(shuffle(pool));
@@ -345,8 +328,6 @@ function QuizEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   );
 }
 
-// ٦) عدّ الآيات (مؤقّت) — الخيارات الخاطئة يجب أن تختلف في عدد الآيات عن الصحيح،
-// وإلا ظهر خياران "صحيحان" ويُحسب أحدهما خطأً (الفلق/المسد/الفيل كلها ٥ آيات مثلاً)
 function CountEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const pool = poolFor(def, minSurah);
   const orderRef = useRef(shuffle(pool));
@@ -396,7 +377,6 @@ function CountEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   );
 }
 
-// ٧) أكمل الآية — يقرأ الطفل آيةً ويختار الآية التالية من نفس السورة (تثبيت حقيقي للحفظ)
 function NextAyahEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const { corpus, failed, retry } = useCorpus();
   if (!corpus) return <CorpusGate failed={failed} retry={retry} />;
@@ -410,9 +390,8 @@ function NextAyahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: Gam
   const make = (prevApp?: number) => {
     let s = getNext();
     if (s.app === prevApp && eligible.length > 1) s = getNext();
-    const i = Math.floor(Math.random() * (s.ayahs.length - 1));   // ليست الأخيرة
+    const i = Math.floor(Math.random() * (s.ayahs.length - 1));
     const answer = s.ayahs[i + 1];
-    // المشتِّتات من نفس السورة أولاً (أصعب وأكثر فائدة)، ثم من سور أخرى إن لم تكفِ
     const distract = shuffle(s.ayahs.filter(a => a.n !== answer.n && a.n !== s.ayahs[i].n)).slice(0, 2);
     const others = shuffle(eligible.filter(c => c.app !== s.app));
     for (const o of others) {
@@ -434,7 +413,7 @@ function NextAyahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: Gam
     setChosen(text);
     if (text === q.answer.text) g.correct(); else g.miss();
     setReveal(true);
-    window.setTimeout(() => next(qNum + 1), text === q.answer.text ? 700 : 1600);   // مهلة أطول ليقرأ الصحيح
+    window.setTimeout(() => next(qNum + 1), text === q.answer.text ? 700 : 1600);
   };
   const replay = () => { g.reset(); setQNum(1); setQ(make()); };
   if (finished) return <ResultCard g={g} onReplay={replay} />;
@@ -456,7 +435,6 @@ function NextAyahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: Gam
   );
 }
 
-// ٧ ب) الآية السابقة — يقرأ الطفل آية ويختار الآية السابقة لها (لتثبيت الحفظ من الاتجاهين)
 function PrevAyahEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const { corpus, failed, retry } = useCorpus();
   if (!corpus) return <CorpusGate failed={failed} retry={retry} />;
@@ -470,9 +448,8 @@ function PrevAyahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: Gam
   const make = (prevApp?: number) => {
     let s = getNext();
     if (s.app === prevApp && eligible.length > 1) s = getNext();
-    const i = Math.floor(Math.random() * (s.ayahs.length - 1)) + 1;   // ليست الأولى
+    const i = Math.floor(Math.random() * (s.ayahs.length - 1)) + 1;
     const answer = s.ayahs[i - 1];
-    // المشتِّتات من نفس السورة أولاً، ثم سور أخرى
     const distract = shuffle(s.ayahs.filter(a => a.n !== answer.n && a.n !== s.ayahs[i].n)).slice(0, 2);
     const others = shuffle(eligible.filter(c => c.app !== s.app));
     for (const o of others) {
@@ -516,7 +493,6 @@ function PrevAyahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: Gam
   );
 }
 
-// ٨) من أيّ سورة؟ — تُعرض آية حقيقية ويختار الطفل سورتها (ربط الآيات بسورها)
 function WhichSurahEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const { corpus, failed, retry } = useCorpus();
   if (!corpus) return <CorpusGate failed={failed} retry={retry} />;
@@ -530,7 +506,6 @@ function WhichSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: G
   const make = (prevApp?: number) => {
     let s = getNext();
     if (s.app === prevApp && eligible.length > 1) s = getNext();
-    // نستثني بسملة الفاتحة (آيتها الأولى) لأنها تُقرأ في أوّل كل السور فيلتبس الجواب
     const ayahs = s.ayahs.filter(a => !(s.std === 1 && a.n === 1));
     const a = ayahs[Math.floor(Math.random() * ayahs.length)] || s.ayahs[0];
     const others = shuffle(eligible.filter(c => c.app !== s.app)).slice(0, 2);
@@ -677,7 +652,6 @@ function MissingWordPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: 
     
     let hiddenIdx = 0;
     let answer = "";
-    // Avoid hiding short words like "في" or "ما" if possible
     for (let i = 0; i < 5; i++) {
       hiddenIdx = Math.floor(Math.random() * words.length);
       answer = words[hiddenIdx];
@@ -686,7 +660,6 @@ function MissingWordPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: 
 
     const allWords = s.ayahs.flatMap(ay => ay.text.split(" ")).filter(w => w !== answer && w.length > 2);
     const distractors = shuffle(Array.from(new Set(allWords))).slice(0, 2);
-    // If not enough distractors from same surah, get from others
     if (distractors.length < 2) {
       const extra = corpus.flatMap(c => c.ayahs.flatMap(ay => ay.text.split(" "))).filter(w => w !== answer && w.length > 2);
       distractors.push(...shuffle(Array.from(new Set(extra))).slice(0, 2 - distractors.length));
@@ -841,7 +814,7 @@ export default function KidsGames() {
   const Engine = def ? ENGINES[def.engine] : null;
 
   const kidsMode = isKidsMode();
-  const inApp = shouldHideMushaf();   // المصحف مخفيّ → الاستماع (لا القراءة) هو ما يفتح الألعاب
+  const inApp = shouldHideMushaf();
 
   const onPinSuccess = () => {
     if (pinAction === "parent" || pinAction === "setparent") { setAppMode("parent"); setKidsLocked(false); setPinAction(null); navigate("/parent"); return; }
@@ -950,9 +923,7 @@ export default function KidsGames() {
                 return (
                   <button key={g.id} onClick={() => tapGame(g.id)}
                     className={`relative overflow-hidden rounded-[1.7rem] p-[2px] active:scale-[0.98] transition-transform text-right ${!canPlay ? "opacity-60" : "hover:shadow-xl hover:shadow-accent/20"}`}>
-                    {/* خلفية مشعة */}
                     <div className={`absolute inset-0 opacity-80 ${g.tint}`} />
-                    {/* محتوى البطاقة الداخلي */}
                     <div className="relative bg-card/95 backdrop-blur-md rounded-[1.6rem] p-4 flex items-center gap-4">
                       <span className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 ${g.tint}`}><I className="w-8 h-8" /></span>
                       <div className="flex-1">
@@ -981,15 +952,19 @@ export default function KidsGames() {
         )}
       </div>
 
-      {pinAction && hasKidsPin() && pinAction !== "setparent" && pinAction !== "setread" ? (
-          <PinModal mode="verify" onSuccess={onPinSuccess} onCancel={() => setPinAction(null)} />
-        ) : pinAction && (pinAction === "setparent" || pinAction === "setread") ? (
-          <PinModal mode="set" onSuccess={onPinSuccess} onCancel={() => setPinAction(null)} />
-        ) : pinAction === "exit" && !hasKidsPin() ? (
-          <MathChallengeModal onSuccess={onPinSuccess} onCancel={() => setPinAction(null)} />
-        ) : pinAction === "parent" && !hasKidsPin() ? (
-           <MathChallengeModal onSuccess={onPinSuccess} onCancel={() => setPinAction(null)} />
-        ) : null}
+      {pinAction && (
+        <ParentalGateModal
+          title={
+            pinAction === "setparent" || pinAction === "setread"
+              ? "إعداد رمز حماية وضع الأطفال"
+              : pinAction === "parent"
+              ? "الدخول لمنطقة الوالدين"
+              : "الخروج من ركن الأطفال"
+          }
+          onSuccess={onPinSuccess}
+          onCancel={() => setPinAction(null)}
+        />
+      )}
       
       {showNotifications && <NotificationsModal onClose={() => setShowNotifications(false)} />}
     </div>

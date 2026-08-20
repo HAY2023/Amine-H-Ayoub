@@ -125,7 +125,7 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
                 <span aria-hidden className="absolute -inset-1.5 rounded-full bg-gradient-to-br from-gold-light to-gold opacity-80 blur-[2px]" />
                 <img src="/my-photo.png" alt="القارئ حاج أيوب أمين"
                   className="relative w-40 h-40 rounded-full object-cover ring-4 ring-accent/80 shadow-gold"
-                  style={{ objectPosition: "50% 22%" }} loading="eager" />
+                  style={{ objectPosition: "center top" }} loading="eager" />
               </div>
               <div className="space-y-1">
                 <h1 className="text-4xl font-extrabold text-gradient-gold leading-tight">مرحباً بك</h1>

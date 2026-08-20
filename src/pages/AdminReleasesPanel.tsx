@@ -68,8 +68,8 @@ export default function AdminReleasesPanel() {
       );
       if (fnError) throw fnError;
       setData(typeof result === "string" ? JSON.parse(result) : result);
-    } catch (e: any) {
-      setError(e.message || "فشل جلب البيانات");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "فشل جلب البيانات");
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ export default function AdminReleasesPanel() {
     setError(null);
     setSuccess(null);
     try {
-      const { data: result, error: fnError } = await supabase.functions.invoke(
+      const { error: fnError } = await supabase.functions.invoke(
         "update-releases",
         {
           body: {
@@ -99,8 +99,8 @@ export default function AdminReleasesPanel() {
       if (fnError) throw fnError;
       setSuccess("تم الحفظ بنجاح ✅");
       setTimeout(() => setSuccess(null), 3000);
-    } catch (e: any) {
-      setError(e.message || "فشل الحفظ");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "فشل الحفظ");
     } finally {
       setSaving(false);
     }
@@ -122,7 +122,7 @@ export default function AdminReleasesPanel() {
   const updatePlatformField = (
     platform: string,
     field: string,
-    value: any
+    value: string | number | boolean | unknown
   ) => {
     if (!data) return;
     setData({

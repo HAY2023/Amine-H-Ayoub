@@ -12,7 +12,7 @@ import PinModal from "../components/PinModal";
 import SupportModal from "../components/SupportModal";
 import { toast } from "../hooks/use-toast";
 import { checkForUpdates, CURRENT_VERSION, triggerDirectDownload } from "../utils/updateChecker";
-import { hasKidsPin, setKidsPin, setKidsLocked, isKidsMode } from "../data/kidsLock";
+import { hasKidsPin, setKidsPin, removeKidsPin, setKidsLocked, isKidsMode } from "../data/kidsLock";
 import { isBackgroundAudioEnabled, setBackgroundAudioEnabled } from "../utils/backgroundAudio";
 import { applyTheme, getTheme } from "../utils/theme";
 const THEME_KEY = "mushaf:theme";
@@ -66,7 +66,7 @@ export default function SettingsPage() {
   const [pendingMode, setPendingMode] = useState<AppMode | null>(null);
   const [bgAudio, setBgAudio] = useState(isBackgroundAudioEnabled);
   const changePin = () => setPinFlow(hasKidsPin() ? "verifyOld" : "setNew");
-  const removePin = () => { setKidsPin(""); setHasPin(false); toast({ title: "أُزيلت كلمة المرور" }); };
+  const removePin = () => { removeKidsPin(); setHasPin(false); toast({ title: "أُزيلت كلمة المرور" }); };
 
   const changeMode = (m: AppMode) => {
     if (m === "kids" && kidsHidden()) {

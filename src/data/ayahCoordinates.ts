@@ -98,6 +98,7 @@ const cloneBoxes = (boxes: AyahBox[]) => boxes.map((box) => ({ ...box }));
 
 export const syncCoordinatesFromServer = async () => {
   if (typeof window === "undefined") return;
+  if (typeof navigator !== "undefined" && !navigator.onLine) return; // offline
   if (!hasValidSupabaseKey()) return; // skip sync when no valid API key
   try {
     const { data } = await supabase.from("store").select("value").eq("key", CALIBRATION_STORAGE_KEY).maybeSingle();

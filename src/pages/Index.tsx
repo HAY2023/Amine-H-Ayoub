@@ -5,8 +5,7 @@ import PointsDisplay from "@/components/PointsDisplay";
 import SurahList from "@/components/SurahList";
 import SearchBar from "@/components/SearchBar";
 import CustomPlayer, { CustomPlayerHandle } from "@/components/CustomPlayer";
-import MushafComingSoon from "@/components/MushafComingSoon";
-import PinModal from "@/components/PinModal";
+import ParentalGateModal from "@/components/ParentalGateModal";
 import BottomNav, { TabType } from "@/components/BottomNav";
 import NotificationsModal from "../components/NotificationsModal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -94,7 +93,7 @@ const Index = () => {
   useEffect(() => { const h = () => setKidsCorner(getKidsEnabled()); window.addEventListener("mushaf:appmode", h); return () => window.removeEventListener("mushaf:appmode", h); }, []);
   useEffect(() => { const h = () => setKidsMode(isKidsMode()); window.addEventListener("mushaf:kidsmode", h); return () => window.removeEventListener("mushaf:kidsmode", h); }, []);
 
-  // ── ركن الأطفال: الدخول يقفل التطبيق برمز ولي الأمر (كما في القارئ) ──
+  // ── ركن الأطفال: الدخول يقفل التطبيق برمز ولي الأمر الإلزامي ──
   const enterKids = () => {
     const timeCheck = isTimeAllowed();
     if (!timeCheck.allowed) {
@@ -103,6 +102,10 @@ const Index = () => {
         description: timeCheck.reason,
         variant: "destructive"
       });
+      return;
+    }
+    if (!hasKidsPin()) {
+      setPinAction("enter");
       return;
     }
     setAppMode("kids");
@@ -714,11 +717,20 @@ const Index = () => {
 
       {/* رمز ولي الأمر: تعيينه عند دخول ركن الأطفال أوّل مرّة، أو التحقّق منه للإعدادات */}
       {pinAction && (
-        <PinModal
-          mode="verify"
-          title="أدخل الرمز للإعدادات"
+        <ParentalGateModal
+          title={
+            pinAction === "enter"
+              ? "تعيين رمز حماية وضع الأطفال"
+              : "الدخول إلى الإعدادات"
+          }
           onSuccess={() => {
-            if (pinAction === "settings") { navigate("/settings"); }
+            if (pinAction === "settings") {
+              navigate("/settings");
+            } else if (pinAction === "enter") {
+              setAppMode("kids");
+              setKidsLocked(true);
+              navigate("/games");
+            }
             setPinAction(null);
           }}
           onCancel={() => setPinAction(null)}

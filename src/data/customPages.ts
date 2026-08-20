@@ -135,6 +135,7 @@ export async function deletePageImage(id: string): Promise<void> {
 
 export const syncCustomPagesFromServer = async () => {
   if (typeof window === "undefined") return;
+  if (typeof navigator !== "undefined" && !navigator.onLine) return; // offline
   try {
     const localPages = getCustomPages();
     let serverPages: CustomPage[] = [];

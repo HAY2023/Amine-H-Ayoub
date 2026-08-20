@@ -38,6 +38,7 @@ export const removeBookmark = (id: string): Bookmark[] => {
 
 export const syncBookmarksFromServer = async () => {
   if (typeof window === "undefined" || !hasValidSupabaseKey()) return;
+  if (typeof navigator !== "undefined" && !navigator.onLine) return; // offline
   try {
     const { data } = await supabase.from("store").select("value").eq("key", KEY).maybeSingle();
     if (data && Array.isArray(data.value)) localStorage.setItem(KEY, JSON.stringify(data.value));

@@ -7,7 +7,7 @@ const AppHeader = () => {
             src="/my-photo.png"
             alt="القارئ حاج أيوب أمين"
             className="w-full h-full object-cover"
-            style={{ objectPosition: "50% 22%" }}
+            style={{ objectPosition: "center top" }}
           />
         </div>
         <h1 className="text-xl md:text-2xl font-bold text-gold text-center leading-relaxed">

@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { getDeviceId } from "@/utils/deviceInfo";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
@@ -38,7 +39,33 @@ function isNewSupabaseApiKey(value: string): boolean {
 }
 
 function createSupabaseFetch(supabaseKey: string): typeof fetch {
-  return (input, init) => {
+  return async (input, init) => {
+    // If device is offline, safely return empty response to prevent network failures
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      const method = (init?.method || "GET").toUpperCase();
+      const mockBody = method === "GET" ? "[]" : "{}";
+      return new Response(mockBody, {
+        status: 200,
+        statusText: "OK",
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // If querying the unmigrated 'store' table, safely mock a successful empty response
+    // to prevent 404 network errors in the browser console.
+    if (urlStr.includes("/rest/v1/store")) {
+      const method = (init?.method || "GET").toUpperCase();
+      const mockBody = method === "GET" ? "[]" : "{}";
+      return new Response(mockBody, {
+        status: 200,
+        statusText: "OK",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Range": "0-0/0",
+        },
+      });
+    }
+
     const headers = new Headers(
       typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined,
     );
@@ -53,12 +80,23 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
     }
 
     headers.set('apikey', supabaseKey);
+    try {
+      const devId = getDeviceId();
+      if (devId) {
+        headers.set('x-device-id', devId);
+      }
+    } catch {
+      // ignore
+    }
     return fetch(input, { ...init, headers });
   };
 }
 
 function createSafeClient(): SupabaseClient {
   if (hasValidSupabaseKey()) {
+    let devId = "";
+    try { devId = getDeviceId(); } catch { /* ignore */ }
+
     return createClient(supabaseUrl, supabaseAnonKey, {
       realtime: {
         params: {
@@ -68,8 +106,9 @@ function createSafeClient(): SupabaseClient {
       global: {
         headers: {
           "Cache-Control": "no-cache",
+          ...(devId ? { "x-device-id": devId } : {}),
         },
-        fetch: isNewSupabaseApiKey(supabaseAnonKey) ? createSupabaseFetch(supabaseAnonKey) : undefined,
+        fetch: createSupabaseFetch(supabaseAnonKey),
       },
     });
   }

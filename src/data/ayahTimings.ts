@@ -57,6 +57,7 @@ const TIMINGS_STORAGE_KEY = "mushaf:ayahTimings:v1";
 
 export const syncTimingsFromServer = async () => {
   if (typeof window === "undefined") return;
+  if (typeof navigator !== "undefined" && !navigator.onLine) return; // offline
   if (!hasValidSupabaseKey()) return; // skip sync when no valid API key
   try {
     const { data, error } = await supabase.from("store").select("value").eq("key", TIMINGS_STORAGE_KEY).maybeSingle();

@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { shouldHideMushaf } from "./utils/tauriUtils";
+import { shouldHideMushaf, setupTauriCloseHandler, closeTauriApp } from "./utils/tauriUtils";
 import { isKidsMode } from "./data/kidsLock";
+import ParentalGateModal from "./components/ParentalGateModal";
 import { Toaster as Sonner } from "./components/ui/sonner";
 import { Toaster } from "./components/ui/toaster";
 import { TooltipProvider } from "./components/ui/tooltip";
@@ -105,6 +106,16 @@ const App = () => {
     } catch { return false; }
   };
   const [showPicker, setShowPicker] = useState(shouldGate);
+  const [showExitGate, setShowExitGate] = useState(false);
+
+  useEffect(() => {
+    const unlistenPromise = setupTauriCloseHandler(() => {
+      setShowExitGate(true);
+    });
+    return () => {
+      unlistenPromise.then((unsub) => unsub && unsub());
+    };
+  }, []);
 
   useBackgroundNotifications();
 
@@ -219,6 +230,16 @@ const App = () => {
             <SiteLinksOverlay open={showSiteLinks} onClose={() => setShowSiteLinks(false)} />
             {showWelcome && <WelcomeOverlay onDone={() => { markPicked(); setShowWelcome(false); setShowPicker(false); }} />}
             {!showWelcome && showPicker && <ProfilePicker onPicked={() => setShowPicker(false)} />}
+            {showExitGate && (
+              <ParentalGateModal
+                title="إغلاق التطبيق (حماية وضع الأطفال)"
+                onSuccess={() => {
+                  setShowExitGate(false);
+                  closeTauriApp();
+                }}
+                onCancel={() => setShowExitGate(false)}
+              />
+            )}
           </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>

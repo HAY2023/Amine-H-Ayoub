@@ -47,6 +47,7 @@ export const savePageSurahRegions = async (pageSrc: string, regions: SurahRegion
 /** يجلب مناطق السور من السيرفر إن وُجدت (للمزامنة عبر الأجهزة). */
 export const syncSurahRegionsFromServer = async () => {
   if (typeof window === "undefined") return;
+  if (typeof navigator !== "undefined" && !navigator.onLine) return; // offline
   if (!hasValidSupabaseKey()) return;
   try {
     const { data } = await supabase.from("store").select("value").eq("key", REGIONS_STORAGE_KEY).maybeSingle();

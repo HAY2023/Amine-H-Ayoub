@@ -14,3 +14,24 @@ export const CLOUD_AVAILABLE_SURAHS = new Set([
 ]);
 
 export const hasCloudAudio = (number: number): boolean => CLOUD_AVAILABLE_SURAHS.has(number);
+
+/**
+ * Robust fetch with exponential backoff retry for audio files
+ */
+export async function fetchAudioWithRetry(url: string, signal?: AbortSignal, maxRetries = 3): Promise<Response> {
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    try {
+      const response = await fetch(url, { signal, cache: "default" });
+      if (response.ok) return response;
+      if (response.status === 404) return response; // don't retry non-existent files
+    } catch (e) {
+      if (signal?.aborted) throw e;
+      attempt++;
+      if (attempt >= maxRetries) throw e;
+      // Wait with backoff: 500ms, 1000ms, 2000ms
+      await new Promise(res => setTimeout(res, 500 * Math.pow(2, attempt - 1)));
+    }
+  }
+  throw new Error(`Failed to fetch audio after ${maxRetries} attempts`);
+}

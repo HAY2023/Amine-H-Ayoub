@@ -86,3 +86,40 @@ export function listenToDownloadProgress(
     unsubscribe();
   };
 }
+
+/**
+ * Intercepts Tauri window close requests when Kids Mode is active.
+ */
+export async function setupTauriCloseHandler(onRequestUnlock: () => void): Promise<() => void> {
+  if (!isTauri()) return () => {};
+  try {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    const appWindow = getCurrentWindow();
+    const unlisten = await appWindow.onCloseRequested(async (event) => {
+      const { isKidsMode } = await import("@/data/kidsLock");
+      if (isKidsMode()) {
+        event.preventDefault();
+        onRequestUnlock();
+      }
+    });
+    return unlisten;
+  } catch (e) {
+    console.warn("Tauri close handler setup:", e);
+    return () => {};
+  }
+}
+
+/**
+ * Closes the application completely (Tauri window destroy).
+ */
+export async function closeTauriApp(): Promise<void> {
+  if (!isTauri()) return;
+  try {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    const appWindow = getCurrentWindow();
+    await appWindow.destroy();
+  } catch (e) {
+    console.error("Failed to destroy Tauri window:", e);
+  }
+}
+
