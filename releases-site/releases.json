@@ -105,6 +105,16 @@
     "android": {
       "releases": [
         {
+          "version": "v1.0.0-100",
+          "date": "2026-08-20",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-100/app-universal-release.apk",
+          "size": "",
+          "changelog": [
+            "إصدار جديد"
+          ],
+          "active": false
+        },
+        {
           "version": "v1.0.0-99",
           "date": "2026-08-20",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-99/app-universal-release.apk",
