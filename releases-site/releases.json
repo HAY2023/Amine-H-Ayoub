@@ -7,16 +7,16 @@
   },
   "platforms": {
     "windows": {
-      "latest_version": "v1.0.0-69",
+      "latest_version": "v1.0.0-99",
       "active": true,
       "min_supported_version": "",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-69",
+          "version": "v1.0.0-99",
           "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-69/hajj-ayoub-amine_1.0.0-69_x64-setup.exe",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-99/hajj-ayoub-amine_1.0.0-99_x64-setup.exe",
           "size": "74.9MB",
           "changelog": [
             "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية",
@@ -24,7 +24,8 @@
             "إصلاح زر إرسال الدعم الفني وتوصيله بالمزامنة اللحظية",
             "إصلاح تشغيل التلاوات أوفلاين دون إنترنت بنسبة 100%",
             "حذف أخطاء الاتصال والمزامنة عند انقطاع الشبكة",
-            "توحيد الهوية والأيقونات الرسمية لجميع المنصات"
+            "توحيد الهوية والأيقونات الرسمية لجميع المنصات",
+            "إضافة شهادة التوقيع الرقمي الآلي وتوثيق الحزم"
           ],
           "active": true
         },
@@ -39,16 +40,16 @@
       ]
     },
     "macos": {
-      "latest_version": "v1.0.0-69",
+      "latest_version": "v1.0.0-99",
       "active": true,
       "min_supported_version": "",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-69",
+          "version": "v1.0.0-99",
           "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-69/hajj-ayoub-amine_1.0.0-69_aarch64.dmg",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-99/hajj-ayoub-amine_1.0.0-99_aarch64.dmg",
           "size": "79.4MB",
           "changelog": [
             "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية",
@@ -61,16 +62,16 @@
       ]
     },
     "android": {
-      "latest_version": "v1.0.0-69",
+      "latest_version": "v1.0.0-99",
       "active": true,
       "min_supported_version": "",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-69",
+          "version": "v1.0.0-99",
           "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-69/app-universal-debug.apk",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-99/app-universal-debug.apk",
           "size": "225MB",
           "changelog": [
             "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية",
@@ -83,16 +84,16 @@
       ]
     },
     "linux": {
-      "latest_version": "v1.0.0-69",
+      "latest_version": "v1.0.0-99",
       "active": true,
       "min_supported_version": "",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-69",
+          "version": "v1.0.0-99",
           "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-69/hajj-ayoub-amine_1.0.0-69_amd64.AppImage",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-99/hajj-ayoub-amine_1.0.0-99_amd64.AppImage",
           "size": "150MB",
           "changelog": [
             "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية",

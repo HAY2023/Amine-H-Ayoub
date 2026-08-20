@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = "1.0.0-69";
+export const CURRENT_VERSION = "1.0.0-99";
 
 export interface UpdateInfo {
   hasUpdate: boolean;
