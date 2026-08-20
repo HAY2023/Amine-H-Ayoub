@@ -33,7 +33,7 @@ function findDirectAsset(assets: Array<{ name: string; browser_download_url: str
   const platform = getPlatform();
 
   if (platform === "android") {
-    const apk = assets.find(a => a.name.endsWith(".apk"));
+    const apk = assets.find(a => a.name.endsWith(".apk") && !a.name.includes("unsigned")) || assets.find(a => a.name.endsWith(".apk"));
     if (apk) return { directUrl: apk.browser_download_url, assetName: apk.name };
   } else if (platform === "windows") {
     const exe = assets.find(a => a.name.endsWith(".exe") || a.name.endsWith("-setup.exe"));
@@ -56,54 +56,104 @@ function findDirectAsset(assets: Array<{ name: string; browser_download_url: str
 }
 
 /**
- * Checks GitHub releases to see if there is a newer version of the app.
+ * Parses version strings like "1.0.0-100" or "v1.0.1" into numeric segments.
+ */
+function parseVersion(v: string): number[] {
+  const cleaned = v.replace(/^v/i, "").trim();
+  const parts = cleaned.split(/[\.-]/).map((p) => {
+    const num = parseInt(p, 10);
+    return isNaN(num) ? 0 : num;
+  });
+  return parts;
+}
+
+/**
+ * Robust semantic version comparison: returns true if latest > current
+ */
+export function isNewerVersion(current: string, latest: string): boolean {
+  const cParts = parseVersion(current);
+  const lParts = parseVersion(latest);
+  const maxLen = Math.max(cParts.length, lParts.length);
+
+  for (let i = 0; i < maxLen; i++) {
+    const c = cParts[i] ?? 0;
+    const l = lParts[i] ?? 0;
+    if (l > c) return true;
+    if (l < c) return false;
+  }
+  return false;
+}
+
+/**
+ * Checks GitHub releases and Vercel releases.json to verify app updates.
  */
 export async function checkForUpdates(): Promise<UpdateInfo> {
   const defaultResult: UpdateInfo = {
     hasUpdate: false,
     latestVersion: CURRENT_VERSION,
-    downloadUrl: "https://github.com/HAY2023/Amine-H-Ayoub/releases",
-    directDownloadUrl: "",
-    assetName: "",
+    downloadUrl: "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
+    directDownloadUrl: "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
+    assetName: `hajj-ayoub-amine-v${CURRENT_VERSION}`,
   };
 
-  // فحص الاتصال بالإنترنت أولاً
+  // فحص الاتصال بالإنترنت
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     throw new Error("لا يوجد اتصال بالإنترنت. يرجى الاتصال والمحاولة مجدداً.");
   }
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000); // 10 ثواني كحد أقصى
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
-    const response = await fetch(
-      "https://api.github.com/repos/HAY2023/Amine-H-Ayoub/releases/latest",
-      {
-        headers: {
-          Accept: "application/vnd.github.v3+json",
-        },
-        signal: controller.signal,
+    let releaseData: any = null;
+
+    try {
+      const response = await fetch(
+        "https://api.github.com/repos/HAY2023/Amine-H-Ayoub/releases/latest",
+        {
+          headers: { Accept: "application/vnd.github.v3+json" },
+          signal: controller.signal,
+        }
+      );
+      if (response.ok) {
+        releaseData = await response.json();
       }
-    );
+    } catch {
+      /* fallback to all releases or releases.json */
+    }
+
+    if (!releaseData) {
+      try {
+        const response2 = await fetch(
+          "https://api.github.com/repos/HAY2023/Amine-H-Ayoub/releases",
+          {
+            headers: { Accept: "application/vnd.github.v3+json" },
+            signal: controller.signal,
+          }
+        );
+        if (response2.ok) {
+          const list = await response2.json();
+          if (Array.isArray(list) && list.length > 0) {
+            releaseData = list[0];
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
 
     clearTimeout(timeout);
 
-    if (!response.ok) {
-      throw new Error(`فشل الاتصال بالخادم: ${response.status}`);
-    }
-
-    const release = await response.json();
-    const latestVersion = release.tag_name ? release.tag_name.replace(/^v/, "") : "";
-    const downloadUrl = release.html_url || defaultResult.downloadUrl;
-    const releaseNotes = release.body || "";
-    const assets = Array.isArray(release.assets) ? release.assets : [];
-    const { directUrl, assetName } = findDirectAsset(assets);
-
-    if (!latestVersion) {
+    if (!releaseData) {
       return defaultResult;
     }
 
-    // Compare semantic versions
+    const latestVersion = releaseData.tag_name ? releaseData.tag_name.replace(/^v/, "") : CURRENT_VERSION;
+    const downloadUrl = releaseData.html_url || defaultResult.downloadUrl;
+    const releaseNotes = releaseData.body || "";
+    const assets = Array.isArray(releaseData.assets) ? releaseData.assets : [];
+    const { directUrl, assetName } = findDirectAsset(assets);
+
     const hasUpdate = isNewerVersion(CURRENT_VERSION, latestVersion);
 
     return {
@@ -119,7 +169,7 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
       throw new Error("انتهت مهلة الاتصال. يرجى التأكد من سرعة الإنترنت والمحاولة مجدداً.");
     }
     console.error("Error checking for updates:", error);
-    throw error;
+    return defaultResult;
   }
 }
 
@@ -138,22 +188,4 @@ export function triggerDirectDownload(url: string, fileName?: string) {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-}
-
-/**
- * Simple semantic version comparison: returns true if v2 > v1
- */
-function isNewerVersion(v1: string, v2: string): boolean {
-  const parts1 = v1.split(".").map(Number);
-  const parts2 = v2.split(".").map(Number);
-
-  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-    const part1 = parts1[i] || 0;
-    const part2 = parts2[i] || 0;
-
-    if (part2 > part1) return true;
-    if (part2 < part1) return false;
-  }
-
-  return false;
 }

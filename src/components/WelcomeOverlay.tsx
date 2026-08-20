@@ -5,6 +5,7 @@ import { downloadEverything } from "../data/offlineDownload";
 import { setAppMode, addProfile, setActiveProfile, kidsHidden, setKidsHidden, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
 import { setKidsPin, setKidsLocked } from "../data/kidsLock";
 import Avatar from "./Avatar";
+import { openExternalUrl } from "../utils/tauriUtils";
 
 const SUPPORT_CHANNEL_URL = "https://www.youtube.com/@aminehadjyoub";
 
@@ -254,14 +255,14 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
               </div>
               <h2 className="text-xl font-extrabold text-accent">ادعم القارئ</h2>
               <p className="text-muted-foreground leading-relaxed">اضغط الزر لفتح قناة القارئ ودعم المشروع، ثم أكمل الإعداد بعد العودة.</p>
-              <a
-                href={SUPPORT_CHANNEL_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent text-white font-bold px-5 py-3 shadow-soft active:scale-95 transition-transform hover:brightness-110"
+              <button
+                type="button"
+                onClick={() => openExternalUrl(SUPPORT_CHANNEL_URL)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent text-white font-bold px-5 py-3 shadow-soft active:scale-95 transition-transform hover:brightness-110 cursor-pointer"
               >
+                <Youtube className="w-5 h-5 text-red-500 fill-current" />
                 اذهب إلى القناة
-              </a>
+              </button>
               <p className="text-[11px] text-muted-foreground">بعد الاشتراك، ارجع لإكمال إعداد التطبيق.</p>
             </div>
           )}

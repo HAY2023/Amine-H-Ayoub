@@ -6,8 +6,6 @@ export const isTauri = (): boolean => {
 };
 
 // ── وضع المالك (المطوّر): يفتح لصاحب التطبيق المصحفَ وأدوات المحتوى لإكمال العمل ──
-// المصحف غير جاهز للإطلاق، فيُخفى عن جميع المستخدمين (ويب وتطبيق) وتظهر رسالة تطوير،
-// إلا لصاحب التطبيق حين يُفعّل وضع المالك (بالنقر ٥ مرّات على أيقونة رسالة التطوير).
 const OWNER_KEY = "mushaf:devReader";
 /** هل وضع المالك مُفعَّل على هذا الجهاز؟ */
 export const isMushafDevEnabled = (): boolean => {
@@ -123,3 +121,28 @@ export async function closeTauriApp(): Promise<void> {
   }
 }
 
+/**
+ * Opens an external URL safely in default system browser across Tauri desktop, mobile, and web.
+ */
+export async function openExternalUrl(url: string): Promise<void> {
+  if (!url) return;
+  if (isTauri()) {
+    try {
+      await invoke("plugin:opener|open", { path: url });
+      return;
+    } catch {
+      try {
+        await invoke("open_url", { url });
+        return;
+      } catch {
+        /* fallback to browser open */
+      }
+    }
+  }
+  if (typeof window !== "undefined") {
+    const w = window.open(url, "_blank", "noopener,noreferrer");
+    if (!w) {
+      window.location.href = url;
+    }
+  }
+}

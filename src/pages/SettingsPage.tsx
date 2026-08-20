@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, FileText, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete, Headphones } from "lucide-react";
-import { isMushafDevEnabled, setMushafDev } from "../utils/tauriUtils";
+import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, FileText, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete, Headphones, Youtube } from "lucide-react";
+import { isMushafDevEnabled, setMushafDev, openExternalUrl } from "../utils/tauriUtils";
 import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHidden, type AppMode } from "../data/kidsProfile";
 import { syncCoordinatesFromServer } from "../data/ayahCoordinates";
 import { syncTimingsFromServer } from "../data/ayahTimings";
@@ -251,6 +251,7 @@ export default function SettingsPage() {
         {/* ===== التطبيق ===== */}
         <Section label="التطبيق">
           <Item icon={<MessageSquare className="w-5 h-5 text-accent" />} title="تواصل مع الدعم الفني" desc="محادثة مباشرة مع فريق الدعم" onClick={() => setShowSupport(true)} />
+          <Item icon={<Youtube className="w-5 h-5 text-red-500 fill-current" />} title="قناة القارئ على يوتيوب" desc="متابعة أحدث التلاوات ودعم القناة" onClick={() => openExternalUrl("https://www.youtube.com/@aminehadjyoub")} />
           <Item icon={<RefreshCw className={`w-5 h-5 ${checkingUpdate ? "animate-spin text-accent" : ""}`} />} title="تحقّق من التحديث" desc={`النسخة الحالية v${CURRENT_VERSION} — جلب أحدث نسخة`} onClick={checkUpdate} />
           <Item icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل للعمل دون إنترنت" desc="السور والتلاوات إلى جهازك" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-success w-12 text-center">{dlPct}%</span> : undefined} />
         </Section>
