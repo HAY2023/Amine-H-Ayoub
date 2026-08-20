@@ -2,14 +2,13 @@
   "site_settings": {
     "site_title": "المصحف المرتل - حاج أيوب أمين",
     "auto_detect_platform": true,
-    "show_qr_for_mobile": true,
     "maintenance_mode": false
   },
   "platforms": {
     "windows": {
       "latest_version": "v1.0.0-100",
       "active": true,
-      "min_supported_version": "",
+      "min_supported_version": "Windows 10/11",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
@@ -21,30 +20,9 @@
           "changelog": [
             "أولوية التشغيل المحلي للتلاوات المحملة حتى مع وجود الإنترنت",
             "حفظ التلاوات المحملة في مجلد التطبيق المخصص وقواعد البيانات المحلية",
-            "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية عند الإغلاق أو الخروج على كافة الأجهزة",
+            "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية عند الإغلاق أو الخروج",
             "إعادة تصميم وتوسيع نافذة الدعم الفني كلوحة جانبية كاملة وإصلاح زر الإرسال",
             "توحيد الهوية والأيقونات الرسمية لجميع المنصات"
-          ],
-          "active": true
-        }
-      ]
-    },
-    "macos": {
-      "latest_version": "v1.0.0-100",
-      "active": true,
-      "min_supported_version": "",
-      "force_update": false,
-      "rollout_percentage": 100,
-      "releases": [
-        {
-          "version": "v1.0.0-100",
-          "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
-          "size": "79.4MB",
-          "changelog": [
-            "أولوية التشغيل المحلي للتلاوات المحملة حتى مع وجود الإنترنت",
-            "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية",
-            "إصلاح محادثة الدعم الفني والإرسال الفوري"
           ],
           "active": true
         }
@@ -53,7 +31,7 @@
     "android": {
       "latest_version": "v1.0.0-100",
       "active": true,
-      "min_supported_version": "",
+      "min_supported_version": "Android 7.0+",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
@@ -63,9 +41,50 @@
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/app-universal-debug.apk",
           "size": "225MB",
           "changelog": [
-            "أولوية التشغيل المحلي للتلاوات المحملة حتى مع وجود الإنترنت",
+            "أولوية التشغيل المحلي للتلاوات المحملة أوفلاين",
             "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية",
             "إصلاح محادثة الدعم الفني والإرسال الفوري"
+          ],
+          "active": true
+        }
+      ]
+    },
+    "android_tv": {
+      "latest_version": "v1.0.0-100",
+      "active": true,
+      "min_supported_version": "Android TV 8.0+",
+      "force_update": false,
+      "rollout_percentage": 100,
+      "releases": [
+        {
+          "version": "v1.0.0-100",
+          "date": "2026-08-20",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/app-universal-debug.apk",
+          "size": "225MB",
+          "changelog": [
+            "نسخة محسنة لشاشات التلفاز الذكية وأجهزة TV Box مع دعم ريموت التحكم",
+            "عرض المصحف والتلاوات بجودة فائقة الدقة للشاشات الكبيرة",
+            "ركن ألعاب تفاعلي للأطفال على التلفاز"
+          ],
+          "active": true
+        }
+      ]
+    },
+    "macos": {
+      "latest_version": "v1.0.0-100",
+      "active": true,
+      "min_supported_version": "macOS 11+",
+      "force_update": false,
+      "rollout_percentage": 100,
+      "releases": [
+        {
+          "version": "v1.0.0-100",
+          "date": "2026-08-20",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
+          "size": "79.4MB",
+          "changelog": [
+            "نسخة نظام macOS معمارية Apple Silicon & Intel",
+            "تشغيل التلاوات أوفلاين وحماية وضع الأطفال"
           ],
           "active": true
         }
@@ -74,7 +93,7 @@
     "linux": {
       "latest_version": "v1.0.0-100",
       "active": true,
-      "min_supported_version": "",
+      "min_supported_version": "Ubuntu / Debian / Fedora",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
@@ -84,9 +103,8 @@
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
           "size": "150MB",
           "changelog": [
-            "أولوية التشغيل المحلي للتلاوات المحملة حتى مع وجود الإنترنت",
-            "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية",
-            "إصلاح محادثة الدعم الفني والإرسال الفوري"
+            "حزمة Linux المستقلة (AppImage / DEB)",
+            "تشغيل التلاوات أوفلاين وحماية وضع الأطفال"
           ],
           "active": true
         }
