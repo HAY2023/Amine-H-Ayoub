@@ -129,11 +129,10 @@ const Index = () => {
     return () => clearInterval(id);
   }, []);
 
-  // شريط التنقّل السفلي: «المصحف» في نسخة التطبيق يعرض رسالة اعتذار بدل القارئ
+  // شريط التنقّل السفلي: «المصحف» يفتح القارئ مباشرة
   const handleTab = useCallback((tab: TabType) => {
     if (tab === "mushaf") {
-      if (shouldHideMushaf()) setActiveTab("mushaf");   // مخفيّ للمستخدمين → رسالة التطوير
-      else navigate("/");                                // وضع المالك → القارئ
+      navigate("/");
     } else {
       setActiveTab(tab);
     }
@@ -416,16 +415,7 @@ const Index = () => {
     },
   });
 
-  if (activeTab === "mushaf") {
-    // نسخة التطبيق فقط: المصحف قيد التطوير — رسالة اعتذار مع إبقاء شريط التنقّل
-    // (خلوص الشريط السفلي يُدار داخل MushafComingSoon عبر pb-28)
-    return (
-      <div className="min-h-screen">
-        <MushafComingSoon onGoListen={() => setActiveTab("audio")} />
-        <BottomNav activeTab={activeTab} onChange={handleTab} hasPlayer={!!currentSurah} />
-      </div>
-    );
-  }
+
 
   return (
     <div className="min-h-screen relative">
