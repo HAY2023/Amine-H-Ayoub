@@ -112,8 +112,15 @@ const App = () => {
     const unlistenPromise = setupTauriCloseHandler(() => {
       setShowExitGate(true);
     });
+
+    const handleGlobalExitRequest = () => {
+      setShowExitGate(true);
+    };
+    window.addEventListener("mushaf:request_exit", handleGlobalExitRequest);
+
     return () => {
       unlistenPromise.then((unsub) => unsub && unsub());
+      window.removeEventListener("mushaf:request_exit", handleGlobalExitRequest);
     };
   }, []);
 
@@ -235,6 +242,7 @@ const App = () => {
                 title="إغلاق التطبيق (حماية وضع الأطفال)"
                 onSuccess={() => {
                   setShowExitGate(false);
+                  setKidsLocked(false);
                   closeTauriApp();
                 }}
                 onCancel={() => setShowExitGate(false)}
