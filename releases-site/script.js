@@ -351,8 +351,31 @@ async function loadMessages() {
     msgContainer.scrollTop = msgContainer.scrollHeight;
 }
 
+let sitePollTimer = null;
+
+async function loadMessagesSilently() {
+    if (!supabaseClient || !siteConvId) return;
+    try {
+        const { data: msgs } = await supabaseClient
+            .from("support_messages")
+            .select("id, sender, body, created_at")
+            .eq("conversation_id", siteConvId)
+            .order("created_at", { ascending: true });
+
+        if (msgs && msgs.length > 0) {
+            msgs.forEach(m => renderMessageBubble(m, false));
+        }
+    } catch (e) {
+        /* ignore */
+    }
+}
+
 function subscribeToMessages() {
     if (!supabaseClient || !siteConvId) return;
+
+    if (!sitePollTimer) {
+        sitePollTimer = setInterval(loadMessagesSilently, 2500);
+    }
 
     supabaseClient
         .channel(`site_support_${siteConvId}`)

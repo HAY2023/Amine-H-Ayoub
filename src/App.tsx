@@ -38,8 +38,8 @@ import { checkForUpdates, triggerDirectDownload } from "./utils/updateChecker.ts
 import { ToastAction } from "./components/ui/toast.tsx";
 const queryClient = new QueryClient();
 
-// مسار الجذر: فتح المصحف المرتل مباشرة
-const HomeRoute = () => <QuranReader />;
+// مسار الجذر: في النسخة العادية يُحوّل لقائمة التلاوات، وفي وضع المطوّر يفتح القارئ
+const HomeRoute = () => (shouldHideMushaf() ? <Navigate to="/audio" replace /> : <QuranReader />);
 
 function KidsModeGuard() {
   const location = useLocation();

@@ -139,9 +139,39 @@ export default function SupportChat({
       }
     }
 
-    initChat();
+    const pollInterval = setInterval(async () => {
+      if (!convId || convId === "user_device") return;
+      try {
+        const { data: latestMsgs } = await supabase
+          .from("support_messages")
+          .select("id, sender, body, created_at")
+          .eq("conversation_id", convId)
+          .order("created_at", { ascending: true });
+
+        if (latestMsgs && latestMsgs.length > 0) {
+          setMessages((prev) => {
+            const map = new Map();
+            prev.forEach((m) => map.set(m.id, m));
+            latestMsgs.forEach((m) => map.set(m.id, m));
+            const merged = Array.from(map.values());
+            if (merged.length !== prev.length) {
+              try {
+                localStorage.setItem(CACHE_KEY, JSON.stringify(merged));
+              } catch {
+                /* ignore */
+              }
+              return merged;
+            }
+            return prev;
+          });
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 2500);
 
     return () => {
+      clearInterval(pollInterval);
       if (subscription) supabase.removeChannel(subscription);
     };
   }, []);

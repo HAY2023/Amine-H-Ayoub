@@ -129,10 +129,11 @@ const Index = () => {
     return () => clearInterval(id);
   }, []);
 
-  // شريط التنقّل السفلي: «المصحف» يفتح القارئ مباشرة
+  // شريط التنقّل السفلي: «المصحف» يعرض رسالة قيد التطوير للمستخدمين العاديين
   const handleTab = useCallback((tab: TabType) => {
     if (tab === "mushaf") {
-      navigate("/");
+      if (shouldHideMushaf()) setActiveTab("mushaf");
+      else navigate("/");
     } else {
       setActiveTab(tab);
     }
@@ -414,8 +415,14 @@ const Index = () => {
       else if (showNotifications) setShowNotifications(false);
     },
   });
-
-
+  if (activeTab === "mushaf") {
+    return (
+      <div className="min-h-screen">
+        <MushafComingSoon onGoListen={() => setActiveTab("audio")} />
+        <BottomNav activeTab={activeTab} onChange={handleTab} hasPlayer={!!currentSurah} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative">
