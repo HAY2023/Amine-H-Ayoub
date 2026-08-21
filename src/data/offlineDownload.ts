@@ -5,7 +5,6 @@
  */
 import { getAllSurahs } from "./quranData";
 import { getSurahAudioUrl, fetchAudioWithRetry } from "./audioUrls";
-import { getAllPageSources } from "./ayahCoordinates";
 import { saveAudioToCache } from "./offlineAudioCache";
 
 const DONE_KEY = "mushaf:offlineDownloaded";
@@ -26,15 +25,7 @@ export const collectAssets = (): AssetDownloadItem[] => {
       surahNumber: s.number,
     });
   }
-  const pages = getAllPageSources();
-  for (const src of pages) {
-    if (src.startsWith("/")) {
-      items.push({
-        type: "page",
-        url: src,
-      });
-    }
-  }
+  // ملاحظة: نُحمّل الملفات الصوتية فقط — صور صفحات المصحف مُستبعدة حالياً
   return items;
 };
 
@@ -42,7 +33,7 @@ export const isDownloaded = (): boolean => {
   try { return !!localStorage.getItem(DONE_KEY); } catch { return false; }
 };
 
-/** ينزّل كل الأصول ويحفظها في الكاش وIndexedDB وقرص Tauri للعمل التام دون إنترنت */
+/** ينزّل التلاوات الصوتية ويحفظها في الكاش وIndexedDB وقرص Tauri للعمل التام دون إنترنت */
 export const downloadEverything = async (
   onProgress?: (done: number, total: number) => void,
   signal?: AbortSignal,
@@ -53,30 +44,15 @@ export const downloadEverything = async (
   for (const item of items) {
     if (signal?.aborted) break;
     try {
-      if (item.type === "audio") {
-        const res = await fetchAudioWithRetry(item.url, signal, 3);
-        if (res.ok) {
-          const blob = await res.blob();
-          if (item.surahNumber) {
-            await saveAudioToCache(item.url, item.surahNumber, blob);
-          }
-          ok++;
-        } else {
-          fail++;
+      const res = await fetchAudioWithRetry(item.url, signal, 3);
+      if (res.ok) {
+        const blob = await res.blob();
+        if (item.surahNumber) {
+          await saveAudioToCache(item.url, item.surahNumber, blob);
         }
+        ok++;
       } else {
-        const res = await fetch(item.url, { cache: "reload", signal });
-        if (res.ok) {
-          if (typeof caches !== "undefined") {
-            try {
-              const cache = await caches.open("quran-pages-cache-v1");
-              await cache.put(item.url, res.clone());
-            } catch { /* ignore */ }
-          }
-          ok++;
-        } else {
-          fail++;
-        }
+        fail++;
       }
     } catch (error) {
       if (signal?.aborted) break;

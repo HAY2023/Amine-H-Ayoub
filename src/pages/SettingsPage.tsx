@@ -253,7 +253,7 @@ export default function SettingsPage() {
           <Item icon={<MessageSquare className="w-5 h-5 text-accent" />} title="تواصل مع الدعم الفني" desc="محادثة مباشرة مع فريق الدعم" onClick={() => setShowSupport(true)} />
           <Item icon={<Youtube className="w-5 h-5 text-red-500 fill-current" />} title="قناة القارئ على يوتيوب" desc="متابعة أحدث التلاوات ودعم القناة" onClick={() => openExternalUrl("https://www.youtube.com/@aminehadjyoub")} />
           <Item icon={<RefreshCw className={`w-5 h-5 ${checkingUpdate ? "animate-spin text-accent" : ""}`} />} title="تحقّق من التحديث" desc={`النسخة الحالية v${CURRENT_VERSION} — جلب أحدث نسخة`} onClick={checkUpdate} />
-          <Item icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل للعمل دون إنترنت" desc="السور والتلاوات إلى جهازك" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-success w-12 text-center">{dlPct}%</span> : undefined} />
+          <Item icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل التلاوات الصوتية" desc="حفظ الملفات الصوتية على جهازك للعمل دون إنترنت" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-success w-12 text-center">{dlPct}%</span> : undefined} />
         </Section>
 
         <Section label="حماية وركن الأطفال">

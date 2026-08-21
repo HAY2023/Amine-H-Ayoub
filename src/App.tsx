@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { shouldHideMushaf, setupTauriCloseHandler, closeTauriApp } from "./utils/tauriUtils";
-import { isKidsMode } from "./data/kidsLock";
+import { BrowserRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { setupTauriCloseHandler, closeTauriApp } from "./utils/tauriUtils";
+import { isKidsMode, setKidsLocked } from "./data/kidsLock";
 import ParentalGateModal from "./components/ParentalGateModal";
 import { Toaster as Sonner } from "./components/ui/sonner";
 import { Toaster } from "./components/ui/toaster";
@@ -38,8 +38,8 @@ import { checkForUpdates, triggerDirectDownload } from "./utils/updateChecker.ts
 import { ToastAction } from "./components/ui/toast.tsx";
 const queryClient = new QueryClient();
 
-// مسار الجذر: في النسخة العادية يُحوّل لقائمة التلاوات، وفي وضع المطوّر يفتح القارئ
-const HomeRoute = () => (shouldHideMushaf() ? <Navigate to="/audio" replace /> : <QuranReader />);
+// المصحف متاح لجميع المستخدمين الآن — المسار الرئيسي يفتح القارئ دائماً
+const HomeRoute = () => <QuranReader />;
 
 function KidsModeGuard() {
   const location = useLocation();
@@ -184,7 +184,7 @@ const App = () => {
       let last = ""; try { last = localStorage.getItem("mushaf:lessonNotified") || ""; } catch { /* ignore */ }
       if (hhmm >= t && last !== todayStr) {
         try { localStorage.setItem("mushaf:lessonNotified", todayStr); } catch { /* ignore */ }
-        const listenMode = shouldHideMushaf();
+        const listenMode = false; // المصحف متاح دائماً الآن
         const verb = listenMode ? "استمع" : "اقرأ";
         if (typeof Notification !== "undefined" && Notification.permission === "granted") { try { new Notification("حان وقت درس القرآن", { body: `${verb} لتُفتح الألعاب` }); } catch { /* ignore */ } }
         toast({ title: "حان وقت درس القرآن", description: listenMode ? "الألعاب مقفلة حتى تُكمل استماعك اليوم" : "الألعاب مقفلة حتى تُكمل قراءتك اليوم" });
@@ -239,12 +239,13 @@ const App = () => {
             {showExitGate && (
               <ParentalGateModal
                 title="إغلاق التطبيق (حماية وضع الأطفال)"
+                strictMode={true}
                 onSuccess={() => {
                   setShowExitGate(false);
                   setKidsLocked(false);
                   closeTauriApp();
                 }}
-                onCancel={() => setShowExitGate(false)}
+                onCancel={() => {/* لا يمكن إلغاء القفل — الوضع الصارم */}}
               />
             )}
           </BrowserRouter>

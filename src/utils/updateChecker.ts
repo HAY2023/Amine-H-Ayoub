@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = "1.0.0-100";
+export const CURRENT_VERSION = "1.0.0-101";
 
 export interface UpdateInfo {
   hasUpdate: boolean;
@@ -85,7 +85,8 @@ export function isNewerVersion(current: string, latest: string): boolean {
 }
 
 /**
- * Checks GitHub releases and Vercel releases.json to verify app updates.
+ * Checks GitHub releases and fallback sources to verify app updates.
+ * Tries: 1) GitHub latest release, 2) GitHub all releases, 3) HuggingFace releases.json fallback.
  */
 export async function checkForUpdates(): Promise<UpdateInfo> {
   const defaultResult: UpdateInfo = {
@@ -103,10 +104,11 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 12000);
 
     let releaseData: any = null;
 
+    // المصدر الأول: GitHub Latest Release
     try {
       const response = await fetch(
         "https://api.github.com/repos/HAY2023/Amine-H-Ayoub/releases/latest",
@@ -119,9 +121,10 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
         releaseData = await response.json();
       }
     } catch {
-      /* fallback to all releases or releases.json */
+      /* fallback to next source */
     }
 
+    // المصدر الثاني: GitHub All Releases
     if (!releaseData) {
       try {
         const response2 = await fetch(
@@ -135,6 +138,24 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
           const list = await response2.json();
           if (Array.isArray(list) && list.length > 0) {
             releaseData = list[0];
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    // المصدر الثالث: ملف releases.json على HuggingFace (احتياطي عند حظر GitHub)
+    if (!releaseData) {
+      try {
+        const hfResponse = await fetch(
+          "https://huggingface.co/datasets/hammoualiyoucef20/quran-audio/resolve/main/releases.json",
+          { signal: controller.signal }
+        );
+        if (hfResponse.ok) {
+          const hfData = await hfResponse.json();
+          if (hfData && hfData.tag_name) {
+            releaseData = hfData;
           }
         }
       } catch {

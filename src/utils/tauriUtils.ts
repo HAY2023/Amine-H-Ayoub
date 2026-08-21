@@ -15,8 +15,8 @@ export const setMushafDev = (on: boolean): void => {
   try { localStorage.setItem(OWNER_KEY, on ? "1" : "0"); } catch { /* ignore */ }
   if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:ownermode"));
 };
-/** يُخفى المصحف (تُعرض رسالة التطوير) لكل المستخدمين ما لم يُفعّل صاحب التطبيق وضع المالك. */
-export const shouldHideMushaf = (): boolean => !isMushafDevEnabled();
+/** المصحف مُتاح لجميع المستخدمين الآن. */
+export const shouldHideMushaf = (): boolean => false;
 
 export interface DownloadProgressPayload {
   surah_number: number;

@@ -4,16 +4,20 @@ import { verifyKidsPin, isDeviceAuthAvailable, requestDeviceUnlock, hasCustomKid
 
 interface Props {
   title?: string;
+  /** عند true: لا يمكن إغلاق النافذة بدون كلمة المرور — بدون زر ❌ وبدون سؤال حسابي */
+  strictMode?: boolean;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
 export default function ParentalGateModal({
   title = "منطقة الوالدين (حماية وضع الأطفال)",
+  strictMode = false,
   onSuccess,
   onCancel,
 }: Props) {
   const hasCustom = hasCustomKidsPin();
+  // في الوضع الصارم: لا يُسمح بالسؤال الحسابي — فقط PIN
   const [mode, setMode] = useState<"pin" | "math" | "setup_pin">(hasCustom ? "pin" : "setup_pin");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -142,13 +146,16 @@ export default function ParentalGateModal({
       dir="rtl"
     >
       <div className="relative w-full max-w-sm rounded-3xl bg-card border border-border shadow-2xl p-6 text-center space-y-4 overflow-hidden animate-in zoom-in-95 duration-200">
-        <button
-          onClick={onCancel}
-          className="absolute top-4 left-4 p-2 rounded-full text-muted-foreground hover:bg-muted transition-colors"
-          aria-label="إغلاق"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        {/* زر الإغلاق مخفي في الوضع الصارم — لا مخرج بدون كلمة المرور */}
+        {!strictMode && (
+          <button
+            onClick={onCancel}
+            className="absolute top-4 left-4 p-2 rounded-full text-muted-foreground hover:bg-muted transition-colors"
+            aria-label="إغلاق"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
 
         <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center ring-1 ring-amber-500/20 shadow-inner">
           {mode === "setup_pin" ? (
@@ -170,7 +177,9 @@ export default function ParentalGateModal({
                 ? "يجب تعيين كلمة مرور مخصصة من 4 أرقام قبل تفعيل وضع الأطفال"
                 : "أعد إدخال كلمة المرور لتأكيدها"
               : mode === "pin"
-              ? "أدخل كلمة مرور الوالدين للخروج من ركن الأطفال / إغلاق التطبيق"
+              ? strictMode
+                ? "لا يمكن الخروج بدون كلمة مرور الوالدين"
+                : "أدخل كلمة مرور الوالدين للخروج من ركن الأطفال / إغلاق التطبيق"
               : "أجب عن السؤال الحسابي للتحقق من أنك ولي الأمر"}
           </p>
         </div>
@@ -270,16 +279,24 @@ export default function ParentalGateModal({
               )}
 
               <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                <button
-                  onClick={() => {
-                    setError(false);
-                    setMode("math");
-                  }}
-                  className="hover:underline flex items-center gap-1"
-                >
-                  <Calculator className="w-3.5 h-3.5" />
-                  <span>نسيت الرمز؟ سؤال حسابي</span>
-                </button>
+                {/* في الوضع الصارم: لا يوجد "نسيت الرمز" — لا تجاوز */}
+                {strictMode ? (
+                  <span className="text-amber-600/70 dark:text-amber-400/70 font-medium flex items-center gap-1">
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>وضع الأطفال — لا يمكن الخروج بدون الرمز</span>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setError(false);
+                      setMode("math");
+                    }}
+                    className="hover:underline flex items-center gap-1"
+                  >
+                    <Calculator className="w-3.5 h-3.5" />
+                    <span>نسيت الرمز؟ سؤال حسابي</span>
+                  </button>
+                )}
 
                 <button
                   onClick={handleManualSubmit}
