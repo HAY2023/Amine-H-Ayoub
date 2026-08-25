@@ -208,7 +208,13 @@ const formatTime = (s: number) => {
         a.currentTime = Math.min(duration, a.currentTime + 10);
       };
 
-      const progress = duration > 0 ? (current / duration) * 100 : 0;
+      const handleClosePlayer = () => {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          notifyStop("audio-list");
+        }
+        onClose();
+      };
 
       return (
         <div className="fixed bottom-[68px] left-0 right-0 z-50 px-3 pb-2 md:max-w-2xl md:left-1/2 md:-translate-x-1/2">
@@ -253,8 +259,8 @@ const formatTime = (s: number) => {
               </div>
 
               <button
-                onClick={onClose}
-                className="w-8 h-8 rounded-full bg-foreground/5 text-muted-foreground flex items-center justify-center hover:bg-foreground/10 hover:text-foreground transition-all shrink-0"
+                onClick={handleClosePlayer}
+                className="w-8 h-8 rounded-full bg-foreground/5 text-muted-foreground flex items-center justify-center hover:bg-foreground/10 hover:text-foreground transition-all shrink-0 active:scale-95"
                 aria-label="إغلاق"
               >
                 <X className="w-4 h-4" />

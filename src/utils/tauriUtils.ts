@@ -114,18 +114,23 @@ export async function setupTauriCloseHandler(onRequestUnlock: () => void): Promi
 }
 
 /**
- * Closes the application completely (Tauri window destroy / exit).
+ * Closes the application completely (Tauri native exit / window destroy).
  */
 export async function closeTauriApp(): Promise<void> {
   bypassCloseLock = true;
   if (isTauri()) {
     try {
-      const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      const appWindow = getCurrentWindow();
-      await appWindow.destroy();
+      await invoke("exit_app");
       return;
-    } catch (e) {
-      console.error("Failed to destroy Tauri window:", e);
+    } catch {
+      try {
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        const appWindow = getCurrentWindow();
+        await appWindow.destroy();
+        return;
+      } catch (e) {
+        console.error("Failed to destroy Tauri window:", e);
+      }
     }
   }
   if (typeof window !== "undefined") {

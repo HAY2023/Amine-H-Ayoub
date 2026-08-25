@@ -66,13 +66,19 @@ async fn download_surah(app: AppHandle, audio_url: String, surah_number: u32) ->
     Ok(path.to_string_lossy().into_owned())
 }
 
+#[tauri::command]
+fn exit_app(app: AppHandle) {
+    app.exit(0);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
     .invoke_handler(tauri::generate_handler![
       check_offline_status,
       get_offline_audio_url,
-      download_surah
+      download_surah,
+      exit_app
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
