@@ -6,98 +6,99 @@
   },
   "platforms": {
     "windows": {
-      "latest_version": "v1.0.0-an experience",
+      "latest_version": "v1.0.0-104",
       "active": true,
       "min_supported_version": "Windows 10/11",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-an experience",
+          "version": "v1.0.0-104",
           "date": "2026-08-25",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
           "size": "75MB",
           "changelog": [
+            "إصلاح مشكلة إغلاق التطبيق في سطح المكتب وتأكيد الخروج بسلاسة",
+            "نظام دقيق بالثواني لاحتساب وتسجيل مدة دراسة القرآن والاستماع في الإحصائيات الحية",
             "لوحة الأوسمة والإنجازات وسلسلة الالتزام اليومية للأطفال (Badges & Streaks)",
-            "دعم إرسال البلاغات والدعم الفني الفوري عبر Resend API بالاسم والتفاصيل",
-            "ترقية إصدار التطبيق إلى 1.0.0-an experience وتحديث الحزم المستقلة"
+            "دعم إرسال البلاغات والدعم الفني الفوري عبر Resend API بالاسم والتفاصيل"
           ],
           "active": true
         }
       ]
     },
     "android": {
-      "latest_version": "v1.0.0-an experience",
+      "latest_version": "v1.0.0-104",
       "active": true,
       "min_supported_version": "Android 7.0+",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-an experience",
+          "version": "v1.0.0-104",
           "date": "2026-08-25",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
           "size": "45MB",
           "changelog": [
             "حزمة APK المباشرة لجميع هواتف وأجهزة أندرويد",
-            "لوحة الأوسمة والإنجازات وسلسلة الالتزام اليومية للأطفال",
-            "الدعم الفني المباشر وتحديث الإصدار إلى 1.0.0-an experience"
+            "تسجيل وحفظ دقيق لدقائق الاستماع والدراسة في لوحة ولي الأمر",
+            "لوحة الأوسمة والإنجازات وسلسلة الالتزام اليومية للأطفال"
           ],
           "active": true
         }
       ]
     },
     "android_aab": {
-      "latest_version": "v1.0.0-an experience",
+      "latest_version": "v1.0.0-104",
       "active": true,
       "min_supported_version": "Android 7.0+ (Google Play Bundle)",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-an experience",
+          "version": "v1.0.0-104",
           "date": "2026-08-25",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
           "size": "38MB",
           "changelog": [
             "حزمة Android App Bundle (.aab) المخصصة لمتجر Google Play",
-            "حجم أصغر وتثبيت أسرع مع تقسيم الموارد تلقائياً لكل جهاز",
-            "دعم كامل لجميع ميزات الإصدار 1.0.0-an experience"
+            "تسجيل مباشر لدقائق الاستماع والأوسمة التفاعلية",
+            "حجم أصغر وتثبيت أسرع مع تقسيم الموارد تلقائياً لكل جهاز"
           ],
           "active": true
         }
       ]
     },
     "ios": {
-      "latest_version": "v1.0.0-an experience",
+      "latest_version": "v1.0.0-104",
       "active": true,
       "min_supported_version": "iOS 13.0+ (iPhone & iPad)",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-an experience",
+          "version": "v1.0.0-104",
           "date": "2026-08-25",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
           "size": "42MB",
           "changelog": [
             "حزمة iOS IPA الرسمية لهواتف iPhone وأجهزة iPad",
             "لوحة الأوسمة والإنجازات وسلسلة الالتزام للأطفال",
-            "نظام الاستماع بدون إنترنت والحفظ المحلي"
+            "تسجيل دقيق لدقائق التلاوة والاستماع في الإحصائيات"
           ],
           "active": true
         }
       ]
     },
     "android_tv": {
-      "latest_version": "v1.0.0-an experience",
+      "latest_version": "v1.0.0-104",
       "active": true,
       "min_supported_version": "Android TV 8.0+",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-an experience",
+          "version": "v1.0.0-104",
           "date": "2026-08-25",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
           "size": "45MB",
@@ -110,14 +111,14 @@
       ]
     },
     "macos": {
-      "latest_version": "v1.0.0-an experience",
+      "latest_version": "v1.0.0-104",
       "active": true,
       "min_supported_version": "macOS 11+",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-an experience",
+          "version": "v1.0.0-104",
           "date": "2026-08-25",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
           "size": "79MB",
@@ -130,14 +131,14 @@
       ]
     },
     "linux": {
-      "latest_version": "v1.0.0-an experience",
+      "latest_version": "v1.0.0-104",
       "active": true,
       "min_supported_version": "Ubuntu / Debian / Fedora",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-an experience",
+          "version": "v1.0.0-104",
           "date": "2026-08-25",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
           "size": "80MB",
