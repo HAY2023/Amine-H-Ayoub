@@ -1,13 +1,13 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Youtube, Check, CloudDownload, Wrench, User, Baby, Plus, Trash2, Minus, KeyRound, Shield, BookOpen, Headphones, Settings, Star, Gamepad2, Puzzle, Trophy } from "lucide-react";
-import { downloadEverything } from "../data/offlineDownload";
+import { Check, Wrench, User, Baby, Plus, Trash2, Minus, KeyRound, Shield, BookOpen, Headphones, Settings, Star, Gamepad2, Puzzle, Trophy, Sparkles, BookmarkCheck, ArrowLeftRight } from "lucide-react";
+
 import { setAppMode, addProfile, setActiveProfile, kidsHidden, setKidsHidden, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
 import { setKidsPin, setKidsLocked } from "../data/kidsLock";
 import Avatar from "./Avatar";
-import { openExternalUrl } from "../utils/tauriUtils";
 
-const SUPPORT_CHANNEL_URL = "https://www.youtube.com/@aminehadjyoub";
+
+
 
 const ONBOARD_KEY = "mushaf:onboarded:v1";
 
@@ -21,29 +21,33 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<AppMode | null>(null);
+  const [parentStyle, setParentStyle] = useState<"pure" | "flexible">("pure");
   const [kids, setKids] = useState<NewKid[]>([{ name: "", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0] }]);
   const [pin, setPin] = useState("");
   const [pin2, setPin2] = useState("");
-  const [dl, setDl] = useState<{ busy: boolean; done: number; total: number; finished: boolean }>({ busy: false, done: 0, total: 0, finished: false });
+
 
   // إذا أخفى المالك ركن الأطفال: إطلاق بالسماع فقط — نتخطّى خطوات الأطفال ونثبّت وضع وليّ الأمر
   const kidsOff = kidsHidden();
-  const effMode: AppMode = kidsOff ? "parent" : (mode ?? "kids");
-  // مفاتيح الخطوات: وضع وليّ الأمر لا يحتاج ملفّات أطفال؛ وضع الأطفال يعرض خطوة ركن الأطفال ورمز وليّ الأمر الاختياري
+  const effMode: AppMode = kidsOff ? "parent" : (mode ?? "parent");
+  // مفاتيح الخطوات: وضع وليّ الأمر يعرض شاشة اختيار نوع الاستخدام؛ وضع الأطفال يعرض خطوة ركن الأطفال ورمز وليّ الأمر
   const stepKeys = kidsOff
-    ? ["welcome", "subscribe", "download"]
-    : effMode === "parent"
-      ? ["welcome", "who", "subscribe", "download"]
-      : ["welcome", "who", "kids", "pin", "subscribe", "download"];
-  const cur = stepKeys[step];
+    ? ["welcome"]
+    : mode === "parent"
+      ? ["welcome", "who", "parent_style"]
+      : mode === "kids"
+        ? ["welcome", "who", "kids", "pin"]
+        : ["welcome", "who"];
+  const cur = stepKeys[step] || stepKeys[0];
   const lastIdx = stepKeys.length - 1;
   const pinValid = /^\d{4}$/.test(pin) && pin === pin2;
   const pinOk = (!pin && !pin2) || pinValid;   // الرمز اختياري: فارغ = تخطٍّ، أو صالح ومتطابق
 
   const finalize = () => {
-    setAppMode(effMode);
-    if (effMode === "parent") {
-      setKidsHidden(true);
+    const finalMode = mode ?? effMode;
+    setAppMode(finalMode);
+    if (finalMode === "parent") {
+      setKidsHidden(parentStyle === "pure");
       setKidsLocked(false);
     } else {
       setKidsHidden(false);
@@ -63,29 +67,14 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
   const finish = () => { finalize(); onDone(); };
   const finishToTools = () => { /* أدوات المعلّم معطّلة */ };
 
-  const downloadController = useRef<AbortController | null>(null);
-  const startDownload = async () => {
-    if (downloadController.current) return;
-    const controller = new AbortController();
-    downloadController.current = controller;
-    setDl(d => ({ ...d, busy: true, done: 0, total: 0, finished: false }));
-    const res = await downloadEverything((done, total) => setDl(d => ({ ...d, done, total })), controller.signal);
-    setDl(d => ({ ...d, busy: false, finished: !res.aborted, total: res.total, done: res.total }));
-    downloadController.current = null;
-  };
-  const cancelDownload = () => {
-    if (!downloadController.current) return;
-    downloadController.current.abort();
-    setDl(d => ({ ...d, busy: false }));
-    downloadController.current = null;
-  };
+
 
   const pick = (m: AppMode) => { setMode(m); setStep(2); };
   const addKid = () => setKids(k => [...k, { name: "", age: 6, avatar: KID_AVATARS[k.length % KID_AVATARS.length], color: KID_COLORS[k.length % KID_COLORS.length] }]);
   const delKid = (i: number) => setKids(k => (k.length > 1 ? k.filter((_, j) => j !== i) : k));
   const setKid = (i: number, patch: Partial<NewKid>) => setKids(k => k.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
-  const pct = dl.total ? Math.round((dl.done / dl.total) * 100) : 0;
+
   const kidsValid = kids.some(k => k.name.trim());
 
   const ModeCard = ({ m, Icon, title, desc, children }: { m: AppMode; Icon: typeof User; title: string; desc: string; children: React.ReactNode }) => (
@@ -132,7 +121,7 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
                 <h1 className="text-4xl font-extrabold text-gradient-gold leading-tight">مرحباً بك</h1>
                 <p className="text-accent text-sm">بصوت القارئ الشيخ حاج أيوب أمين</p>
               </div>
-              <p className="text-muted-foreground leading-relaxed max-w-xs mx-auto">{kidsOff ? "استمع إلى تلاوات القرآن الكريم برواية ورش بصوت الشيخ حاج أيوب أمين — ويعمل دون إنترنت بعد التحميل." : "تطبيق تعليم القرآن للأطفال — يقرأ المعلّم وتُكرّر معه، مع ألعاب تعليمية وركن أطفال آمن، ويعمل دون إنترنت بعد التحميل."}</p>
+              <p className="text-muted-foreground leading-relaxed max-w-xs mx-auto">{kidsOff ? "استمع إلى تلاوات القرآن الكريم برواية ورش بصوت الشيخ حاج أيوب أمين." : "تطبيق تعليم القرآن للأطفال — استمع للتلاوات العطرة مع ألعاب تعليمية وركن أطفال آمن."}</p>
               <div aria-hidden className="mx-auto w-24 h-px bg-gradient-to-l from-transparent via-accent/60 to-transparent" />
             </div>
           )}
@@ -142,7 +131,7 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
               <h2 className="text-xl font-extrabold text-accent text-center">لِمَن هذا التطبيق؟</h2>
               <p className="text-muted-foreground text-sm text-center leading-relaxed">اختر طريقة الاستخدام — يمكنك تغييرها لاحقاً من الإعدادات.</p>
               <div className="space-y-4 pt-1">
-                <ModeCard m="parent" Icon={User} title="لي أنا" desc="تصفح المصحف، استمع للتلاوات بحرية، وإعدادات متقدمة. (بلا ركن أطفال)">
+                <ModeCard m="parent" Icon={User} title="لي أنا" desc="استمع للتلاوات العطرة بحرية، مع إعدادات متقدمة. (بلا ركن أطفال)">
                   <div className="flex-1 h-full rounded-lg bg-card border border-border/50 flex flex-col p-2 gap-1.5 shadow-sm">
                     <div className="flex justify-between items-center">
                       <div className="w-8 h-2 rounded bg-muted-foreground/30" />
@@ -247,52 +236,98 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
             </div>
           )}
 
-          {cur === "subscribe" && (
-            <div className="text-center space-y-4 animate-fade-up">
-              <div className="relative mx-auto w-20 h-20">
-                <span aria-hidden className="absolute inset-0 rounded-3xl bg-accent/25 blur-xl" />
-                <div className="relative w-20 h-20 rounded-3xl bg-accent text-white flex items-center justify-center shadow-soft"><BookOpen className="w-11 h-11" /></div>
+          {cur === "parent_style" && (
+            <div className="space-y-4 animate-fade-up">
+              <div className="text-center space-y-1.5">
+                <h2 className="text-2xl font-extrabold text-gradient-gold">تخصيص وضع الاستماع</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  اختر طريقة عرض الواجهة المفضلة لك — يمكنك تغييرها لاحقاً من الإعدادات.
+                </p>
               </div>
-              <h2 className="text-xl font-extrabold text-accent">ادعم القارئ</h2>
-              <p className="text-muted-foreground leading-relaxed">اضغط الزر لفتح قناة القارئ ودعم المشروع، ثم أكمل الإعداد بعد العودة.</p>
-              <button
-                type="button"
-                onClick={() => openExternalUrl(SUPPORT_CHANNEL_URL)}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent text-white font-bold px-5 py-3 shadow-soft active:scale-95 transition-transform hover:brightness-110 cursor-pointer"
-              >
-                <Youtube className="w-5 h-5 text-red-500 fill-current" />
-                اذهب إلى القناة
-              </button>
-              <p className="text-[11px] text-muted-foreground">بعد الاشتراك، ارجع لإكمال إعداد التطبيق.</p>
+
+              <div className="space-y-3 pt-1">
+                {/* الخيار الأول: وضع عادي خالي من الأطفال */}
+                <button
+                  type="button"
+                  onClick={() => setParentStyle("pure")}
+                  className={`w-full text-right p-4 rounded-2xl border transition-all active:scale-[0.99] flex flex-col gap-3 ${
+                    parentStyle === "pure"
+                      ? "border-accent bg-accent/15 shadow-gold ring-1 ring-accent/50"
+                      : "border-border bg-card hover:border-accent/40 shadow-soft"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-black flex items-center justify-center shrink-0 shadow-soft">
+                      <Headphones className="w-6 h-6" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-foreground text-base">وضع عادي (استماع وتلاوات فقط)</span>
+                        {parentStyle === "pure" && (
+                          <span className="w-5 h-5 rounded-full bg-accent text-accent-foreground flex items-center justify-center">
+                            <Check className="w-3.5 h-3.5" />
+                          </span>
+                        )}
+                      </div>
+                      <span className="block text-[12px] text-muted-foreground leading-relaxed mt-0.5">
+                        واجهة مخصصة لك فقط، خالية تماماً من أزرار أو ركن الأطفال.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="w-full py-2 px-3 rounded-xl bg-background/60 border border-border/50 flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5 font-medium text-foreground">
+                      <Headphones className="w-4 h-4 text-accent" /> تلاوات واستماع بدون أطفال
+                    </span>
+                    <span className="text-[11px] bg-secondary px-2 py-0.5 rounded-md text-secondary-foreground font-semibold">
+                      ركن الأطفال مخفي
+                    </span>
+                  </div>
+                </button>
+
+                {/* الخيار الثاني: وضع مرن مع إمكانية التنقل */}
+                <button
+                  type="button"
+                  onClick={() => setParentStyle("flexible")}
+                  className={`w-full text-right p-4 rounded-2xl border transition-all active:scale-[0.99] flex flex-col gap-3 ${
+                    parentStyle === "flexible"
+                      ? "border-accent bg-accent/15 shadow-gold ring-1 ring-accent/50"
+                      : "border-border bg-card hover:border-accent/40 shadow-soft"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 text-white flex items-center justify-center shrink-0 shadow-soft">
+                      <ArrowLeftRight className="w-6 h-6" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-foreground text-base">وضع التنقل المرن</span>
+                        {parentStyle === "flexible" && (
+                          <span className="w-5 h-5 rounded-full bg-accent text-accent-foreground flex items-center justify-center">
+                            <Check className="w-3.5 h-3.5" />
+                          </span>
+                        )}
+                      </div>
+                      <span className="block text-[12px] text-muted-foreground leading-relaxed mt-0.5">
+                        تصفح التلاوات مع إبقاء زر ركن الأطفال متاحاً للتنقل والتبديل متى أردت.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="w-full py-2 px-3 rounded-xl bg-background/60 border border-border/50 flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5 font-medium text-foreground">
+                      <Sparkles className="w-4 h-4 text-sky-400" /> كبار + إمكانية التبديل
+                    </span>
+                    <span className="text-[11px] bg-secondary px-2 py-0.5 rounded-md text-secondary-foreground font-semibold">
+                      ركن الأطفال متاح
+                    </span>
+                  </div>
+                </button>
+              </div>
             </div>
           )}
 
-          {cur === "download" && (
-            <div className="text-center space-y-4 animate-fade-up">
-              <div className="relative mx-auto w-20 h-20">
-                <span aria-hidden className="absolute inset-0 rounded-3xl bg-primary/25 blur-xl" />
-                <div className="relative w-20 h-20 rounded-3xl btn-emerald !p-0 flex items-center justify-center"><CloudDownload className="w-11 h-11" /></div>
-              </div>
-              <h2 className="text-xl font-extrabold text-accent">تحميل التلاوات دون إنترنت</h2>
-              <p className="text-muted-foreground leading-relaxed">حمّل التلاوات الصوتية العذبة ومصحف جزء عمّ إلى جهازك ليعمل التطبيق بالكامل دون الحاجة إلى اتصال بالإنترنت.</p>
-              {dl.busy ? (
-                <div className="space-y-3">
-                  <div className="h-3 rounded-full bg-muted overflow-hidden"><div className="h-full bg-gradient-to-l from-emerald-light to-emerald transition-all" style={{ width: `${pct}%` }} /></div>
-                  <p className="text-sm text-muted-foreground">{`${dl.done} / ${dl.total} (${pct}%)`}</p>
-                  <button onClick={cancelDownload} className="inline-flex items-center justify-center gap-2 rounded-xl bg-destructive text-white font-bold px-4 py-2 shadow-soft active:scale-95 transition-transform">إلغاء التحميل</button>
-                </div>
-              ) : dl.finished ? (
-                <div className="space-y-2">
-                  <div className="h-3 rounded-full bg-muted overflow-hidden"><div className="h-full bg-gradient-to-l from-emerald-light to-emerald" style={{ width: `100%` }} /></div>
-                  <p className="text-sm text-success font-bold">اكتمل التحميل بنجاح ✅</p>
-                </div>
-              ) : (
-                <button onClick={startDownload} className="btn-emerald px-5 py-3 shadow-md"><CloudDownload className="w-5 h-5" /> بدء تحميل التلاوات والمصحف</button>
-              )}
-              <p className="text-[11px] text-muted-foreground">يمكنك تحميل التلاوات في أي وقت لاحقاً من صفحة الإعدادات.</p>
-              {/* زر الدخول لأدوات المعلّم مخفي */}
-            </div>
-          )}
+
         </div>
 
         {/* أزرار التنقّل */}
@@ -304,8 +339,11 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
                 className="btn-gold flex-1 px-5 py-3 disabled:opacity-40">{cur === "pin" && !pin && !pin2 ? "تخطّي" : "التالي"}</button>
             )
           ) : (
-            <button onClick={finish} disabled={dl.busy}
-              className="btn-gold flex-1 px-5 py-3 disabled:opacity-40"><Check className="w-5 h-5" /> {dl.finished ? "ابدأ" : "ابدأ (بلا تحميل)"}</button>
+            <button onClick={finish}
+              className="btn-gold flex-1 px-5 py-3 disabled:opacity-40">
+              <Check className="w-5 h-5" />
+              {cur === "parent_style" ? "ابدأ التلاوة" : "ابدأ"}
+            </button>
           )}
         </div>
       </div>

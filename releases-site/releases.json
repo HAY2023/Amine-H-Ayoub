@@ -1,89 +1,128 @@
 {
   "site_settings": {
-    "site_title": "المصحف المرتل - حاج أيوب أمين",
+    "site_title": "تطبيق تلاوات القرآن - حاج أيوب أمين",
     "auto_detect_platform": true,
     "maintenance_mode": false
   },
   "platforms": {
     "windows": {
-      "latest_version": "v1.0.0-100",
+      "latest_version": "v1.0.0-an experience",
       "active": true,
       "min_supported_version": "Windows 10/11",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-100",
-          "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/learn-quran-kids_1.0.0_x64-setup.exe",
-          "size": "74.9MB",
+          "version": "v1.0.0-an experience",
+          "date": "2026-08-25",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
+          "size": "75MB",
           "changelog": [
-            "أولوية التشغيل المحلي للتلاوات المحملة حتى مع وجود الإنترنت",
-            "حفظ التلاوات المحملة في مجلد التطبيق المخصص وقواعد البيانات المحلية",
-            "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية عند الإغلاق أو الخروج",
-            "إعادة تصميم وتوسيع نافذة الدعم الفني كلوحة جانبية كاملة وإصلاح زر الإرسال",
-            "توحيد الهوية والأيقونات الرسمية لجميع المنصات"
+            "لوحة الأوسمة والإنجازات وسلسلة الالتزام اليومية للأطفال (Badges & Streaks)",
+            "دعم إرسال البلاغات والدعم الفني الفوري عبر Resend API بالاسم والتفاصيل",
+            "ترقية إصدار التطبيق إلى 1.0.0-an experience وتحديث الحزم المستقلة"
           ],
           "active": true
         }
       ]
     },
     "android": {
-      "latest_version": "v1.0.0-100",
+      "latest_version": "v1.0.0-an experience",
       "active": true,
       "min_supported_version": "Android 7.0+",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-100",
-          "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/app-universal-debug.apk",
-          "size": "225MB",
+          "version": "v1.0.0-an experience",
+          "date": "2026-08-25",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
+          "size": "45MB",
           "changelog": [
-            "أولوية التشغيل المحلي للتلاوات المحملة أوفلاين",
-            "قفل صارم لوضع الأطفال بكلمة مرور الوالدين الإلزامية",
-            "إصلاح محادثة الدعم الفني والإرسال الفوري"
+            "حزمة APK المباشرة لجميع هواتف وأجهزة أندرويد",
+            "لوحة الأوسمة والإنجازات وسلسلة الالتزام اليومية للأطفال",
+            "الدعم الفني المباشر وتحديث الإصدار إلى 1.0.0-an experience"
+          ],
+          "active": true
+        }
+      ]
+    },
+    "android_aab": {
+      "latest_version": "v1.0.0-an experience",
+      "active": true,
+      "min_supported_version": "Android 7.0+ (Google Play Bundle)",
+      "force_update": false,
+      "rollout_percentage": 100,
+      "releases": [
+        {
+          "version": "v1.0.0-an experience",
+          "date": "2026-08-25",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
+          "size": "38MB",
+          "changelog": [
+            "حزمة Android App Bundle (.aab) المخصصة لمتجر Google Play",
+            "حجم أصغر وتثبيت أسرع مع تقسيم الموارد تلقائياً لكل جهاز",
+            "دعم كامل لجميع ميزات الإصدار 1.0.0-an experience"
+          ],
+          "active": true
+        }
+      ]
+    },
+    "ios": {
+      "latest_version": "v1.0.0-an experience",
+      "active": true,
+      "min_supported_version": "iOS 13.0+ (iPhone & iPad)",
+      "force_update": false,
+      "rollout_percentage": 100,
+      "releases": [
+        {
+          "version": "v1.0.0-an experience",
+          "date": "2026-08-25",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
+          "size": "42MB",
+          "changelog": [
+            "حزمة iOS IPA الرسمية لهواتف iPhone وأجهزة iPad",
+            "لوحة الأوسمة والإنجازات وسلسلة الالتزام للأطفال",
+            "نظام الاستماع بدون إنترنت والحفظ المحلي"
           ],
           "active": true
         }
       ]
     },
     "android_tv": {
-      "latest_version": "v1.0.0-100",
+      "latest_version": "v1.0.0-an experience",
       "active": true,
       "min_supported_version": "Android TV 8.0+",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-100",
-          "date": "2026-08-20",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/app-universal-debug.apk",
-          "size": "225MB",
+          "version": "v1.0.0-an experience",
+          "date": "2026-08-25",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
+          "size": "45MB",
           "changelog": [
-            "نسخة محسنة لشاشات التلفاز الذكية وأجهزة TV Box مع دعم ريموت التحكم",
-            "عرض المصحف والتلاوات بجودة فائقة الدقة للشاشات الكبيرة",
-            "ركن ألعاب تفاعلي للأطفال على التلفاز"
+            "نسخة شاشات التلفاز الذكية وأجهزة TV Box مع دعم ريموت التحكم",
+            "ركن ألعاب تفاعلي للأطفال على التلفاز مع نظام الأوسمة"
           ],
           "active": true
         }
       ]
     },
     "macos": {
-      "latest_version": "v1.0.0-100",
+      "latest_version": "v1.0.0-an experience",
       "active": true,
       "min_supported_version": "macOS 11+",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-100",
-          "date": "2026-08-20",
+          "version": "v1.0.0-an experience",
+          "date": "2026-08-25",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
-          "size": "79.4MB",
+          "size": "79MB",
           "changelog": [
-            "نسخة نظام macOS معمارية Apple Silicon & Intel",
+            "نسخة macOS (DMG) لمعالجات Apple Silicon M1/M2/M3 و Intel",
             "تشغيل التلاوات أوفلاين وحماية وضع الأطفال"
           ],
           "active": true
@@ -91,17 +130,17 @@
       ]
     },
     "linux": {
-      "latest_version": "v1.0.0-100",
+      "latest_version": "v1.0.0-an experience",
       "active": true,
       "min_supported_version": "Ubuntu / Debian / Fedora",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-100",
-          "date": "2026-08-20",
+          "version": "v1.0.0-an experience",
+          "date": "2026-08-25",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
-          "size": "150MB",
+          "size": "80MB",
           "changelog": [
             "حزمة Linux المستقلة (AppImage / DEB)",
             "تشغيل التلاوات أوفلاين وحماية وضع الأطفال"

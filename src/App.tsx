@@ -34,12 +34,11 @@ import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
 import ProfilePicker, { isPicked, markPicked } from "./components/ProfilePicker.tsx";
 import { logAppOpen } from "./utils/analytics.ts";
 import { useBackgroundNotifications, showLocalNotification } from "./utils/notifications.ts";
-import { checkForUpdates, triggerDirectDownload } from "./utils/updateChecker.ts";
-import { ToastAction } from "./components/ui/toast.tsx";
+
 const queryClient = new QueryClient();
 
-// المصحف متاح لجميع المستخدمين الآن — المسار الرئيسي يفتح القارئ دائماً
-const HomeRoute = () => <QuranReader />;
+// المسار الرئيسي يفتح صفحة الصوت (التلاوات) — المصحف قيد التطوير
+const HomeRoute = () => <Index />;
 
 function KidsModeGuard() {
   const location = useLocation();
@@ -49,7 +48,7 @@ function KidsModeGuard() {
     const checkMode = () => {
       const allowedPaths = ["/games", "/", "/audio", "/shop", "/profiles"];
       if (isKidsMode() && !allowedPaths.includes(location.pathname)) {
-        navigate("/games", { replace: true });
+        navigate("/audio", { replace: true });
       }
     };
     checkMode();
@@ -74,8 +73,8 @@ function KidsModeGuard() {
       if (isKidsMode()) {
         const allowedPaths = ["/games", "/", "/audio", "/shop", "/profiles"];
         if (!allowedPaths.includes(window.location.pathname)) {
-          window.history.pushState(null, "", "/games");
-          navigate("/games", { replace: true });
+          window.history.pushState(null, "", "/audio");
+          navigate("/audio", { replace: true });
         }
       }
     };
@@ -146,36 +145,13 @@ const App = () => {
       fetch('/api/save-boxes', { method: 'POST', body: data }).catch(() => {});
     }
 
-    // Check for updates
-    checkForUpdates().then((info) => {
-      if (info.hasUpdate) {
-        showLocalNotification("تحديث جديد متاح 🚀", `تحديث جديد (${info.latestVersion}) جاهز للتحميل.`);
-        toast({
-          title: "تحديث جديد متاح 🚀",
-          description: `نسخة ${info.latestVersion} متاحة الآن.`,
-          duration: Number.MAX_SAFE_INTEGER,
-          action: (
-            <ToastAction 
-              altText="تحميل التحديث" 
-              onClick={() => {
-                toast({ title: "جاري بدء التحميل المباشر 📥", description: `الملف: ${info.assetName || info.latestVersion}` });
-                triggerDirectDownload(info.directDownloadUrl || info.downloadUrl, info.assetName);
-              }}
-            >
-              تحميل الآن
-            </ToastAction>
-          )
-        });
-      }
-    }).catch(() => {
-      // تجاهل الأخطاء عند بدء التطبيق — لا حاجة لإزعاج المستخدم
-    });
+    // تم إزالة فحص التحديثات التلقائي
   }, []);
 
-  // تذكير الدرس اليومي (أثناء فتح التطبيق)
+  // تذكير الدرس اليومي (أثناء فتح التطبيق) — يوجه للصوت مباشرة
   useEffect(() => {
-    const id = setInterval(() => {
-      if (!kidsEnabled()) return;   // لا تذكير بالألعاب إذا أُخفي ركن الأطفال
+    const checkLesson = () => {
+      if (!kidsEnabled()) return;
       const t = getProfile().lessonTime;
       if (!t) return;
       const now = new Date();
@@ -184,12 +160,14 @@ const App = () => {
       let last = ""; try { last = localStorage.getItem("mushaf:lessonNotified") || ""; } catch { /* ignore */ }
       if (hhmm >= t && last !== todayStr) {
         try { localStorage.setItem("mushaf:lessonNotified", todayStr); } catch { /* ignore */ }
-        const listenMode = false; // المصحف متاح دائماً الآن
-        const verb = listenMode ? "استمع" : "اقرأ";
-        if (typeof Notification !== "undefined" && Notification.permission === "granted") { try { new Notification("حان وقت درس القرآن", { body: `${verb} لتُفتح الألعاب` }); } catch { /* ignore */ } }
-        toast({ title: "حان وقت درس القرآن", description: listenMode ? "الألعاب مقفلة حتى تُكمل استماعك اليوم" : "الألعاب مقفلة حتى تُكمل قراءتك اليوم" });
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+          try { new Notification("حان وقت درس القرآن 📖", { body: "هيا نستمع للتلاوات العطرة" }); } catch { /* ignore */ }
+        }
+        toast({ title: "حان وقت درس القرآن 📖", description: "هيا نستمع للتلاوات العطرة" });
       }
-    }, 60000);
+    };
+    checkLesson();
+    const id = setInterval(checkLesson, 30000);
     return () => clearInterval(id);
   }, []);
 
@@ -217,6 +195,7 @@ const App = () => {
               <Routes>
                 <Route path="/" element={<HomeRoute />} />
                 <Route path="/audio" element={<Index />} />
+                <Route path="/mushaf" element={<QuranReader />} />
                 <Route path="/games" element={<KidsGames />} />
                 <Route path="/shop" element={<KidsShop />} />
                 <Route path="/settings" element={<SettingsPage />} />

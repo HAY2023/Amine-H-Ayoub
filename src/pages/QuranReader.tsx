@@ -117,10 +117,13 @@ const speakerColors: Record<Speaker, { bg: string; glow: string; text: string }>
   kids: { bg: "rgba(56,189,248,0.30)", glow: "rgba(56,189,248,0.55)", text: "#0369a1" },
 };
 
-const previewHighlight = "rgba(250,204,21,0.30)";
-const previewStroke = "rgba(250,204,21,0.80)";
+import MushafComingSoon from "@/components/MushafComingSoon";
 
 export default function QuranReader() {
+  return <MushafComingSoon />;
+}
+
+function _UnusedQuranReader() {
   const navigate = useNavigate();
   const { requestPlay, notifyStop, registerAudio, unregisterAudio, simultaneousMode, setSimultaneousMode } = useAudioContext();
 

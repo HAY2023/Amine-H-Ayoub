@@ -33,18 +33,24 @@ interface ReleasesData {
     maintenance_mode: boolean;
   };
   platforms: {
-    windows: PlatformData;
-    macos: PlatformData;
-    android: PlatformData;
-    linux: PlatformData;
+    windows?: PlatformData;
+    macos?: PlatformData;
+    android?: PlatformData;
+    android_aab?: PlatformData;
+    ios?: PlatformData;
+    android_tv?: PlatformData;
+    linux?: PlatformData;
   };
 }
 
 const PLATFORM_LABELS: Record<string, { name: string; icon: string }> = {
-  windows: { name: "Windows", icon: "💻" },
-  macos: { name: "macOS", icon: "🍎" },
-  android: { name: "Android", icon: "📱" },
-  linux: { name: "Linux", icon: "🐧" },
+  windows: { name: "Windows (EXE)", icon: "💻" },
+  android: { name: "Android (APK)", icon: "📱" },
+  android_aab: { name: "Google Play Bundle (AAB)", icon: "📦" },
+  ios: { name: "iOS (iPhone/iPad IPA)", icon: "🍏" },
+  android_tv: { name: "Android TV", icon: "📺" },
+  macos: { name: "macOS (DMG)", icon: "🍎" },
+  linux: { name: "Linux (AppImage)", icon: "🐧" },
 };
 
 export default function AdminReleasesPanel() {

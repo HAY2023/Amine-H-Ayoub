@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, BookOpen, Clock, Bell, Baby, Check, Gift, Plus, Trash2, Minus, Star, X, TrendingUp, Award, Zap, Target } from "lucide-react";
+import { ArrowRight, BookOpen, Clock, Bell, Baby, Check, Gift, Plus, Trash2, Minus, Star, X, TrendingUp, Award, Zap, Target, Trophy } from "lucide-react";
 import { getProfile, updateProfile, getProgress, getHistory, getProfiles, getActiveId, setActiveProfile, addProfile, removeProfile, getAppMode, setAppMode, kidsRouteBlocked, KID_AVATARS, KID_COLORS, KidsProfile, KidsProgress, DayLog } from "../data/kidsProfile";
 import { getKidsSchedule, saveKidsSchedule, KidsSchedule } from "../data/kidsSchedule";
-import { isKidsMode } from "../data/kidsLock";
+import { isKidsMode, setKidsLocked } from "../data/kidsLock";
 import Avatar from "../components/Avatar";
+import BadgesModal from "../components/BadgesModal";
 import { toast } from "../hooks/use-toast";
 
 const Bar = ({ value, max, color }: { value: number; max: number; color: string }) => (
@@ -32,6 +33,7 @@ export default function ParentDashboard() {
   const [history, setHistory] = useState<DayLog[]>(() => getHistory().slice(0, 7).reverse());
   const [draft, setDraft] = useState<KidsProfile>(getProfile);
   const [showAdd, setShowAdd] = useState(false);
+  const [showBadges, setShowBadges] = useState(false);
   const [newKid, setNewKid] = useState({ name: "", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0] });
   const [schedule, setSchedule] = useState<KidsSchedule>(getKidsSchedule);
 
@@ -306,8 +308,26 @@ export default function ParentDashboard() {
           </div>
         </div>
 
-        <button onClick={() => navigate("/games")} className="w-full p-3 rounded-2xl bg-secondary text-secondary-foreground hover:brightness-95 font-bold flex items-center justify-center gap-2 active:scale-95"><Baby className="w-5 h-5" /> فتح ركن الأطفال (الألعاب)</button>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setShowBadges(true)}
+            className="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 font-bold flex items-center justify-center gap-2 active:scale-95 transition-all text-xs"
+          >
+            <Trophy className="w-4 h-4" /> الأوسمة وسلسلة الأيام
+          </button>
+          <button
+            onClick={() => {
+              setKidsLocked(true);
+              navigate("/games");
+            }}
+            className="p-3 rounded-2xl bg-secondary text-secondary-foreground hover:brightness-95 font-bold flex items-center justify-center gap-2 active:scale-95 text-xs"
+          >
+            <Baby className="w-4 h-4" /> فتح ركن الألعاب
+          </button>
+        </div>
       </div>
+
+      {showBadges && <BadgesModal onClose={() => setShowBadges(false)} />}
 
       {/* إنشاء ملفّ طفل جديد — نموذج أنيق بدل نافذة المتصفّح */}
       {showAdd && (

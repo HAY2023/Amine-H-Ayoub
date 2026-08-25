@@ -1,17 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, RefreshCw, CloudDownload, Baby, FileText, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete, Headphones, Youtube } from "lucide-react";
-import { isMushafDevEnabled, setMushafDev, openExternalUrl } from "../utils/tauriUtils";
+import { ArrowRight, Moon, Sun, Baby, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete, Headphones } from "lucide-react";
+import { isMushafDevEnabled, setMushafDev } from "../utils/tauriUtils";
 import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHidden, type AppMode } from "../data/kidsProfile";
-import { syncCoordinatesFromServer } from "../data/ayahCoordinates";
-import { syncTimingsFromServer } from "../data/ayahTimings";
-import { syncSurahRegionsFromServer } from "../data/surahRegions";
-import { syncCustomPagesFromServer } from "../data/customPages";
-import { downloadEverything } from "../data/offlineDownload";
+
+
 import PinModal from "../components/PinModal";
 import SupportModal from "../components/SupportModal";
 import { toast } from "../hooks/use-toast";
-import { checkForUpdates, CURRENT_VERSION, triggerDirectDownload } from "../utils/updateChecker";
+
 import { hasKidsPin, setKidsPin, removeKidsPin, setKidsLocked, isKidsMode } from "../data/kidsLock";
 import { isBackgroundAudioEnabled, setBackgroundAudioEnabled } from "../utils/backgroundAudio";
 import { applyTheme, getTheme } from "../utils/theme";
@@ -42,7 +39,7 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState<"dark" | "light">(getTheme);
   const [appMode, setMode] = useState<AppMode>(getAppMode);
   const [showPin, setShowPin] = useState(false);
-  const [dlPct, setDlPct] = useState<number | null>(null);
+
   const [owner, setOwner] = useState(isMushafDevEnabled);
   const [showSupport, setShowSupport] = useState(false);
   useEffect(() => { const h = () => setOwner(isMushafDevEnabled()); window.addEventListener("mushaf:ownermode", h); return () => window.removeEventListener("mushaf:ownermode", h); }, []);
@@ -99,58 +96,15 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!isKidsMode()) return;
     if (!hasKidsPin()) {
-      navigate("/games");
+      navigate("/audio");
       return;
     }
     setShowPin(true);
   }, [navigate]);
 
-  const [checkingUpdate, setCheckingUpdate] = useState(false);
 
-  const checkUpdate = async () => {
-    if (checkingUpdate) return;
-    setCheckingUpdate(true);
-    toast({ title: "يجري البحث عن تحديث..." });
-    try {
-      if ("serviceWorker" in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map(r => r.update()));
-      }
-      const info = await checkForUpdates();
-      if (info.hasUpdate) {
-        toast({
-          title: `تحديث جديد متوفر: v${info.latestVersion} 🚀`,
-          description: `جاري تحميل ملف التثبيت المباشر (${info.assetName})...`,
-          duration: 10000,
-        });
-        triggerDirectDownload(info.directDownloadUrl || info.downloadUrl, info.assetName);
-      } else {
-        toast({
-          title: "التطبيق في أحدث نسخة ✅",
-          description: `أنت تستخدم النسخة الحالية v${CURRENT_VERSION}.`,
-        });
-      }
-    } catch (e) {
-      console.error("Update check error:", e);
-      toast({
-        title: "تعذّر التحقّق من التحديثات",
-        description: "يرجى التثبّت من الاتصال بالإنترنت والإعادة.",
-        variant: "destructive",
-      });
-    } finally {
-      setCheckingUpdate(false);
-    }
-  };
 
-  const downloadAll = async () => {
-    if (dlPct !== null) return;
-    setDlPct(0);
-    await Promise.allSettled([syncCoordinatesFromServer(), syncTimingsFromServer(), syncSurahRegionsFromServer(), syncCustomPagesFromServer()]);
-    const res = await downloadEverything((d, t) => setDlPct(t ? Math.round((d / t) * 100) : 0));
-    setDlPct(100);
-    toast({ title: "اكتمل التحميل للعمل دون إنترنت", description: `${res.ok} ملف محفوظ على الجهاز` });
-    setTimeout(() => setDlPct(null), 1500);
-  };
+
 
   return (
     <div className="min-h-screen page-nour text-foreground" dir="rtl">
@@ -201,24 +155,57 @@ export default function SettingsPage() {
           </div>
         </Section>
 
-        {/* ===== من يستخدم التطبيق؟ + الأطفال ===== */}
-        {/* ظاهرة للجميع ليتمكنوا من التحكم بركن الأطفال */}
-        <Section label="أوضاع التطبيق">
-            <div className="p-3 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                {([
-                  { m: "parent" as AppMode, Icon: User, label: "لي" },
-                  { m: "kids" as AppMode, Icon: Baby, label: "لأطفالي" },
-                ]).map(o => (
-                  <button key={o.m} onClick={() => changeMode(o.m)}
-                    className={`flex flex-col items-center gap-1 rounded-xl py-3 text-xs font-bold border transition-all ${appMode === o.m ? "border-accent bg-accent/15 text-accent shadow-soft" : "border-border bg-muted text-muted-foreground hover:border-accent/40"}`}>
-                    <o.Icon className="w-5 h-5" /> {o.label}
-                  </button>
-                ))}
+        {/* ===== أوضاع التطبيق وحماية الأطفال — تظهر فقط إذا كان التطبيق في وضع الأطفال ===== */}
+        {appMode === "kids" && (
+          <>
+            <Section label="أوضاع التطبيق">
+              <div className="p-3 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { m: "parent" as AppMode, Icon: User, label: "لي" },
+                    { m: "kids" as AppMode, Icon: Baby, label: "لأطفالي" },
+                  ]).map(o => (
+                    <button key={o.m} onClick={() => changeMode(o.m)}
+                      className={`flex flex-col items-center gap-1 rounded-xl py-3 text-xs font-bold border transition-all ${appMode === o.m ? "border-accent bg-accent/15 text-accent shadow-soft" : "border-border bg-muted text-muted-foreground hover:border-accent/40"}`}>
+                      <o.Icon className="w-5 h-5" /> {o.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">«لي»: بلا ركن أطفال. «لأطفالي»: ركن أطفال آمن.</p>
               </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">«لي»: بلا ركن أطفال. «لأطفالي»: ركن أطفال آمن.</p>
-            </div>
-        </Section>
+            </Section>
+
+            <Section label="حماية وركن الأطفال">
+              <Item
+                icon={<Baby className="w-5 h-5 text-accent" />}
+                title={hideKids ? "إظهار ركن الأطفال والألعاب" : "إخفاء ركن الأطفال والألعاب"}
+                desc={hideKids ? "ركن الأطفال مخفيّ حالياً عن الواجهة — اضغط لإظهاره" : "تفعيل/إخفاء ركن الأطفال والألعاب من جميع الواجهات"}
+                onClick={toggleHideKids}
+                right={<span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${hideKids ? "bg-destructive/15 text-destructive" : "bg-success/15 text-success"}`}>{hideKids ? "مخفيّ" : "ظاهر"}</span>}
+              />
+              <Item
+                icon={<Lock className="w-5 h-5 text-accent" />}
+                title={hasPin ? "تغيير رمز وليّ الأمر" : "تعيين رمز وليّ الأمر"}
+                desc={hasPin ? "غير رمز الوصول إلى إعدادات ولي الأمر." : "عيّن رمزاً لحماية الإعدادات والانتقال إلى وضع الأطفال."}
+                onClick={changePin}
+              />
+              {hasPin && (
+                <Item
+                  icon={<Delete className="w-5 h-5 text-destructive" />}
+                  title="إزالة رمز وليّ الأمر"
+                  desc="لن يُطلب الرمز بعد ذلك للوصول إلى الإعدادات." 
+                  onClick={removePin}
+                />
+              )}
+              <Item
+                icon={<User className="w-5 h-5 text-accent" />}
+                title="لوحة ولي الأمر"
+                desc="اطّلع على تقدّم الأطفال وإعداداتهم." 
+                onClick={() => navigate("/parent")}
+              />
+            </Section>
+          </>
+        )}
 
         {/* ===== الصوت والتلاوة ===== */}
         <Section label="الصوت والتلاوة">
@@ -250,40 +237,7 @@ export default function SettingsPage() {
 
         {/* ===== التطبيق ===== */}
         <Section label="التطبيق">
-          <Item icon={<MessageSquare className="w-5 h-5 text-accent" />} title="تواصل مع الدعم الفني" desc="محادثة مباشرة مع فريق الدعم" onClick={() => setShowSupport(true)} />
-          <Item icon={<Youtube className="w-5 h-5 text-red-500 fill-current" />} title="قناة القارئ على يوتيوب" desc="متابعة أحدث التلاوات ودعم القناة" onClick={() => openExternalUrl("https://www.youtube.com/@aminehadjyoub")} />
-          <Item icon={<RefreshCw className={`w-5 h-5 ${checkingUpdate ? "animate-spin text-accent" : ""}`} />} title="تحقّق من التحديث" desc={`النسخة الحالية v${CURRENT_VERSION} — جلب أحدث نسخة`} onClick={checkUpdate} />
-          <Item icon={<CloudDownload className={`w-5 h-5 ${dlPct !== null ? "animate-pulse" : ""}`} />} title="تنزيل التلاوات الصوتية" desc="حفظ الملفات الصوتية على جهازك للعمل دون إنترنت" onClick={downloadAll} right={dlPct !== null ? <span className="text-xs font-bold text-success w-12 text-center">{dlPct}%</span> : undefined} />
-        </Section>
-
-        <Section label="حماية وركن الأطفال">
-          <Item
-            icon={<Baby className="w-5 h-5 text-accent" />}
-            title={hideKids ? "إظهار ركن الأطفال والألعاب" : "إخفاء ركن الأطفال والألعاب"}
-            desc={hideKids ? "ركن الأطفال مخفيّ حالياً عن الواجهة — اضغط لإظهاره" : "تفعيل/إخفاء ركن الأطفال والألعاب من جميع الواجهات"}
-            onClick={toggleHideKids}
-            right={<span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${hideKids ? "bg-destructive/15 text-destructive" : "bg-success/15 text-success"}`}>{hideKids ? "مخفيّ" : "ظاهر"}</span>}
-          />
-          <Item
-            icon={<Lock className="w-5 h-5 text-accent" />}
-            title={hasPin ? "تغيير رمز وليّ الأمر" : "تعيين رمز وليّ الأمر"}
-            desc={hasPin ? "غير رمز الوصول إلى إعدادات ولي الأمر." : "عيّن رمزاً لحماية الإعدادات والانتقال إلى وضع الأطفال."}
-            onClick={changePin}
-          />
-          {hasPin && (
-            <Item
-              icon={<Delete className="w-5 h-5 text-destructive" />}
-              title="إزالة رمز وليّ الأمر"
-              desc="لن يُطلب الرمز بعد ذلك للوصول إلى الإعدادات." 
-              onClick={removePin}
-            />
-          )}
-          <Item
-            icon={<User className="w-5 h-5 text-accent" />}
-            title="لوحة ولي الأمر"
-            desc="اطّلع على تقدّم الأطفال وإعداداتهم." 
-            onClick={() => navigate("/parent")}
-          />
+          <Item icon={<MessageSquare className="w-5 h-5 text-accent" />} title="تواصل مع الدعم الفني والإبلاغ" desc="إرسال مشكلة تقنية أو اقتراح لفريق العمل" onClick={() => setShowSupport(true)} />
         </Section>
 
         {/* ===== أدوات المالك (تظهر فقط في وضع المالك) ===== */}
@@ -300,7 +254,17 @@ export default function SettingsPage() {
       </div>
 
       {showPin && (
-        <PinModal mode="verify" title="رمز وليّ الأمر" onSuccess={() => { setShowPin(false); navigate("/parent"); }} onCancel={() => setShowPin(false)} />
+        <PinModal
+          mode="verify"
+          title="رمز وليّ الأمر"
+          onSuccess={() => {
+            setShowPin(false);
+          }}
+          onCancel={() => {
+            setShowPin(false);
+            navigate("/audio");
+          }}
+        />
       )}
 
       {pinFlow === "verifyOld" && (

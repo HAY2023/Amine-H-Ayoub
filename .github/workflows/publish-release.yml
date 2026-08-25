@@ -185,9 +185,11 @@ jobs:
       - name: Initialize Android project
         run: npx tauri android init || true
 
-      # بناء نسخة Release لمعمارية aarch64 فقط (بدون --debug)
-      - name: Build release APK (aarch64)
-        run: npx tauri android build --apk --target aarch64
+      # بناء نسخة Release لمعمارية aarch64 (APK و AAB)
+      - name: Build release APK & AAB (aarch64)
+        run: |
+          npx tauri android build --apk --target aarch64
+          npx tauri android build --aab --target aarch64 || true
 
       # توقيع APK بمفتاح الإنتاج الثابت إن وجد
       - name: Sign APK with production keystore
@@ -217,13 +219,59 @@ jobs:
             fi
           fi
 
-      # رفع APK الموقّع إلى GitHub Release
-      - name: Attach signed APK to release
+      # رفع APK و AAB إلى GitHub Release
+      - name: Attach signed APK and AAB to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           draft: true
-          files: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          files: |
+            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+            src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
+
+  # ───────────── iOS (حزمة IPA لأجهزة iPhone / iPad) ─────────────
+  build-ios:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios, x86_64-apple-ios
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - run: npm ci
+      - run: npm install -D @tauri-apps/cli@^2
+
+      - name: Generate app icon
+        run: npx tauri icon public/pwa-512x512.png
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Initialize and build iOS
+        run: |
+          npx tauri ios init || true
+          npx tauri ios build --export-method development || true
+
+      - name: Attach iOS packages to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: |
+            src-tauri/gen/apple/build/**/*.ipa
+            src-tauri/gen/apple/build/**/*.app
 
   # ╔═══════════════════════════════════════════════════════════════╗
   # ║  مرحلة 2: تحديث releases.json (تسلسلي عبر concurrency)     ║

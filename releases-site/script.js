@@ -3,13 +3,15 @@ const GITHUB_REPO = "HAY2023/Amine-H-Ayoub";
 const SUPABASE_URL = "https://qmnvzxjsokibsmgpfeln.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtbnZ6eGpzb2tpYnNtZ3BmZWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3MTY2NTYsImV4cCI6MjEwMjI5MjY1Nn0.HuEYBLDADNuFkNNDUIJ2v8fYAxDUXenFROgpBEgpj7c";
 
-// Fallback release URLs for v1.0.0-100
+// Fallback release URLs for v1.0.0-an experience
 const FALLBACK_ASSETS = {
-    windows: `https://github.com/${GITHUB_REPO}/releases/download/v1.0.0-100/hajj-ayoub-amine_1.0.0-100_x64-setup.exe`,
-    android: `https://github.com/${GITHUB_REPO}/releases/download/v1.0.0-100/app-universal-debug.apk`,
-    tv: `https://github.com/${GITHUB_REPO}/releases/download/v1.0.0-100/app-universal-debug.apk`,
-    macos: `https://github.com/${GITHUB_REPO}/releases/download/v1.0.0-100/hajj-ayoub-amine_1.0.0-100_aarch64.dmg`,
-    linux: `https://github.com/${GITHUB_REPO}/releases/download/v1.0.0-100/hajj-ayoub-amine_1.0.0-100_amd64.AppImage`
+    windows: `https://github.com/${GITHUB_REPO}/releases/latest`,
+    android: `https://github.com/${GITHUB_REPO}/releases/latest`,
+    aab: `https://github.com/${GITHUB_REPO}/releases/latest`,
+    ios: `https://github.com/${GITHUB_REPO}/releases/latest`,
+    tv: `https://github.com/${GITHUB_REPO}/releases/latest`,
+    macos: `https://github.com/${GITHUB_REPO}/releases/latest`,
+    linux: `https://github.com/${GITHUB_REPO}/releases/latest`
 };
 
 let liveAssets = { ...FALLBACK_ASSETS };
@@ -20,8 +22,8 @@ function detectUserOS() {
     const platform = window.navigator.platform?.toLowerCase() || '';
 
     if (/android tv|smart-tv|googletv|androidtv/i.test(userAgent)) return 'tv';
-    if (/android/i.test(userAgent)) return 'android';
     if (/iphone|ipad|ipod/i.test(userAgent) || (platform.includes('mac') && navigator.maxTouchPoints > 1)) return 'ios';
+    if (/android/i.test(userAgent)) return 'android';
     if (/mac/i.test(platform) || /macintosh/i.test(userAgent)) return 'macos';
     if (/linux/i.test(platform) || /linux/i.test(userAgent)) return 'linux';
     if (/win/i.test(platform) || /windows/i.test(userAgent)) return 'windows';
@@ -44,6 +46,10 @@ async function fetchLiveGitHubAssets() {
             else if (name.endsWith('.apk')) {
                 liveAssets.android = url;
                 liveAssets.tv = url;
+            } else if (name.endsWith('.aab')) {
+                liveAssets.aab = url;
+            } else if (name.endsWith('.ipa')) {
+                liveAssets.ios = url;
             } else if (name.endsWith('.dmg')) liveAssets.macos = url;
             else if (name.endsWith('.appimage')) liveAssets.linux = url;
         });
@@ -58,12 +64,16 @@ function updatePlatformLinks() {
     const w = document.getElementById("card-dl-windows");
     const tv = document.getElementById("card-dl-tv");
     const a = document.getElementById("card-dl-android");
+    const aab = document.getElementById("card-dl-aab");
+    const ios = document.getElementById("card-dl-ios");
     const m = document.getElementById("card-dl-macos");
     const l = document.getElementById("card-dl-linux");
 
     if (w) w.href = liveAssets.windows;
     if (tv) tv.href = liveAssets.tv;
     if (a) a.href = liveAssets.android;
+    if (aab) aab.href = liveAssets.aab;
+    if (ios) ios.href = liveAssets.ios;
     if (m) m.href = liveAssets.macos;
     if (l) l.href = liveAssets.linux;
 }
@@ -78,7 +88,12 @@ function renderPrimaryCard(os) {
     let subtitle = "حزمة .EXE الذاتية والمستقلة — تعمل 100% بدون إنترنت";
     let link = liveAssets.windows;
 
-    if (os === 'android') {
+    if (os === 'ios') {
+        icon = "🍏";
+        title = "تنزيل حزمة آيفون وآيباد (iOS IPA)";
+        subtitle = "حزمة IPA الرسمية متوافقة مع أجهزة iPhone و iPad";
+        link = liveAssets.ios;
+    } else if (os === 'android') {
         icon = "📱";
         title = "تنزيل نسخة أندرويد (Android APK)";
         subtitle = "تثبيت مباشر لجميع هواتف وأجهزة أندرويد اللوحية";

@@ -11,6 +11,7 @@ import { shouldHideMushaf } from "../utils/tauriUtils";
 import ParentalGateModal from "../components/ParentalGateModal";
 import Avatar from "../components/Avatar";
 import NotificationsModal from "../components/NotificationsModal";
+import BadgesModal from "../components/BadgesModal";
 import { toast } from "../hooks/use-toast";
 import { isTimeAllowed } from "../data/kidsSchedule";
 
@@ -797,12 +798,31 @@ export default function KidsGames() {
   // تسخين نصوص السور مبكراً كي تفتح الألعاب النصّية فوراً (تُخزَّن محلياً بعد أول مرة)
   useEffect(() => { ensureCorpus().catch(() => { /* ستعيد اللعبة المحاولة عند فتحها */ }); }, []);
 
+  const [showBadges, setShowBadges] = useState(false);
+
   useEffect(() => {
     const refresh = () => { setProfile(getProfile()); setProgress(getProgress()); setCoins(getCoins()); setCatalog(getGameCatalog()); };
     refresh();
     const evts = ["focus", "mushaf:games_unlocked", "mushaf:coins", "mushaf:gamecatalog", "mushaf:activeprofile"];
     evts.forEach(e => window.addEventListener(e, refresh));
-    return () => evts.forEach(e => window.removeEventListener(e, refresh));
+
+    const handleBadgeUnlocked = (e: any) => {
+      const badges = e.detail;
+      if (Array.isArray(badges) && badges.length > 0) {
+        badges.forEach((b: any) => {
+          toast({
+            title: `🏆 مبارك! وسام جديد: ${b.title}`,
+            description: `حصلت على ${b.rewardCoins} نجمة إضافية!`,
+          });
+        });
+      }
+    };
+    window.addEventListener("mushaf:badge_unlocked", handleBadgeUnlocked);
+
+    return () => {
+      evts.forEach(e => window.removeEventListener(e, refresh));
+      window.removeEventListener("mushaf:badge_unlocked", handleBadgeUnlocked);
+    };
   }, []);
 
   // قفل واحد فقط: «اقرأ لتفتح الألعاب» — بلا حدّ لوقت اللعب وبلا شراء
@@ -817,15 +837,61 @@ export default function KidsGames() {
   const inApp = shouldHideMushaf();
 
   const onPinSuccess = () => {
-    if (pinAction === "parent" || pinAction === "setparent") { setAppMode("parent"); setKidsLocked(false); setPinAction(null); navigate("/parent"); return; }
-    if (pinAction === "exit") { setAppMode("parent"); setKidsLocked(false); setPinAction(null); navigate("/"); return; }
-    if (pinAction === "setread") { setAppMode("kids"); setKidsLocked(true); setPinAction(null); navigate("/"); return; }
+    if (pinAction === "parent" || pinAction === "setparent") {
+      setKidsLocked(false);
+      setPinAction(null);
+      navigate("/parent");
+      return;
+    }
+    if (pinAction === "exit") {
+      setKidsLocked(false);
+      setPinAction(null);
+      toast({ title: "تم فك القفل والخروج للتلاوات" });
+      navigate("/audio");
+      return;
+    }
+    if (pinAction === "setread") {
+      setKidsLocked(true);
+      setPinAction(null);
+      navigate("/audio");
+      return;
+    }
     setPinAction(null);
   };
 
-  const lockAndRead = () => { if (hasKidsPin()) { setAppMode("kids"); setKidsLocked(true); navigate("/"); } else setPinAction("setread"); };
-  const openParent = () => { if (hasKidsPin()) setPinAction("parent"); else setPinAction("setparent"); };
-  const headerBack = () => { if (active) setActive(null); else if (kidsMode) setPinAction("exit"); else navigate("/"); };
+  const exitKidsCorner = () => {
+    if (hasKidsPin()) {
+      setPinAction("exit");
+    } else {
+      setKidsLocked(false);
+      toast({ title: "تم الخروج إلى التلاوات" });
+      navigate("/audio");
+    }
+  };
+
+  const lockAndRead = () => {
+    if (hasKidsPin()) {
+      setAppMode("kids");
+      setKidsLocked(true);
+      navigate("/audio");
+    } else {
+      setPinAction("setread");
+    }
+  };
+
+  const openParent = () => {
+    if (hasKidsPin()) setPinAction("parent");
+    else setPinAction("setparent");
+  };
+
+  const headerBack = () => {
+    if (active) {
+      setActive(null);
+    } else {
+      exitKidsCorner();
+    }
+  };
+
   const tapGame = (id: string) => { if (canPlay) setActive(id); else toast({ title: "أكمِل قراءتك أولاً لتُفتح الألعاب", variant: "destructive" }); };
 
   const pct = Math.min(100, (progress.minutes / Math.max(1, profile.goalMinutes)) * 100);
@@ -858,13 +924,14 @@ export default function KidsGames() {
     <div className="min-h-screen page-nour text-foreground" dir="rtl">
       <div className="mx-auto max-w-md px-4 py-4 space-y-4">
         <header className="flex items-center justify-between gap-2">
-          <button onClick={headerBack} className="flex h-10 items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold hover:brightness-95 active:scale-95">
-            <ArrowRight className="h-4 w-4" /> {active ? "الألعاب" : kidsMode ? "خروج" : "رجوع"}
+          <button onClick={headerBack} className="flex h-10 items-center gap-1.5 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold hover:brightness-95 active:scale-95 border border-border">
+            <ArrowRight className="h-4 w-4" /> {active ? "الرجوع للألعاب" : "الخروج للتلاوات"}
           </button>
           <h1 className="font-extrabold text-lg text-gradient-gold">ركن الأطفال</h1>
           {!active ? (
             <div className="flex items-center gap-1.5">
               <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-accent font-extrabold text-sm px-2.5 h-10"><Star className="w-4 h-4 fill-current" /> {coins}</span>
+              <button onClick={() => setShowBadges(true)} aria-label="الأوسمة والإنجازات" title="الأوسمة والإنجازات" className="w-10 h-10 rounded-full bg-amber-500/15 text-amber-500 hover:brightness-95 flex items-center justify-center active:scale-95 border border-amber-500/30 shadow-sm"><Trophy className="w-5 h-5" /></button>
               <button onClick={() => setShowNotifications(true)} aria-label="الإشعارات" className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground hover:brightness-95 flex items-center justify-center active:scale-95"><Bell className="w-5 h-5" /></button>
               <button onClick={openParent} aria-label="إعدادات ولي الأمر" className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground hover:brightness-95 flex items-center justify-center active:scale-95"><Settings className="w-5 h-5" /></button>
             </div>
@@ -889,15 +956,19 @@ export default function KidsGames() {
               {!unlocked ? (
                 <>
                   <p className="text-sm text-destructive flex items-center justify-center gap-1 font-bold">
-                    <Lock className="w-4 h-4" /> الألعاب مقفلة — {inApp ? "استمع" : "اقرأ"} {profile.goalMinutes >= 3 && profile.goalMinutes <= 10 ? `${profile.goalMinutes} دقائق` : `${profile.goalMinutes} دقيقة`} لفتحها
+                    <Lock className="w-4 h-4" /> الألعاب مقفلة — استمع {profile.goalMinutes >= 3 && profile.goalMinutes <= 10 ? `${profile.goalMinutes} دقائق` : `${profile.goalMinutes} دقيقة`} لفتحها
                   </p>
                   <div className="h-2.5 rounded-full bg-secondary overflow-hidden"><div className="h-full bg-success transition-all" style={{ width: `${pct}%` }} /></div>
                   <p className="text-xs text-muted-foreground font-bold">{progress.minutes} / {profile.goalMinutes} {profile.goalMinutes >= 3 && profile.goalMinutes <= 10 ? "دقائق" : "دقيقة"}</p>
                   <button
-                    onClick={() => navigate("/")}
+                    onClick={() => {
+                      setAppMode("kids");
+                      setKidsLocked(true);
+                      navigate("/audio");
+                    }}
                     className="btn-emerald w-full p-3 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 shadow-md"
                   >
-                    {inApp ? <Headphones className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />} {inApp ? "استمع الآن لفتح الألعاب" : "اقرأ الآن لفتح الألعاب"}
+                    <Headphones className="w-5 h-5" /> استمع الآن لفتح الألعاب
                   </button>
                 </>
               ) : (
@@ -937,14 +1008,16 @@ export default function KidsGames() {
                 );
               })}
               
-              <button onClick={lockAndRead} className="mt-2 relative overflow-hidden rounded-[1.7rem] p-[2px] active:scale-[0.98] transition-transform text-right hover:shadow-xl hover:shadow-secondary/50">
-                <div className="absolute inset-0 bg-secondary/80" />
-                <div className="relative bg-card/95 backdrop-blur-md rounded-[1.6rem] p-4 flex items-center gap-4">
-                  <span className="w-16 h-16 rounded-2xl bg-secondary text-accent flex items-center justify-center shrink-0">{inApp ? <Headphones className="w-8 h-8" /> : <BookOpen className="w-8 h-8" />}</span>
+              {/* زر الخروج المباشر إلى التلاوات */}
+              <button onClick={exitKidsCorner} className="mt-2 relative overflow-hidden rounded-[1.7rem] p-[2px] active:scale-[0.98] transition-transform text-right hover:shadow-xl hover:shadow-accent/30">
+                <div className="absolute inset-0 bg-accent/20" />
+                <div className="relative bg-card/95 backdrop-blur-md rounded-[1.6rem] p-4 flex items-center gap-4 border border-accent/40">
+                  <span className="w-16 h-16 rounded-2xl bg-accent/20 text-accent flex items-center justify-center shrink-0"><Headphones className="w-8 h-8" /></span>
                   <div className="flex-1">
-                    <span className="block font-extrabold text-foreground text-xl leading-tight">{inApp ? "سماع مقفل" : "قراءة مقفلة"}</span>
-                    <span className="inline-block mt-1 text-[11px] font-bold text-muted-foreground bg-secondary rounded-full px-2.5 py-0.5 flex items-center gap-1 w-max"><Lock className="w-3 h-3" /> محمي بكلمة مرور</span>
+                    <span className="block font-extrabold text-foreground text-xl leading-tight">الخروج إلى تلاوات القرآن</span>
+                    <span className="inline-block mt-1 text-[11px] font-bold text-accent bg-accent/15 rounded-full px-2.5 py-0.5">الاستماع للقرآن الكريم</span>
                   </div>
+                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-muted-foreground shrink-0"><ArrowRight className="w-4 h-4" /></div>
                 </div>
               </button>
             </div>
@@ -967,6 +1040,7 @@ export default function KidsGames() {
       )}
       
       {showNotifications && <NotificationsModal onClose={() => setShowNotifications(false)} />}
+      {showBadges && <BadgesModal onClose={() => setShowBadges(false)} />}
     </div>
   );
 }

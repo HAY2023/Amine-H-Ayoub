@@ -64,6 +64,35 @@ export default defineConfig(({ mode }) => ({
             res.end('saved');
           });
         });
+        server.middlewares.use('/api/send-email', async (req: any, res: any) => {
+          if (req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk: any) => body += chunk);
+            req.on('end', async () => {
+              try {
+                const payload = JSON.parse(body);
+                const resp = await fetch('https://api.resend.com/emails', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${payload.apiKey || Buffer.from('cmVfVHFBdlFBZU5fRXlld0Jja3ZaR2RxRk0xTDhiVUx3VEJx', 'base64').toString('utf-8')}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify(payload.data)
+                });
+                const data = await resp.json();
+                res.setHeader('Content-Type', 'application/json');
+                res.statusCode = resp.status;
+                res.end(JSON.stringify(data));
+              } catch (err: any) {
+                res.statusCode = 500;
+                res.end(JSON.stringify({ error: err.message }));
+              }
+            });
+          } else {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+          }
+        });
       }
     },
     react(),

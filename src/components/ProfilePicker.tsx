@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Plus, Settings, Sparkles } from "lucide-react";
-import { getProfiles, getAppMode, setActiveProfile, kidsRouteBlocked, type KidsProfile } from "../data/kidsProfile";
-import { hasKidsPin } from "../data/kidsLock";
+import { getProfiles, getAppMode, setAppMode, setActiveProfile, kidsRouteBlocked, type KidsProfile } from "../data/kidsProfile";
+import { hasKidsPin, setKidsLocked } from "../data/kidsLock";
 import PinModal from "./PinModal";
 import Avatar from "./Avatar";
 
@@ -25,9 +25,19 @@ export default function ProfilePicker({ onPicked }: { onPicked?: () => void }) {
   useEffect(() => { if (kidsRouteBlocked() && !onPicked) navigate("/audio", { replace: true }); }, [navigate, onPicked]);
 
   const close = () => { markPicked(); onPicked?.(); };
-  const goHome = () => { close(); if (!onPicked) navigate("/"); };
-  const pickChild = (id: string) => { setActiveProfile(id); goHome(); };
-  const asParent = () => goHome();
+  const pickChild = (id: string) => {
+    setActiveProfile(id);
+    setAppMode("kids");
+    setKidsLocked(true);
+    close();
+    navigate("/games");
+  };
+  const asParent = () => {
+    setAppMode("parent");
+    setKidsLocked(false);
+    close();
+    navigate("/audio");
+  };
   const goParent = () => { close(); navigate("/parent"); };
   // إدارة الملفّات (لوحة وليّ الأمر) — بنافذة رمز أنيقة إن وُجد رمز، وإلّا دخول مباشر
   const manage = () => { if (hasKidsPin()) setShowPin(true); else goParent(); };

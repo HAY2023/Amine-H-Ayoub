@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = "1.0.0-101";
+export const CURRENT_VERSION = "1.0.0-an experience";
 
 export interface UpdateInfo {
   hasUpdate: boolean;
@@ -12,9 +12,10 @@ export interface UpdateInfo {
 /**
  * Detects the current operating system to match the correct release asset.
  */
-function getPlatform(): "android" | "windows" | "mac" | "linux" | "unknown" {
+function getPlatform(): "android" | "ios" | "windows" | "mac" | "linux" | "unknown" {
   if (typeof navigator === "undefined") return "unknown";
   const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes("iphone") || ua.includes("ipad") || ua.includes("ipod")) return "ios";
   if (ua.includes("android")) return "android";
   if (ua.includes("win")) return "windows";
   if (ua.includes("mac")) return "mac";
@@ -32,9 +33,14 @@ function findDirectAsset(assets: Array<{ name: string; browser_download_url: str
 
   const platform = getPlatform();
 
-  if (platform === "android") {
+  if (platform === "ios") {
+    const ipa = assets.find(a => a.name.endsWith(".ipa"));
+    if (ipa) return { directUrl: ipa.browser_download_url, assetName: ipa.name };
+  } else if (platform === "android") {
     const apk = assets.find(a => a.name.endsWith(".apk") && !a.name.includes("unsigned")) || assets.find(a => a.name.endsWith(".apk"));
     if (apk) return { directUrl: apk.browser_download_url, assetName: apk.name };
+    const aab = assets.find(a => a.name.endsWith(".aab"));
+    if (aab) return { directUrl: aab.browser_download_url, assetName: aab.name };
   } else if (platform === "windows") {
     const exe = assets.find(a => a.name.endsWith(".exe") || a.name.endsWith("-setup.exe"));
     if (exe) return { directUrl: exe.browser_download_url, assetName: exe.name };

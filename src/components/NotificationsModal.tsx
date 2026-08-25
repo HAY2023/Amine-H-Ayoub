@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { X, Bell, BellOff, Info, Megaphone, Loader2 } from "lucide-react";
+import { X, Bell, BellOff, Info, Megaphone, Loader2, Trophy } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { getBadgesList } from "@/data/kidsBadges";
 
 interface Announcement {
   id: string;
@@ -18,19 +19,32 @@ export default function NotificationsModal({ onClose }: { onClose: () => void })
   useEffect(() => {
     async function fetchNotifications() {
       try {
+        const unlockedBadges = getBadgesList()
+          .filter((b) => b.unlocked)
+          .map((b) => ({
+            id: `badge-${b.id}`,
+            title: `🏆 وسام محقق: ${b.title}`,
+            body: `${b.description} (+${b.rewardCoins} نجمة 🌟)`,
+            type: "badge",
+            created_at: b.unlockedAt || new Date().toISOString(),
+          }));
+
+        let cloudAnnouncements: Announcement[] = [];
         const { data, error } = await supabase
           .from("announcements")
           .select("*")
           .order("created_at", { ascending: false });
-        
-        if (error) {
-          console.debug("Notifications fetch:", error);
+
+        if (!error && data && Array.isArray(data)) {
+          const active = data.filter((a: any) => a.is_active !== false);
+          cloudAnnouncements = active.length > 0 ? active : data;
         }
 
-        if (data && Array.isArray(data)) {
-          const active = data.filter((a: any) => a.is_active !== false);
-          setNotifications(active.length > 0 ? active : data);
-        }
+        const combined = [...unlockedBadges, ...cloudAnnouncements].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
+        setNotifications(combined);
       } catch (err) {
         console.debug("Failed to fetch notifications", err);
       } finally {
@@ -88,7 +102,13 @@ export default function NotificationsModal({ onClose }: { onClose: () => void })
               >
                 <div className="flex items-start gap-3.5">
                   <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center text-accent shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
-                    {n.type === "alert" ? <Megaphone className="w-5 h-5 text-amber-500" /> : <Info className="w-5 h-5 text-accent" />}
+                    {n.type === "badge" ? (
+                      <Trophy className="w-5 h-5 text-amber-500 fill-amber-500/20" />
+                    ) : n.type === "alert" ? (
+                      <Megaphone className="w-5 h-5 text-amber-500" />
+                    ) : (
+                      <Info className="w-5 h-5 text-accent" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center justify-between gap-2">

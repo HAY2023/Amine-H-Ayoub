@@ -5,6 +5,60 @@
 const PIN_KEY = "mushaf:kidsPin";
 const MODE_KEY = "mushaf:kidsMode";
 const APP_MODE_KEY = "mushaf:appMode:v1";
+const QUESTION_KEY = "mushaf:kidsSecurityQuestion";
+const ANSWER_KEY = "mushaf:kidsSecurityAnswer";
+
+export const DEFAULT_SECURITY_QUESTIONS = [
+  "ما هو اسم مدينتك المفضلة أو مسقط رأسك؟",
+  "ما هو اسم أول معلم أو مدرسة لك؟",
+  "ما هو اسم جدك أو لقب العائلة؟",
+  "ما هي كلمتك أو سنتك السرية المفضلة؟",
+];
+
+export const getSecurityQuestion = (): string => {
+  try {
+    return localStorage.getItem(QUESTION_KEY) || DEFAULT_SECURITY_QUESTIONS[0];
+  } catch {
+    return DEFAULT_SECURITY_QUESTIONS[0];
+  }
+};
+
+export const setSecurityQuestion = (question: string, answer: string) => {
+  try {
+    localStorage.setItem(QUESTION_KEY, question.trim());
+    localStorage.setItem(ANSWER_KEY, answer.trim().toLowerCase());
+  } catch {
+    /* ignore */
+  }
+};
+
+export const hasSecurityQuestion = (): boolean => {
+  try {
+    const ans = localStorage.getItem(ANSWER_KEY);
+    return !!ans && ans.length > 0;
+  } catch {
+    return false;
+  }
+};
+
+export const verifySecurityAnswer = (inputAnswer: string): boolean => {
+  try {
+    const stored = localStorage.getItem(ANSWER_KEY);
+    if (!stored) return false;
+    return inputAnswer.trim().toLowerCase() === stored.trim().toLowerCase();
+  } catch {
+    return false;
+  }
+};
+
+export const removeSecurityQuestion = () => {
+  try {
+    localStorage.removeItem(QUESTION_KEY);
+    localStorage.removeItem(ANSWER_KEY);
+  } catch {
+    /* ignore */
+  }
+};
 
 /**
  * استرجاع رمز ولي الأمر المخصص.
@@ -32,6 +86,7 @@ export const setKidsPin = (p: string) => {
 export const removeKidsPin = () => {
   try {
     localStorage.removeItem(PIN_KEY);
+    removeSecurityQuestion();
     // إلغاء وضع الأطفال أيضاً عند إزالة الرمز
     setKidsLocked(false);
   } catch {
@@ -77,13 +132,11 @@ export const setKidsLocked = (on: boolean): boolean => {
 
   try {
     localStorage.setItem(MODE_KEY, on ? "1" : "0");
-    localStorage.setItem(APP_MODE_KEY, on ? "kids" : "parent");
   } catch {
     /* ignore */
   }
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("mushaf:kidsmode"));
-    window.dispatchEvent(new Event("mushaf:appmode"));
   }
   return true;
 };

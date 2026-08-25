@@ -1,10 +1,18 @@
-import { useState, useEffect } from "react";
-import { Lock, Fingerprint, Calculator, KeyRound, AlertCircle, X, ShieldCheck } from "lucide-react";
-import { verifyKidsPin, isDeviceAuthAvailable, requestDeviceUnlock, hasCustomKidsPin, setKidsPin } from "@/data/kidsLock";
+import { useState } from "react";
+import { Lock, KeyRound, AlertCircle, X, ShieldCheck, HelpCircle, Check } from "lucide-react";
+import {
+  verifyKidsPin,
+  hasCustomKidsPin,
+  setKidsPin,
+  getSecurityQuestion,
+  setSecurityQuestion,
+  verifySecurityAnswer,
+  DEFAULT_SECURITY_QUESTIONS,
+} from "@/data/kidsLock";
 
 interface Props {
   title?: string;
-  /** عند true: لا يمكن إغلاق النافذة بدون كلمة المرور — بدون زر ❌ وبدون سؤال حسابي */
+  /** عند true: لا يمكن إغلاق النافذة بدون كلمة المرور — بدون زر ❌ */
   strictMode?: boolean;
   onSuccess: () => void;
   onCancel: () => void;
@@ -17,26 +25,18 @@ export default function ParentalGateModal({
   onCancel,
 }: Props) {
   const hasCustom = hasCustomKidsPin();
-  // في الوضع الصارم: لا يُسمح بالسؤال الحسابي — فقط PIN
-  const [mode, setMode] = useState<"pin" | "math" | "setup_pin">(hasCustom ? "pin" : "setup_pin");
+  const [mode, setMode] = useState<"pin" | "recovery" | "setup_pin">(
+    hasCustom ? "pin" : "setup_pin"
+  );
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
-  const [setupStep, setSetupStep] = useState<"enter" | "confirm">("enter");
+  const [setupStep, setSetupStep] = useState<"enter" | "confirm" | "security">("enter");
+  const [selectedQuestion, setSelectedQuestion] = useState(DEFAULT_SECURITY_QUESTIONS[0]);
+  const [customQuestion, setCustomQuestion] = useState("");
+  const [securityAnswer, setSecurityAnswer] = useState("");
+  const [recoveryAnswerInput, setRecoveryAnswerInput] = useState("");
   const [error, setError] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [hasBiometrics, setHasBiometrics] = useState(false);
-  const [isVerifyingBio, setIsVerifyingBio] = useState(false);
-
-  // Math challenge state (emergency fallback)
-  const [num1, setNum1] = useState(0);
-  const [num2, setNum2] = useState(0);
-  const [mathAnswer, setMathAnswer] = useState("");
-
-  useEffect(() => {
-    isDeviceAuthAvailable().then(setHasBiometrics).catch(() => setHasBiometrics(false));
-    setNum1(Math.floor(Math.random() * 8) + 6);
-    setNum2(Math.floor(Math.random() * 8) + 4);
-  }, []);
 
   const handleKeyClick = (val: string) => {
     setError(false);
@@ -57,7 +57,7 @@ export default function ParentalGateModal({
             }, 150);
           }
         }
-      } else {
+      } else if (setupStep === "confirm") {
         if (val === "back") {
           setConfirmPin((p) => p.slice(0, -1));
           return;
@@ -67,8 +67,9 @@ export default function ParentalGateModal({
           setConfirmPin(next);
           if (next.length === 4) {
             if (next === pin) {
-              setKidsPin(next);
-              onSuccess();
+              setTimeout(() => {
+                setSetupStep("security");
+              }, 150);
             } else {
               setError(true);
               setErrorMsg("الرمزان غير متطابقين، حاول مجدداً");
@@ -114,27 +115,30 @@ export default function ParentalGateModal({
     }
   };
 
-  const handleBiometricUnlock = async () => {
-    setIsVerifyingBio(true);
-    setError(false);
-    try {
-      const ok = await requestDeviceUnlock();
-      if (ok) {
-        onSuccess();
-        return;
-      }
-    } finally {
-      setIsVerifyingBio(false);
+  const handleSaveSetup = () => {
+    const finalQuestion = customQuestion.trim() || selectedQuestion;
+    const finalAnswer = securityAnswer.trim();
+    if (!finalAnswer) {
+      setError(true);
+      setErrorMsg("يرجى إدخال إجابة سرية لسؤال الأمان الاحتياطي");
+      return;
     }
+    setKidsPin(pin);
+    setSecurityQuestion(finalQuestion, finalAnswer);
+    onSuccess();
   };
 
-  const handleMathSubmit = () => {
-    if (parseInt(mathAnswer, 10) === num1 * num2) {
+  const handleRecoverySubmit = () => {
+    if (!recoveryAnswerInput.trim()) {
+      setError(true);
+      setErrorMsg("يرجى إدخال الإجابة");
+      return;
+    }
+    if (verifySecurityAnswer(recoveryAnswerInput)) {
       onSuccess();
     } else {
       setError(true);
-      setErrorMsg("إجابة غير صحيحة، حاول مجدداً");
-      setMathAnswer("");
+      setErrorMsg("إجابة سؤال الأمان غير صحيحة، حاول مجدداً");
     }
   };
 
@@ -142,11 +146,11 @@ export default function ParentalGateModal({
 
   return (
     <div
-      className="fixed inset-0 z-[250] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[250] flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in duration-200"
       dir="rtl"
     >
       <div className="relative w-full max-w-sm rounded-3xl bg-card border border-border shadow-2xl p-6 text-center space-y-4 overflow-hidden animate-in zoom-in-95 duration-200">
-        {/* زر الإغلاق مخفي في الوضع الصارم — لا مخرج بدون كلمة المرور */}
+        {/* زر الإغلاق مخفي في الوضع الصارم — لا مخرج بدون كلمة المرور أو سؤال الأمان */}
         {!strictMode && (
           <button
             onClick={onCancel}
@@ -157,34 +161,43 @@ export default function ParentalGateModal({
           </button>
         )}
 
-        <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center ring-1 ring-amber-500/20 shadow-inner">
+        <div className="mx-auto w-14 h-14 rounded-2xl bg-accent/15 text-accent flex items-center justify-center ring-1 ring-accent/30 shadow-inner">
           {mode === "setup_pin" ? (
             <ShieldCheck className="w-7 h-7" />
           ) : mode === "pin" ? (
             <Lock className="w-7 h-7" />
           ) : (
-            <Calculator className="w-7 h-7" />
+            <HelpCircle className="w-7 h-7" />
           )}
         </div>
 
         <div>
           <h3 className="font-extrabold text-lg text-foreground">
-            {mode === "setup_pin" ? "إعداد كلمة مرور حماية وضع الأطفال" : title}
+            {mode === "setup_pin"
+              ? setupStep === "security"
+                ? "سؤال الأمان الاحتياطي"
+                : "إعداد رمز حماية وضع الأطفال"
+              : mode === "pin"
+              ? title
+              : "استعادة الوصول عبر سؤال الأمان"}
           </h3>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
             {mode === "setup_pin"
               ? setupStep === "enter"
-                ? "يجب تعيين كلمة مرور مخصصة من 4 أرقام قبل تفعيل وضع الأطفال"
-                : "أعد إدخال كلمة المرور لتأكيدها"
+                ? "اختر رمز مرور مخصصاً من 4 أرقام لحماية وضع الأطفال"
+                : setupStep === "confirm"
+                ? "أعد إدخال الرمز للتأكيد"
+                : "حدد سؤال أمان وإجابة سرية لاسترداد الرمز عند نسيانه"
               : mode === "pin"
               ? strictMode
-                ? "لا يمكن الخروج بدون كلمة مرور الوالدين"
-                : "أدخل كلمة مرور الوالدين للخروج من ركن الأطفال / إغلاق التطبيق"
-              : "أجب عن السؤال الحسابي للتحقق من أنك ولي الأمر"}
+                ? "أدخل رمز الوالدين للخروج من التطبيق"
+                : "أدخل رمز الوالدين للخروج من ركن الأطفال أو الدخول للإعدادات"
+              : "أجب عن سؤال الأمان الذي حددته مسبقاً للتحقق من أنك ولي الأمر"}
           </p>
         </div>
 
-        {mode === "setup_pin" ? (
+        {/* ===== نمط إعداد الرمز وسؤال الأمان لأول مرة ===== */}
+        {mode === "setup_pin" && setupStep !== "security" && (
           <div className="space-y-4">
             <div className="flex justify-center items-center gap-3 py-2" dir="ltr">
               {[0, 1, 2, 3].map((i) => {
@@ -194,7 +207,7 @@ export default function ParentalGateModal({
                     key={i}
                     className={`w-4 h-4 rounded-full transition-all duration-200 ${
                       currentVal.length > i
-                        ? "bg-amber-500 scale-110 shadow-md shadow-amber-500/40"
+                        ? "bg-accent scale-110 shadow-md shadow-accent/40"
                         : "bg-muted border border-border"
                     }`}
                   />
@@ -225,16 +238,66 @@ export default function ParentalGateModal({
               )}
             </div>
           </div>
-        ) : mode === "pin" ? (
+        )}
+
+        {/* ===== خطوة تحديد سؤال الأمان الاحتياطي في الإعداد ===== */}
+        {mode === "setup_pin" && setupStep === "security" && (
+          <div className="space-y-3 text-right animate-fade-up">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-foreground block">اختر سؤال الأمان:</label>
+              <select
+                value={selectedQuestion}
+                onChange={(e) => setSelectedQuestion(e.target.value)}
+                className="w-full text-xs p-2.5 rounded-xl bg-muted border border-border text-foreground focus:border-accent outline-none"
+              >
+                {DEFAULT_SECURITY_QUESTIONS.map((q, i) => (
+                  <option key={i} value={q}>
+                    {q}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-foreground block">الإجابة السرية الاحتياطية:</label>
+              <input
+                type="text"
+                value={securityAnswer}
+                onChange={(e) => {
+                  setSecurityAnswer(e.target.value);
+                  setError(false);
+                }}
+                placeholder="اكتب إجابتك السرية هنا..."
+                className="w-full text-sm p-3 rounded-xl bg-muted border border-border text-foreground placeholder-muted-foreground focus:border-accent outline-none"
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-1.5 text-xs text-destructive font-bold">
+                <AlertCircle className="w-4 h-4" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            <button
+              onClick={handleSaveSetup}
+              className="btn-gold w-full p-3 rounded-xl font-bold flex items-center justify-center gap-2 mt-2 shadow-md active:scale-95"
+            >
+              <Check className="w-5 h-5" /> حفظ وتفعيل الحماية
+            </button>
+          </div>
+        )}
+
+        {/* ===== نمط التحقق برمز الـ PIN ===== */}
+        {mode === "pin" && (
           <div className="space-y-4">
-            {/* PIN Dots */}
             <div className="flex justify-center items-center gap-3 py-2" dir="ltr">
               {[0, 1, 2, 3].map((i) => (
                 <div
                   key={i}
                   className={`w-4 h-4 rounded-full transition-all duration-200 ${
                     pin.length > i
-                      ? "bg-amber-500 scale-110 shadow-md shadow-amber-500/40"
+                      ? "bg-accent scale-110 shadow-md shadow-accent/40"
                       : "bg-muted border border-border"
                   }`}
                 />
@@ -248,7 +311,6 @@ export default function ParentalGateModal({
               </div>
             )}
 
-            {/* Keypad */}
             <div className="grid grid-cols-3 gap-2 pt-1">
               {keys.map((k, i) =>
                 k === "" ? (
@@ -265,101 +327,84 @@ export default function ParentalGateModal({
               )}
             </div>
 
-            {/* Actions / Biometric / Fallback */}
-            <div className="pt-2 space-y-2">
-              {hasBiometrics && (
-                <button
-                  onClick={handleBiometricUnlock}
-                  disabled={isVerifyingBio}
-                  className="w-full py-2.5 px-4 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-sm flex items-center justify-center gap-2 transition-colors border border-amber-500/20"
-                >
-                  <Fingerprint className="w-4 h-4" />
-                  <span>فتح بالبصمة / قفل الهاتف</span>
-                </button>
-              )}
+            <div className="pt-2 flex items-center justify-between text-xs text-muted-foreground">
+              <button
+                type="button"
+                onClick={() => {
+                  setError(false);
+                  setErrorMsg("");
+                  setRecoveryAnswerInput("");
+                  setMode("recovery");
+                }}
+                className="text-accent hover:underline flex items-center gap-1 font-bold"
+              >
+                <HelpCircle className="w-4 h-4" />
+                <span>نسيت الرمز؟ سؤال الأمان</span>
+              </button>
 
-              <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                {/* في الوضع الصارم: لا يوجد "نسيت الرمز" — لا تجاوز */}
-                {strictMode ? (
-                  <span className="text-amber-600/70 dark:text-amber-400/70 font-medium flex items-center gap-1">
-                    <Lock className="w-3.5 h-3.5" />
-                    <span>وضع الأطفال — لا يمكن الخروج بدون الرمز</span>
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setError(false);
-                      setMode("math");
-                    }}
-                    className="hover:underline flex items-center gap-1"
-                  >
-                    <Calculator className="w-3.5 h-3.5" />
-                    <span>نسيت الرمز؟ سؤال حسابي</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={handleManualSubmit}
-                  disabled={pin.length < 4}
-                  className="text-amber-600 dark:text-amber-400 font-bold disabled:opacity-40"
-                >
-                  تأكيد
-                </button>
-              </div>
+              <button
+                onClick={handleManualSubmit}
+                disabled={pin.length < 4}
+                className="text-accent font-bold disabled:opacity-40"
+              >
+                تأكيد
+              </button>
             </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="text-2xl font-bold font-mono py-3 text-foreground" dir="ltr">
-              {num1} × {num2} ={" "}
-              <span className="text-amber-500 border-b-2 border-dashed border-amber-500 px-2">
-                {mathAnswer || "?"}
-              </span>
+        )}
+
+        {/* ===== نمط الاسترداد عبر سؤال الأمان الاحتياطي (بدون أي عملية حسابية) ===== */}
+        {mode === "recovery" && (
+          <div className="space-y-4 text-right animate-fade-up">
+            <div className="p-3.5 rounded-2xl bg-muted/60 border border-border space-y-1">
+              <span className="text-[11px] font-bold text-accent block">سؤال الأمان الاحتياطي:</span>
+              <p className="text-sm font-bold text-foreground leading-relaxed">
+                {getSecurityQuestion()}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-foreground block">أدخل الإجابة السرية:</label>
+              <input
+                type="text"
+                value={recoveryAnswerInput}
+                onChange={(e) => {
+                  setRecoveryAnswerInput(e.target.value);
+                  setError(false);
+                }}
+                placeholder="اكتب إجابتك هنا..."
+                className="w-full text-sm p-3 rounded-xl bg-muted border border-border text-foreground placeholder-muted-foreground focus:border-accent outline-none"
+              />
             </div>
 
             {error && (
-              <p className="text-xs text-destructive font-medium animate-bounce">
-                {errorMsg || "إجابة غير صحيحة، حاول مجدداً"}
-              </p>
+              <div className="flex items-center gap-1.5 text-xs text-destructive font-bold animate-bounce">
+                <AlertCircle className="w-4 h-4" />
+                <span>{errorMsg}</span>
+              </div>
             )}
-
-            <div className="grid grid-cols-3 gap-2">
-              {keys.map((k, i) =>
-                k === "" ? (
-                  <span key={i} />
-                ) : (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      setError(false);
-                      if (k === "back") setMathAnswer((p) => p.slice(0, -1));
-                      else if (mathAnswer.length < 3) setMathAnswer((p) => p + k);
-                    }}
-                    className="h-12 rounded-2xl bg-secondary hover:bg-secondary/80 text-foreground text-lg font-bold flex items-center justify-center active:scale-95 transition-transform"
-                  >
-                    {k === "back" ? "⌫" : k}
-                  </button>
-                )
-              )}
-            </div>
 
             <div className="flex gap-2 pt-2">
               <button
+                type="button"
                 onClick={() => {
                   setError(false);
+                  setErrorMsg("");
+                  setPin("");
                   setMode("pin");
                 }}
-                className="flex-1 py-2.5 rounded-2xl bg-secondary text-muted-foreground text-sm font-bold flex items-center justify-center gap-1"
+                className="flex-1 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-bold flex items-center justify-center gap-1"
               >
                 <KeyRound className="w-4 h-4" />
-                <span>العودة للرمز السري</span>
+                <span>العودة للرمز</span>
               </button>
               <button
-                onClick={handleMathSubmit}
-                disabled={!mathAnswer}
-                className="flex-1 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold disabled:opacity-50 transition-colors"
+                type="button"
+                onClick={handleRecoverySubmit}
+                className="btn-gold flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
               >
-                تأكيد
+                <Check className="w-4 h-4" />
+                <span>تأكيد الإجابة</span>
               </button>
             </div>
           </div>

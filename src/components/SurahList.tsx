@@ -1,34 +1,20 @@
 import { SurahItem } from "@/hooks/useSurahData";
-import { Download, Check, Loader2 } from "lucide-react";
 
 interface Props {
   surahs: SurahItem[];
   currentPlaying: number | null;
   onSelect: (surah: SurahItem) => void;
-  isTauri?: boolean;
-  offlineStatus?: Record<number, boolean>;
-  isDownloading?: Record<number, boolean>;
-  downloadProgress?: Record<number, number>;
-  onDownload?: (e: React.MouseEvent, surah: SurahItem) => void;
 }
 
 const SurahList = ({
   surahs,
   currentPlaying,
   onSelect,
-  isTauri = false,
-  offlineStatus = {},
-  isDownloading = {},
-  downloadProgress = {},
-  onDownload,
 }: Props) => {
   return (
     <div className="grid grid-cols-1 gap-3">
-      {surahs.map((surah, index) => {
+      {surahs.map((surah) => {
         const isActive = currentPlaying === surah.number;
-        const downloaded = offlineStatus[surah.number] || false;
-        const downloading = isDownloading[surah.number] || false;
-        const progress = downloadProgress[surah.number] || 0;
 
         return (
           <button
@@ -56,32 +42,6 @@ const SurahList = ({
                 {surah.revelationType === "custom" ? surah.name : `سورة ${surah.name}`}
               </h3>
             </div>
-
-            {/* Offline download status or actions in desktop app */}
-            {isTauri && surah.revelationType !== "custom" && (
-              <div className="shrink-0 flex items-center">
-                {downloading ? (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 text-xs font-bold animate-pulse">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span className="tabular-nums">{progress}%</span>
-                  </div>
-                ) : downloaded ? (
-                  <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-xs font-bold">
-                    <Check className="w-3.5 h-3.5" />
-                    <span>جاهز أوفلاين</span>
-                  </div>
-                ) : (
-                  <button
-                    onClick={(e) => onDownload?.(e, surah)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-md text-xs font-bold transition-all"
-                    title="تحميل للتشغيل بدون إنترنت"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>تحميل</span>
-                  </button>
-                )}
-              </div>
-            )}
 
             {/* Wave animation for active */}
             {isActive && (
