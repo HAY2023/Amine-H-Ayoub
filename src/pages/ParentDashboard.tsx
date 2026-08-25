@@ -43,6 +43,7 @@ export default function ParentDashboard() {
   };
 
   const [history, setHistory] = useState<DayLog[]>(getFullHistory);
+  const [progress, setProgress] = useState<KidsProgress>(getProgress);
   const [draft, setDraft] = useState<KidsProfile>(getProfile);
   const [showAdd, setShowAdd] = useState(false);
   const [showBadges, setShowBadges] = useState(false);

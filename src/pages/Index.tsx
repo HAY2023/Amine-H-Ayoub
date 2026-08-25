@@ -80,6 +80,10 @@ const Index = () => {
       }
     };
 
+    const handleExit = () => flushMinutes();
+    window.addEventListener("beforeunload", handleExit);
+    window.addEventListener("mushaf:flush_time", handleExit);
+
     const id = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       if (!isAudioPlayingRef.current) return; // لا نحتسب إلا أثناء استماع وتشغيل فعلي
@@ -92,6 +96,8 @@ const Index = () => {
     return () => {
       clearInterval(id);
       flushMinutes();
+      window.removeEventListener("beforeunload", handleExit);
+      window.removeEventListener("mushaf:flush_time", handleExit);
     };
   }, [navigate]);
 
@@ -304,13 +310,6 @@ const Index = () => {
           </div>
         ) : (
           <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
-            <button
-              onClick={() => setShowNotifications(true)}
-              className="h-10 px-3.5 rounded-full bg-card/85 backdrop-blur border border-accent/40 shadow-soft flex items-center gap-1.5 text-sm font-bold text-foreground/85 hover:text-foreground hover:border-accent/70 active:scale-95 transition-all"
-              title="الإعلانات والتنبيهات"
-            >
-              <Bell className="w-4 h-4 text-accent" /> الإعلانات
-            </button>
             <button
               onClick={openSettings}
               className="h-10 px-3.5 rounded-full bg-card/85 backdrop-blur border border-accent/40 shadow-soft flex items-center gap-1.5 text-sm font-bold text-foreground/85 hover:text-foreground hover:border-accent/70 active:scale-95 transition-all"

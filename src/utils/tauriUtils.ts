@@ -118,6 +118,9 @@ export async function setupTauriCloseHandler(onRequestUnlock: () => void): Promi
  */
 export async function closeTauriApp(): Promise<void> {
   bypassCloseLock = true;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("mushaf:flush_time"));
+  }
   if (isTauri()) {
     try {
       await invoke("exit_app");

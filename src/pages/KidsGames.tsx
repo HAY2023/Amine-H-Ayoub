@@ -759,22 +759,26 @@ export default function KidsGames() {
     window.addEventListener("keydown", handleKeyDown);
 
     // Enforce Schedule and Play Duration
-    const checkSchedule = () => {
+    let lastPlayTick = Date.now();
+    const checkSchedule = (flushExact = false) => {
       const timeCheck = isTimeAllowed();
       if (!timeCheck.allowed) {
         toast({ title: "انتهى وقت اللعب ⏰", description: timeCheck.reason, variant: "destructive" });
-        if (hasKidsPin()) {
-          setKidsLocked(false);
-        }
+        if (hasKidsPin()) setKidsLocked(false);
         navigate("/");
         return;
       }
       
       if (isKidsMode()) {
-        const { justExpired, progress } = addPlayMinutes(1);
-        if (justExpired || progress.playExpired) {
-          toast({ title: "انتهى وقت اللعب ⏰", description: "لقد استنفدت وقت اللعب المخصص لك. يلزم رمز ولي الأمر للخروج.", variant: "destructive" });
-          setPinAction("exit");
+        const now = Date.now();
+        const mins = (now - lastPlayTick) / 60000;
+        if (mins >= 0.1 || flushExact) {
+           const { justExpired, progress } = addPlayMinutes(mins);
+           lastPlayTick = now;
+           if (justExpired || progress.playExpired) {
+             toast({ title: "انتهى وقت اللعب ⏰", description: "لقد استنفدت وقت اللعب المخصص لك. يلزم رمز ولي الأمر للخروج.", variant: "destructive" });
+             setPinAction("exit");
+           }
         }
       }
     };
@@ -784,13 +788,19 @@ export default function KidsGames() {
         toast({ title: "انتهى وقت اللعب ⏰", description: initialCheck.reason || "لقد استنفدت وقت اللعب. يلزم رمز ولي الأمر للخروج.", variant: "destructive" });
         setPinAction("exit");
     }
-    const scheduleInterval = setInterval(checkSchedule, 60000);
+    const scheduleInterval = setInterval(() => checkSchedule(false), 30000); // Check every 30s instead of 60s
+    
+    const handleExit = () => checkSchedule(true);
+    window.addEventListener("beforeunload", handleExit);
+    window.addEventListener("mushaf:flush_time", handleExit);
 
     return () => { 
       exitKioskMode(); 
       window.removeEventListener("popstate", handlePopState);
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("beforeunload", handleExit);
+      window.removeEventListener("mushaf:flush_time", handleExit);
       clearInterval(scheduleInterval);
     };
   }, [navigate]);
