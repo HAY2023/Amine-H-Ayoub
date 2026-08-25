@@ -216,6 +216,8 @@ const formatTime = (s: number) => {
         onClose();
       };
 
+      const progress = duration > 0 ? (current / duration) * 100 : 0;
+
       return (
         <div className="fixed bottom-[68px] left-0 right-0 z-50 px-3 pb-2 md:max-w-2xl md:left-1/2 md:-translate-x-1/2">
           <div
