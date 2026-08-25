@@ -29,8 +29,20 @@ export default function ParentDashboard() {
   const [profiles, setProfiles] = useState<KidsProfile[]>(getProfiles);
   const [activeId, setActiveId] = useState<string>(getActiveId);
   const [profile, setProfile] = useState<KidsProfile>(getProfile);
-  const [progress, setProgress] = useState<KidsProgress>(getProgress);
-  const [history, setHistory] = useState<DayLog[]>(() => getHistory().slice(0, 7).reverse());
+  const getFullHistory = (): DayLog[] => {
+    const past = getHistory();
+    const cur = getProgress();
+    const todayDate = cur.date || new Date().toISOString().split("T")[0];
+    const pastFiltered = past.filter(d => d.date !== todayDate);
+    const todayLog: DayLog = {
+      date: todayDate,
+      minutes: cur.minutes || 0,
+      played: cur.played || 0,
+    };
+    return [...pastFiltered, todayLog].slice(-7);
+  };
+
+  const [history, setHistory] = useState<DayLog[]>(getFullHistory);
   const [draft, setDraft] = useState<KidsProfile>(getProfile);
   const [showAdd, setShowAdd] = useState(false);
   const [showBadges, setShowBadges] = useState(false);
@@ -46,13 +58,22 @@ export default function ParentDashboard() {
     setProfile(getProfile());
     setDraft(getProfile());
     setProgress(getProgress());
-    setHistory(getHistory().slice(0, 7).reverse());
+    setHistory(getFullHistory());
   };
 
-  // حساب الإحصائيات المتقدمة
+  useEffect(() => {
+    refresh();
+    const evts = ["focus", "mushaf:games_unlocked", "mushaf:coins", "mushaf:activeprofile", "mushaf:reading_progress"];
+    evts.forEach(e => window.addEventListener(e, refresh));
+    return () => evts.forEach(e => window.removeEventListener(e, refresh));
+  }, []);
+
+  // حساب الإحصائيات المتقدمة الشاملة لدقائق الدراسة اليومية
+  const totalMins = Math.round(history.reduce((a, d) => a + d.minutes, 0) * 10) / 10;
+  const activeDays = history.filter(d => d.minutes > 0);
   const stats = {
-    totalMinutes: history.reduce((a, d) => a + d.minutes, 0),
-    avgMinutes: history.length > 0 ? Math.round(history.reduce((a, d) => a + d.minutes, 0) / history.length) : 0,
+    totalMinutes: totalMins,
+    avgMinutes: activeDays.length > 0 ? Math.round(totalMins / activeDays.length) : (history.length > 0 ? Math.round(totalMins / history.length) : 0),
     bestDay: Math.max(0, ...history.map(d => d.minutes)),
     consecutiveDays: (() => {
       let count = 0;
@@ -62,8 +83,8 @@ export default function ParentDashboard() {
       }
       return count;
     })(),
-    thisWeekReading: history.reduce((a, d) => a + d.minutes, 0),
-    completedDays: history.filter(d => d.minutes >= profile.goalMinutes).length,
+    thisWeekReading: totalMins,
+    completedDays: history.filter(d => d.minutes >= profile.goalMinutes && profile.goalMinutes > 0).length,
     percentComplete: Math.min(100, Math.round((progress.minutes / Math.max(1, profile.goalMinutes)) * 100)),
   };
 
@@ -230,8 +251,8 @@ export default function ParentDashboard() {
                         />
                       </div>
                       <div className="text-center">
-                        <span className="text-[10px] font-bold text-foreground block">{d.minutes}</span>
-                        <span className="text-[9px] text-muted-foreground">{d.date.split(" ")[2]}</span>
+                        <span className="text-[10px] font-bold text-foreground block">{d.minutes}د</span>
+                        <span className="text-[9px] text-muted-foreground">{isToday ? "اليوم" : (d.date.includes("-") ? d.date.slice(5) : d.date)}</span>
                       </div>
                     </div>
                   );

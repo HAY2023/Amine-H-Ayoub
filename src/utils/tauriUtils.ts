@@ -85,6 +85,8 @@ export function listenToDownloadProgress(
   };
 }
 
+let bypassCloseLock = false;
+
 /**
  * Intercepts Tauri window close requests when Kids Mode is active.
  */
@@ -94,8 +96,12 @@ export async function setupTauriCloseHandler(onRequestUnlock: () => void): Promi
     const { getCurrentWindow } = await import("@tauri-apps/api/window");
     const appWindow = getCurrentWindow();
     const unlisten = await appWindow.onCloseRequested(async (event) => {
-      const { isKidsMode } = await import("@/data/kidsLock");
-      if (isKidsMode()) {
+      if (bypassCloseLock) {
+        // Legitimate close confirmed by user/parent - do not intercept!
+        return;
+      }
+      const { isKidsMode, hasKidsPin } = await import("@/data/kidsLock");
+      if (isKidsMode() && hasKidsPin()) {
         event.preventDefault();
         onRequestUnlock();
       }
@@ -108,16 +114,26 @@ export async function setupTauriCloseHandler(onRequestUnlock: () => void): Promi
 }
 
 /**
- * Closes the application completely (Tauri window destroy).
+ * Closes the application completely (Tauri window destroy / exit).
  */
 export async function closeTauriApp(): Promise<void> {
-  if (!isTauri()) return;
-  try {
-    const { getCurrentWindow } = await import("@tauri-apps/api/window");
-    const appWindow = getCurrentWindow();
-    await appWindow.destroy();
-  } catch (e) {
-    console.error("Failed to destroy Tauri window:", e);
+  bypassCloseLock = true;
+  if (isTauri()) {
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      const appWindow = getCurrentWindow();
+      await appWindow.destroy();
+      return;
+    } catch (e) {
+      console.error("Failed to destroy Tauri window:", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    try {
+      window.close();
+    } catch {
+      /* ignore */
+    }
   }
 }
 

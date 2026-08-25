@@ -145,15 +145,32 @@ function _UnusedQuranReader() {
   const [loadedImgs, setLoadedImgs] = useState<Set<string>>(() => new Set());
   const markLoaded = useCallback((src: string) => setLoadedImgs(prev => (prev.has(src) ? prev : new Set(prev).add(src))), []);
 
-  // تتبّع وقت القراءة: تُفتح ألعاب ركن الأطفال بعد بلوغ الهدف اليومي
+  // تتبّع وقت القراءة والدراسة وتسجيله في الإحصائيات والأوسمة
   useEffect(() => {
+    let accumulatedSecs = 0;
+    const flushMinutes = () => {
+      if (accumulatedSecs >= 5) {
+        const mins = Math.round((accumulatedSecs / 60) * 10) / 10;
+        accumulatedSecs = 0;
+        if (mins > 0) {
+          const { justUnlocked } = addReadingMinutes(mins);
+          if (justUnlocked) toast({ title: "أحسنت! فتحت ألعاب ركن الأطفال", description: "اذهب إلى ركن الأطفال" });
+        }
+      }
+    };
+
     const id = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-      if (!getKidsEnabled()) return;   // وضع وليّ الأمر فقط: لا تتبّع لركن الأطفال
-      const { justUnlocked } = addReadingMinutes(1);
-      if (justUnlocked) toast({ title: "أحسنت! فتحت ألعاب ركن الأطفال", description: "اذهب إلى ركن الأطفال" });
-    }, 60000);
-    return () => clearInterval(id);
+      accumulatedSecs += 5;
+      if (accumulatedSecs >= 30) {
+        flushMinutes();
+      }
+    }, 5000);
+
+    return () => {
+      clearInterval(id);
+      flushMinutes();
+    };
   }, []);
   const pages = useMemo<PageInfo[]>(() => {
     const extra: PageInfo[] = customPageList.map(cp => {

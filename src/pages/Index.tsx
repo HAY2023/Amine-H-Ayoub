@@ -60,22 +60,42 @@ const Index = () => {
   // ── الإعدادات: محميّة برمز ولي الأمر فقط في وضع الأطفال ──
   const openSettings = () => { if (isKidsMode() && hasKidsPin()) setPinAction("settings"); else navigate("/settings"); };
 
-  // تتبّع دقائق الاستماع لفتح الألعاب وفحص الأوسمة
+  // تتبّع دقائق الاستماع والدراسة الفعالة وحفظها في الإحصائيات والأوسمة
   useEffect(() => {
+    let accumulatedSecs = 0;
+    const flushMinutes = () => {
+      if (accumulatedSecs >= 5) {
+        const mins = Math.round((accumulatedSecs / 60) * 10) / 10;
+        accumulatedSecs = 0;
+        if (mins > 0) {
+          const { justUnlocked } = addReadingMinutes(mins);
+          checkAndUnlockBadges();
+          if (justUnlocked) {
+            toast({ title: "🎉 أحسنت! اكتمل وقت الاستماع وفتحت الألعاب" });
+            setTimeout(() => {
+              navigate("/games");
+            }, 1000);
+          }
+        }
+      }
+    };
+
     const id = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-      if (!getKidsEnabled()) return;         // وضع وليّ الأمر فقط: لا تتبّع
-      if (!isAudioPlayingRef.current) return; // لا نحتسب إلا أثناء استماع فعلي
-      const { justUnlocked } = addReadingMinutes(1);
-      checkAndUnlockBadges();
-      if (justUnlocked) {
-        toast({ title: "🎉 أحسنت! اكتمل وقت الاستماع وفتحت الألعاب" });
-        setTimeout(() => {
-          navigate("/games");
-        }, 1000);
+      if (!isAudioPlayingRef.current) return; // لا نحتسب إلا أثناء استماع وتشغيل فعلي
+      accumulatedSecs += 5;
+      if (accumulatedSecs >= 30) {
+        flushMinutes();
       }
-    }, 60000);
+    }, 5000);
 
+    return () => {
+      clearInterval(id);
+      flushMinutes();
+    };
+  }, [navigate]);
+
+  useEffect(() => {
     const handleBadgeUnlocked = (e: any) => {
       const badges = e.detail;
       if (Array.isArray(badges) && badges.length > 0) {
@@ -90,7 +110,6 @@ const Index = () => {
     window.addEventListener("mushaf:badge_unlocked", handleBadgeUnlocked);
 
     return () => {
-      clearInterval(id);
       window.removeEventListener("mushaf:badge_unlocked", handleBadgeUnlocked);
     };
   }, []);

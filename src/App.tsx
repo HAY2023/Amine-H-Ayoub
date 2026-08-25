@@ -218,13 +218,15 @@ const App = () => {
             {showExitGate && (
               <ParentalGateModal
                 title="إغلاق التطبيق (حماية وضع الأطفال)"
-                strictMode={true}
+                strictMode={false}
                 onSuccess={() => {
                   setShowExitGate(false);
                   setKidsLocked(false);
                   closeTauriApp();
                 }}
-                onCancel={() => {/* لا يمكن إلغاء القفل — الوضع الصارم */}}
+                onCancel={() => {
+                  setShowExitGate(false);
+                }}
               />
             )}
           </BrowserRouter>

@@ -306,7 +306,10 @@ export const addReadingMinutes = (mins: number): { progress: KidsProgress; justU
   const justUnlocked = unlocked && !cur.unlocked;
   const progress: KidsProgress = { ...cur, minutes, unlocked };
   saveProgress(progress);
-  if (justUnlocked && typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:games_unlocked"));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("mushaf:reading_progress", { detail: progress }));
+    if (justUnlocked) window.dispatchEvent(new Event("mushaf:games_unlocked"));
+  }
   return { progress, justUnlocked };
 };
 
