@@ -214,13 +214,23 @@ jobs:
 
             # محاولة التوقيع إن وُجدت المفاتيح
             if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASS" ]; then
+              # التحقق من خلو كلمات المرور من أحرف غير ASCII (مثل الحروف العربية أو الاقتباسات الذكية)
+              if LC_ALL=C grep -q '[^ -~]' <<< "$KEYSTORE_PASS"; then
+                echo "::error::KEYSTORE_PASSWORD contains non-ASCII characters. apksigner requires ASCII-only passwords."
+                exit 1
+              fi
+              if LC_ALL=C grep -q '[^ -~]' <<< "$KEY_PASS"; then
+                echo "::error::KEY_PASSWORD contains non-ASCII characters. apksigner requires ASCII-only passwords."
+                exit 1
+              fi
+
               echo "$KEYSTORE_B64" | base64 --decode > "${{ runner.temp }}/release.keystore"
               "$BUILD_TOOLS_DIR/apksigner" sign \
                 --ks "${{ runner.temp }}/release.keystore" \
                 --ks-pass "env:KEYSTORE_PASS" \
                 --ks-key-alias "$KEY_ALIAS" \
                 --key-pass "env:KEY_PASS" \
-                "$APK_PATH" || { echo "Keystore signing failed"; exit 1; }
+                "$APK_PATH" || { echo "::error::Keystore signing failed"; exit 1; }
             fi
           fi
 
