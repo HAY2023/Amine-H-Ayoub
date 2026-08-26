@@ -87,6 +87,16 @@
     "macos": {
       "releases": [
         {
+          "version": "v1.0.0",
+          "date": "2026-08-26",
+          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0/learn-quran-kids_1.0.0_aarch64.dmg",
+          "size": "",
+          "changelog": [
+            "إصدار جديد"
+          ],
+          "active": false
+        },
+        {
           "version": "v1.0.0-107",
           "date": "2026-08-25",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0-107/hajj-ayoub-amine_1.0.0-107_aarch64.dmg",
