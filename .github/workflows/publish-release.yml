@@ -43,9 +43,8 @@ jobs:
 
       - run: npm ci
 
-      # توليد الأيقونة (نفس الخطوة المُصلحة سابقاً — ملف PNG صالح ومُختبر)
       - name: Generate app icon
-        run: npx --yes @tauri-apps/cli@^2 icon public/pwa-512x512.png
+        run: npx --yes @tauri-apps/cli@^2 icon src-tauri/icons/app-icon.png
 
       - name: Build Windows desktop app
         uses: tauri-apps/tauri-action@v0
@@ -79,7 +78,7 @@ jobs:
       - run: npm ci
 
       - name: Generate app icon
-        run: npx --yes @tauri-apps/cli@^2 icon public/pwa-512x512.png
+        run: npx --yes @tauri-apps/cli@^2 icon src-tauri/icons/app-icon.png
 
       - name: Build macOS desktop app
         uses: tauri-apps/tauri-action@v0
@@ -116,7 +115,7 @@ jobs:
       - run: npm ci
 
       - name: Generate app icon
-        run: npx --yes @tauri-apps/cli@^2 icon public/pwa-512x512.png
+        run: npx --yes @tauri-apps/cli@^2 icon src-tauri/icons/app-icon.png
 
       - name: Build Linux desktop app
         uses: tauri-apps/tauri-action@v0
@@ -177,7 +176,7 @@ jobs:
       - run: npm install -D @tauri-apps/cli@^2
 
       - name: Generate app icon
-        run: npx tauri icon public/pwa-512x512.png
+        run: npx tauri icon src-tauri/icons/app-icon.png
 
       - name: Build frontend
         run: npm run build
@@ -320,7 +319,7 @@ jobs:
       - run: npm install -D @tauri-apps/cli@^2
 
       - name: Generate app icon
-        run: npx tauri icon public/pwa-512x512.png
+        run: npx tauri icon src-tauri/icons/app-icon.png
 
       - name: Build frontend
         run: npm run build
