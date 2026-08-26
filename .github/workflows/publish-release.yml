@@ -2,8 +2,6 @@ name: Publish Distribution Releases
 
 # يعمل فقط عند دفع وسم إصدار (مثل v1.0.0) أو تشغيل يدوي
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
 
 env:
