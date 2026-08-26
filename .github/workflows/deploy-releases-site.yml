@@ -56,6 +56,10 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        with:
+          # Automatically enable GitHub Pages with "GitHub Actions" as the build source
+          # if it isn't enabled yet (avoids the 404 "Get Pages site failed" error).
+          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
