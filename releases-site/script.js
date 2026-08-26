@@ -438,27 +438,36 @@ function setupShowcaseTabs() {
 // ═══════════════════════════════════════════════════════════
 function setupAudioPreview() {
     const playBtn = document.getElementById("btn-audio-toggle");
-    const audioElem = document.getElementById("preview-audio-elem");
-    const waveElem = document.getElementById("wave-bars");
+    let audioElem = document.getElementById("preview-audio-elem");
 
-    if (!playBtn || !audioElem) return;
+    if (!playBtn) return;
+
+    if (!audioElem) {
+        audioElem = new Audio("https://huggingface.co/datasets/hammoualiyoucef20/quran-audio/resolve/main/1.mp3");
+    }
 
     playBtn.addEventListener("click", () => {
         if (audioElem.paused) {
+            playBtn.textContent = "⏳";
             audioElem.play().then(() => {
                 playBtn.textContent = "⏸";
-                if (waveElem) waveElem.style.opacity = "1";
-            }).catch(e => console.debug("Audio preview play info:", e));
+            }).catch(e => {
+                console.error("Audio preview play info:", e);
+                audioElem.src = "https://huggingface.co/datasets/hammoualiyoucef20/quran-audio/resolve/main/1.mp3";
+                audioElem.play().then(() => {
+                    playBtn.textContent = "⏸";
+                }).catch(() => {
+                    playBtn.textContent = "▶";
+                });
+            });
         } else {
             audioElem.pause();
             playBtn.textContent = "▶";
-            if (waveElem) waveElem.style.opacity = "0.4";
         }
     });
 
     audioElem.addEventListener("ended", () => {
         playBtn.textContent = "▶";
-        if (waveElem) waveElem.style.opacity = "0.4";
     });
 }
 
