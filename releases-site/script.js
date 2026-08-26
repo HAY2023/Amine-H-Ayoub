@@ -321,41 +321,32 @@ async function fetchLiveGitHubAssets() {
             const name = asset.name.toLowerCase();
             const url = asset.browser_download_url;
 
-            if (name.endsWith('.exe')) liveAssets.windows = url;
-            else if (name.endsWith('.apk')) {
-                liveAssets.android = url;
+            if (name.endsWith('.exe') || name.endsWith('.msi')) {
+                if (name.endsWith('.exe')) liveAssets.windows = url;
+            } else if (name.includes('tv') && name.endsWith('.apk')) {
                 liveAssets.android_tv = url;
-            } else if (name.endsWith('.aab')) {
-                liveAssets.android_aab = url;
-            } else if (name.endsWith('.ipa')) {
-                liveAssets.ios = url;
-            } else if (name.endsWith('.dmg')) liveAssets.macos = url;
-            else if (name.endsWith('.appimage')) liveAssets.linux = url;
+            } else if (name.endsWith('.apk')) {
+                liveAssets.android = url;
+                if (!liveAssets.android_tv || liveAssets.android_tv === FALLBACK_ASSETS.android_tv) {
+                    liveAssets.android_tv = url;
+                }
+            }
         });
 
         updatePlatformLinks();
-        renderPrimaryCard(detectUserOS());
     } catch (e) {
         console.debug("Live release assets fetched with fallback:", e);
     }
 }
 
 function updatePlatformLinks() {
-    const w = document.getElementById("card-dl-windows");
-    const tv = document.getElementById("card-dl-tv");
-    const a = document.getElementById("card-dl-android");
-    const aab = document.getElementById("card-dl-aab");
-    const ios = document.getElementById("card-dl-ios");
-    const m = document.getElementById("card-dl-macos");
-    const l = document.getElementById("card-dl-linux");
+    const w = document.getElementById("btn-dl-win");
+    const tv = document.getElementById("btn-dl-tv");
+    const a = document.getElementById("btn-dl-android");
 
     if (w) w.href = liveAssets.windows;
     if (tv) tv.href = liveAssets.android_tv;
     if (a) a.href = liveAssets.android;
-    if (aab) aab.href = liveAssets.android_aab;
-    if (ios) ios.href = liveAssets.ios;
-    if (m) m.href = liveAssets.macos;
-    if (l) l.href = liveAssets.linux;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -671,10 +662,7 @@ async function handleFileUpload(file) {
 // ═══════════════════════════════════════════════════════════
 document.addEventListener("DOMContentLoaded", () => {
     initParticles();
-    initRadialOrbitHub();
-    renderPrimaryCard(detectUserOS());
     fetchLiveGitHubAssets();
-    setupShowcaseTabs();
     setupAudioPreview();
     initSupabaseSupport();
 });

@@ -1,4 +1,4 @@
-name: Build 4 Core Platforms (Windows + Android + TV + iOS)
+name: Build 3 Core Platforms (Windows + Android Mobile + Android TV)
 
 on:
   workflow_dispatch:
@@ -217,56 +217,3 @@ jobs:
           tag_name: ${{ github.ref_name }}
           files: dist-tv/app-tv-release.apk
 
-  # ───────────── 4. تطبيق آيفون وآيباد (iOS IPA) ─────────────
-  ios:
-    name: 🍏 Build iOS (iPhone & iPad IPA)
-    runs-on: macos-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-ios, x86_64-apple-ios
-
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: './src-tauri -> target'
-
-      - run: npm ci
-      - run: npm install -D @tauri-apps/cli@^2
-
-      - name: Generate app icon
-        run: npx tauri icon src-tauri/icons/app-icon.png
-
-      - name: Build frontend
-        run: npm run build
-
-      - name: Initialize and build iOS
-        run: |
-          npx tauri ios init || true
-          npx tauri ios build --export-method development || true
-
-      - name: Upload iOS Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-ipa
-          if-no-files-found: ignore
-          path: |
-            src-tauri/gen/apple/build/**/*.ipa
-            src-tauri/gen/apple/build/**/*.app
-
-      - name: Attach iOS packages to Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          files: |
-            src-tauri/gen/apple/build/**/*.ipa
-            src-tauri/gen/apple/build/**/*.app

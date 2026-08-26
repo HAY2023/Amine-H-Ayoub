@@ -463,364 +463,211 @@
         }
 
         /* ═══════════════════════════════════════════════════════════
-           🌟 THE EXPANDED CELESTIAL RADIAL ORBIT HUB 🌟
+           CLEAN CENTERED HERO & 3 CORE DOWNLOAD CARDS
         ═══════════════════════════════════════════════════════════ */
-        .radial-hub-showcase {
-            position: relative;
+        .hero-section-clean {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 540px;
+            text-align: center;
+            margin-bottom: 2rem;
+            width: 100%;
         }
 
-        .orbit-container {
-            position: relative;
-            width: 520px;
-            height: 520px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Concentric Celestial Orbit Rings */
-        .orbit-ring {
-            position: absolute;
-            border-radius: 50%;
-            pointer-events: none;
-            transition: all 0.5s ease;
-        }
-
-        .orbit-ring-outer {
-            width: 480px;
-            height: 480px;
-            border: 1.5px dashed rgba(245, 158, 11, 0.35);
-            animation: rotateClockwise 65s linear infinite;
-        }
-
-        .orbit-ring-middle {
-            width: 340px;
-            height: 340px;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            box-shadow: inset 0 0 30px rgba(16, 185, 129, 0.12);
-            animation: rotateCounter 45s linear infinite;
-        }
-
-        .orbit-ring-inner {
-            width: 210px;
-            height: 210px;
-            border: 2px solid rgba(245, 158, 11, 0.45);
-            box-shadow: 0 0 40px rgba(245, 158, 11, 0.3);
-        }
-
-        @keyframes rotateClockwise {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        @keyframes rotateCounter {
-            from { transform: rotate(360deg); }
-            to { transform: rotate(0deg); }
-        }
-
-        /* Central Grand Portrait Core */
-        .orbit-center-core {
-            position: absolute;
-            width: 175px;
-            height: 175px;
-            border-radius: 50%;
-            background: #030712;
-            border: 3.5px solid var(--gold);
-            box-shadow: 
-                0 0 0 7px rgba(245, 158, 11, 0.25),
-                0 0 50px rgba(245, 158, 11, 0.6),
-                0 0 70px rgba(16, 185, 129, 0.35);
-            z-index: 10;
+        .hero-content-clean {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            text-decoration: none;
-            color: inherit;
+            max-width: 860px;
+            width: 100%;
+            margin: 0 auto;
         }
 
-        .orbit-center-core img {
+        .brand-avatar-hero-wrap {
+            position: relative;
+            width: 110px;
+            height: 110px;
+            margin-bottom: 1.8rem;
+        }
+
+        .brand-avatar-hero {
             width: 100%;
             height: 100%;
+            border-radius: 50%;
             object-fit: cover;
             object-position: center top;
-            transition: transform 0.5s ease;
-        }
-
-        .orbit-center-core:hover img {
-            transform: scale(1.09);
-        }
-
-        .orbit-center-overlay {
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(to top, rgba(3, 7, 18, 0.94) 0%, rgba(3, 7, 18, 0.2) 65%, transparent 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            align-items: center;
-            padding-bottom: 0.9rem;
+            border: 3.5px solid var(--gold);
+            box-shadow: 0 0 35px rgba(245, 158, 11, 0.6);
+            position: relative;
             z-index: 2;
         }
 
-        .orbit-center-title {
-            font-family: 'Cairo', sans-serif;
-            font-size: 0.92rem;
-            font-weight: 1000;
-            color: #fff;
-            text-align: center;
-            line-height: 1.2;
-        }
-
-        .orbit-center-status {
-            font-size: 0.72rem;
-            color: #34d399;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        /* Circular Orbiting Platform Nodes (4 Nodes Layout) */
-        .orbit-node {
-            position: absolute;
-            width: 74px;
-            height: 74px;
-            border-radius: 50%;
-            background: rgba(15, 23, 42, 0.96);
-            border: 2px solid var(--card-border);
-            backdrop-filter: blur(16px);
+        /* ── 3 Core Platforms Download Cards Grid ── */
+        .core-download-hub {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            text-decoration: none;
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.75);
-            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 25;
-            cursor: pointer;
-            user-select: none;
+            gap: 1.25rem;
+            width: 100%;
+            max-width: 720px;
+            margin: 2rem 0 2.5rem;
         }
 
-        .orbit-node:hover, .orbit-node.active-node {
-            transform: scale(1.25);
-            border-color: var(--gold);
-            background: rgba(30, 41, 59, 0.98);
-            box-shadow: 0 0 35px rgba(245, 158, 11, 0.85);
-            z-index: 30;
-        }
-
-        .orbit-node-icon {
-            font-size: 1.85rem;
-            line-height: 1;
-        }
-
-        .orbit-node-label {
-            font-size: 0.65rem;
-            font-weight: 900;
-            color: var(--gold-light);
-            margin-top: 3px;
-            white-space: nowrap;
-        }
-
-        /* ── Flawless 4-Platform Radial Positioning (Radius = 210px) ── */
-        .node-pos-1 { top: 15px; left: 223px; }                   /* 0 deg (Top - iOS) */
-        .node-pos-2 { top: 223px; right: 15px; }                  /* 90 deg (Right - Android APK) */
-        .node-pos-3 { bottom: 15px; left: 223px; }                /* 180 deg (Bottom - Windows PC) */
-        .node-pos-4 { top: 223px; left: 15px; }                   /* 270 deg (Left - Smart TV) */
-
-        /* ── Orbit Quick Details Card ── */
-        .orbit-details-card {
-            margin-top: 1.5rem;
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9));
-            border: 1.5px solid var(--gold);
+        .core-dl-card {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.88) 100%);
+            border: 1.5px solid var(--card-border);
             border-radius: var(--radius-md);
-            padding: 0.9rem 1.6rem;
-            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.85), 0 0 30px rgba(245, 158, 11, 0.35);
+            padding: 1.35rem 1.75rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 1.5rem;
-            z-index: 30;
-            backdrop-filter: blur(24px);
-            width: 100%;
-            max-width: 480px;
-            animation: popIn 0.3s ease-out;
-        }
-
-        @keyframes popIn {
-            from { transform: scale(0.92) translateY(8px); opacity: 0; }
-            to { transform: scale(1) translateY(0); opacity: 1; }
-        }
-
-        .orbit-details-left {
-            display: flex;
-            align-items: center;
-            gap: 0.9rem;
-            text-align: right;
-        }
-
-        .orbit-details-info h4 {
-            font-family: 'Cairo', sans-serif;
-            font-size: 1.05rem;
-            font-weight: 1000;
-            color: var(--gold-light);
-            line-height: 1.2;
-        }
-
-        .orbit-details-info p {
-            font-size: 0.8rem;
-            color: #cbd5e1;
-            line-height: 1.35;
-        }
-
-        .btn-orbit-quick-dl {
-            background: var(--gold-gradient);
-            color: #030712;
-            padding: 0.55rem 1.2rem;
-            border-radius: 50px;
-            font-family: 'Cairo', sans-serif;
-            font-weight: 1000;
-            font-size: 0.92rem;
-            text-decoration: none;
-            white-space: nowrap;
-            transition: all 0.2s;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-        .btn-orbit-quick-dl:hover {
-            transform: scale(1.06);
-            box-shadow: 0 0 25px rgba(245, 158, 11, 0.7);
-        }
-
-        /* ═══════════════════════════════════════════════════════════
-           ALL PLATFORMS GRID MATRIX
-        ═══════════════════════════════════════════════════════════ */
-        .platforms-hub-section {
-            margin-top: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .platforms-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.85rem;
-            max-width: 1100px;
-            margin: 2rem auto 0;
-        }
-
-        .platform-action-card {
-            background: var(--dark-surface);
-            backdrop-filter: blur(24px);
-            border: 1.5px solid var(--card-border);
-            border-radius: var(--radius-lg);
-            padding: 2.3rem 1.95rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
             text-decoration: none;
             color: inherit;
-            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
         }
 
-        .platform-action-card::before {
+        .core-dl-card::before {
             content: '';
             position: absolute;
-            top: 0; left: 0; right: 0; height: 3.5px;
+            top: 0; bottom: 0; right: 0; width: 4px;
             background: var(--gold-gradient);
             opacity: 0;
             transition: opacity 0.3s;
         }
 
-        .platform-action-card:hover {
-            transform: translateY(-10px);
+        .core-dl-card:hover {
+            transform: translateY(-4px) scale(1.01);
             border-color: var(--gold);
-            background: rgba(30, 41, 59, 0.9);
-            box-shadow: 0 25px 55px rgba(245, 158, 11, 0.35);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.75), 0 0 30px rgba(245, 158, 11, 0.28);
         }
-        .platform-action-card:hover::before {
+
+        .core-dl-card:hover::before {
             opacity: 1;
         }
 
-        .platform-logo-badge {
-            width: 84px;
-            height: 84px;
-            border-radius: 1.85rem;
-            background: rgba(255, 255, 255, 0.06);
+        .core-dl-featured {
+            border-color: rgba(16, 185, 129, 0.55);
+            background: linear-gradient(135deg, rgba(2, 44, 34, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 25px rgba(16, 185, 129, 0.15);
+        }
+
+        .core-dl-featured:hover {
+            border-color: var(--emerald-glow);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.75), 0 0 35px rgba(16, 185, 129, 0.4);
+        }
+
+        .core-dl-icon {
+            font-size: 2.8rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .core-dl-info {
+            text-align: right;
+            flex: 1;
+        }
+
+        .core-dl-tag {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 800;
+            padding: 0.15rem 0.65rem;
+            border-radius: 50px;
+            background: rgba(245, 158, 11, 0.18);
+            color: var(--gold-light);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            margin-bottom: 0.35rem;
+        }
+
+        .tag-feat {
+            background: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+
+        .tag-tv-badge {
+            background: rgba(239, 68, 68, 0.18);
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .core-dl-title {
+            font-family: 'Cairo', sans-serif;
+            font-size: 1.35rem;
+            font-weight: 1000;
+            color: var(--text-main);
+            line-height: 1.25;
+            margin-bottom: 0.2rem;
+        }
+
+        .core-dl-desc {
+            font-size: 0.86rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .core-dl-action {
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            margin-bottom: 1.4rem;
-            border: 1.5px solid rgba(255, 255, 255, 0.16);
-            transition: transform 0.3s ease;
-        }
-        .platform-action-card:hover .platform-logo-badge {
-            transform: scale(1.14) rotate(4deg);
-            background: rgba(245, 158, 11, 0.2);
-            border-color: var(--gold);
-            box-shadow: 0 0 30px rgba(245, 158, 11, 0.5);
-        }
-
-        .platform-name {
-            font-family: 'Cairo', sans-serif;
-            font-size: 1.55rem;
-            font-weight: 1000;
-            margin-bottom: 0.45rem;
-        }
-
-        .platform-desc {
-            font-size: 0.94rem;
-            color: var(--text-muted);
-            margin-bottom: 1.85rem;
-            line-height: 1.65;
-        }
-
-        .platform-action-btn {
-            margin-top: auto;
-            width: 100%;
-            padding: 1rem 1.45rem;
-            border-radius: var(--radius-md);
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.22);
-            font-family: 'Cairo', sans-serif;
-            font-weight: 900;
-            font-size: 1.08rem;
-            transition: all 0.2s;
-        }
-        .platform-action-card:hover .platform-action-btn {
+            gap: 0.5rem;
             background: var(--gold-gradient);
             color: #030712;
-            border-color: transparent;
-            box-shadow: 0 6px 22px rgba(245, 158, 11, 0.55);
+            padding: 0.8rem 1.4rem;
+            border-radius: var(--radius-sm);
+            font-family: 'Cairo', sans-serif;
+            font-weight: 1000;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+            box-shadow: 0 4px 18px rgba(245, 158, 11, 0.35);
+            transition: all 0.2s;
         }
 
-        .tag-special {
-            position: absolute;
-            top: 1.1rem;
-            left: 1.1rem;
-            padding: 0.35rem 0.9rem;
-            border-radius: 50px;
-            font-size: 0.78rem;
-            font-weight: 1000;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        .core-dl-card:hover .core-dl-action {
+            transform: scale(1.05);
+            box-shadow: 0 6px 24px rgba(245, 158, 11, 0.6);
         }
-        .tag-tv { background: #ef4444; color: #fff; }
-        .tag-ios { background: #0284c7; color: #fff; }
-        .tag-android { background: #10b981; color: #022c22; }
+
+        .dl-arrow {
+            font-size: 1.15rem;
+        }
+
+        /* ── Audio Preview Clean Bar ── */
+        .audio-preview-bar-clean {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1.5px solid rgba(245, 158, 11, 0.3);
+            border-radius: var(--radius-md);
+            padding: 1.1rem 1.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.25rem;
+            width: 100%;
+            max-width: 720px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+
+        .audio-info-text {
+            flex: 1;
+            text-align: right;
+        }
+
+        .audio-title {
+            font-size: 1.05rem;
+            font-weight: 900;
+            color: var(--gold-light);
+            font-family: 'Cairo', sans-serif;
+            line-height: 1.2;
+        }
+
+        .audio-subtitle {
+            font-size: 0.86rem;
+            color: #cbd5e1;
+        }
 
         /* ═══════════════════════════════════════════════════════════
            RESPONSIVE DESIGN
@@ -892,9 +739,14 @@
     </header>
 
     <main>
-        <!-- Hero Section with Central Radial Orbit Hub -->
-        <section class="hero-section" id="radial-hub">
-            <div class="hero-content">
+        <!-- Main Centered Hero Download Section -->
+        <section class="hero-section-clean">
+            <div class="hero-content-clean">
+                <div class="brand-avatar-hero-wrap">
+                    <div class="brand-avatar-glow"></div>
+                    <img src="assets/my-photo.png" alt="القارئ الشيخ حاج أيوب أمين" class="brand-avatar-hero">
+                </div>
+
                 <div class="hero-badge-gold">👑 الإصدار الموحد الرسمي v1.0.0 — برواية ورش عن نافع من طريق الأزرق</div>
                 <h1 class="hero-headline">
                     المصحف المرتل <br>
@@ -904,131 +756,69 @@
                     تطبيق قرآني متكامل صُمم بأعلى معايير الإتقان ليجمع بين التلاوة المرتلة الكاملة برواية ورش، ركن ألعاب وتحديات الأطفال الهادف، ونظام الإحصائيات والأوسمة، يعمل 100% بدون إنترنت على كافة أجهزتك.
                 </p>
 
-                <!-- Primary Device Auto-Detection Card -->
-                <div class="primary-download-card">
-                    <div id="primary-card-content">
-                        <!-- Populated via script.js -->
-                    </div>
-
-                    <!-- Embedded Recitation Audio Preview Player -->
-                    <div class="audio-preview-bar">
-                        <button id="btn-audio-toggle" class="btn-play-preview" title="استمع لنموذج التلاوة">▶</button>
-                        <div style="flex: 1; text-align: right;">
-                            <p style="font-size: 1rem; font-weight: 800; color: var(--gold-light);">نموذج تلاوة: سورة الفاتحة</p>
-                            <p style="font-size: 0.84rem; color: #cbd5e1;">بصوت القارئ الشيخ حاج أيوب أمين (برواية ورش)</p>
+                <!-- 3 Core Platforms Direct Download Hub -->
+                <div class="core-download-hub">
+                    <!-- 1. Windows PC -->
+                    <a id="btn-dl-win" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="core-dl-card">
+                        <div class="core-dl-icon">💻</div>
+                        <div class="core-dl-info">
+                            <span class="core-dl-tag">كمبيوتر ولابتوب</span>
+                            <h3 class="core-dl-title">نسخة Windows الرسمية (PC)</h3>
+                            <p class="core-dl-desc">حزمة EXE المستقلة • تعمل 100% بدون إنترنت • v1.0.0</p>
                         </div>
-                        <div class="audio-wave-anim" id="wave-bars" style="opacity: 0.4;">
-                            <div class="wave-bar"></div>
-                            <div class="wave-bar"></div>
-                            <div class="wave-bar"></div>
-                            <div class="wave-bar"></div>
-                            <div class="wave-bar"></div>
-                        </div>
-                        <audio id="preview-audio-elem" preload="none">
-                            <source src="https://huggingface.co/datasets/HAY2023/quran-kids-audio/resolve/main/audio/1.mp3" type="audio/mpeg">
-                        </audio>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 🌟 THE CELESTIAL RADIAL ORBIT HUB 🌟 -->
-            <div class="radial-hub-showcase">
-                <div class="orbit-container">
-                    <!-- Concentric Glowing Orbit Rings -->
-                    <div class="orbit-ring orbit-ring-outer"></div>
-                    <div class="orbit-ring orbit-ring-middle"></div>
-                    <div class="orbit-ring orbit-ring-inner"></div>
-
-                    <!-- Center Masterpiece Core: Sheikh's Portrait with Aura -->
-                    <a href="#platforms-hub" class="orbit-center-core" id="orbit-center-btn" title="اضغط لتحميل كافة النسخ">
-                        <img src="assets/my-photo.png" alt="القارئ الشيخ حاج أيوب أمين">
-                        <div class="orbit-center-overlay">
-                            <span class="orbit-center-title">حاج أيوب أمين</span>
-                            <span class="orbit-center-status">● كل النسخ متاحة</span>
+                        <div class="core-dl-action">
+                            <span>تحميل مباشر</span>
+                            <span class="dl-arrow">📥</span>
                         </div>
                     </a>
 
-                    <!-- 4 Orbiting Circular Platform Nodes (ALL 100% UNBLOCKED & CLICKABLE) -->
-                    <!-- 1. iOS (iPhone / iPad) -->
-                    <div class="orbit-node node-pos-1" data-platform="ios" title="تطبيق iPhone و iPad (Web App)">
-                        <span class="orbit-node-icon">🍏</span>
-                        <span class="orbit-node-label">iPhone & iPad</span>
-                    </div>
-
-                    <!-- 2. Android APK -->
-                    <div class="orbit-node node-pos-2" data-platform="android" title="تطبيق أندرويد للهواتف (APK)">
-                        <span class="orbit-node-icon">📱</span>
-                        <span class="orbit-node-label">Android APK</span>
-                    </div>
-
-                    <!-- 3. Windows PC (EXE) -->
-                    <div class="orbit-node node-pos-3" data-platform="windows" title="كمبيوتر ولابتوب ويندوز (EXE)">
-                        <span class="orbit-node-icon">💻</span>
-                        <span class="orbit-node-label">Windows PC</span>
-                    </div>
-
-                    <!-- 4. Android TV (Smart TV 4K) -->
-                    <div class="orbit-node node-pos-4" data-platform="android_tv" title="شاشات التلفاز الذكية (Android TV)">
-                        <span class="orbit-node-icon">📺</span>
-                        <span class="orbit-node-label">Smart TV</span>
-                    </div>
-                </div>
-
-                <!-- Dynamic Floating Quick Details Card (Seamlessly positioned below orbit) -->
-                <div class="orbit-details-card" id="orbit-tooltip-card">
-                    <div class="orbit-details-left">
-                        <span id="orbit-tip-icon" style="font-size: 2.2rem; line-height: 1;">💻</span>
-                        <div class="orbit-details-info">
-                            <h4 id="orbit-tip-title">Windows PC (EXE)</h4>
-                            <p id="orbit-tip-desc">حزمة التثبيت المستقلة لأجهزة الكمبيوتر (Win 10/11) • تعمل 100% أوفلاين</p>
+                    <!-- 2. Android Phone -->
+                    <a id="btn-dl-android" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="core-dl-card core-dl-featured">
+                        <div class="core-dl-icon">📱</div>
+                        <div class="core-dl-info">
+                            <span class="core-dl-tag tag-feat">الأكثر تحميلاً للهواتف</span>
+                            <h3 class="core-dl-title">نسخة أندرويد للهواتف (APK)</h3>
+                            <p class="core-dl-desc">تثبيت مباشر لجميع هواتف وأجهزة أندرويد اللوحية • v1.0.0</p>
                         </div>
-                    </div>
-                    <a href="#" id="orbit-tip-btn" class="btn-orbit-quick-dl">
-                        <span>تحميل مباشر</span>
-                        <span>📥</span>
+                        <div class="core-dl-action">
+                            <span>تحميل APK</span>
+                            <span class="dl-arrow">📥</span>
+                        </div>
+                    </a>
+
+                    <!-- 3. Android TV -->
+                    <a id="btn-dl-tv" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="core-dl-card">
+                        <div class="core-dl-icon">📺</div>
+                        <div class="core-dl-info">
+                            <span class="core-dl-tag tag-tv-badge">شاشات التلفاز الذكية</span>
+                            <h3 class="core-dl-title">نسخة التلفاز (Android TV 4K)</h3>
+                            <p class="core-dl-desc">حزمة APK مخصصة لشاشات سمارت وأجهزة TV Box مع دعم الريموت</p>
+                        </div>
+                        <div class="core-dl-action">
+                            <span>تحميل APK</span>
+                            <span class="dl-arrow">📥</span>
+                        </div>
                     </a>
                 </div>
-            </div>
-        </section>
 
-        <!-- All Platforms Download Hub Matrix (4 Core Editions) -->
-        <section id="platforms-hub" class="platforms-hub-section">
-            <div class="platforms-grid">
-                <!-- 1. Windows PC (Primary) -->
-                <a id="card-dl-windows" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-action-card">
-                    <span class="tag-special" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4);">كمبيوتر ولابتوب</span>
-                    <div class="platform-logo-badge">💻</div>
-                    <h3 class="platform-name">Windows PC</h3>
-                    <p class="platform-desc">لأجهزة الكمبيوتر واللابتوب (Windows 10 & 11) بحزمة EXE المستقلة بدون إنترنت</p>
-                    <div class="platform-action-btn">تحميل حزمة .EXE للكمبيوتر</div>
-                </a>
-
-                <!-- 2. Android Phone (APK) -->
-                <a id="card-dl-android" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-action-card">
-                    <span class="tag-special tag-android">الأكثر تحميلاً</span>
-                    <div class="platform-logo-badge">📱</div>
-                    <h3 class="platform-name">Android APK</h3>
-                    <p class="platform-desc">تثبيت مباشر لجميع هواتف وأجهزة أندرويد اللوحية (Samsung, Xiaomi, Huawei, etc.)</p>
-                    <div class="platform-action-btn">تحميل APK مباشر للهاتف</div>
-                </a>
-
-                <!-- 3. iOS (iPhone / iPad) -->
-                <a id="card-dl-ios" href="https://learn-quran-kids.pages.dev" class="platform-action-card">
-                    <span class="tag-special tag-ios">آبل آيفون</span>
-                    <div class="platform-logo-badge">🍏</div>
-                    <h3 class="platform-name">iOS (iPhone & iPad)</h3>
-                    <p class="platform-desc">هواتف آيفون وأجهزة آيباد اللوحية يعمل كتطبيق ويب (PWA) فوري وسلس</p>
-                    <div class="platform-action-btn">تشغيل التطبيق للآيفون</div>
-                </a>
-
-                <!-- 4. Android TV / Smart TV -->
-                <a id="card-dl-tv" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-action-card">
-                    <span class="tag-special tag-tv">نسخة التلفاز</span>
-                    <div class="platform-logo-badge">📺</div>
-                    <h3 class="platform-name">Android TV (4K)</h3>
-                    <p class="platform-desc">شاشات التلفاز الذكية وأجهزة TV Box مع دعم كامل للريموت كنترول</p>
-                    <div class="platform-action-btn">تحميل APK مخصص للتلفاز</div>
-                </a>
+                <!-- Recitation Audio Preview Bar -->
+                <div class="audio-preview-bar-clean">
+                    <button id="btn-audio-toggle" class="btn-play-preview" title="استمع لنموذج التلاوة">▶</button>
+                    <div class="audio-info-text">
+                        <p class="audio-title">نموذج تلاوة: سورة الفاتحة</p>
+                        <p class="audio-subtitle">بصوت القارئ الشيخ حاج أيوب أمين (برواية ورش عن نافع)</p>
+                    </div>
+                    <div class="audio-wave-anim" id="wave-bars" style="opacity: 0.4;">
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                    </div>
+                    <audio id="preview-audio-elem" preload="none">
+                        <source src="https://huggingface.co/datasets/HAY2023/quran-kids-audio/resolve/main/audio/1.mp3" type="audio/mpeg">
+                    </audio>
+                </div>
             </div>
         </section>
     </main>
