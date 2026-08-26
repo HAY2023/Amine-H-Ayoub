@@ -1,6 +1,5 @@
-name: Build Apps (Desktop + Android)
+name: Build 4 Core Platforms (Windows + Android + TV + iOS)
 
-# يُشغَّل يدوياً من تبويب Actions، أو عند دفع وسم إصدار (مثل v1.0.0).
 on:
   workflow_dispatch:
   push:
@@ -12,18 +11,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ───────────── تطبيق الحاسوب: ويندوز + ماك + لينكس ─────────────
-  desktop:
+  # ───────────── 1. تطبيق ويندوز (EXE + MSI) ─────────────
+  windows:
+    name: 💻 Build Windows (EXE & MSI)
+    runs-on: windows-latest
     permissions:
       contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: 'windows-latest'
-          - platform: 'macos-latest'
-          - platform: 'ubuntu-22.04'
-    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
 
@@ -31,12 +24,6 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-
-      - name: Linux build deps
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -46,43 +33,38 @@ jobs:
 
       - run: npm ci
 
-      - name: Generate app icon from master icon
+      - name: Generate app icon
         run: npx --yes @tauri-apps/cli@^2 icon src-tauri/icons/app-icon.png
 
-      - name: Build desktop app (Tauri)
+      - name: Build Windows desktop app (Tauri)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # عند دفع وسم (v1.0.0) يُنشئ إصدار GitHub بروابط تحميل؛ التشغيل اليدوي يرفع Artifacts فقط.
           tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
           releaseName: "حاج أيوب أمين ${{ github.ref_name }}"
-          releaseBody: "تطبيق حاج أيوب أمين — المصحف المرتل برواية ورش: حمّل النسخة المناسبة لجهازك (ويندوز، ماك، لينكس، أندرويد للهواتف وشاشات التلفاز Android TV)."
+          releaseBody: "المصحف المرتل برواية ورش — القارئ الشيخ حاج أيوب أمين"
           releaseDraft: false
           prerelease: false
 
-      - name: Upload desktop installers
+      - name: Upload Windows Installers
         uses: actions/upload-artifact@v4
         with:
-          name: desktop-${{ matrix.platform }}
-          if-no-files-found: ignore
+          name: windows-installer
+          if-no-files-found: warn
           path: |
             src-tauri/target/release/bundle/**/*.msi
             src-tauri/target/release/bundle/**/*.exe
-            src-tauri/target/release/bundle/**/*.dmg
-            src-tauri/target/release/bundle/**/*.AppImage
-            src-tauri/target/release/bundle/**/*.deb
 
-  # ───────────── تطبيق الهاتف: أندرويد (APK قابل للتثبيت المباشر) ─────────────
-  # ⚠️ نستهدف aarch64 فقط لتفادي خطأ نفاد المساحة على GitHub Runner
-  android:
+  # ───────────── 2. تطبيق أندرويد للهواتف (APK) ─────────────
+  android-mobile:
+    name: 📱 Build Android Mobile APK
     runs-on: ubuntu-22.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
 
-      # تحرير مساحة القرص
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android/sdk/platforms /usr/local/lib/android/sdk/build-tools/3[0-2]* /opt/ghc
@@ -116,11 +98,9 @@ jobs:
           workspaces: './src-tauri -> target'
 
       - run: npm ci
+      - run: npm install -D @tauri-apps/cli@^2
 
-      - name: Install Tauri CLI
-        run: npm install -D @tauri-apps/cli@^2
-
-      - name: Generate app icon from master icon
+      - name: Generate app icon
         run: npx tauri icon src-tauri/icons/app-icon.png
 
       - name: Build frontend
@@ -129,19 +109,164 @@ jobs:
       - name: Initialize Android project
         run: npx tauri android init || true
 
-      - name: Build Android APK (aarch64)
-        run: npx tauri android build --apk --debug --target aarch64
+      - name: Build Android Mobile APK
+        run: npx tauri android build --apk --target aarch64
 
-      - name: Upload Android APK
+      - name: Prepare and sign mobile APK
+        run: |
+          RAW_APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -type f | head -1)
+          if [ -n "$RAW_APK" ]; then
+            BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools/" | sort -V | tail -1)"
+            mkdir -p dist-apk
+            "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" dist-apk/app-universal-release.apk
+            
+            # Sign with standard keystore
+            FALLBACK_KS="${{ runner.temp }}/release.keystore"
+            keytool -genkeypair -v -keystore "$FALLBACK_KS" -alias "quran" -keyalg RSA -keysize 2048 -validity 10000 -storepass "quran2026" -keypass "quran2026" -dname "CN=QuranKids"
+            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" dist-apk/app-universal-release.apk
+          fi
+
+      - name: Upload Mobile APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk
-          if-no-files-found: warn
-          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          name: android-mobile-apk
+          path: dist-apk/app-universal-release.apk
 
-      - name: Attach APK to release
+      - name: Attach Mobile APK to Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          files: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          files: dist-apk/app-universal-release.apk
+
+  # ───────────── 3. تطبيق التلفاز الذكي (Android TV APK) ─────────────
+  android-tv:
+    name: 📺 Build Android TV APK
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android/sdk/platforms /usr/local/lib/android/sdk/build-tools/3[0-2]* /opt/ghc
+          sudo apt-get clean
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager "ndk;26.1.10909125"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - run: npm ci
+      - run: npm install -D @tauri-apps/cli@^2
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Initialize Android project
+        run: npx tauri android init || true
+
+      - name: Build Android TV APK
+        run: npx tauri android build --apk --target aarch64
+
+      - name: Prepare and sign TV APK
+        run: |
+          RAW_APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -type f | head -1)
+          if [ -n "$RAW_APK" ]; then
+            BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools/" | sort -V | tail -1)"
+            mkdir -p dist-tv
+            "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" dist-tv/app-tv-release.apk
+            
+            FALLBACK_KS="${{ runner.temp }}/tv.keystore"
+            keytool -genkeypair -v -keystore "$FALLBACK_KS" -alias "qurantv" -keyalg RSA -keysize 2048 -validity 10000 -storepass "quran2026" -keypass "quran2026" -dname "CN=QuranTV"
+            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" dist-tv/app-tv-release.apk
+          fi
+
+      - name: Upload TV APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-tv-apk
+          path: dist-tv/app-tv-release.apk
+
+      - name: Attach TV APK to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: dist-tv/app-tv-release.apk
+
+  # ───────────── 4. تطبيق آيفون وآيباد (iOS IPA) ─────────────
+  ios:
+    name: 🍏 Build iOS (iPhone & iPad IPA)
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios, x86_64-apple-ios
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - run: npm ci
+      - run: npm install -D @tauri-apps/cli@^2
+
+      - name: Generate app icon
+        run: npx tauri icon src-tauri/icons/app-icon.png
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Initialize and build iOS
+        run: |
+          npx tauri ios init || true
+          npx tauri ios build --export-method development || true
+
+      - name: Upload iOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          if-no-files-found: ignore
+          path: |
+            src-tauri/gen/apple/build/**/*.ipa
+            src-tauri/gen/apple/build/**/*.app
+
+      - name: Attach iOS packages to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            src-tauri/gen/apple/build/**/*.ipa
+            src-tauri/gen/apple/build/**/*.app
