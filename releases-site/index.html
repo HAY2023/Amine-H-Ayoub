@@ -4,73 +4,58 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>المصحف المرتل برواية ورش | القارئ الشيخ حاج أيوب أمين</title>
-    <meta name="description" content="الموقع الرسمي الموحد لتحميل تطبيق حاج أيوب أمين للقرآن الكريم برواية ورش لكافة المنصات: ويندوز، أندرويد، آيفون، وشاشات التلفاز الذكية. يعمل 100% بدون إنترنت.">
+    <meta name="description" content="الموقع الرسمي الموحد لتحميل تطبيق حاج أيوب أمين للقرآن الكريم برواية ورش لكافة المنصات: ويندوز، أندرويد، آيفون، وشاشات التلفاز الذكية.">
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="assets/app-icon.png">
     <link rel="apple-touch-icon" href="assets/app-icon.png">
     
-    <!-- Google Fonts: Cairo, Tajawal & Amiri -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900;1000&family=Tajawal:wght@400;500;700;800;900&family=Amiri:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
-
-    <!-- Supabase JS Client for Real-time Support -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900;1000&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
 
     <style>
         :root {
             --primary-emerald: #059669;
             --emerald-glow: #10b981;
-            --emerald-deep: #064e3b;
             --gold-light: #fef08a;
             --gold: #f59e0b;
-            --gold-deep: #d97706;
             --gold-gradient: linear-gradient(135deg, #fffbeb 0%, #fef08a 25%, #f59e0b 60%, #b45309 100%);
-            --emerald-gradient: linear-gradient(135deg, #6ee7b7 0%, #10b981 50%, #047857 100%);
             --dark-bg: #030712;
-            --dark-surface: rgba(15, 23, 42, 0.78);
-            --dark-card: rgba(30, 41, 59, 0.65);
-            --card-border: rgba(245, 158, 11, 0.28);
-            --card-hover: rgba(245, 158, 11, 0.85);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --radius-xl: 2.25rem;
-            --radius-lg: 1.75rem;
-            --radius-md: 1.25rem;
-            --radius-sm: 0.75rem;
+            --card-border: rgba(245, 158, 11, 0.35);
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            scroll-behavior: smooth;
         }
 
         body {
             font-family: 'Tajawal', sans-serif;
             background-color: var(--dark-bg);
             background-image: 
-                radial-gradient(circle at 10% 15%, rgba(5, 150, 105, 0.28) 0px, transparent 45%),
-                radial-gradient(circle at 90% 20%, rgba(217, 119, 6, 0.22) 0px, transparent 45%),
-                radial-gradient(circle at 50% 50%, rgba(2, 44, 34, 0.5) 0px, transparent 60%),
-                radial-gradient(circle at 80% 85%, rgba(180, 83, 9, 0.25) 0px, transparent 50%);
-            color: var(--text-main);
+                radial-gradient(circle at 50% 50%, rgba(2, 44, 34, 0.65) 0px, transparent 65%),
+                radial-gradient(circle at 20% 20%, rgba(5, 150, 105, 0.22) 0px, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(217, 119, 6, 0.22) 0px, transparent 50%);
+            color: #f8fafc;
             min-height: 100vh;
+            width: 100vw;
             display: flex;
             flex-direction: column;
-            overflow-x: hidden;
-            line-height: 1.6;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
         }
 
-        /* Ambient Dynamic Canvas */
         #particles-canvas {
             position: fixed;
             inset: 0;
             pointer-events: none;
             z-index: 0;
-            opacity: 0.75;
+            opacity: 0.85;
         }
 
         .bg-grid-pattern {
@@ -79,346 +64,213 @@
             background-image: 
                 linear-gradient(to right, rgba(245, 158, 11, 0.035) 1px, transparent 1px),
                 linear-gradient(to bottom, rgba(16, 185, 129, 0.035) 1px, transparent 1px);
-            background-size: 45px 45px;
+            background-size: 50px 50px;
             pointer-events: none;
             z-index: 0;
-        }
-
-        /* Ambient rotating Islamic geometric rosette */
-        .bg-islamic-pattern {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 900px;
-            height: 900px;
-            background: radial-gradient(circle, rgba(245, 158, 11, 0.04) 0%, rgba(5, 150, 105, 0.02) 50%, transparent 70%);
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 0;
-            filter: blur(40px);
-            animation: pulseAura 12s ease-in-out infinite alternate;
-        }
-
-        @keyframes pulseAura {
-            0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.5; }
-            100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.85; }
         }
 
         /* ═══════════════════════════════════════════════════════════
-           HEADER
+           CELESTIAL RADIAL ORBIT HUB (FULLSCREEN MASTERPIECE)
         ═══════════════════════════════════════════════════════════ */
-        header {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            backdrop-filter: blur(28px);
-            -webkit-backdrop-filter: blur(28px);
-            background: rgba(3, 7, 18, 0.85);
-            border-bottom: 1px solid rgba(245, 158, 11, 0.22);
-            padding: 0.85rem 2.5rem;
+        .orbit-wrapper {
+            position: relative;
+            z-index: 10;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            padding: 1rem;
         }
 
-        .brand-container {
+        .orbit-container {
+            position: relative;
+            width: 620px;
+            height: 620px;
             display: flex;
             align-items: center;
-            gap: 1.1rem;
-            text-decoration: none;
-            color: inherit;
+            justify-content: center;
         }
 
-        .brand-avatar-wrap {
-            position: relative;
-            width: 54px;
-            height: 54px;
-            flex-shrink: 0;
-        }
-
-        .brand-avatar {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: cover;
-            object-position: center top;
-            border: 2.5px solid var(--gold);
-            box-shadow: 0 0 25px rgba(245, 158, 11, 0.55);
-            position: relative;
-            z-index: 2;
-        }
-
-        .brand-avatar-glow {
+        /* Celestial Orbit Rings */
+        .orbit-ring {
             position: absolute;
-            inset: -4px;
             border-radius: 50%;
-            background: conic-gradient(from 0deg, var(--gold), var(--primary-emerald), #38bdf8, var(--gold));
-            animation: rotateGlow 5s linear infinite;
-            z-index: 1;
-            filter: blur(5px);
-            opacity: 0.85;
+            pointer-events: none;
         }
 
-        @keyframes rotateGlow {
+        .orbit-ring-outer {
+            width: 580px;
+            height: 580px;
+            border: 1.5px dashed rgba(245, 158, 11, 0.35);
+            animation: rotateClockwise 75s linear infinite;
+        }
+
+        .orbit-ring-middle {
+            width: 410px;
+            height: 410px;
+            border: 1.5px solid rgba(16, 185, 129, 0.35);
+            box-shadow: inset 0 0 35px rgba(16, 185, 129, 0.15);
+            animation: rotateCounter 55s linear infinite;
+        }
+
+        .orbit-ring-inner {
+            width: 250px;
+            height: 250px;
+            border: 2px solid rgba(245, 158, 11, 0.45);
+            box-shadow: 0 0 45px rgba(245, 158, 11, 0.3);
+        }
+
+        @keyframes rotateClockwise {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
-
-        .brand-text-title {
-            font-family: 'Cairo', sans-serif;
-            font-weight: 1000;
-            font-size: 1.45rem;
-            background: var(--gold-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            display: block;
-            line-height: 1.15;
-            letter-spacing: -0.5px;
+        @keyframes rotateCounter {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
         }
 
-        .brand-text-subtitle {
-            font-size: 0.82rem;
-            color: #cbd5e1;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .badge-warsh-mini {
-            background: rgba(16, 185, 129, 0.2);
-            color: #6ee7b7;
-            font-size: 0.72rem;
-            padding: 0.15rem 0.55rem;
-            border-radius: 6px;
-            border: 1px solid rgba(16, 185, 129, 0.45);
-            font-weight: 800;
-        }
-
-        .btn-pwa-top {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.65rem;
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.4));
-            border: 1.5px solid var(--emerald-glow);
-            color: #a7f3d0;
-            padding: 0.6rem 1.45rem;
-            border-radius: 50px;
-            font-weight: 900;
-            font-size: 0.95rem;
-            text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
-        }
-        .btn-pwa-top:hover {
-            background: var(--emerald-glow);
-            color: #022c22;
-            box-shadow: 0 0 30px rgba(16, 185, 129, 0.7);
-            transform: translateY(-2px) scale(1.03);
-        }
-
-        /* ═══════════════════════════════════════════════════════════
-           MAIN CONTAINER
-        ═══════════════════════════════════════════════════════════ */
-        main {
-            position: relative;
-            z-index: 1;
-            max-width: 1360px;
-            margin: 0 auto;
-            padding: 3rem 1.5rem 5rem;
-            width: 100%;
-        }
-
-        /* ═══════════════════════════════════════════════════════════
-           HERO SECTION
-        ═══════════════════════════════════════════════════════════ */
-        .hero-section {
-            display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
-            gap: 4rem;
-            align-items: center;
-            margin-bottom: 4rem;
-        }
-
-        .hero-content {
+        /* Central Sheikh Core */
+        .orbit-center-core {
+            position: absolute;
+            width: 210px;
+            height: 210px;
+            border-radius: 50%;
+            background: #030712;
+            border: 4px solid var(--gold);
+            box-shadow: 
+                0 0 0 9px rgba(245, 158, 11, 0.28),
+                0 0 60px rgba(245, 158, 11, 0.75),
+                0 0 80px rgba(16, 185, 129, 0.4);
+            z-index: 20;
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .hero-badge-gold {
-            display: inline-flex;
             align-items: center;
-            gap: 0.75rem;
-            background: rgba(245, 158, 11, 0.14);
-            border: 1.5px solid rgba(245, 158, 11, 0.5);
-            color: var(--gold-light);
-            padding: 0.55rem 1.4rem;
-            border-radius: 50px;
-            font-size: 0.95rem;
-            font-weight: 800;
-            margin-bottom: 1.6rem;
-            box-shadow: 0 0 25px rgba(245, 158, 11, 0.25);
-            backdrop-filter: blur(12px);
-        }
-
-        .hero-headline {
-            font-family: 'Cairo', sans-serif;
-            font-size: 3.6rem;
-            font-weight: 1000;
-            line-height: 1.16;
-            margin-bottom: 1.35rem;
-            letter-spacing: -1px;
-        }
-
-        .hero-headline .highlight-gold {
-            background: var(--gold-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 35px rgba(245, 158, 11, 0.35);
-        }
-
-        .hero-desc {
-            font-size: 1.25rem;
-            color: #cbd5e1;
-            line-height: 1.85;
-            margin-bottom: 2.2rem;
-            max-width: 640px;
-        }
-
-        /* ── Dynamic Device Download Box ── */
-        .primary-download-card {
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.85) 100%);
-            backdrop-filter: blur(28px);
-            border: 1.5px solid var(--card-border);
-            border-radius: var(--radius-lg);
-            padding: 1.85rem;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(245, 158, 11, 0.18);
-            margin-bottom: 2rem;
-            width: 100%;
-            max-width: 600px;
-            transition: all 0.35s ease;
-            position: relative;
+            justify-content: center;
             overflow: hidden;
-        }
-        .primary-download-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; height: 3.5px;
-            background: var(--gold-gradient);
-        }
-        .primary-download-card:hover {
-            border-color: var(--card-hover);
-            box-shadow: 0 30px 75px rgba(0, 0, 0, 0.8), 0 0 50px rgba(245, 158, 11, 0.35);
-        }
-
-        .btn-download-master {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: var(--gold-gradient);
-            color: #030712;
             text-decoration: none;
-            padding: 1.2rem 1.75rem;
-            border-radius: var(--radius-md);
-            font-family: 'Cairo', sans-serif;
-            box-shadow: 0 12px 35px rgba(245, 158, 11, 0.45);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-            border: none;
+            color: inherit;
             cursor: pointer;
-            width: 100%;
-        }
-        .btn-download-master:hover {
-            transform: translateY(-4px) scale(1.02);
-            box-shadow: 0 18px 50px rgba(245, 158, 11, 0.7);
-            color: #000;
-        }
-        .btn-download-master::after {
-            content: '';
-            position: absolute;
-            top: 0; left: -100%; width: 50%; height: 100%;
-            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.75), transparent);
-            transform: skewX(-20deg);
-            animation: shine-sweep 3s infinite;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .btn-download-left {
+        .orbit-center-core img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center top;
+            transition: transform 0.5s ease;
+        }
+
+        .orbit-center-core:hover img {
+            transform: scale(1.08);
+        }
+
+        .orbit-center-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(3, 7, 18, 0.95) 0%, rgba(3, 7, 18, 0.25) 60%, transparent 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding-bottom: 1.1rem;
+            z-index: 2;
+        }
+
+        .orbit-center-title {
+            font-family: 'Cairo', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 1000;
+            color: #fff;
+            text-align: center;
+            line-height: 1.2;
+            letter-spacing: -0.3px;
+        }
+
+        .orbit-center-status {
+            font-size: 0.8rem;
+            color: #34d399;
+            font-weight: 800;
             display: flex;
             align-items: center;
-            gap: 1.1rem;
-            text-align: right;
+            gap: 5px;
+            margin-top: 2px;
         }
-        .btn-download-icon {
-            font-size: 2.4rem;
+
+        /* 4 Orbiting Platform Nodes */
+        .orbit-node {
+            position: absolute;
+            width: 92px;
+            height: 92px;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.96);
+            border: 2.5px solid var(--card-border);
+            backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            text-decoration: none;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.85);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 25;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .orbit-node:hover, .orbit-node.active-node {
+            transform: scale(1.22);
+            border-color: var(--gold);
+            background: rgba(30, 41, 59, 0.98);
+            box-shadow: 0 0 45px rgba(245, 158, 11, 0.95);
+            z-index: 30;
+        }
+
+        .orbit-node-icon {
+            font-size: 2.3rem;
             line-height: 1;
         }
-        .btn-download-label-sub {
-            font-size: 0.82rem;
-            color: #78350f;
-            font-weight: 800;
-            display: block;
-            line-height: 1.2;
-        }
-        .btn-download-label-main {
-            font-size: 1.35rem;
-            font-weight: 1000;
-            color: #030712;
-            display: block;
-            line-height: 1.25;
-        }
-        .btn-download-arrow {
-            font-size: 1.6rem;
-            background: rgba(0, 0, 0, 0.12);
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+
+        .orbit-node-label {
+            font-size: 0.72rem;
             font-weight: 900;
-            transition: transform 0.2s;
-        }
-        .btn-download-master:hover .btn-download-arrow {
-            transform: translateX(-4px);
+            color: var(--gold-light);
+            margin-top: 4px;
+            white-space: nowrap;
+            font-family: 'Cairo', sans-serif;
         }
 
-        .device-meta-chips {
+        /* Exact 4-Platform Radial Positions (Radius = 245px on 620px circle) */
+        .node-pos-top    { top: 18px; left: 264px; }                /* Top: iPhone & iPad */
+        .node-pos-right  { top: 264px; right: 18px; }               /* Right: Android APK */
+        .node-pos-bottom { bottom: 18px; left: 264px; }             /* Bottom: Windows PC */
+        .node-pos-left   { top: 264px; left: 18px; }                /* Left: Smart TV */
+
+        /* Floating Mini Audio Bar Below Orbit */
+        .orbit-bottom-bar {
+            margin-top: 1.8rem;
             display: flex;
-            flex-wrap: wrap;
             align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            margin-top: 1rem;
-            font-size: 0.82rem;
-            color: #cbd5e1;
-        }
-        .meta-chip {
-            background: rgba(255, 255, 255, 0.06);
-            padding: 0.25rem 0.75rem;
+            gap: 1rem;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1.5px solid rgba(245, 158, 11, 0.3);
             border-radius: 50px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.6rem 1.6rem;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            animation: fadeIn 0.8s ease-out;
         }
 
-        /* ── Audio Recitation Player Bar ── */
-        .audio-preview-bar {
-            margin-top: 1.25rem;
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            border-radius: var(--radius-md);
-            padding: 0.95rem 1.35rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1.1rem;
+        .orbit-bottom-bar span {
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: var(--gold-light);
         }
 
-        .btn-play-preview {
-            width: 50px;
-            height: 50px;
+        .btn-play-mini {
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             background: var(--primary-emerald);
             border: none;
@@ -426,401 +278,97 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.35rem;
+            font-size: 1rem;
             cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 18px rgba(5, 150, 105, 0.55);
-            flex-shrink: 0;
-        }
-        .btn-play-preview:hover {
-            background: var(--emerald-glow);
-            transform: scale(1.1);
-            box-shadow: 0 0 30px rgba(16, 185, 129, 0.85);
-        }
-
-        .audio-wave-anim {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            height: 24px;
-        }
-        .wave-bar {
-            width: 4px;
-            height: 100%;
-            background: var(--gold);
-            border-radius: 4px;
-            animation: wave 1.2s ease-in-out infinite;
-        }
-        .wave-bar:nth-child(1) { animation-delay: 0.1s; height: 35%; }
-        .wave-bar:nth-child(2) { animation-delay: 0.3s; height: 75%; }
-        .wave-bar:nth-child(3) { animation-delay: 0.5s; height: 100%; }
-        .wave-bar:nth-child(4) { animation-delay: 0.2s; height: 50%; }
-        .wave-bar:nth-child(5) { animation-delay: 0.4s; height: 80%; }
-
-        @keyframes wave {
-            0%, 100% { transform: scaleY(0.35); }
-            50% { transform: scaleY(1); }
-        }
-
-        /* ═══════════════════════════════════════════════════════════
-           CLEAN CENTERED HERO & 3 CORE DOWNLOAD CARDS
-        ═══════════════════════════════════════════════════════════ */
-        .hero-section-clean {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            margin-bottom: 2rem;
-            width: 100%;
-        }
-
-        .hero-content-clean {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            max-width: 860px;
-            width: 100%;
-            margin: 0 auto;
-        }
-
-        .brand-avatar-hero-wrap {
-            position: relative;
-            width: 110px;
-            height: 110px;
-            margin-bottom: 1.8rem;
-        }
-
-        .brand-avatar-hero {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: cover;
-            object-position: center top;
-            border: 3.5px solid var(--gold);
-            box-shadow: 0 0 35px rgba(245, 158, 11, 0.6);
-            position: relative;
-            z-index: 2;
-        }
-
-        /* ── 3 Core Platforms Download Cards Grid ── */
-        .core-download-hub {
-            display: flex;
-            flex-direction: column;
-            gap: 1.25rem;
-            width: 100%;
-            max-width: 720px;
-            margin: 2rem 0 2.5rem;
-        }
-
-        .core-dl-card {
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.88) 100%);
-            border: 1.5px solid var(--card-border);
-            border-radius: var(--radius-md);
-            padding: 1.35rem 1.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1.5rem;
-            text-decoration: none;
-            color: inherit;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .core-dl-card::before {
-            content: '';
-            position: absolute;
-            top: 0; bottom: 0; right: 0; width: 4px;
-            background: var(--gold-gradient);
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .core-dl-card:hover {
-            transform: translateY(-4px) scale(1.01);
-            border-color: var(--gold);
-            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.75), 0 0 30px rgba(245, 158, 11, 0.28);
-        }
-
-        .core-dl-card:hover::before {
-            opacity: 1;
-        }
-
-        .core-dl-featured {
-            border-color: rgba(16, 185, 129, 0.55);
-            background: linear-gradient(135deg, rgba(2, 44, 34, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 25px rgba(16, 185, 129, 0.15);
-        }
-
-        .core-dl-featured:hover {
-            border-color: var(--emerald-glow);
-            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.75), 0 0 35px rgba(16, 185, 129, 0.4);
-        }
-
-        .core-dl-icon {
-            font-size: 2.8rem;
-            line-height: 1;
-            flex-shrink: 0;
-        }
-
-        .core-dl-info {
-            text-align: right;
-            flex: 1;
-        }
-
-        .core-dl-tag {
-            display: inline-block;
-            font-size: 0.75rem;
-            font-weight: 800;
-            padding: 0.15rem 0.65rem;
-            border-radius: 50px;
-            background: rgba(245, 158, 11, 0.18);
-            color: var(--gold-light);
-            border: 1px solid rgba(245, 158, 11, 0.4);
-            margin-bottom: 0.35rem;
-        }
-
-        .tag-feat {
-            background: rgba(16, 185, 129, 0.2);
-            color: #6ee7b7;
-            border-color: rgba(16, 185, 129, 0.4);
-        }
-
-        .tag-tv-badge {
-            background: rgba(239, 68, 68, 0.18);
-            color: #fca5a5;
-            border-color: rgba(239, 68, 68, 0.4);
-        }
-
-        .core-dl-title {
-            font-family: 'Cairo', sans-serif;
-            font-size: 1.35rem;
-            font-weight: 1000;
-            color: var(--text-main);
-            line-height: 1.25;
-            margin-bottom: 0.2rem;
-        }
-
-        .core-dl-desc {
-            font-size: 0.86rem;
-            color: var(--text-muted);
-            line-height: 1.4;
-        }
-
-        .core-dl-action {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: var(--gold-gradient);
-            color: #030712;
-            padding: 0.8rem 1.4rem;
-            border-radius: var(--radius-sm);
-            font-family: 'Cairo', sans-serif;
-            font-weight: 1000;
-            font-size: 0.95rem;
-            white-space: nowrap;
-            flex-shrink: 0;
-            box-shadow: 0 4px 18px rgba(245, 158, 11, 0.35);
             transition: all 0.2s;
         }
-
-        .core-dl-card:hover .core-dl-action {
-            transform: scale(1.05);
-            box-shadow: 0 6px 24px rgba(245, 158, 11, 0.6);
+        .btn-play-mini:hover {
+            background: var(--emerald-glow);
+            transform: scale(1.1);
         }
 
-        .dl-arrow {
-            font-size: 1.15rem;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* ── Audio Preview Clean Bar ── */
-        .audio-preview-bar-clean {
-            background: rgba(15, 23, 42, 0.85);
-            border: 1.5px solid rgba(245, 158, 11, 0.3);
-            border-radius: var(--radius-md);
-            padding: 1.1rem 1.6rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1.25rem;
-            width: 100%;
-            max-width: 720px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-        }
-
-        .audio-info-text {
-            flex: 1;
-            text-align: right;
-        }
-
-        .audio-title {
-            font-size: 1.05rem;
-            font-weight: 900;
-            color: var(--gold-light);
-            font-family: 'Cairo', sans-serif;
-            line-height: 1.2;
-        }
-
-        .audio-subtitle {
-            font-size: 0.86rem;
-            color: #cbd5e1;
-        }
-
-        /* ═══════════════════════════════════════════════════════════
-           RESPONSIVE DESIGN
-        ═══════════════════════════════════════════════════════════ */
-        @media (max-width: 1080px) {
-            .hero-section {
-                grid-template-columns: 1fr;
-                text-align: center;
-                gap: 4.5rem;
-            }
-            .hero-content {
-                align-items: center;
-            }
-            .hero-headline {
-                font-size: 3.2rem;
-            }
-            .radial-hub-showcase {
-                order: -1;
-            }
-        }
-
-        @media (max-width: 640px) {
+        @media (max-width: 680px) {
             .orbit-container {
-                width: 330px;
-                height: 330px;
+                width: 350px;
+                height: 350px;
             }
-            .orbit-ring-outer { width: 320px; height: 320px; }
-            .orbit-ring-middle { width: 235px; height: 235px; }
-            .orbit-center-core { width: 125px; height: 125px; }
-            .orbit-node { width: 56px; height: 56px; }
-            .orbit-node-icon { font-size: 1.4rem; }
-            .orbit-node-label { font-size: 0.55rem; }
+            .orbit-ring-outer { width: 340px; height: 340px; }
+            .orbit-ring-middle { width: 245px; height: 245px; }
+            .orbit-ring-inner { width: 155px; height: 155px; }
+            .orbit-center-core { width: 135px; height: 135px; }
+            .orbit-center-title { font-size: 0.85rem; }
+            .orbit-center-status { font-size: 0.65rem; }
+            .orbit-node { width: 62px; height: 62px; }
+            .orbit-node-icon { font-size: 1.55rem; }
+            .orbit-node-label { font-size: 0.58rem; }
             
-            /* Recalculate 330px circle (Radius = 140px) */
-            .node-pos-1 { top: 8px; left: 137px; }
-            .node-pos-2 { top: 137px; right: 8px; }
-            .node-pos-3 { bottom: 8px; left: 137px; }
-            .node-pos-4 { top: 137px; left: 8px; }
-
-            .hero-headline { font-size: 2.4rem; }
-            header { padding: 0.75rem 1.25rem; }
+            /* Positions on 350px circle (Radius = 144px) */
+            .node-pos-top    { top: 8px; left: 144px; }
+            .node-pos-right  { top: 144px; right: 8px; }
+            .node-pos-bottom { bottom: 8px; left: 144px; }
+            .node-pos-left   { top: 144px; left: 8px; }
         }
     </style>
 </head>
 <body>
     <canvas id="particles-canvas"></canvas>
     <div class="bg-grid-pattern"></div>
-    <div class="bg-islamic-pattern"></div>
 
-    <!-- Sticky Master Header -->
-    <header>
-        <a href="#" class="brand-container">
-            <div class="brand-avatar-wrap">
-                <div class="brand-avatar-glow"></div>
-                <img src="assets/my-photo.png" alt="القارئ الشيخ حاج أيوب أمين" class="brand-avatar">
-            </div>
-            <div>
-                <span class="brand-text-title">القارئ حاج أيوب أمين</span>
-                <span class="brand-text-subtitle">
-                    <span>المصحف المرتل وركن ألعاب الأطفال</span>
-                    <span class="badge-warsh-mini">ورش عن نافع</span>
-                </span>
-            </div>
-        </a>
-        <a href="#platforms-hub" class="btn-pwa-top">
-            <span>تحميل التطبيق</span>
-            <span>⚡</span>
-        </a>
-    </header>
+    <main class="orbit-wrapper">
+        <!-- 🌟 THE CELESTIAL RADIAL ORBIT HUB 🌟 -->
+        <div class="orbit-container">
+            <!-- Glowing Orbit Rings -->
+            <div class="orbit-ring orbit-ring-outer"></div>
+            <div class="orbit-ring orbit-ring-middle"></div>
+            <div class="orbit-ring orbit-ring-inner"></div>
 
-    <main>
-        <!-- Main Centered Hero Download Section -->
-        <section class="hero-section-clean">
-            <div class="hero-content-clean">
-                <div class="brand-avatar-hero-wrap">
-                    <div class="brand-avatar-glow"></div>
-                    <img src="assets/my-photo.png" alt="القارئ الشيخ حاج أيوب أمين" class="brand-avatar-hero">
+            <!-- Central Core: Sheikh Hajj Ayoub Amine -->
+            <a href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" id="orbit-center-btn" class="orbit-center-core" title="المصحف المرتل - الشيخ حاج أيوب أمين">
+                <img src="assets/my-photo.png" alt="القارئ الشيخ حاج أيوب أمين">
+                <div class="orbit-center-overlay">
+                    <span class="orbit-center-title">حاج أيوب أمين</span>
+                    <span class="orbit-center-status">● كل النسخ متاحة</span>
                 </div>
+            </a>
 
-                <div class="hero-badge-gold">👑 الإصدار الموحد الرسمي v1.0.0 — برواية ورش عن نافع من طريق الأزرق</div>
-                <h1 class="hero-headline">
-                    المصحف المرتل <br>
-                    <span class="highlight-gold">للشيخ حاج أيوب أمين</span>
-                </h1>
-                <p class="hero-desc">
-                    تطبيق قرآني متكامل صُمم بأعلى معايير الإتقان ليجمع بين التلاوة المرتلة الكاملة برواية ورش، ركن ألعاب وتحديات الأطفال الهادف، ونظام الإحصائيات والأوسمة، يعمل 100% بدون إنترنت على كافة أجهزتك.
-                </p>
+            <!-- 1. Top: iPhone & iPad -->
+            <a id="node-ios" href="https://learn-quran-kids.pages.dev" class="orbit-node node-pos-top" title="تشغيل تطبيق iPhone و iPad">
+                <span class="orbit-node-icon">🍏</span>
+                <span class="orbit-node-label">iPhone & iPad</span>
+            </a>
 
-                <!-- 3 Core Platforms Direct Download Hub -->
-                <div class="core-download-hub">
-                    <!-- 1. Windows PC -->
-                    <a id="btn-dl-win" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="core-dl-card">
-                        <div class="core-dl-icon">💻</div>
-                        <div class="core-dl-info">
-                            <span class="core-dl-tag">كمبيوتر ولابتوب</span>
-                            <h3 class="core-dl-title">نسخة Windows الرسمية (PC)</h3>
-                            <p class="core-dl-desc">حزمة EXE المستقلة • تعمل 100% بدون إنترنت • v1.0.0</p>
-                        </div>
-                        <div class="core-dl-action">
-                            <span>تحميل مباشر</span>
-                            <span class="dl-arrow">📥</span>
-                        </div>
-                    </a>
+            <!-- 2. Right: Android APK -->
+            <a id="node-android" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="orbit-node node-pos-right" title="تحميل تطبيق أندرويد للهواتف APK">
+                <span class="orbit-node-icon">📱</span>
+                <span class="orbit-node-label">Android APK</span>
+            </a>
 
-                    <!-- 2. Android Phone -->
-                    <a id="btn-dl-android" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="core-dl-card core-dl-featured">
-                        <div class="core-dl-icon">📱</div>
-                        <div class="core-dl-info">
-                            <span class="core-dl-tag tag-feat">الأكثر تحميلاً للهواتف</span>
-                            <h3 class="core-dl-title">نسخة أندرويد للهواتف (APK)</h3>
-                            <p class="core-dl-desc">تثبيت مباشر لجميع هواتف وأجهزة أندرويد اللوحية • v1.0.0</p>
-                        </div>
-                        <div class="core-dl-action">
-                            <span>تحميل APK</span>
-                            <span class="dl-arrow">📥</span>
-                        </div>
-                    </a>
+            <!-- 3. Bottom: Windows PC -->
+            <a id="node-windows" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="orbit-node node-pos-bottom" title="تحميل برنامج ويندوز للكمبيوتر EXE">
+                <span class="orbit-node-icon">💻</span>
+                <span class="orbit-node-label">Windows PC</span>
+            </a>
 
-                    <!-- 3. Android TV -->
-                    <a id="btn-dl-tv" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="core-dl-card">
-                        <div class="core-dl-icon">📺</div>
-                        <div class="core-dl-info">
-                            <span class="core-dl-tag tag-tv-badge">شاشات التلفاز الذكية</span>
-                            <h3 class="core-dl-title">نسخة التلفاز (Android TV 4K)</h3>
-                            <p class="core-dl-desc">حزمة APK مخصصة لشاشات سمارت وأجهزة TV Box مع دعم الريموت</p>
-                        </div>
-                        <div class="core-dl-action">
-                            <span>تحميل APK</span>
-                            <span class="dl-arrow">📥</span>
-                        </div>
-                    </a>
-                </div>
+            <!-- 4. Left: Smart TV -->
+            <a id="node-tv" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="orbit-node node-pos-left" title="تحميل تطبيق التلفاز الذكي Android TV APK">
+                <span class="orbit-node-icon">📺</span>
+                <span class="orbit-node-label">Smart TV</span>
+            </a>
+        </div>
 
-                <!-- Recitation Audio Preview Bar -->
-                <div class="audio-preview-bar-clean">
-                    <button id="btn-audio-toggle" class="btn-play-preview" title="استمع لنموذج التلاوة">▶</button>
-                    <div class="audio-info-text">
-                        <p class="audio-title">نموذج تلاوة: سورة الفاتحة</p>
-                        <p class="audio-subtitle">بصوت القارئ الشيخ حاج أيوب أمين (برواية ورش عن نافع)</p>
-                    </div>
-                    <div class="audio-wave-anim" id="wave-bars" style="opacity: 0.4;">
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
-                    </div>
-                    <audio id="preview-audio-elem" preload="none">
-                        <source src="https://huggingface.co/datasets/HAY2023/quran-kids-audio/resolve/main/audio/1.mp3" type="audio/mpeg">
-                    </audio>
-                </div>
-            </div>
-        </section>
+        <!-- Mini Audio Recitation Bar -->
+        <div class="orbit-bottom-bar">
+            <button id="btn-audio-toggle" class="btn-play-mini" title="استمع لتلاوة سورة الفاتحة">▶</button>
+            <span>سورة الفاتحة • برواية ورش عن نافع</span>
+            <audio id="preview-audio-elem" preload="none">
+                <source src="https://huggingface.co/datasets/HAY2023/quran-kids-audio/resolve/main/audio/1.mp3" type="audio/mpeg">
+            </audio>
+        </div>
     </main>
 
     <!-- Main Logic Script -->

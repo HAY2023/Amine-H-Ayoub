@@ -340,13 +340,17 @@ async function fetchLiveGitHubAssets() {
 }
 
 function updatePlatformLinks() {
-    const w = document.getElementById("btn-dl-win");
-    const tv = document.getElementById("btn-dl-tv");
-    const a = document.getElementById("btn-dl-android");
+    const w = document.getElementById("node-windows");
+    const tv = document.getElementById("node-tv");
+    const a = document.getElementById("node-android");
+    const ios = document.getElementById("node-ios");
+    const center = document.getElementById("orbit-center-btn");
 
     if (w) w.href = liveAssets.windows;
     if (tv) tv.href = liveAssets.android_tv;
     if (a) a.href = liveAssets.android;
+    if (ios) ios.href = "https://learn-quran-kids.pages.dev";
+    if (center) center.href = liveAssets.windows || `https://github.com/${GITHUB_REPO}/releases/latest`;
 }
 
 // ═══════════════════════════════════════════════════════════

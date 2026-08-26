@@ -6,6 +6,10 @@ on:
     branches: [main]
     tags: ['v*']
 
+permissions:
+  contents: write
+  packages: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -135,9 +139,12 @@ jobs:
       - name: Attach Mobile APK to Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
           files: dist-apk/app-universal-release.apk
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   # ───────────── 3. تطبيق التلفاز الذكي (Android TV APK) ─────────────
   android-tv:
@@ -213,7 +220,10 @@ jobs:
       - name: Attach TV APK to Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
           files: dist-tv/app-tv-release.apk
+          token: ${{ secrets.GITHUB_TOKEN }}
 
