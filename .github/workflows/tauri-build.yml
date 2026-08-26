@@ -122,19 +122,19 @@ jobs:
           if [ -n "$RAW_APK" ]; then
             BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools/" | sort -V | tail -1)"
             mkdir -p dist-apk
-            "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" dist-apk/app-universal-release.apk
+            "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" dist-apk/Quran_1.0.0_Android.apk
             
             # Sign with standard keystore
             FALLBACK_KS="${{ runner.temp }}/release.keystore"
             keytool -genkeypair -v -keystore "$FALLBACK_KS" -alias "quran" -keyalg RSA -keysize 2048 -validity 10000 -storepass "quran2026" -keypass "quran2026" -dname "CN=QuranKids"
-            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" dist-apk/app-universal-release.apk
+            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" dist-apk/Quran_1.0.0_Android.apk
           fi
 
       - name: Upload Mobile APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-mobile-apk
-          path: dist-apk/app-universal-release.apk
+          path: dist-apk/Quran_1.0.0_Android.apk
 
       - name: Attach Mobile APK to Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -143,7 +143,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
-          files: dist-apk/app-universal-release.apk
+          files: dist-apk/Quran_1.0.0_Android.apk
           token: ${{ secrets.GITHUB_TOKEN }}
 
   # ───────────── 3. تطبيق التلفاز الذكي (Android TV APK) ─────────────
@@ -204,18 +204,18 @@ jobs:
           if [ -n "$RAW_APK" ]; then
             BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools/" | sort -V | tail -1)"
             mkdir -p dist-tv
-            "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" dist-tv/app-tv-release.apk
+            "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" dist-tv/Quran_1.0.0_Android_TV.apk
             
             FALLBACK_KS="${{ runner.temp }}/tv.keystore"
             keytool -genkeypair -v -keystore "$FALLBACK_KS" -alias "qurantv" -keyalg RSA -keysize 2048 -validity 10000 -storepass "quran2026" -keypass "quran2026" -dname "CN=QuranTV"
-            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" dist-tv/app-tv-release.apk
+            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" dist-tv/Quran_1.0.0_Android_TV.apk
           fi
 
       - name: Upload TV APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-tv-apk
-          path: dist-tv/app-tv-release.apk
+          path: dist-tv/Quran_1.0.0_Android_TV.apk
 
       - name: Attach TV APK to Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -224,6 +224,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
-          files: dist-tv/app-tv-release.apk
+          files: dist-tv/Quran_1.0.0_Android_TV.apk
           token: ${{ secrets.GITHUB_TOKEN }}
 
