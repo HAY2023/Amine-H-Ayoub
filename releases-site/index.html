@@ -295,6 +295,39 @@
             text-align: center;
         }
 
+        /* ── Top Official Version Badge ── */
+        .orbit-top-badge {
+            margin-bottom: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.65rem;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.16) 0%, rgba(15, 23, 42, 0.85) 100%);
+            border: 1.5px solid rgba(245, 158, 11, 0.55);
+            border-radius: 50px;
+            padding: 0.55rem 1.6rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(245, 158, 11, 0.25);
+            backdrop-filter: blur(20px);
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--gold-light);
+            animation: fadeIn 0.8s ease-out;
+            font-family: 'Cairo', sans-serif;
+            text-align: center;
+        }
+
+        .badge-gold-crown {
+            font-size: 1.15rem;
+        }
+
+        .badge-text-main strong {
+            color: #fff;
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 1000;
+            padding: 0 2px;
+        }
+
         /* ── Floating Mini Recitation Bar ── */
         .orbit-bottom-bar {
             margin-top: 2rem;
@@ -342,6 +375,11 @@
 
         /* ── Responsive on Mobile & Tablets ── */
         @media (max-width: 680px) {
+            .orbit-top-badge {
+                font-size: 0.78rem;
+                padding: 0.45rem 1.1rem;
+                margin-bottom: 1rem;
+            }
             .orbit-container {
                 width: 350px;
                 height: 350px;
@@ -370,6 +408,12 @@
     <div class="bg-grid-pattern"></div>
 
     <main class="orbit-wrapper">
+        <!-- 👑 Top Official Version Badge 👑 -->
+        <div class="orbit-top-badge">
+            <span class="badge-gold-crown">👑</span>
+            <span class="badge-text-main">الإصدار الموحد الرسمي <strong>v1.0.0</strong> — برواية ورش عن نافع</span>
+        </div>
+
         <!-- 🌟 THE 3-NODE REVOLVING CELESTIAL ORBIT HUB 🌟 -->
         <div class="orbit-container">
             <!-- Glowing Orbit Rings -->
