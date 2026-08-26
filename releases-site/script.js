@@ -103,11 +103,11 @@ function initParticles() {
         reset() {
             this.x = Math.random() * canvas.width;
             this.y = Math.random() * canvas.height;
-            this.size = Math.random() * 2.2 + 0.6;
-            this.speedX = (Math.random() - 0.5) * 0.4;
-            this.speedY = (Math.random() - 0.5) * 0.4;
-            this.alpha = Math.random() * 0.6 + 0.2;
-            this.color = Math.random() > 0.4 ? "#f59e0b" : "#10b981";
+            this.size = Math.random() * 2.4 + 0.6;
+            this.speedX = (Math.random() - 0.5) * 0.45;
+            this.speedY = (Math.random() - 0.5) * 0.45;
+            this.alpha = Math.random() * 0.65 + 0.25;
+            this.color = Math.random() > 0.45 ? "#f59e0b" : "#10b981";
         }
         update() {
             this.x += this.speedX;
@@ -120,7 +120,7 @@ function initParticles() {
             ctx.save();
             ctx.globalAlpha = this.alpha;
             ctx.fillStyle = this.color;
-            ctx.shadowBlur = 8;
+            ctx.shadowBlur = 10;
             ctx.shadowColor = this.color;
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
@@ -129,7 +129,7 @@ function initParticles() {
         }
     }
 
-    for (let i = 0; i < 45; i++) {
+    for (let i = 0; i < 50; i++) {
         particles.push(new Particle());
     }
 
@@ -146,8 +146,8 @@ function initParticles() {
 
 // ══════════════════════════════════════════════════════════════
 // 2. CELESTIAL RADIAL ORBIT HUB LOGIC
-// ══════════════════════════════════════════════════════════════
-let activeOrbitPlatform = "android";
+// ═══════════════════════════════════════════════════════════
+let activeOrbitPlatform = "windows";
 let orbitInterval = null;
 const platformKeys = Object.keys(PLATFORM_SPECS);
 
@@ -176,7 +176,7 @@ function initRadialOrbitHub() {
         if (tipDesc) tipDesc.textContent = spec.desc;
         if (tipBtn) {
             tipBtn.href = liveAssets[key] || FALLBACK_ASSETS[key];
-            tipBtn.textContent = spec.btnText + " 📥";
+            tipBtn.innerHTML = `<span>تحميل مباشر</span> <span>📥</span>`;
         }
 
         if (manual) {
@@ -205,7 +205,7 @@ function initRadialOrbitHub() {
     orbitInterval = setInterval(() => {
         idx = (idx + 1) % platformKeys.length;
         selectPlatform(platformKeys[idx], false);
-    }, 4500);
+    }, 4000);
 
     // Initial selection based on user OS
     const detected = detectUserOS();
@@ -260,45 +260,52 @@ function renderPrimaryCard(os) {
     if (!container) return;
 
     let icon = "💻";
-    let title = "تنزيل نسخة ويندوز المباشرة (Windows PC)";
-    let subtitle = "حزمة .EXE المستقلة الموحدة v1.0.0 — تعمل 100% بدون إنترنت";
+    let title = "نسخة Windows الرسمية (PC)";
+    let subtitle = "حزمة EXE المستقلة • تعمل 100% بدون إنترنت • v1.0.0";
     let link = liveAssets.windows;
 
     if (os === 'ios') {
         icon = "🍏";
-        title = "تنزيل حزمة آيفون وآيباد (iOS IPA)";
-        subtitle = "حزمة IPA الرسمية المتوافقة مع أجهزة iPhone و iPad • v1.0.0";
+        title = "حزمة iOS الرسمية (iPhone & iPad)";
+        subtitle = "حزمة IPA الرسمية المتوافقة مع أجهزة آبل • v1.0.0";
         link = liveAssets.ios;
     } else if (os === 'android') {
         icon = "📱";
-        title = "تنزيل نسخة أندرويد (Android APK)";
+        title = "نسخة أندرويد المباشرة (APK)";
         subtitle = "تثبيت مباشر لجميع هواتف وأجهزة أندرويد اللوحية • v1.0.0";
         link = liveAssets.android;
     } else if (os === 'tv') {
         icon = "📺";
-        title = "تنزيل نسخة التلفاز الذكي (Android TV 4K)";
-        subtitle = "حزمة APK متوافقة تماماً مع شاشات سمارت وريموت التحكم";
+        title = "نسخة التلفاز الذكي (Android TV 4K)";
+        subtitle = "حزمة APK متوافقة مع شاشات سمارت وريموت التحكم • v1.0.0";
         link = liveAssets.android_tv;
     } else if (os === 'macos') {
         icon = "🍎";
-        title = "تنزيل نسخة الماك (macOS DMG)";
-        subtitle = "حزمة DMG متوافقة مع معالجات Apple Silicon و Intel";
+        title = "نسخة الماك الرسمية (macOS DMG)";
+        subtitle = "حزمة DMG متوافقة مع معالجات M1/M2/M3 و Intel • v1.0.0";
         link = liveAssets.macos;
     } else if (os === 'linux') {
         icon = "🐧";
-        title = "تنزيل نسخة لينكس (Linux AppImage)";
-        subtitle = "تشغيل مباشر لجميع توزيعات لينكس بحزمة AppImage المستقلة";
+        title = "نسخة لينكس المستقلة (AppImage)";
+        subtitle = "تشغيل مباشر لكافة توزيعات لينكس بحزمة AppImage • v1.0.0";
         link = liveAssets.linux;
     }
 
     container.innerHTML = `
         <a href="${link}" class="btn-download-master" id="primary-dl-btn">
-            <span style="font-size: 1.8rem;">${icon}</span>
-            <span>${title}</span>
+            <div class="btn-download-left">
+                <span class="btn-download-icon">${icon}</span>
+                <div>
+                    <span class="btn-download-label-sub">تنزيل مباشر لجهازك الحالي</span>
+                    <span class="btn-download-label-main">${title}</span>
+                </div>
+            </div>
+            <span class="btn-download-arrow">📥</span>
         </a>
-        <p style="text-align: center; font-size: 0.92rem; color: #cbd5e1; margin-top: 0.95rem; font-weight: 500;">
-            ${subtitle}
-        </p>
+        <div class="device-meta-chips">
+            <span class="meta-chip">⚡ ${subtitle}</span>
+            <span class="meta-chip">🛡️ فحص الفيروسات: سليم 100%</span>
+        </div>
     `;
 }
 
