@@ -193,6 +193,11 @@ jobs:
 
       # توقيع APK بمفتاح الإنتاج الثابت إن وجد
       - name: Sign APK with production keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           # البحث عن APK الناتج
           APK_PATH=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -type f | head -1)
@@ -208,14 +213,14 @@ jobs:
             "$BUILD_TOOLS_DIR/zipalign" -f 4 "$APK_PATH.original" "$APK_PATH" || true
 
             # محاولة التوقيع إن وُجدت المفاتيح
-            if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ] && [ -n "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ]; then
-              echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "${{ runner.temp }}/release.keystore"
+            if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASS" ]; then
+              echo "$KEYSTORE_B64" | base64 --decode > "${{ runner.temp }}/release.keystore"
               "$BUILD_TOOLS_DIR/apksigner" sign \
                 --ks "${{ runner.temp }}/release.keystore" \
-                --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
-                --ks-key-alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
-                --key-pass "pass:${{ secrets.ANDROID_KEY_PASSWORD }}" \
-                "$APK_PATH" || echo "Keystore signing skipped or failed, proceeding with generated APK"
+                --ks-pass "env:KEYSTORE_PASS" \
+                --ks-key-alias "$KEY_ALIAS" \
+                --key-pass "env:KEY_PASS" \
+                "$APK_PATH" || { echo "Keystore signing failed"; exit 1; }
             fi
           fi
 
