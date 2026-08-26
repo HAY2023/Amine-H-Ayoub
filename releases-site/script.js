@@ -1,22 +1,247 @@
-// Configuration & Constants
+// ══════════════════════════════════════════════════════════════
+// THE LEGENDARY QURAN KIDS & RECITATIONS SITE SCRIPT
+// Designed & crafted for Sheikh Hajj Ayoub Amine
+// ══════════════════════════════════════════════════════════════
+
 const GITHUB_REPO = "HAY2023/Amine-H-Ayoub";
 const SUPABASE_URL = "https://qmnvzxjsokibsmgpfeln.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtbnZ6eGpzb2tpYnNtZ3BmZWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3MTY2NTYsImV4cCI6MjEwMjI5MjY1Nn0.HuEYBLDADNuFkNNDUIJ2v8fYAxDUXenFROgpBEgpj7c";
 
-// Fallback release URLs for v1.0.0-an experience
+// Default direct release links
 const FALLBACK_ASSETS = {
     windows: `https://github.com/${GITHUB_REPO}/releases/latest`,
     android: `https://github.com/${GITHUB_REPO}/releases/latest`,
-    aab: `https://github.com/${GITHUB_REPO}/releases/latest`,
+    android_aab: `https://github.com/${GITHUB_REPO}/releases/latest`,
     ios: `https://github.com/${GITHUB_REPO}/releases/latest`,
-    tv: `https://github.com/${GITHUB_REPO}/releases/latest`,
+    android_tv: `https://github.com/${GITHUB_REPO}/releases/latest`,
     macos: `https://github.com/${GITHUB_REPO}/releases/latest`,
     linux: `https://github.com/${GITHUB_REPO}/releases/latest`
 };
 
 let liveAssets = { ...FALLBACK_ASSETS };
 
-// Detect OS
+// Platform metadata specifications for radial orbit hub
+const PLATFORM_SPECS = {
+    ios: {
+        icon: "🍏",
+        title: "iOS (iPhone & iPad)",
+        desc: "حزمة IPA الرسمية المباشرة لهواتف آيفون وأجهزة آيباد • الإصدار v1.0.0",
+        btnText: "تحميل iOS IPA",
+        badge: "آبل آيفون",
+        fileExt: ".ipa"
+    },
+    android: {
+        icon: "📱",
+        title: "Android Phone (APK)",
+        desc: "تثبيت مباشر لجميع هواتف وأجهزة أندرويد اللوحية • حجم خفيف وسريع",
+        btnText: "تحميل APK مباشر",
+        badge: "الأكثر تحميلاً",
+        fileExt: ".apk"
+    },
+    android_aab: {
+        icon: "📦",
+        title: "Google Play (AAB)",
+        desc: "حزمة Android App Bundle المخصصة لمتجر جوجل بلاي • v1.0.0",
+        btnText: "تحميل حزمة AAB",
+        badge: "متجر Play",
+        fileExt: ".aab"
+    },
+    windows: {
+        icon: "💻",
+        title: "Windows PC (EXE)",
+        desc: "حزمة التثبيت المستقلة لأجهزة الكمبيوتر (Win 10/11) • تعمل 100% أوفلاين",
+        btnText: "تحميل Windows EXE",
+        badge: "ويندوز رسمي",
+        fileExt: ".exe"
+    },
+    macos: {
+        icon: "🍎",
+        title: "macOS (DMG)",
+        desc: "حزمة DMG متوافقة مع معالجات M1/M2/M3 ومعالجات Intel",
+        btnText: "تحميل macOS DMG",
+        badge: "آبل ماك",
+        fileExt: ".dmg"
+    },
+    linux: {
+        icon: "🐧",
+        title: "Linux (AppImage)",
+        desc: "حزمة AppImage مستقلة تعمل على كافة توزيعات لينكس بنقرة واحدة",
+        btnText: "تحميل Linux AppImage",
+        badge: "لينكس",
+        fileExt: ".AppImage"
+    },
+    android_tv: {
+        icon: "📺",
+        title: "Android TV (4K)",
+        desc: "نسخة مخصصة لشاشات التلفاز الذكية وأجهزة TV Box مع دعم كامل للريموت",
+        btnText: "تحميل APK للتلفاز",
+        badge: "شاشات التلفاز",
+        fileExt: ".apk"
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// 1. DYNAMIC AMBIENT PARTICLES CANVAS
+// ══════════════════════════════════════════════════════════════
+function initParticles() {
+    const canvas = document.getElementById("particles-canvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let particles = [];
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    class Particle {
+        constructor() {
+            this.reset();
+        }
+        reset() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 2.2 + 0.6;
+            this.speedX = (Math.random() - 0.5) * 0.4;
+            this.speedY = (Math.random() - 0.5) * 0.4;
+            this.alpha = Math.random() * 0.6 + 0.2;
+            this.color = Math.random() > 0.4 ? "#f59e0b" : "#10b981";
+        }
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+            if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                this.reset();
+            }
+        }
+        draw() {
+            ctx.save();
+            ctx.globalAlpha = this.alpha;
+            ctx.fillStyle = this.color;
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    for (let i = 0; i < 45; i++) {
+        particles.push(new Particle());
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+            p.update();
+            p.draw();
+        });
+        requestAnimationFrame(animate);
+    }
+    animate();
+}
+
+// ══════════════════════════════════════════════════════════════
+// 2. CELESTIAL RADIAL ORBIT HUB LOGIC
+// ══════════════════════════════════════════════════════════════
+let activeOrbitPlatform = "android";
+let orbitInterval = null;
+const platformKeys = Object.keys(PLATFORM_SPECS);
+
+function initRadialOrbitHub() {
+    const nodes = document.querySelectorAll(".orbit-node");
+    const tipIcon = document.getElementById("orbit-tip-icon");
+    const tipTitle = document.getElementById("orbit-tip-title");
+    const tipDesc = document.getElementById("orbit-tip-desc");
+    const tipBtn = document.getElementById("orbit-tip-btn");
+
+    function selectPlatform(key, manual = false) {
+        activeOrbitPlatform = key;
+        const spec = PLATFORM_SPECS[key];
+        if (!spec) return;
+
+        nodes.forEach(n => {
+            if (n.getAttribute("data-platform") === key) {
+                n.classList.add("active-node");
+            } else {
+                n.classList.remove("active-node");
+            }
+        });
+
+        if (tipIcon) tipIcon.textContent = spec.icon;
+        if (tipTitle) tipTitle.textContent = spec.title;
+        if (tipDesc) tipDesc.textContent = spec.desc;
+        if (tipBtn) {
+            tipBtn.href = liveAssets[key] || FALLBACK_ASSETS[key];
+            tipBtn.textContent = spec.btnText + " 📥";
+        }
+
+        if (manual) {
+            playAudioChime();
+        }
+    }
+
+    nodes.forEach(node => {
+        node.addEventListener("mouseenter", () => {
+            const plat = node.getAttribute("data-platform");
+            selectPlatform(plat, true);
+            clearInterval(orbitInterval);
+        });
+
+        node.addEventListener("click", (e) => {
+            e.preventDefault();
+            const plat = node.getAttribute("data-platform");
+            selectPlatform(plat, true);
+            const targetUrl = liveAssets[plat] || FALLBACK_ASSETS[plat];
+            if (targetUrl) window.location.href = targetUrl;
+        });
+    });
+
+    // Auto-cycle orbit highlight every 4 seconds if untouched
+    let idx = 0;
+    orbitInterval = setInterval(() => {
+        idx = (idx + 1) % platformKeys.length;
+        selectPlatform(platformKeys[idx], false);
+    }, 4500);
+
+    // Initial selection based on user OS
+    const detected = detectUserOS();
+    const initKey = (detected === "windows") ? "windows" : (detected === "ios") ? "ios" : (detected === "macos") ? "macos" : "android";
+    selectPlatform(initKey);
+}
+
+// Gentle pleasant Web Audio chime
+function playAudioChime() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12); // A5
+
+        gain.gain.setValueAtTime(0.04, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start();
+        osc.stop(ctx.currentTime + 0.2);
+    } catch (e) {
+        // AudioContext not allowed without interaction
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 3. OS DETECTION & HERO CARD RENDERING
+// ══════════════════════════════════════════════════════════════
 function detectUserOS() {
     const userAgent = window.navigator.userAgent.toLowerCase();
     const platform = window.navigator.platform?.toLowerCase() || '';
@@ -28,6 +253,53 @@ function detectUserOS() {
     if (/linux/i.test(platform) || /linux/i.test(userAgent)) return 'linux';
     if (/win/i.test(platform) || /windows/i.test(userAgent)) return 'windows';
     return 'windows';
+}
+
+function renderPrimaryCard(os) {
+    const container = document.getElementById("primary-card-content");
+    if (!container) return;
+
+    let icon = "💻";
+    let title = "تنزيل نسخة ويندوز المباشرة (Windows PC)";
+    let subtitle = "حزمة .EXE المستقلة الموحدة v1.0.0 — تعمل 100% بدون إنترنت";
+    let link = liveAssets.windows;
+
+    if (os === 'ios') {
+        icon = "🍏";
+        title = "تنزيل حزمة آيفون وآيباد (iOS IPA)";
+        subtitle = "حزمة IPA الرسمية المتوافقة مع أجهزة iPhone و iPad • v1.0.0";
+        link = liveAssets.ios;
+    } else if (os === 'android') {
+        icon = "📱";
+        title = "تنزيل نسخة أندرويد (Android APK)";
+        subtitle = "تثبيت مباشر لجميع هواتف وأجهزة أندرويد اللوحية • v1.0.0";
+        link = liveAssets.android;
+    } else if (os === 'tv') {
+        icon = "📺";
+        title = "تنزيل نسخة التلفاز الذكي (Android TV 4K)";
+        subtitle = "حزمة APK متوافقة تماماً مع شاشات سمارت وريموت التحكم";
+        link = liveAssets.android_tv;
+    } else if (os === 'macos') {
+        icon = "🍎";
+        title = "تنزيل نسخة الماك (macOS DMG)";
+        subtitle = "حزمة DMG متوافقة مع معالجات Apple Silicon و Intel";
+        link = liveAssets.macos;
+    } else if (os === 'linux') {
+        icon = "🐧";
+        title = "تنزيل نسخة لينكس (Linux AppImage)";
+        subtitle = "تشغيل مباشر لجميع توزيعات لينكس بحزمة AppImage المستقلة";
+        link = liveAssets.linux;
+    }
+
+    container.innerHTML = `
+        <a href="${link}" class="btn-download-master" id="primary-dl-btn">
+            <span style="font-size: 1.8rem;">${icon}</span>
+            <span>${title}</span>
+        </a>
+        <p style="text-align: center; font-size: 0.92rem; color: #cbd5e1; margin-top: 0.95rem; font-weight: 500;">
+            ${subtitle}
+        </p>
+    `;
 }
 
 // Fetch live assets from GitHub API
@@ -45,9 +317,9 @@ async function fetchLiveGitHubAssets() {
             if (name.endsWith('.exe')) liveAssets.windows = url;
             else if (name.endsWith('.apk')) {
                 liveAssets.android = url;
-                liveAssets.tv = url;
+                liveAssets.android_tv = url;
             } else if (name.endsWith('.aab')) {
-                liveAssets.aab = url;
+                liveAssets.android_aab = url;
             } else if (name.endsWith('.ipa')) {
                 liveAssets.ios = url;
             } else if (name.endsWith('.dmg')) liveAssets.macos = url;
@@ -55,8 +327,9 @@ async function fetchLiveGitHubAssets() {
         });
 
         updatePlatformLinks();
+        renderPrimaryCard(detectUserOS());
     } catch (e) {
-        console.debug("Live release assets fallback active:", e);
+        console.debug("Live release assets fetched with fallback:", e);
     }
 }
 
@@ -70,71 +343,25 @@ function updatePlatformLinks() {
     const l = document.getElementById("card-dl-linux");
 
     if (w) w.href = liveAssets.windows;
-    if (tv) tv.href = liveAssets.tv;
+    if (tv) tv.href = liveAssets.android_tv;
     if (a) a.href = liveAssets.android;
-    if (aab) aab.href = liveAssets.aab;
+    if (aab) aab.href = liveAssets.android_aab;
     if (ios) ios.href = liveAssets.ios;
     if (m) m.href = liveAssets.macos;
     if (l) l.href = liveAssets.linux;
 }
 
-// Render Primary Hero Download Card
-function renderPrimaryCard(os) {
-    const container = document.getElementById("primary-card-content");
-    if (!container) return;
-
-    let icon = "💻";
-    let title = "تنزيل نسخة ويندوز الرسمية (Windows PC)";
-    let subtitle = "حزمة .EXE الذاتية والمستقلة — تعمل 100% بدون إنترنت";
-    let link = liveAssets.windows;
-
-    if (os === 'ios') {
-        icon = "🍏";
-        title = "تنزيل حزمة آيفون وآيباد (iOS IPA)";
-        subtitle = "حزمة IPA الرسمية متوافقة مع أجهزة iPhone و iPad";
-        link = liveAssets.ios;
-    } else if (os === 'android') {
-        icon = "📱";
-        title = "تنزيل نسخة أندرويد (Android APK)";
-        subtitle = "تثبيت مباشر لجميع هواتف وأجهزة أندرويد اللوحية";
-        link = liveAssets.android;
-    } else if (os === 'tv') {
-        icon = "📺";
-        title = "تنزيل نسخة التلفاز الذكي (Android TV 4K)";
-        subtitle = "حزمة APK متوافقة تماماً مع شاشات سمارت وريموت التحكم";
-        link = liveAssets.tv;
-    } else if (os === 'macos') {
-        icon = "🍎";
-        title = "تنزيل نسخة الماك (macOS DMG)";
-        subtitle = "حزمة DMG متوافقة مع معالجات M1/M2/M3 و Intel";
-        link = liveAssets.macos;
-    } else if (os === 'linux') {
-        icon = "🐧";
-        title = "تنزيل نسخة لينكس (Linux AppImage)";
-        subtitle = "تشغيل مباشر لجميع توزيعات لينكس بحزمة AppImage";
-        link = liveAssets.linux;
-    }
-
-    container.innerHTML = `
-        <a href="${link}" class="btn-download-master" id="primary-dl-btn">
-            <span style="font-size: 1.6rem;">${icon}</span>
-            <span>${title}</span>
-        </a>
-        <p style="text-align: center; font-size: 0.88rem; color: var(--text-muted); margin-top: 0.85rem;">
-            ${subtitle}
-        </p>
-    `;
-}
-
-// Interactive Showcase Tabs Data
+// ═══════════════════════════════════════════════════════════
+// 4. INTERACTIVE SHOWCASE TABS (REAL APP SCREENSHOTS)
+// ═══════════════════════════════════════════════════════════
 const TABS_DATA = {
     recitations: {
         title: "المصحف المرتل وقائمة التلاوات",
         desc: "واجهة أنيقة وسلسة تعرض سور القرآن الكريم برواية ورش، مع إمكانية البحث الفوري، وزر تحميل السور أوفلاين للتشغيل بدون إنترنت، ونظام جمع النقاط التشجيعي.",
         features: [
-            "تلاوة كاملة بصوت القارئ حاج أيوب أمين برواية ورش",
-            "زر (تحميل الكل / جاهز أوفلاين) للتشغيل دون نت",
-            "ركن ألعاب الأطفال مدمج مع حماية ولي الأمر"
+            "تلاوة كاملة بصوت القارئ حاج أيوب أمين برواية ورش عن نافع",
+            "زر (تحميل الكل / جاهز أوفلاين) للتشغيل دون اتصال بالإنترنت",
+            "مشغل صوتي تفاعلي مع التحكم في السرعة والتكرار والمؤقت"
         ],
         image: "assets/screen-desktop-home.png"
     },
@@ -144,26 +371,26 @@ const TABS_DATA = {
         features: [
             "ألعاب قرآنية ممتعة وهادفة تحبب الأطفال في كتاب الله",
             "نظام فتح الألعاب تدريجياً عبر الاستماع للتلاوة",
-            "مؤثرات بصرية وصوتية محفزة للأبطال الصغار"
+            "مؤثرات بصرية وصوتية محفزة للأبطال الصغار مع نجوم ومكافآت"
         ],
         image: "assets/screen-mobile-kids.png"
     },
     desktop_kids: {
-        title: "ساحة ألعاب وتحديات الكمبيوتر والشاشات",
+        title: "ساحة ألعاب وتحديات الشاشات والحواسيب",
         desc: "عرض عريض مذهل لألعاب الأطفال والتحديات على الشاشات الكبيرة وأجهزة الكمبيوتر والتلفاز بدقة عالية وتحكم سلس.",
         features: [
-            "دعم الشاشات الكبيرة 4K والحواسيب بدقة فائقة",
-            "متجر الأوسمة والمكافآت التنافسي",
-            "لوحة متابعة إنجازات وتطور حفظ الطفل"
+            "دعم الشاشات الكبيرة 4K والحواسيب بدقة فائقة وألوان زاهية",
+            "متجر الأوسمة والمكافآت والشخصيات الكرتونية المحفزة",
+            "لوحة متابعة إنجازات وتطور حفظ الطفل اليومي"
         ],
         image: "assets/screen-desktop-kids.png"
     },
     settings: {
         title: "لوحة التحكم وقفل الوالدين الذكي",
-        desc: "إعدادات شاملة تتيح التحكم في الحسابات، قفل الخروج بكلمة سر للوالدين، وإدارة التنزيلات، وفتح قناة اليوتيوب والتواصل مع الدعم الفني.",
+        desc: "إعدادات شاملة تتيح التحكم في الحسابات، قفل الخروج بكلمة سر للوالدين لمنع خروج الطفل من التطبيق، وإدارة التنزيلات والدعم الفني.",
         features: [
             "حماية خروج الطفل برمز PIN مخصص لولي الأمر",
-            "إدارة سعة التخزين وحذف السور المحملة بسهولة",
+            "إدارة سعة التخزين وحذف السور المحملة بسهولة لتوفير المساحة",
             "تواصل مباشر مع الدعم الفني وقناة القارئ على يوتيوب"
         ],
         image: "assets/screen-desktop-settings.png"
@@ -193,7 +420,7 @@ function setupShowcaseTabs() {
                 setTimeout(() => {
                     imgElem.src = data.image;
                     imgElem.style.opacity = "1";
-                }, 150);
+                }, 180);
             }
             if (featList) {
                 featList.innerHTML = data.features.map(f => `
@@ -204,7 +431,9 @@ function setupShowcaseTabs() {
     });
 }
 
-// Audio Preview Controller
+// ═══════════════════════════════════════════════════════════
+// 5. AUDIO RECITATION PREVIEW CONTROLLER
+// ═══════════════════════════════════════════════════════════
 function setupAudioPreview() {
     const playBtn = document.getElementById("btn-audio-toggle");
     const audioElem = document.getElementById("preview-audio-elem");
@@ -231,9 +460,9 @@ function setupAudioPreview() {
     });
 }
 
-// ══════════════════════════════════════════════════════════════
-// LIVE SUPABASE SUPPORT CHAT FOR WEBSITE VISITORS (NO BOT)
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// 6. LIVE SUPABASE SUPPORT CHAT (NO BOT, DIRECT SUPERVISOR)
+// ═══════════════════════════════════════════════════════════
 let supabaseClient = null;
 let siteConvId = null;
 let siteVisitorDeviceId = null;
@@ -308,7 +537,7 @@ async function loadOrInitConversation() {
     const msgContainer = document.getElementById("site-support-messages");
     if (!msgContainer) return;
 
-    msgContainer.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:2rem; font-size:0.9rem;">جاري الاتصال بالمشرف...</div>`;
+    msgContainer.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:2rem; font-size:0.95rem;">جاري الاتصال بالمشرف...</div>`;
 
     try {
         let { data: conv } = await supabaseClient
@@ -333,7 +562,7 @@ async function loadOrInitConversation() {
         }
     } catch (e) {
         console.debug("Init chat error:", e);
-        msgContainer.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:2rem; font-size:0.9rem;">أهلاً بك! اكتب رسالتك وسيتواصل معك المشرف مباشرة.</div>`;
+        msgContainer.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:2rem; font-size:0.95rem;">أهلاً بك! اكتب رسالتك وسيتواصل معك المشرف مباشرة.</div>`;
     }
 }
 
@@ -350,175 +579,95 @@ async function loadMessages() {
 
     if (!msgs || msgs.length === 0) {
         msgContainer.innerHTML = `
-            <div style="text-align:center; color:#94a3b8; padding:3rem 1.5rem; space-y: 1rem;">
-                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">💬</div>
-                <h4 style="font-family:'Cairo',sans-serif; color:#f8fafc; font-size:1.15rem; font-weight:800;">مرحباً بك في الدعم الفني</h4>
-                <p style="font-size:0.85rem; line-height:1.6; max-width:280px; margin:0.5rem auto 0;">
-                    اطرح استفسارك أو ملاحظتك وسيرد عليك المشرف مباشرة. يمكنك أيضاً إرفاق لقطات شاشة.
-                </p>
+            <div style="text-align: center; color: #cbd5e1; padding: 2rem 1rem; font-size: 0.95rem;">
+                <p style="font-size: 1.5rem; margin-bottom: 0.5rem;">👋 أهلاً بك!</p>
+                <p>تواصلك هنا يصل مباشرة إلى مشرف التطبيق والقارئ الشيخ حاج أيوب أمين للإجابة على استفساراتك.</p>
             </div>
         `;
         return;
     }
 
-    msgContainer.innerHTML = "";
-    msgs.forEach(m => renderMessageBubble(m, false));
+    msgContainer.innerHTML = msgs.map(m => {
+        const isUser = m.sender === "user";
+        return `
+            <div class="msg-bubble ${isUser ? 'msg-user' : 'msg-admin'}">
+                ${m.body}
+            </div>
+        `;
+    }).join("");
+
     msgContainer.scrollTop = msgContainer.scrollHeight;
-}
-
-let sitePollTimer = null;
-
-async function loadMessagesSilently() {
-    if (!supabaseClient || !siteConvId) return;
-    try {
-        const { data: msgs } = await supabaseClient
-            .from("support_messages")
-            .select("id, sender, body, created_at")
-            .eq("conversation_id", siteConvId)
-            .order("created_at", { ascending: true });
-
-        if (msgs && msgs.length > 0) {
-            msgs.forEach(m => renderMessageBubble(m, false));
-        }
-    } catch (e) {
-        /* ignore */
-    }
 }
 
 function subscribeToMessages() {
     if (!supabaseClient || !siteConvId) return;
-
-    if (!sitePollTimer) {
-        sitePollTimer = setInterval(loadMessagesSilently, 2500);
-    }
-
     supabaseClient
-        .channel(`site_support_${siteConvId}`)
-        .on("postgres_changes", {
-            event: "INSERT",
-            schema: "public",
-            table: "support_messages",
+        .channel(`site-chat-${siteConvId}`)
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'support_messages',
             filter: `conversation_id=eq.${siteConvId}`
-        }, (payload) => {
-            const newMsg = payload.new;
-            renderMessageBubble(newMsg, true);
+        }, payload => {
+            const m = payload.new;
+            const msgContainer = document.getElementById("site-support-messages");
+            if (!msgContainer) return;
+
+            const isUser = m.sender === "user";
+            const bubble = document.createElement("div");
+            bubble.className = `msg-bubble ${isUser ? 'msg-user' : 'msg-admin'}`;
+            bubble.textContent = m.body;
+            msgContainer.appendChild(bubble);
+            msgContainer.scrollTop = msgContainer.scrollHeight;
         })
         .subscribe();
 }
 
-function renderMessageBubble(m, shouldScroll) {
-    const msgContainer = document.getElementById("site-support-messages");
-    if (!msgContainer) return;
-
-    // Remove empty placeholder if present
-    if (msgContainer.querySelector("h4")) {
-        msgContainer.innerHTML = "";
-    }
-
-    // Avoid duplicate render
-    if (document.getElementById(`msg-${m.id}`)) return;
-
-    const isUser = m.sender === "user";
-    const bubble = document.createElement("div");
-    bubble.id = `msg-${m.id || Date.now()}`;
-    bubble.className = `msg-bubble ${isUser ? "msg-user" : "msg-admin"}`;
-
-    const timeStr = new Date(m.created_at || Date.now()).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" });
-
-    let contentHtml = "";
-    if (m.body && m.body.startsWith("[IMAGE] ")) {
-        const src = m.body.replace("[IMAGE] ", "").trim();
-        contentHtml = `<img src="${src}" alt="صورة مرفقة" style="max-width:100%; border-radius:12px; display:block; margin-top:4px;">`;
-    } else {
-        contentHtml = `<p style="white-space:pre-wrap; word-break:break-word;">${m.body}</p>`;
-    }
-
-    bubble.innerHTML = `
-        <div style="font-size:0.72rem; opacity:0.8; font-weight:800; margin-bottom:2px;">${isUser ? "أنت" : "المشرف"}</div>
-        ${contentHtml}
-        <div class="msg-time">${timeStr}</div>
-    `;
-
-    msgContainer.appendChild(bubble);
-    if (shouldScroll || isUser) {
-        msgContainer.scrollTop = msgContainer.scrollHeight;
-    }
-}
-
 async function sendUserMessage() {
-    const inputElem = document.getElementById("site-support-input");
-    if (!inputElem || !inputElem.value.trim() || !supabaseClient) return;
+    const input = document.getElementById("site-support-input");
+    if (!input || !supabaseClient || !siteConvId) return;
+    const text = input.value.trim();
+    if (!text) return;
 
-    const text = inputElem.value.trim();
-    inputElem.value = "";
+    input.value = "";
 
-    const tempMsg = {
-        id: `opt-${Date.now()}`,
+    await supabaseClient.from("support_messages").insert({
+        conversation_id: siteConvId,
         sender: "user",
-        body: text,
-        created_at: new Date().toISOString()
-    };
-    renderMessageBubble(tempMsg, true);
-
-    try {
-        if (siteConvId) {
-            await supabaseClient.from("support_messages").insert({
-                conversation_id: siteConvId,
-                sender: "user",
-                body: text
-            });
-            await supabaseClient.from("support_conversations").update({
-                last_message: text,
-                last_message_at: new Date().toISOString()
-            }).eq("id", siteConvId);
-        }
-    } catch (e) {
-        console.debug("Send note:", e);
-    }
+        body: text
+    });
 }
 
 async function handleFileUpload(file) {
-    if (!file || !file.type.startsWith("image/") || !supabaseClient) return;
-
-    const toBase64 = (f) => new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(r.result);
-        r.onerror = rej;
-        r.readAsDataURL(f);
-    });
-
+    if (!supabaseClient || !siteConvId) return;
     try {
-        const base64 = await toBase64(file);
-        const tempMsg = {
-            id: `opt-${Date.now()}`,
-            sender: "user",
-            body: `[IMAGE] ${base64}`,
-            created_at: new Date().toISOString()
-        };
-        renderMessageBubble(tempMsg, true);
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${siteConvId}_${Date.now()}.${fileExt}`;
+        const { error } = await supabaseClient.storage.from("support_attachments").upload(fileName, file);
+        if (error) throw error;
 
-        if (siteConvId) {
+        const { data: pubUrl } = supabaseClient.storage.from("support_attachments").getPublicUrl(fileName);
+        if (pubUrl?.publicUrl) {
             await supabaseClient.from("support_messages").insert({
                 conversation_id: siteConvId,
                 sender: "user",
-                body: `[IMAGE] ${base64}`
+                body: `[صورة مرفقة]: ${pubUrl.publicUrl}`
             });
-            await supabaseClient.from("support_conversations").update({
-                last_message: "📷 صورة مرفقة",
-                last_message_at: new Date().toISOString()
-            }).eq("id", siteConvId);
         }
     } catch (e) {
-        console.debug("Upload note:", e);
+        console.debug("Upload failed:", e);
     }
 }
 
-// Initialization on DOM Load
+// ═══════════════════════════════════════════════════════════
+// INITIALIZATION ON DOM READY
+// ═══════════════════════════════════════════════════════════
 document.addEventListener("DOMContentLoaded", () => {
-    const userOS = detectUserOS();
-    renderPrimaryCard(userOS);
+    initParticles();
+    initRadialOrbitHub();
+    renderPrimaryCard(detectUserOS());
+    fetchLiveGitHubAssets();
     setupShowcaseTabs();
     setupAudioPreview();
-    fetchLiveGitHubAssets();
     initSupabaseSupport();
 });
