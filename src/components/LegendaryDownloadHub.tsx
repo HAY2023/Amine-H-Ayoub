@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { Apple, Smartphone, Monitor, Download } from "lucide-react";
+import { Apple, Smartphone, Monitor, Tv, Download } from "lucide-react";
 
 export default function LegendaryDownloadHub() {
   const [isOpen, setIsOpen] = useState(false);
 
   const platforms = [
-    { name: "iOS", icon: <Apple className="w-6 h-6" />, desc: "iPhone & iPad", url: "https://learn-quran-kids.pages.dev", color: "from-gray-700 to-gray-900", position: "translate(-50%, -150%)" },
-    { name: "Android", icon: <Smartphone className="w-6 h-6" />, desc: "APK & Play Store", url: "https://learn-quran-kids.pages.dev/app-universal-release.apk", color: "from-emerald-500 to-emerald-700", position: "translate(50%, -50%)" },
-    { name: "Windows", icon: <Monitor className="w-6 h-6" />, desc: "PC (EXE)", url: "https://learn-quran-kids.pages.dev/app-universal-release.apk", color: "from-blue-500 to-blue-700", position: "translate(-50%, 50%)" },
-    { name: "macOS", icon: <Apple className="w-6 h-6" />, desc: "Mac (DMG)", url: "https://learn-quran-kids.pages.dev/app-universal-release.apk", color: "from-purple-500 to-purple-700", position: "translate(-150%, -50%)" },
+    { name: "iOS", icon: <Apple className="w-6 h-6" />, desc: "iPhone & iPad", url: "https://learn-quran-kids.pages.dev", color: "from-gray-700 to-gray-900" },
+    { name: "Android", icon: <Smartphone className="w-6 h-6" />, desc: "هواتف وأجهزة أندرويد", url: "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest", color: "from-emerald-500 to-emerald-700" },
+    { name: "Windows", icon: <Monitor className="w-6 h-6" />, desc: "كمبيوتر ولابتوب (EXE)", url: "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest", color: "from-blue-500 to-blue-700" },
+    { name: "Smart TV", icon: <Tv className="w-6 h-6" />, desc: "شاشات Android TV", url: "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest", color: "from-purple-500 to-purple-700" },
   ];
 
   return (

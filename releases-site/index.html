@@ -652,14 +652,11 @@
             white-space: nowrap;
         }
 
-        /* ── Flawless Radial Positioning for 520px Circle (Radius = 210px) ── */
-        .node-pos-1 { top: 15px; left: 223px; }                   /* 0 deg (Top - iOS) */
-        .node-pos-2 { top: 90px; right: 25px; }                   /* 51.4 deg (Top Right - Android APK) */
-        .node-pos-3 { top: 255px; right: 5px; }                   /* 102.8 deg (Right - Android AAB) */
-        .node-pos-4 { top: 410px; right: 85px; }                  /* 154.2 deg (Bottom Right - Windows) */
-        .node-pos-5 { top: 410px; left: 85px; }                   /* 205.7 deg (Bottom Left - Mac) */
-        .node-pos-6 { top: 255px; left: 5px; }                    /* 257.1 deg (Left - Linux) */
-        .node-pos-7 { top: 90px; left: 25px; }                    /* 308.5 deg (Top Left - Android TV) */
+        /* ── Flawless 4-Platform Radial Positioning for 520px Circle (Radius = 210px) ── */
+        .node-pos-1 { top: 15px; left: 223px; }                   /* 0 deg (Top - iOS iPhone & iPad) */
+        .node-pos-2 { top: 223px; right: 15px; }                  /* 90 deg (Right - Android Phone APK) */
+        .node-pos-3 { bottom: 15px; left: 223px; }                /* 180 deg (Bottom - Windows PC) */
+        .node-pos-4 { top: 223px; left: 15px; }                   /* 270 deg (Left - Smart TV) */
 
         /* ── Orbit Quick Details Card (Positioned Cleanly Below Orbit) ── */
         .orbit-details-card {
@@ -1388,11 +1385,11 @@
                         </div>
                     </a>
 
-                    <!-- 7 Orbiting Circular Platform Nodes (ALL 100% UNBLOCKED & CLICKABLE) -->
-                    <!-- 1. iOS (iPhone / iPad - Web App) -->
+                    <!-- 4 Orbiting Circular Platform Nodes (ALL 100% UNBLOCKED & CLICKABLE) -->
+                    <!-- 1. iOS (iPhone / iPad) -->
                     <div class="orbit-node node-pos-1" data-platform="ios" title="تطبيق iPhone و iPad (Web App)">
                         <span class="orbit-node-icon">🍏</span>
-                        <span class="orbit-node-label">iOS App</span>
+                        <span class="orbit-node-label">iPhone & iPad</span>
                     </div>
 
                     <!-- 2. Android APK -->
@@ -1401,32 +1398,14 @@
                         <span class="orbit-node-label">Android APK</span>
                     </div>
 
-                    <!-- 3. Google Play Bundle (AAB) -->
-                    <div class="orbit-node node-pos-3" data-platform="android_aab" title="حزمة متجر Google Play (AAB)">
-                        <span class="orbit-node-icon">📦</span>
-                        <span class="orbit-node-label">Google AAB</span>
-                    </div>
-
-                    <!-- 4. Windows PC (EXE) -->
-                    <div class="orbit-node node-pos-4" data-platform="windows" title="كمبيوتر ولابتوب ويندوز (EXE)">
+                    <!-- 3. Windows PC (EXE) -->
+                    <div class="orbit-node node-pos-3" data-platform="windows" title="كمبيوتر ولابتوب ويندوز (EXE)">
                         <span class="orbit-node-icon">💻</span>
-                        <span class="orbit-node-label">Windows EXE</span>
+                        <span class="orbit-node-label">Windows PC</span>
                     </div>
 
-                    <!-- 5. macOS (DMG) -->
-                    <div class="orbit-node node-pos-5" data-platform="macos" title="أجهزة آبل ماك (DMG)">
-                        <span class="orbit-node-icon">🍎</span>
-                        <span class="orbit-node-label">macOS DMG</span>
-                    </div>
-
-                    <!-- 6. Linux (AppImage) -->
-                    <div class="orbit-node node-pos-6" data-platform="linux" title="توزيعات لينكس (AppImage)">
-                        <span class="orbit-node-icon">🐧</span>
-                        <span class="orbit-node-label">Linux</span>
-                    </div>
-
-                    <!-- 7. Android TV (Smart TV 4K) -->
-                    <div class="orbit-node node-pos-7" data-platform="android_tv" title="شاشات التلفاز الذكية (Android TV)">
+                    <!-- 4. Android TV (Smart TV 4K) -->
+                    <div class="orbit-node node-pos-4" data-platform="android_tv" title="شاشات التلفاز الذكية (Android TV)">
                         <span class="orbit-node-icon">📺</span>
                         <span class="orbit-node-label">Smart TV</span>
                     </div>
@@ -1508,14 +1487,14 @@
             <h2 class="section-header-title">مركز التحميل لكافة الأجهزة</h2>
             <p class="section-header-subtitle">اختر النسخة المتوافقة مع جهازك بروابط مباشرة وسريعة ومحدثة باستمرار</p>
 
-            <div class="platforms-grid">
-                <!-- 1. iOS (iPhone / iPad - IPA) -->
-                <a id="card-dl-ios" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-action-card">
-                    <span class="tag-special tag-ios">آبل آيفون</span>
-                    <div class="platform-logo-badge">🍏</div>
-                    <h3 class="platform-name">iOS (iPhone & iPad)</h3>
-                    <p class="platform-desc">هواتف آيفون وأجهزة آيباد اللوحية بحزمة IPA الرسمية المباشرة</p>
-                    <div class="platform-action-btn">تحميل حزمة iOS IPA</div>
+            <div class="platforms-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); max-width: 1100px; margin: 2rem auto 0;">
+                <!-- 1. Windows PC (Primary) -->
+                <a id="card-dl-windows" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-action-card">
+                    <span class="tag-special" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4);">كمبيوتر ولابتوب</span>
+                    <div class="platform-logo-badge">💻</div>
+                    <h3 class="platform-name">Windows PC</h3>
+                    <p class="platform-desc">لأجهزة الكمبيوتر واللابتوب (Windows 10 & 11) بحزمة EXE المستقلة بدون إنترنت</p>
+                    <div class="platform-action-btn">تحميل حزمة .EXE للكمبيوتر</div>
                 </a>
 
                 <!-- 2. Android Phone (APK) -->
@@ -1524,15 +1503,16 @@
                     <div class="platform-logo-badge">📱</div>
                     <h3 class="platform-name">Android APK</h3>
                     <p class="platform-desc">تثبيت مباشر لجميع هواتف وأجهزة أندرويد اللوحية (Samsung, Xiaomi, Huawei, etc.)</p>
-                    <div class="platform-action-btn">تحميل APK مباشر</div>
+                    <div class="platform-action-btn">تحميل APK مباشر للهاتف</div>
                 </a>
 
-                <!-- 3. Android App Bundle (AAB) -->
-                <a id="card-dl-aab" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-action-card">
-                    <div class="platform-logo-badge">📦</div>
-                    <h3 class="platform-name">Google Play Bundle (AAB)</h3>
-                    <p class="platform-desc">حزمة .AAB الرسمية للنشر على متجر Google Play بحجم خفيف</p>
-                    <div class="platform-action-btn">تحميل حزمة AAB</div>
+                <!-- 3. iOS (iPhone / iPad) -->
+                <a id="card-dl-ios" href="https://learn-quran-kids.pages.dev" class="platform-action-card">
+                    <span class="tag-special tag-ios">آبل آيفون</span>
+                    <div class="platform-logo-badge">🍏</div>
+                    <h3 class="platform-name">iOS (iPhone & iPad)</h3>
+                    <p class="platform-desc">هواتف آيفون وأجهزة آيباد اللوحية يعمل كتطبيق ويب (PWA) فوري وسلس</p>
+                    <div class="platform-action-btn">تشغيل التطبيق للآيفون</div>
                 </a>
 
                 <!-- 4. Android TV / Smart TV -->
@@ -1542,30 +1522,6 @@
                     <h3 class="platform-name">Android TV (4K)</h3>
                     <p class="platform-desc">شاشات التلفاز الذكية وأجهزة TV Box مع دعم كامل للريموت كنترول</p>
                     <div class="platform-action-btn">تحميل APK مخصص للتلفاز</div>
-                </a>
-
-                <!-- 5. Windows PC -->
-                <a id="card-dl-windows" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-action-card">
-                    <div class="platform-logo-badge">💻</div>
-                    <h3 class="platform-name">Windows PC</h3>
-                    <p class="platform-desc">لأجهزة الكمبيوتر واللابتوب (Windows 10 & 11) بحزمة EXE المستقلة</p>
-                    <div class="platform-action-btn">تحميل حزمة .EXE المباشرة</div>
-                </a>
-
-                <!-- 6. macOS -->
-                <a id="card-dl-macos" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-action-card">
-                    <div class="platform-logo-badge">🍎</div>
-                    <h3 class="platform-name">macOS</h3>
-                    <p class="platform-desc">أجهزة آبل ماك بحزمة DMG لمعالجات Apple Silicon (M1/M2/M3) و Intel</p>
-                    <div class="platform-action-btn">تحميل حزمة DMG للماك</div>
-                </a>
-
-                <!-- 7. Linux -->
-                <a id="card-dl-linux" href="https://github.com/HAY2023/Amine-H-Ayoub/releases/latest" class="platform-action-card">
-                    <div class="platform-logo-badge">🐧</div>
-                    <h3 class="platform-name">Linux</h3>
-                    <p class="platform-desc">توزيعات لينكس (Ubuntu, Debian, Fedora) بحزمة AppImage المستقلة</p>
-                    <div class="platform-action-btn">تحميل حزمة Linux</div>
                 </a>
             </div>
 
