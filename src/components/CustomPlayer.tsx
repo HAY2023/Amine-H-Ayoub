@@ -1,6 +1,5 @@
 import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
 import { X, Play, Pause, Music, Repeat, SkipForward, SkipBack, RotateCcw } from "lucide-react";
-import { isTauri } from "../utils/tauriUtils";
 import { resolvePlayableAudioUrl } from "@/data/offlineAudioCache";
 import { useAudioContext } from "@/contexts/audioContext";
 import { updateMediaSession, setMediaPlaybackState, isBackgroundAudioEnabled } from "@/utils/backgroundAudio";
