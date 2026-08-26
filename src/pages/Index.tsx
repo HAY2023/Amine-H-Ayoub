@@ -12,6 +12,7 @@ import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useTVNavigation } from "@/hooks/useTVNavigation";
+import LegendaryDownloadHub from "@/components/LegendaryDownloadHub";
 
 import { Shuffle, ListOrdered, Settings, Bell, Gamepad2, Lock } from "lucide-react";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
@@ -286,7 +287,7 @@ const Index = () => {
         className="fixed inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: "url('/background-kids.jpg')" }}
       />
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-md" />
 
       <div className="relative z-10 min-h-screen pb-8">
         {/* شريط التنقل العلوي */}
@@ -318,101 +319,11 @@ const Index = () => {
             </button>
           </div>
         )}
-        <AppHeader />
 
-        {getKidsEnabled() && (
-          <div className="flex justify-center mb-4">
-            <PointsDisplay points={points} />
-          </div>
-        )}
-
-        <main className="mx-auto max-w-2xl px-4 py-4 space-y-4 transition-all duration-300 animate-fade-up">
-          {/* Search + Shuffle */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="flex-1 min-w-0">
-              <SearchBar value={search} onChange={setSearch} />
-            </div>
-            <div className="flex flex-wrap gap-2 items-center">
-              <button
-                onClick={handleShuffle}
-                className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 border ${
-                  isShuffled
-                    ? "bg-accent text-accent-foreground border-accent shadow-lg scale-105"
-                    : "bg-card border-border hover:border-accent/50 hover:shadow-md"
-                }`}
-                title={isShuffled ? "العودة للترتيب الأصلي" : "ترتيب عشوائي"}
-                aria-label={isShuffled ? "العودة للترتيب الأصلي" : "ترتيب عشوائي"}
-              >
-                {isShuffled ? (
-                  <ListOrdered className="w-5 h-5" />
-                ) : (
-                  <Shuffle className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Shuffle indicator */}
-          {isShuffled && (
-            <div className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-accent/10 border border-accent/30 text-accent-foreground text-sm font-bold animate-fade-in">
-              <Shuffle className="w-4 h-4" />
-              <span>الترتيب العشوائي مُفعّل</span>
-              <button
-                onClick={handleShuffle}
-                className="mr-2 px-2 py-0.5 rounded-md bg-accent/20 hover:bg-accent/30 text-xs transition-colors"
-              >
-                إلغاء
-              </button>
-            </div>
-          )}
-
-          {loading && (
-            <div className="space-y-3">
-              <div className="text-center py-6">
-                <div className="w-14 h-14 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-muted-foreground text-lg font-quran">
-                  جاري جلب التلاوات العطرة...
-                </p>
-                <p className="text-muted-foreground/70 text-sm mt-1">
-                  قد يستغرق الأمر بضع ثوانٍ
-                </p>
-              </div>
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border">
-                  <Skeleton className="w-12 h-12 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-3 w-16" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {error && (
-            <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-8 text-center space-y-4">
-              <p className="text-destructive text-lg font-bold">خطأ في تحميل البيانات</p>
-              <p className="text-muted-foreground text-sm">{error}</p>
-              <button
-                onClick={retry}
-                className="px-6 py-3 bg-accent text-accent-foreground font-bold rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
-              >
-                🔄 إعادة المحاولة
-              </button>
-            </div>
-          )}
-
-          {/* Surah list */}
-          {!loading && !error && (
-            <div className="w-full flex flex-col gap-6">
-              <SurahList
-                surahs={displaySurahs}
-                currentPlaying={currentSurah?.number ?? null}
-                onSelect={handleSelect}
-              />
-            </div>
-          )}
-        </main>
+        {/* المكون الأسطوري الجديد */}
+        <LegendaryDownloadHub />
+        
+        {/* تم إخفاء قسم السور والبحث كما طُلب */}
       </div>
 
       {currentSurah && (

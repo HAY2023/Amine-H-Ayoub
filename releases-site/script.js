@@ -25,10 +25,10 @@ const PLATFORM_SPECS = {
     ios: {
         icon: "🍏",
         title: "iOS (iPhone & iPad)",
-        desc: "حزمة IPA الرسمية المباشرة لهواتف آيفون وأجهزة آيباد • الإصدار v1.0.0",
-        btnText: "تحميل iOS IPA",
+        desc: "تطبيق ويب متوافق مع هواتف آيفون وأجهزة آيباد • الإصدار v1.0.0",
+        btnText: "تشغيل التطبيق",
         badge: "آبل آيفون",
-        fileExt: ".ipa"
+        fileExt: ""
     },
     android: {
         icon: "📱",
@@ -176,7 +176,7 @@ function initRadialOrbitHub() {
         if (tipDesc) tipDesc.textContent = spec.desc;
         if (tipBtn) {
             tipBtn.href = liveAssets[key] || FALLBACK_ASSETS[key];
-            tipBtn.innerHTML = `<span>تحميل مباشر</span> <span>📥</span>`;
+            tipBtn.innerHTML = `<span>${spec.btnText}</span> <span>📥</span>`;
         }
 
         if (manual) {
@@ -266,8 +266,8 @@ function renderPrimaryCard(os) {
 
     if (os === 'ios') {
         icon = "🍏";
-        title = "حزمة iOS الرسمية (iPhone & iPad)";
-        subtitle = "حزمة IPA الرسمية المتوافقة مع أجهزة آبل • v1.0.0";
+        title = "تطبيق iOS (iPhone & iPad)";
+        subtitle = "تطبيق ويب (PWA) متوافق مع أجهزة آبل • v1.0.0";
         link = liveAssets.ios;
     } else if (os === 'android') {
         icon = "📱";
