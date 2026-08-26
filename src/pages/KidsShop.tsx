@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Star, Lock, Sparkles, Palette } from "lucide-react";
 import { getCoins, getProfile, ownItem, unlockItem, equipAvatar, equipColor, kidsRouteBlocked, KID_AVATARS, KID_COLORS, SHOP_AVATARS, SHOP_COLORS } from "../data/kidsProfile";
 import Avatar from "../components/Avatar";
+import TreasureBox from "../components/TreasureBox";
 import { toast } from "../hooks/use-toast";
 import { cn } from "../lib/utils";
 
@@ -11,6 +12,12 @@ export default function KidsShop() {
   useEffect(() => { if (kidsRouteBlocked()) navigate("/audio", { replace: true }); }, [navigate]);
   const [, force] = useState(0);
   const refresh = () => force(x => x + 1);
+
+  // تزامن عدّاد النجوم مع أي تغيير (صندوق الكنز/الألعاب) عبر حدث addCoins
+  useEffect(() => {
+    window.addEventListener("mushaf:coins", refresh);
+    return () => window.removeEventListener("mushaf:coins", refresh);
+  }, []);
 
   const coins = getCoins();
   const profile = getProfile();
@@ -37,6 +44,9 @@ export default function KidsShop() {
           <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-accent font-extrabold text-sm px-2.5 h-10"><Star className="w-4 h-4 fill-amber-300" /> {coins}</span>
         </header>
         <p className="text-xs text-muted-foreground text-center leading-relaxed">اجمع النجوم من الألعاب، ثم افتح بها وجوهاً وألواناً جديدة لشخصيتك.</p>
+
+        {/* صندوق الكنز اليومي — مرة واحدة كل يوم */}
+        <TreasureBox />
 
         {/* وجوه */}
         <section className="space-y-2 animate-fade-up">

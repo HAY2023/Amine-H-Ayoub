@@ -297,6 +297,49 @@
   50% { box-shadow: 0 0 26px hsl(var(--gold) / 0.5); }
 }
 .animate-glow { animation: glow-pulse 2.4s ease-in-out infinite; }
+/* ===== صندوق الكنز: اهتزاز + قصاصات + لمعان الفتح ===== */
+@keyframes treasure-shake {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  20% { transform: rotate(-7deg) scale(1.03); }
+  40% { transform: rotate(6deg) scale(1.05); }
+  60% { transform: rotate(-4deg) scale(1.05); }
+  80% { transform: rotate(3deg) scale(1.03); }
+}
+.animate-shake { animation: treasure-shake 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes confetti-fall {
+  0% { opacity: 0; transform: translate3d(0, -14px, 0) rotate(0deg); }
+  10% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(var(--dx, 24px), 230px, 0) rotate(560deg); }
+}
+/* قصاصة واحدة — اللون/الموضع/التأخير تُمرَّر عبر inline style */
+.confetti-piece {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 13px;
+  border-radius: 2px;
+  pointer-events: none;
+  animation: confetti-fall var(--dur, 1.6s) cubic-bezier(0.22, 1, 0.36, 1) var(--delay, 0s) both;
+}
+
+/* لحظة فتح الصندوق: تكبّرة + لمعان ذهبي */
+@keyframes treasure-pop {
+  0% { transform: scale(1); box-shadow: 0 0 0 hsl(var(--gold) / 0); }
+  35% { transform: scale(1.12) rotate(-2deg); }
+  70% { transform: scale(1.05) rotate(1deg); box-shadow: 0 0 46px hsl(var(--gold) / 0.65), 0 0 110px hsl(var(--gold-light) / 0.4); }
+  100% { transform: scale(1); box-shadow: 0 0 28px hsl(var(--gold) / 0.45); }
+}
+.animate-treasure-pop { animation: treasure-pop 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* احترام تفضيل تقليل الحركة */
+@media (prefers-reduced-motion: reduce) {
+  .animate-shake, .animate-treasure-pop { animation: none !important; }
+  .confetti-piece { animation: none !important; display: none !important; }
+}
+
+/* ===== تظليل الآيات
 
 /* ===== تظليل الآيات (يعتمده القارئ) — يبقى كما هو ===== */
 @keyframes ayah-glow {
