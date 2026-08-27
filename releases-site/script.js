@@ -23,7 +23,7 @@ const PLATFORM_SPECS = {
     ios: {
         icon: "🍏",
         title: "iOS (iPhone & iPad)",
-        desc: "تطبيق ويب متوافق مع هواتف آيفون وأجهزة آيباد • الإصدار v1.0.0",
+        desc: "تطبيق ويب متوافق مع هواتف آيفون وأجهزة آيباد • الإصدار v1.0.0-001",
         btnText: "تشغيل التطبيق",
         badge: "آبل آيفون",
         fileExt: ""
@@ -31,7 +31,7 @@ const PLATFORM_SPECS = {
     android: {
         icon: "📱",
         title: "Android Phone (APK)",
-        desc: "تثبيت مباشر لجميع هواتف وأجهزة أندرويد اللوحية • حجم خفيف وسريع",
+        desc: "تثبيت مباشر لجميع هواتف وأجهزة أندرويد اللوحية • v1.0.0-001",
         btnText: "تحميل APK مباشر",
         badge: "الأكثر تحميلاً",
         fileExt: ".apk"
@@ -39,7 +39,7 @@ const PLATFORM_SPECS = {
     android_aab: {
         icon: "📦",
         title: "Google Play (AAB)",
-        desc: "حزمة Android App Bundle المخصصة لمتجر جوجل بلاي • v1.0.0",
+        desc: "حزمة Android App Bundle المخصصة لمتجر جوجل بلاي • v1.0.0-001",
         btnText: "تحميل حزمة AAB",
         badge: "متجر Play",
         fileExt: ".aab"
@@ -307,12 +307,33 @@ function renderPrimaryCard(os) {
     `;
 }
 
-// Fetch live assets from GitHub API
+// Fetch live assets from GitHub API & releases.json
 async function fetchLiveGitHubAssets() {
     try {
+        // Try local/HF releases.json first for exact pinned version
+        try {
+            const rJson = await fetch('./releases.json');
+            if (rJson.ok) {
+                const rData = await rJson.json();
+                const v = rData.platforms?.windows?.latest_version || rData.platforms?.android?.latest_version;
+                if (v) {
+                    const badgeElem = document.getElementById("top-badge-version");
+                    if (badgeElem) badgeElem.textContent = v;
+                }
+            }
+        } catch (e) {
+            console.debug("Local releases.json fallback", e);
+        }
+
         const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
         if (!res.ok) return;
         const data = await res.json();
+
+        if (data.tag_name) {
+            const badgeElem = document.getElementById("top-badge-version");
+            if (badgeElem) badgeElem.textContent = data.tag_name;
+        }
+
         if (!data.assets || !Array.isArray(data.assets)) return;
 
         data.assets.forEach(asset => {
@@ -347,7 +368,7 @@ function updatePlatformLinks() {
     if (w) w.href = liveAssets.windows;
     if (tv) tv.href = liveAssets.android_tv;
     if (a) a.href = liveAssets.android;
-    if (ios) ios.href = "https://learn-quran-kids.pages.dev";
+    if (ios) ios.href = "https://amine-h-ayoub.vercel.app/";
     if (center) center.href = liveAssets.windows || FALLBACK_ASSETS.windows;
 }
 
