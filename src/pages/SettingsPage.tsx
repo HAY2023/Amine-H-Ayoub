@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, Baby, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete, Headphones, Power } from "lucide-react";
+import { ArrowRight, Moon, Sun, Baby, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete, Headphones, Power, Download } from "lucide-react";
 import { isMushafDevEnabled, setMushafDev, closeTauriApp } from "../utils/tauriUtils";
 import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHidden, type AppMode } from "../data/kidsProfile";
 
 
 import PinModal from "../components/PinModal";
 import SupportModal from "../components/SupportModal";
+import DownloadModal from "../components/DownloadModal";
 import { toast } from "../hooks/use-toast";
 
 import { hasKidsPin, setKidsPin, removeKidsPin, setKidsLocked, isKidsMode } from "../data/kidsLock";
@@ -42,6 +43,7 @@ export default function SettingsPage() {
 
   const [owner, setOwner] = useState(isMushafDevEnabled);
   const [showSupport, setShowSupport] = useState(false);
+  const [showDownloads, setShowDownloads] = useState(false);
   useEffect(() => { const h = () => setOwner(isMushafDevEnabled()); window.addEventListener("mushaf:ownermode", h); return () => window.removeEventListener("mushaf:ownermode", h); }, []);
   const disableOwner = () => { setMushafDev(false); setOwner(false); toast({ title: "أُوقف وضع المالك", description: "عادت رسالة التطوير للمستخدمين" }); };
   const [hideKids, setHideKids] = useState(kidsHidden);
@@ -237,6 +239,7 @@ export default function SettingsPage() {
 
         {/* ===== التطبيق ===== */}
         <Section label="التطبيق">
+          <Item icon={<Download className="w-5 h-5 text-accent" />} title="تحميل التطبيق لجميع الأجهزة" desc="روابط مباشرة لتحميل نسخة ويندوز، أندرويد، والتلفاز (1.0.0-001)" onClick={() => setShowDownloads(true)} />
           <Item icon={<MessageSquare className="w-5 h-5 text-accent" />} title="تواصل مع الدعم الفني والإبلاغ" desc="إرسال مشكلة تقنية أو اقتراح لفريق العمل" onClick={() => setShowSupport(true)} />
           <Item icon={<Power className="w-5 h-5 text-destructive" />} title="إغلاق التطبيق والخروج" desc="إغلاق نافذة التطبيق بالكامل وحفظ الجلسة" onClick={() => closeTauriApp()} />
         </Section>
@@ -287,6 +290,7 @@ export default function SettingsPage() {
       )}
 
       {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
+      {showDownloads && <DownloadModal isOpen={showDownloads} onClose={() => setShowDownloads(false)} />}
     </div>
   );
 }
