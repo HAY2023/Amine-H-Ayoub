@@ -148,13 +148,16 @@ jobs:
             BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools/" | sort -V | tail -1)"
             mkdir -p dist-apk
             "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" "dist-apk/Quran_${VERSION}_Android.apk"
-            cp "dist-apk/Quran_${VERSION}_Android.apk" "dist-apk/Quran_1.0.0_Android.apk"
+            if [ "$VERSION" != "1.0.0" ]; then
+              cp "dist-apk/Quran_${VERSION}_Android.apk" "dist-apk/Quran_1.0.0_Android.apk"
+            fi
             
             # Sign with standard keystore
             FALLBACK_KS="${{ runner.temp }}/release.keystore"
             keytool -genkeypair -v -keystore "$FALLBACK_KS" -alias "quran" -keyalg RSA -keysize 2048 -validity 10000 -storepass "quran2026" -keypass "quran2026" -dname "CN=QuranKids"
-            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" "dist-apk/Quran_${VERSION}_Android.apk"
-            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" "dist-apk/Quran_1.0.0_Android.apk"
+            for apk in dist-apk/*.apk; do
+              "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" "$apk"
+            done
           fi
 
       - name: Upload Mobile APK Artifact
@@ -258,12 +261,15 @@ jobs:
             BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools/" | sort -V | tail -1)"
             mkdir -p dist-tv
             "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" "dist-tv/Quran_${VERSION}_Android_TV.apk"
-            cp "dist-tv/Quran_${VERSION}_Android_TV.apk" "dist-tv/Quran_1.0.0_Android_TV.apk"
+            if [ "$VERSION" != "1.0.0" ]; then
+              cp "dist-tv/Quran_${VERSION}_Android_TV.apk" "dist-tv/Quran_1.0.0_Android_TV.apk"
+            fi
             
             FALLBACK_KS="${{ runner.temp }}/tv.keystore"
             keytool -genkeypair -v -keystore "$FALLBACK_KS" -alias "qurantv" -keyalg RSA -keysize 2048 -validity 10000 -storepass "quran2026" -keypass "quran2026" -dname "CN=QuranTV"
-            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" "dist-tv/Quran_${VERSION}_Android_TV.apk"
-            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" "dist-tv/Quran_1.0.0_Android_TV.apk"
+            for apk in dist-tv/*.apk; do
+              "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" "$apk"
+            done
           fi
 
       - name: Upload TV APK Artifact
