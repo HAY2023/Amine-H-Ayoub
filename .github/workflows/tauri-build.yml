@@ -235,6 +235,9 @@ jobs:
       - run: npm ci
       - run: npm install -D @tauri-apps/cli@^2
 
+      - name: Generate app icon
+        run: npx tauri icon src-tauri/icons/app-icon.png
+
       - name: Build frontend
         run: npm run build
 
