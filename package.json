@@ -1,7 +1,7 @@
 {
   "name": "Quran",
   "private": true,
-  "version": "1.0.0-Primary",
+  "version": "1.0.0",
   "type": "module",
   "homepage": "https://learn-quran-kids.pages.dev",
   "scripts": {
