@@ -166,15 +166,12 @@ jobs:
           name: android-mobile-apk
           path: dist-apk/*.apk
 
-      - name: Attach Mobile APK to Release
+      - name: Attach Mobile APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          files: dist-apk/*.apk
-          token: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.ref_name }}" dist-apk/*.apk --clobber || true
 
       - name: Upload Android Mobile APK to Hugging Face
         if: success()
@@ -278,15 +275,12 @@ jobs:
           name: android-tv-apk
           path: dist-tv/*.apk
 
-      - name: Attach TV APK to Release
+      - name: Attach TV APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          files: dist-tv/*.apk
-          token: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.ref_name }}" dist-tv/*.apk --clobber || true
 
       - name: Upload Android TV APK to Hugging Face
         if: success()
