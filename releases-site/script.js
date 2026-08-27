@@ -4,18 +4,16 @@
 // ══════════════════════════════════════════════════════════════
 
 const GITHUB_REPO = "HAY2023/Amine-H-Ayoub";
+const HF_BASE = "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main";
 const SUPABASE_URL = "https://qmnvzxjsokibsmgpfeln.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtbnZ6eGpzb2tpYnNtZ3BmZWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3MTY2NTYsImV4cCI6MjEwMjI5MjY1Nn0.HuEYBLDADNuFkNNDUIJ2v8fYAxDUXenFROgpBEgpj7c";
 
-// Default direct release links
+// Default direct permanent public download links via Hugging Face CDN (Zero authentication required)
 const FALLBACK_ASSETS = {
-    windows: `https://github.com/${GITHUB_REPO}/releases/latest`,
-    android: `https://github.com/${GITHUB_REPO}/releases/latest`,
-    android_aab: `https://github.com/${GITHUB_REPO}/releases/latest`,
-    ios: `https://github.com/${GITHUB_REPO}/releases/latest`,
-    android_tv: `https://github.com/${GITHUB_REPO}/releases/latest`,
-    macos: `https://github.com/${GITHUB_REPO}/releases/latest`,
-    linux: `https://github.com/${GITHUB_REPO}/releases/latest`
+    windows: `${HF_BASE}/Quran_1.0.0_x64-setup.exe`,
+    android: `${HF_BASE}/Quran_1.0.0_Android.apk`,
+    android_tv: `${HF_BASE}/Quran_1.0.0_Android_TV.apk`,
+    ios: "https://learn-quran-kids.pages.dev"
 };
 
 let liveAssets = { ...FALLBACK_ASSETS };
@@ -350,7 +348,7 @@ function updatePlatformLinks() {
     if (tv) tv.href = liveAssets.android_tv;
     if (a) a.href = liveAssets.android;
     if (ios) ios.href = "https://learn-quran-kids.pages.dev";
-    if (center) center.href = liveAssets.windows || `https://github.com/${GITHUB_REPO}/releases/latest`;
+    if (center) center.href = liveAssets.windows || FALLBACK_ASSETS.windows;
 }
 
 // ═══════════════════════════════════════════════════════════

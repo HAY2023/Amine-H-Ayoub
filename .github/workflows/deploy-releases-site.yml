@@ -27,17 +27,17 @@ jobs:
 
       - name: Generate updater.json
         run: |
-          # Fetch the latest release from GitHub API
-          LATEST_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest)
-          VERSION=$(echo $LATEST_RELEASE | jq -r .tag_name)
-          PUB_DATE=$(echo $LATEST_RELEASE | jq -r .published_at)
-          NOTES=$(echo $LATEST_RELEASE | jq -r .body)
+          LATEST_RELEASE=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest" || echo "{}")
+          VERSION=$(echo "$LATEST_RELEASE" | jq -r '.tag_name // "v1.0.0"')
+          PUB_DATE=$(echo "$LATEST_RELEASE" | jq -r '.published_at // "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"')
+          NOTES=$(echo "$LATEST_RELEASE" | jq -r '.body // "New Release"')
           
-          # We need the signature files (they should be uploaded as assets ending in .sig)
-          # For this basic setup, we'll point to the download URLs
-          WINDOWS_URL=$(echo $LATEST_RELEASE | jq -r '.assets[] | select(.name | endswith(".msi.zip")) | .browser_download_url' || echo "")
-          WINDOWS_SIG=$(echo $LATEST_RELEASE | jq -r '.assets[] | select(.name | endswith(".msi.zip.sig")) | .browser_download_url' || echo "")
+          WINDOWS_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[]? | select(.name | endswith(".msi.zip")) | .browser_download_url' | head -1)
+          if [ -z "$WINDOWS_URL" ] || [ "$WINDOWS_URL" = "null" ]; then
+            WINDOWS_URL="https://github.com/${{ github.repository }}/releases"
+          fi
           
+          mkdir -p releases-site
           cat <<EOF > releases-site/updater.json
           {
             "version": "$VERSION",
@@ -45,14 +45,12 @@ jobs:
             "pub_date": "$PUB_DATE",
             "platforms": {
               "windows-x86_64": {
-                "signature": "SIGNATURE_HERE",
+                "signature": "",
                 "url": "$WINDOWS_URL"
               }
             }
           }
           EOF
-          # Note: Real signature fetching requires downloading the .sig file and reading its contents into the JSON,
-          # or using crabnebula-dev/cloud-release action.
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -61,6 +59,17 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: './releases-site'
+
+      - name: Sync releases.json to Hugging Face
+        if: always()
+        run: |
+          if [ -n "${{ secrets.HF_TOKEN }}" ]; then
+            echo "Syncing to Hugging Face..."
+            curl -f -X POST \
+              -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
+              --data-binary "@releases-site/releases.json" \
+              "https://huggingface.co/api/datasets/hammoualiyoucef20/quran-app-releases/upload/main/releases.json" || true
+          fi
 
       - name: Deploy to GitHub Pages
         id: deployment

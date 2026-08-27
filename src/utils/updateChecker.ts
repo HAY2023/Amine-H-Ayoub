@@ -23,12 +23,22 @@ function getPlatform(): "android" | "ios" | "windows" | "mac" | "linux" | "unkno
   return "unknown";
 }
 
+export const HF_RELEASES_BASE = "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main";
+
+export function getHFPlatformDirectUrl(): string {
+  const platform = getPlatform();
+  if (platform === "windows") return `${HF_RELEASES_BASE}/Quran_1.0.0_x64-setup.exe`;
+  if (platform === "android") return `${HF_RELEASES_BASE}/Quran_1.0.0_Android.apk`;
+  if (platform === "ios") return "https://learn-quran-kids.pages.dev";
+  return `${HF_RELEASES_BASE}/Quran_1.0.0_x64-setup.exe`;
+}
+
 /**
  * Finds the most suitable release asset file based on platform.
  */
 function findDirectAsset(assets: Array<{ name: string; browser_download_url: string }>): { directUrl: string; assetName: string } {
   if (!assets || !assets.length) {
-    return { directUrl: "", assetName: "" };
+    return { directUrl: getHFPlatformDirectUrl(), assetName: "Quran_Release" };
   }
 
   const platform = getPlatform();
@@ -56,9 +66,9 @@ function findDirectAsset(assets: Array<{ name: string; browser_download_url: str
     if (deb) return { directUrl: deb.browser_download_url, assetName: deb.name };
   }
 
-  // Fallback to first downloadable asset
+  // Fallback to first downloadable asset or HF direct link
   const first = assets[0];
-  return { directUrl: first.browser_download_url, assetName: first.name };
+  return { directUrl: first ? first.browser_download_url : getHFPlatformDirectUrl(), assetName: first ? first.name : "Quran_Release" };
 }
 
 /**
@@ -95,12 +105,13 @@ export function isNewerVersion(current: string, latest: string): boolean {
  * Tries: 1) GitHub latest release, 2) GitHub all releases, 3) HuggingFace releases.json fallback.
  */
 export async function checkForUpdates(): Promise<UpdateInfo> {
+  const hfDirectUrl = getHFPlatformDirectUrl();
   const defaultResult: UpdateInfo = {
     hasUpdate: false,
     latestVersion: CURRENT_VERSION,
-    downloadUrl: "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
-    directDownloadUrl: "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
-    assetName: `hajj-ayoub-amine-v${CURRENT_VERSION}`,
+    downloadUrl: hfDirectUrl,
+    directDownloadUrl: hfDirectUrl,
+    assetName: `Quran_v${CURRENT_VERSION}`,
   };
 
   // فحص الاتصال بالإنترنت

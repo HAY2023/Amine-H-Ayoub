@@ -4,11 +4,13 @@ import { Apple, Smartphone, Monitor, Tv, Download } from "lucide-react";
 export default function LegendaryDownloadHub() {
   const [isOpen, setIsOpen] = useState(false);
 
+  const HF_BASE = "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main";
+
   const platforms = [
     { name: "iOS", icon: <Apple className="w-6 h-6" />, desc: "iPhone & iPad", url: "https://learn-quran-kids.pages.dev", color: "from-gray-700 to-gray-900" },
-    { name: "Android", icon: <Smartphone className="w-6 h-6" />, desc: "هواتف وأجهزة أندرويد", url: "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest", color: "from-emerald-500 to-emerald-700" },
-    { name: "Windows", icon: <Monitor className="w-6 h-6" />, desc: "كمبيوتر ولابتوب (EXE)", url: "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest", color: "from-blue-500 to-blue-700" },
-    { name: "Smart TV", icon: <Tv className="w-6 h-6" />, desc: "شاشات Android TV", url: "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest", color: "from-purple-500 to-purple-700" },
+    { name: "Android", icon: <Smartphone className="w-6 h-6" />, desc: "هواتف وأجهزة أندرويد (APK)", url: `${HF_BASE}/Quran_1.0.0_Android.apk`, color: "from-emerald-500 to-emerald-700" },
+    { name: "Windows", icon: <Monitor className="w-6 h-6" />, desc: "كمبيوتر ولابتوب (EXE)", url: `${HF_BASE}/Quran_1.0.0_x64-setup.exe`, color: "from-blue-500 to-blue-700" },
+    { name: "Smart TV", icon: <Tv className="w-6 h-6" />, desc: "شاشات Android TV (APK)", url: `${HF_BASE}/Quran_1.0.0_Android_TV.apk`, color: "from-purple-500 to-purple-700" },
   ];
 
   return (

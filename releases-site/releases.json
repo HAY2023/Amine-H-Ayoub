@@ -6,40 +6,41 @@
   },
   "platforms": {
     "windows": {
-      "latest_version": "v1.0.0-104",
+      "latest_version": "v1.0.0-105",
       "active": true,
       "min_supported_version": "Windows 10/11",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-104",
-          "date": "2026-08-25",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
+          "version": "v1.0.0-105",
+          "date": "2026-08-27",
+          "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0_x64-setup.exe",
           "size": "75MB",
           "changelog": [
+            "تحديث الأيقونة الرسمية للتطبيق بجودة عالية لجميع المنصات",
             "إصلاح مشكلة إغلاق التطبيق في سطح المكتب وتأكيد الخروج بسلاسة",
-            "نظام دقيق بالثواني لاحتساب وتسجيل مدة دراسة القرآن والاستماع في الإحصائيات الحية",
-            "لوحة الأوسمة والإنجازات وسلسلة الالتزام اليومية للأطفال (Badges & Streaks)",
-            "دعم إرسال البلاغات والدعم الفني الفوري عبر Resend API بالاسم والتفاصيل"
+            "نظام دقيق بالثواني لاحتساب وتسجيل مدة دراسة القرآن والاستماع",
+            "لوحة الأوسمة والإنجازات وسلسلة الالتزام اليومية للأطفال (Badges & Streaks)"
           ],
           "active": true
         }
       ]
     },
     "android": {
-      "latest_version": "v1.0.0-104",
+      "latest_version": "v1.0.0-105",
       "active": true,
       "min_supported_version": "Android 7.0+",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-104",
-          "date": "2026-08-25",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
+          "version": "v1.0.0-105",
+          "date": "2026-08-27",
+          "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0_Android.apk",
           "size": "45MB",
           "changelog": [
+            "تحديث أيقونة التطبيق الرسمية الجديدة لهواتف أندرويد",
             "حزمة APK المباشرة لجميع هواتف وأجهزة أندرويد",
             "تسجيل وحفظ دقيق لدقائق الاستماع والدراسة في لوحة ولي الأمر",
             "لوحة الأوسمة والإنجازات وسلسلة الالتزام اليومية للأطفال"
@@ -49,19 +50,19 @@
       ]
     },
     "android_aab": {
-      "latest_version": "v1.0.0-104",
+      "latest_version": "v1.0.0-105",
       "active": true,
       "min_supported_version": "Android 7.0+ (Google Play Bundle)",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-104",
-          "date": "2026-08-25",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
+          "version": "v1.0.0-105",
+          "date": "2026-08-27",
+          "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0_Android.apk",
           "size": "38MB",
           "changelog": [
-            "حزمة Android App Bundle (.aab) المخصصة لمتجر Google Play",
+            "تحديث أيقونة التطبيق الرسمية وحزمة Google Play Bundle",
             "تسجيل مباشر لدقائق الاستماع والأوسمة التفاعلية",
             "حجم أصغر وتثبيت أسرع مع تقسيم الموارد تلقائياً لكل جهاز"
           ],
@@ -70,19 +71,19 @@
       ]
     },
     "ios": {
-      "latest_version": "v1.0.0-104",
+      "latest_version": "v1.0.0-105",
       "active": true,
       "min_supported_version": "iOS 13.0+ (iPhone & iPad)",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-104",
-          "date": "2026-08-25",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
+          "version": "v1.0.0-105",
+          "date": "2026-08-27",
+          "url": "https://learn-quran-kids.pages.dev",
           "size": "42MB",
           "changelog": [
-            "حزمة iOS IPA الرسمية لهواتف iPhone وأجهزة iPad",
+            "تحديث أيقونة التطبيق الرسمية للآيفون والآيباد و PWA",
             "لوحة الأوسمة والإنجازات وسلسلة الالتزام للأطفال",
             "تسجيل دقيق لدقائق التلاوة والاستماع في الإحصائيات"
           ],
@@ -91,19 +92,19 @@
       ]
     },
     "android_tv": {
-      "latest_version": "v1.0.0-104",
+      "latest_version": "v1.0.0-105",
       "active": true,
       "min_supported_version": "Android TV 8.0+",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-104",
-          "date": "2026-08-25",
-          "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
+          "version": "v1.0.0-105",
+          "date": "2026-08-27",
+          "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0_Android_TV.apk",
           "size": "45MB",
           "changelog": [
-            "نسخة شاشات التلفاز الذكية وأجهزة TV Box مع دعم ريموت التحكم",
+            "تحديث أيقونة التطبيق لشاشات التلفاز الذكية وأجهزة TV Box مع دعم ريموت التحكم",
             "ركن ألعاب تفاعلي للأطفال على التلفاز مع نظام الأوسمة"
           ],
           "active": true
@@ -111,19 +112,19 @@
       ]
     },
     "macos": {
-      "latest_version": "v1.0.0-104",
+      "latest_version": "v1.0.0-105",
       "active": true,
       "min_supported_version": "macOS 11+",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-104",
-          "date": "2026-08-25",
+          "version": "v1.0.0-105",
+          "date": "2026-08-27",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
           "size": "79MB",
           "changelog": [
-            "نسخة macOS (DMG) لمعالجات Apple Silicon M1/M2/M3 و Intel",
+            "تحديث أيقونة التطبيق لنظام macOS (DMG)",
             "تشغيل التلاوات أوفلاين وحماية وضع الأطفال"
           ],
           "active": true
@@ -131,19 +132,19 @@
       ]
     },
     "linux": {
-      "latest_version": "v1.0.0-104",
+      "latest_version": "v1.0.0-105",
       "active": true,
       "min_supported_version": "Ubuntu / Debian / Fedora",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-104",
-          "date": "2026-08-25",
+          "version": "v1.0.0-105",
+          "date": "2026-08-27",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
           "size": "80MB",
           "changelog": [
-            "حزمة Linux المستقلة (AppImage / DEB)",
+            "تحديث أيقونة التطبيق لحزم Linux المستقلة (AppImage / DEB)",
             "تشغيل التلاوات أوفلاين وحماية وضع الأطفال"
           ],
           "active": true
