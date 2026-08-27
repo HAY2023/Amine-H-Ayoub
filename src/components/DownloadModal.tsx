@@ -19,7 +19,7 @@ export const DOWNLOAD_PACKAGES = [
     icon: <Smartphone className="w-7 h-7 text-emerald-400" />,
     color: "from-emerald-600/30 to-emerald-950/40 border-emerald-500/40 hover:border-emerald-400",
     btnColor: "bg-emerald-600 hover:bg-emerald-500 text-white",
-    url: `${HF_BASE}/Quran_1.0.0-001_Android.apk`,
+    url: `${HF_BASE}/Quran_1.0.0_Android.apk`,
     isDirect: true,
   },
   {
@@ -32,7 +32,7 @@ export const DOWNLOAD_PACKAGES = [
     icon: <Monitor className="w-7 h-7 text-blue-400" />,
     color: "from-blue-600/30 to-blue-950/40 border-blue-500/40 hover:border-blue-400",
     btnColor: "bg-blue-600 hover:bg-blue-500 text-white",
-    url: `${HF_BASE}/Quran_1.0.0-001_x64-setup.exe`,
+    url: `${HF_BASE}/Quran_1.0.0_x64-setup.exe`,
     isDirect: true,
   },
   {
@@ -45,7 +45,7 @@ export const DOWNLOAD_PACKAGES = [
     icon: <Tv className="w-7 h-7 text-purple-400" />,
     color: "from-purple-600/30 to-purple-950/40 border-purple-500/40 hover:border-purple-400",
     btnColor: "bg-purple-600 hover:bg-purple-500 text-white",
-    url: `${HF_BASE}/Quran_1.0.0-001_Android_TV.apk`,
+    url: `${HF_BASE}/Quran_1.0.0_Android_TV.apk`,
     isDirect: true,
   },
   {

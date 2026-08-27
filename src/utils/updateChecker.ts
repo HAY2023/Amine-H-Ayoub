@@ -27,10 +27,10 @@ export const HF_RELEASES_BASE = "https://huggingface.co/datasets/hammoualiyoucef
 
 export function getHFPlatformDirectUrl(): string {
   const platform = getPlatform();
-  if (platform === "windows") return `${HF_RELEASES_BASE}/Quran_${CURRENT_VERSION}_x64-setup.exe`;
-  if (platform === "android") return `${HF_RELEASES_BASE}/Quran_${CURRENT_VERSION}_Android.apk`;
+  if (platform === "windows") return `${HF_RELEASES_BASE}/Quran_1.0.0_x64-setup.exe`;
+  if (platform === "android") return `${HF_RELEASES_BASE}/Quran_1.0.0_Android.apk`;
   if (platform === "ios") return "https://amine-h-ayoub.vercel.app/";
-  return `${HF_RELEASES_BASE}/Quran_${CURRENT_VERSION}_x64-setup.exe`;
+  return `${HF_RELEASES_BASE}/Quran_1.0.0_x64-setup.exe`;
 }
 
 /**
