@@ -14,7 +14,7 @@ export const DOWNLOAD_PACKAGES = [
     name: "تطبيق أندرويد للهواتف (APK)",
     platform: "Android Phone & Tablet",
     desc: "ملف تثبيت APK مباشر لجميع هواتف أندرويد (سامسونج، شاومي، هواوي...)",
-    version: "1.0.0",
+    version: "1.0.0-Primary",
     size: "45 MB",
     icon: <Smartphone className="w-7 h-7 text-emerald-400" />,
     color: "from-emerald-600/30 to-emerald-950/40 border-emerald-500/40 hover:border-emerald-400",
@@ -27,7 +27,7 @@ export const DOWNLOAD_PACKAGES = [
     name: "برنامج ويندوز للكمبيوتر (EXE)",
     platform: "Windows 10 / 11",
     desc: "برنامج سطح المكتب المستقل خفيف وسريع يعمل دون اتصال بالإنترنت",
-    version: "1.0.0",
+    version: "1.0.0-Primary",
     size: "75 MB",
     icon: <Monitor className="w-7 h-7 text-blue-400" />,
     color: "from-blue-600/30 to-blue-950/40 border-blue-500/40 hover:border-blue-400",
@@ -40,7 +40,7 @@ export const DOWNLOAD_PACKAGES = [
     name: "نسخة شاشات التلفاز الذكية (Android TV)",
     platform: "Android TV & Smart Box",
     desc: "واجهة مهيأة للشاشات الكبيرة مع دعم كامل لجهاز التحكم (الريموت)",
-    version: "1.0.0",
+    version: "1.0.0-Primary",
     size: "45 MB",
     icon: <Tv className="w-7 h-7 text-purple-400" />,
     color: "from-purple-600/30 to-purple-950/40 border-purple-500/40 hover:border-purple-400",
@@ -53,7 +53,7 @@ export const DOWNLOAD_PACKAGES = [
     name: "تثبيت على آيفون وآيباد (PWA)",
     platform: "iOS / Safari",
     desc: "أضف الموقع إلى شاشتك الرئيسية من زر المشاركة (Share ⎘ ➔ Add to Home Screen)",
-    version: "1.0.0-001",
+    version: "1.0.0-Primary",
     size: "فوري",
     icon: <Apple className="w-7 h-7 text-amber-300" />,
     color: "from-amber-600/20 to-amber-950/40 border-amber-500/40 hover:border-amber-400",
@@ -95,7 +95,7 @@ export default function DownloadModal({ isOpen, onClose }: DownloadModalProps) {
               <div className="flex items-center gap-2">
                 <h2 className="text-xl md:text-2xl font-bold text-gold">تحميل تطبيق تلاوات القرآن</h2>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-gold/20 text-gold border border-gold/30 font-mono font-bold">
-                  v1.0.0
+                  v1.0.0-Primary
                 </span>
               </div>
               <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
@@ -167,7 +167,7 @@ export default function DownloadModal({ isOpen, onClose }: DownloadModalProps) {
             <Sparkles className="w-4 h-4" />
             جميع النسخ مجانية 100% وتعمل دون إنترنت
           </span>
-          <span className="font-mono">الإصدار: 1.0.0-001</span>
+          <span className="font-mono">الإصدار: 1.0.0-Primary</span>
         </div>
       </div>
     </div>
