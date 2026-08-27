@@ -1,6 +1,6 @@
 [package]
 name = "hajj_ayoub_amine"
-version = "1.0.0"
+version = "1.0.1"
 description = "تطبيق تعليم القرآن الكريم برواية ورش - القارئ حاج أيوب أمين"
 authors = ["Hajj Ayoub Amine <contact@hay2023.org>"]
 license = "MIT"
