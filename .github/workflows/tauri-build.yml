@@ -125,14 +125,17 @@ jobs:
       - run: npm ci
       - run: npm install -D @tauri-apps/cli@^2
 
-      - name: Generate app icon
-        run: npx tauri icon src-tauri/icons/app-icon.png
-
       - name: Build frontend
         run: npm run build
 
       - name: Initialize Android project
         run: npx tauri android init || true
+
+      - name: Inject custom app icon into Android project
+        run: |
+          npx tauri icon src-tauri/icons/app-icon.png
+          mkdir -p src-tauri/gen/android/app/src/main/res
+          cp -rf src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/ || true
 
       - name: Build Android Mobile APK
         run: npx tauri android build --apk --target aarch64
@@ -235,14 +238,17 @@ jobs:
       - run: npm ci
       - run: npm install -D @tauri-apps/cli@^2
 
-      - name: Generate app icon
-        run: npx tauri icon src-tauri/icons/app-icon.png
-
       - name: Build frontend
         run: npm run build
 
       - name: Initialize Android project
         run: npx tauri android init || true
+
+      - name: Inject custom app icon into Android project
+        run: |
+          npx tauri icon src-tauri/icons/app-icon.png
+          mkdir -p src-tauri/gen/android/app/src/main/res
+          cp -rf src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/ || true
 
       - name: Build Android TV APK
         run: npx tauri android build --apk --target aarch64

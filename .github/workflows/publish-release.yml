@@ -173,14 +173,17 @@ jobs:
       - run: npm ci
       - run: npm install -D @tauri-apps/cli@^2
 
-      - name: Generate app icon
-        run: npx tauri icon src-tauri/icons/app-icon.png
-
       - name: Build frontend
         run: npm run build
 
       - name: Initialize Android project
         run: npx tauri android init || true
+
+      - name: Inject custom app icon into Android project
+        run: |
+          npx tauri icon src-tauri/icons/app-icon.png
+          mkdir -p src-tauri/gen/android/app/src/main/res
+          cp -rf src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/ || true
 
       # بناء نسخة Release لمعمارية aarch64 (APK و AAB)
       - name: Build release APK & AAB (aarch64)
@@ -316,15 +319,13 @@ jobs:
       - run: npm ci
       - run: npm install -D @tauri-apps/cli@^2
 
-      - name: Generate app icon
-        run: npx tauri icon src-tauri/icons/app-icon.png
-
       - name: Build frontend
         run: npm run build
 
       - name: Initialize and build iOS
         run: |
           npx tauri ios init || true
+          npx tauri icon src-tauri/icons/app-icon.png
           npx tauri ios build --export-method development || true
 
       - name: Attach iOS packages to release
