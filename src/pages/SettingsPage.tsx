@@ -239,7 +239,7 @@ export default function SettingsPage() {
 
         {/* ===== التطبيق ===== */}
         <Section label="التطبيق">
-          <Item icon={<Download className="w-5 h-5 text-accent" />} title="تحميل التطبيق لجميع الأجهزة" desc="روابط مباشرة لتحميل نسخة ويندوز، أندرويد، والتلفاز (1.0.0-001)" onClick={() => setShowDownloads(true)} />
+          <Item icon={<Download className="w-5 h-5 text-accent" />} title="تحميل التطبيق لجميع الأجهزة" desc="روابط مباشرة لتحميل نسخة ويندوز، أندرويد، والتلفاز (1.0.0)" onClick={() => setShowDownloads(true)} />
           <Item icon={<MessageSquare className="w-5 h-5 text-accent" />} title="تواصل مع الدعم الفني والإبلاغ" desc="إرسال مشكلة تقنية أو اقتراح لفريق العمل" onClick={() => setShowSupport(true)} />
           <Item icon={<Power className="w-5 h-5 text-destructive" />} title="إغلاق التطبيق والخروج" desc="إغلاق نافذة التطبيق بالكامل وحفظ الجلسة" onClick={() => closeTauriApp()} />
         </Section>

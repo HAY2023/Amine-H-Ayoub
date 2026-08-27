@@ -6,14 +6,14 @@
   },
   "platforms": {
     "windows": {
-      "latest_version": "v1.0.0-001",
+      "latest_version": "v1.0.0",
       "active": true,
       "min_supported_version": "Windows 10/11",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-001",
+          "version": "v1.0.0",
           "date": "2026-08-27",
           "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0_x64-setup.exe",
           "size": "75MB",
@@ -28,14 +28,14 @@
       ]
     },
     "android": {
-      "latest_version": "v1.0.0-001",
+      "latest_version": "v1.0.0",
       "active": true,
       "min_supported_version": "Android 7.0+",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-001",
+          "version": "v1.0.0",
           "date": "2026-08-27",
           "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0_Android.apk",
           "size": "45MB",
@@ -50,14 +50,14 @@
       ]
     },
     "android_aab": {
-      "latest_version": "v1.0.0-001",
+      "latest_version": "v1.0.0",
       "active": true,
       "min_supported_version": "Android 7.0+ (Google Play Bundle)",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-001",
+          "version": "v1.0.0",
           "date": "2026-08-27",
           "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0_Android.apk",
           "size": "38MB",
@@ -71,14 +71,14 @@
       ]
     },
     "ios": {
-      "latest_version": "v1.0.0-001",
+      "latest_version": "v1.0.0",
       "active": true,
       "min_supported_version": "iOS 13.0+ (iPhone & iPad)",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-001",
+          "version": "v1.0.0",
           "date": "2026-08-27",
           "url": "https://amine-h-ayoub.vercel.app/",
           "size": "42MB",
@@ -92,14 +92,14 @@
       ]
     },
     "android_tv": {
-      "latest_version": "v1.0.0-001",
+      "latest_version": "v1.0.0",
       "active": true,
       "min_supported_version": "Android TV 8.0+",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-001",
+          "version": "v1.0.0",
           "date": "2026-08-27",
           "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0_Android_TV.apk",
           "size": "45MB",
@@ -112,14 +112,14 @@
       ]
     },
     "macos": {
-      "latest_version": "v1.0.0-001",
+      "latest_version": "v1.0.0",
       "active": true,
       "min_supported_version": "macOS 11+",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-001",
+          "version": "v1.0.0",
           "date": "2026-08-27",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
           "size": "79MB",
@@ -132,14 +132,14 @@
       ]
     },
     "linux": {
-      "latest_version": "v1.0.0-001",
+      "latest_version": "v1.0.0",
       "active": true,
       "min_supported_version": "Ubuntu / Debian / Fedora",
       "force_update": false,
       "rollout_percentage": 100,
       "releases": [
         {
-          "version": "v1.0.0-001",
+          "version": "v1.0.0",
           "date": "2026-08-27",
           "url": "https://github.com/HAY2023/Amine-H-Ayoub/releases/latest",
           "size": "80MB",

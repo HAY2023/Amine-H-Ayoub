@@ -23,7 +23,7 @@ const PLATFORM_SPECS = {
     ios: {
         icon: "🍏",
         title: "iOS (iPhone & iPad)",
-        desc: "تطبيق ويب متوافق مع هواتف آيفون وأجهزة آيباد • الإصدار v1.0.0-001",
+        desc: "تطبيق ويب متوافق مع هواتف آيفون وأجهزة آيباد • الإصدار v1.0.0",
         btnText: "تشغيل التطبيق",
         badge: "آبل آيفون",
         fileExt: ""
@@ -31,7 +31,7 @@ const PLATFORM_SPECS = {
     android: {
         icon: "📱",
         title: "Android Phone (APK)",
-        desc: "تثبيت مباشر لجميع هواتف وأجهزة أندرويد اللوحية • v1.0.0-001",
+        desc: "تثبيت مباشر لجميع هواتف وأجهزة أندرويد اللوحية • v1.0.0",
         btnText: "تحميل APK مباشر",
         badge: "الأكثر تحميلاً",
         fileExt: ".apk"
@@ -39,7 +39,7 @@ const PLATFORM_SPECS = {
     android_aab: {
         icon: "📦",
         title: "Google Play (AAB)",
-        desc: "حزمة Android App Bundle المخصصة لمتجر جوجل بلاي • v1.0.0-001",
+        desc: "حزمة Android App Bundle المخصصة لمتجر جوجل بلاي • v1.0.0",
         btnText: "تحميل حزمة AAB",
         badge: "متجر Play",
         fileExt: ".aab"
