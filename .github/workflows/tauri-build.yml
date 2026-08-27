@@ -65,8 +65,16 @@ jobs:
         shell: bash
         run: |
           EXE_FILE=$(find src-tauri/target/release/bundle -name "*.exe" | head -1)
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then VERSION="1.0.0-001"; fi
+          
           if [ -n "$EXE_FILE" ] && [ -n "${{ secrets.HF_TOKEN }}" ]; then
-            echo "Uploading Windows EXE to Hugging Face..."
+            echo "Uploading Windows EXE to Hugging Face (Quran_${VERSION}_x64-setup.exe)..."
+            curl -f -X POST \
+              -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
+              --data-binary "@$EXE_FILE" \
+              "https://huggingface.co/api/datasets/hammoualiyoucef20/quran-app-releases/upload/main/Quran_${VERSION}_x64-setup.exe" || true
             curl -f -X POST \
               -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
               --data-binary "@$EXE_FILE" \
@@ -132,22 +140,28 @@ jobs:
       - name: Prepare and sign mobile APK
         run: |
           RAW_APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -type f | head -1)
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then VERSION="1.0.0-001"; fi
+
           if [ -n "$RAW_APK" ]; then
             BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools/" | sort -V | tail -1)"
             mkdir -p dist-apk
-            "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" dist-apk/Quran_1.0.0_Android.apk
+            "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" "dist-apk/Quran_${VERSION}_Android.apk"
+            cp "dist-apk/Quran_${VERSION}_Android.apk" "dist-apk/Quran_1.0.0_Android.apk"
             
             # Sign with standard keystore
             FALLBACK_KS="${{ runner.temp }}/release.keystore"
             keytool -genkeypair -v -keystore "$FALLBACK_KS" -alias "quran" -keyalg RSA -keysize 2048 -validity 10000 -storepass "quran2026" -keypass "quran2026" -dname "CN=QuranKids"
-            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" dist-apk/Quran_1.0.0_Android.apk
+            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" "dist-apk/Quran_${VERSION}_Android.apk"
+            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" "dist-apk/Quran_1.0.0_Android.apk"
           fi
 
       - name: Upload Mobile APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-mobile-apk
-          path: dist-apk/Quran_1.0.0_Android.apk
+          path: dist-apk/*.apk
 
       - name: Attach Mobile APK to Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -156,14 +170,22 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
-          files: dist-apk/Quran_1.0.0_Android.apk
+          files: dist-apk/*.apk
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Android Mobile APK to Hugging Face
         if: success()
         run: |
-          if [ -f "dist-apk/Quran_1.0.0_Android.apk" ] && [ -n "${{ secrets.HF_TOKEN }}" ]; then
-            echo "Uploading Android Mobile APK to Hugging Face..."
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then VERSION="1.0.0-001"; fi
+
+          if [ -f "dist-apk/Quran_${VERSION}_Android.apk" ] && [ -n "${{ secrets.HF_TOKEN }}" ]; then
+            echo "Uploading Android Mobile APK (Quran_${VERSION}_Android.apk) to Hugging Face..."
+            curl -f -X POST \
+              -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
+              --data-binary "@dist-apk/Quran_${VERSION}_Android.apk" \
+              "https://huggingface.co/api/datasets/hammoualiyoucef20/quran-app-releases/upload/main/Quran_${VERSION}_Android.apk" || true
             curl -f -X POST \
               -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
               --data-binary "@dist-apk/Quran_1.0.0_Android.apk" \
@@ -225,21 +247,27 @@ jobs:
       - name: Prepare and sign TV APK
         run: |
           RAW_APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -type f | head -1)
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then VERSION="1.0.0-001"; fi
+
           if [ -n "$RAW_APK" ]; then
             BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools/" | sort -V | tail -1)"
             mkdir -p dist-tv
-            "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" dist-tv/Quran_1.0.0_Android_TV.apk
+            "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" "dist-tv/Quran_${VERSION}_Android_TV.apk"
+            cp "dist-tv/Quran_${VERSION}_Android_TV.apk" "dist-tv/Quran_1.0.0_Android_TV.apk"
             
             FALLBACK_KS="${{ runner.temp }}/tv.keystore"
             keytool -genkeypair -v -keystore "$FALLBACK_KS" -alias "qurantv" -keyalg RSA -keysize 2048 -validity 10000 -storepass "quran2026" -keypass "quran2026" -dname "CN=QuranTV"
-            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" dist-tv/Quran_1.0.0_Android_TV.apk
+            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" "dist-tv/Quran_${VERSION}_Android_TV.apk"
+            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" "dist-tv/Quran_1.0.0_Android_TV.apk"
           fi
 
       - name: Upload TV APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-tv-apk
-          path: dist-tv/Quran_1.0.0_Android_TV.apk
+          path: dist-tv/*.apk
 
       - name: Attach TV APK to Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -248,14 +276,22 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
-          files: dist-tv/Quran_1.0.0_Android_TV.apk
+          files: dist-tv/*.apk
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Android TV APK to Hugging Face
         if: success()
         run: |
-          if [ -f "dist-tv/Quran_1.0.0_Android_TV.apk" ] && [ -n "${{ secrets.HF_TOKEN }}" ]; then
-            echo "Uploading Android TV APK to Hugging Face..."
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then VERSION="1.0.0-001"; fi
+
+          if [ -f "dist-tv/Quran_${VERSION}_Android_TV.apk" ] && [ -n "${{ secrets.HF_TOKEN }}" ]; then
+            echo "Uploading Android TV APK (Quran_${VERSION}_Android_TV.apk) to Hugging Face..."
+            curl -f -X POST \
+              -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
+              --data-binary "@dist-tv/Quran_${VERSION}_Android_TV.apk" \
+              "https://huggingface.co/api/datasets/hammoualiyoucef20/quran-app-releases/upload/main/Quran_${VERSION}_Android_TV.apk" || true
             curl -f -X POST \
               -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
               --data-binary "@dist-tv/Quran_1.0.0_Android_TV.apk" \

@@ -15,7 +15,7 @@
         {
           "version": "v1.0.0-001",
           "date": "2026-08-27",
-          "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0_x64-setup.exe",
+          "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0-001_x64-setup.exe",
           "size": "75MB",
           "changelog": [
             "تحديث الأيقونة الرسمية للتطبيق بجودة عالية لجميع المنصات",
@@ -37,7 +37,7 @@
         {
           "version": "v1.0.0-001",
           "date": "2026-08-27",
-          "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0_Android.apk",
+          "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0-001_Android.apk",
           "size": "45MB",
           "changelog": [
             "تحديث أيقونة التطبيق الرسمية الجديدة لهواتف أندرويد",
@@ -59,7 +59,7 @@
         {
           "version": "v1.0.0-001",
           "date": "2026-08-27",
-          "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0_Android.apk",
+          "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0-001_Android.apk",
           "size": "38MB",
           "changelog": [
             "تحديث أيقونة التطبيق الرسمية وحزمة Google Play Bundle",
@@ -80,7 +80,7 @@
         {
           "version": "v1.0.0-001",
           "date": "2026-08-27",
-          "url": "https://learn-quran-kids.pages.dev",
+          "url": "https://amine-h-ayoub.vercel.app/",
           "size": "42MB",
           "changelog": [
             "تحديث أيقونة التطبيق الرسمية للآيفون والآيباد و PWA",
@@ -101,7 +101,7 @@
         {
           "version": "v1.0.0-001",
           "date": "2026-08-27",
-          "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0_Android_TV.apk",
+          "url": "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main/Quran_1.0.0-001_Android_TV.apk",
           "size": "45MB",
           "changelog": [
             "تحديث أيقونة التطبيق لشاشات التلفاز الذكية وأجهزة TV Box مع دعم ريموت التحكم",
