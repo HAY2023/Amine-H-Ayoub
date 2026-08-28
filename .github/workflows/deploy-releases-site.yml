@@ -28,7 +28,7 @@ jobs:
       - name: Generate updater.json
         run: |
           LATEST_RELEASE=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest" || echo "{}")
-          VERSION=$(echo "$LATEST_RELEASE" | jq -r '.tag_name // "v1.0.1"')
+          VERSION=$(echo "$LATEST_RELEASE" | jq -r '.tag_name // "v1.0.0"')
           PUB_DATE=$(echo "$LATEST_RELEASE" | jq -r '.published_at // "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"')
           NOTES=$(echo "$LATEST_RELEASE" | jq -r '.body // "New Release"')
           

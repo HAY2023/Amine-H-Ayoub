@@ -33,7 +33,7 @@ export default function LegendaryDownloadHub() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-gold"></span>
             </span>
-            الإصدار الجديد 1.0.1 متاح الآن للتحميل المباشر
+            الإصدار الجديد 1.0.0 متاح الآن للتحميل المباشر
           </div>
         </div>
 
