@@ -25,6 +25,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Clean up obsolete releases and set v1.0.0 as Latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for tag in "v1.0.1" "v1.0.15"; do
+            gh release delete "$tag" --yes --cleanup-tag || true
+          done
+          gh release edit "v1.0.0" --title "Quran v1.0.0" --latest || true
+
       - name: Generate updater.json
         run: |
           LATEST_RELEASE=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest" || echo "{}")

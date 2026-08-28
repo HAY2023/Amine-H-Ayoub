@@ -35,7 +35,14 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
-      - run: npm ci
+      - name: Clean up obsolete releases and set v1.0.0 as Latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for tag in "v1.0.1" "v1.0.15"; do
+            gh release delete "$tag" --yes --cleanup-tag || true
+          done
+          gh release edit "v1.0.0" --title "Quran v1.0.0" --latest || true
 
       - name: Generate app icon
         run: npx --yes @tauri-apps/cli@^2 icon src-tauri/icons/app-icon.png
