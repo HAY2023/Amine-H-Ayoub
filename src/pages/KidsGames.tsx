@@ -710,6 +710,119 @@ function MissingWordPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: 
   );
 }
 
+/* ── ألعاب قرآنية صعبة مبرمجة بـ TypeScript (بنفس أسلوب الألعاب المدمجة) ── */
+
+function AyahSurahEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
+  const { corpus, failed, retry } = useCorpus();
+  if (!corpus) return <CorpusGate failed={failed} retry={retry} />;
+  return <AyahSurahPlay corpus={corpus} def={def} minSurah={minSurah} />;
+}
+function AyahSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: GameDef; minSurah: number }) {
+  const pool = poolFor(def, minSurah).map(s => s.number);
+  const eligible = corpus.filter(c => c.ayahs.length >= 2 && pool.includes(c.app));
+  const orderRef = useRef(shuffle(eligible));
+  const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(eligible); return orderRef.current.pop() || eligible[0]; };
+  const make = () => {
+    const s = getNext();
+    const ayah = s.ayahs[Math.floor(Math.random() * s.ayahs.length)];
+    const wrong = shuffle(eligible.filter(c => c.app !== s.app)).slice(0, 3);
+    return { s, ayah, opts: shuffle([s, ...wrong]) };
+  };
+  const [q, setQ] = useState(make);
+  const [round, setRound] = useState(0);
+  const [qNum, setQNum] = useState(1);
+  const [reveal, setReveal] = useState(false);
+  const [chosen, setChosen] = useState<number | null>(null);
+  const g = useGame();
+  const finished = qNum > ROUNDS;
+  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) { setQ(make()); setRound(r => r + 1); } };
+  const left = useRoundTimer(round, 12, () => { g.miss(); setReveal(true); window.setTimeout(() => next(qNum + 1), 1300); }, !reveal && !finished);
+  const choose = (n: number) => {
+    if (reveal || finished) return;
+    setChosen(n);
+    if (n === q.s.app) g.correct(); else g.miss();
+    setReveal(true);
+    window.setTimeout(() => next(qNum + 1), 1200);
+  };
+  const replay = () => { g.reset(); setQNum(1); setQ(make()); setRound(r => r + 1); };
+  if (finished) return <ResultCard g={g} onReplay={replay} />;
+  return (
+    <div className="space-y-4 text-center">
+      <SessionBar q={qNum} />
+      <p className="text-muted-foreground text-sm">من أي سورة هذه الآية الكريمة؟</p>
+      <TimerBar left={left} seconds={12} />
+      <div className="p-4 rounded-2xl bg-accent/10 border border-accent/40 font-amiri text-xl leading-loose text-foreground">{q.ayah.text}</div>
+      <div className="grid grid-cols-2 gap-2">
+        {q.opts.map(o => {
+          const cls = reveal && o.app === q.s.app ? "bg-success/20 border-success/60 text-success"
+            : reveal && o.app === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
+            : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
+          return <button key={o.app} onClick={() => choose(o.app)} className={`p-4 rounded-xl border font-bold active:scale-95 transition-colors ${cls}`}>{o.name}</button>;
+        })}
+      </div>
+      <GameHud g={g} />
+    </div>
+  );
+}
+
+function AyahOrderEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
+  const { corpus, failed, retry } = useCorpus();
+  if (!corpus) return <CorpusGate failed={failed} retry={retry} />;
+  return <AyahOrderPlay corpus={corpus} def={def} minSurah={minSurah} />;
+}
+function AyahOrderPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: GameDef; minSurah: number }) {
+  const pool = poolFor(def, minSurah).map(s => s.number);
+  const eligible = corpus.filter(c => c.ayahs.length >= 5 && pool.includes(c.app));
+  const orderRef = useRef(shuffle(eligible));
+  const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(eligible); return orderRef.current.pop() || eligible[0]; };
+  const make = () => {
+    const s = getNext();
+    const i = Math.floor(Math.random() * (s.ayahs.length - 3));
+    const seq = s.ayahs.slice(i, i + 3);
+    return { s, opts: shuffle(seq.map((a, k) => ({ ...a, k }))) };
+  };
+  const [q, setQ] = useState(make);
+  const [round, setRound] = useState(0);
+  const [qNum, setQNum] = useState(1);
+  const [picked, setPicked] = useState<number[]>([]);
+  const [reveal, setReveal] = useState(false);
+  const g = useGame();
+  const finished = qNum > ROUNDS;
+  const next = (nn: number) => { setPicked([]); setReveal(false); setQNum(nn); if (nn <= ROUNDS) { setQ(make()); setRound(r => r + 1); } };
+  const left = useRoundTimer(round, 15, () => { g.miss(); setReveal(true); window.setTimeout(() => next(qNum + 1), 1400); }, !reveal && !finished);
+  const tap = (k: number) => {
+    if (reveal || finished || picked.includes(k)) return;
+    if (k === picked.length) {
+      const np = [...picked, k]; setPicked(np);
+      if (np.length === 3) { g.correct(); setReveal(true); window.setTimeout(() => next(qNum + 1), 900); }
+    } else { g.miss(); setReveal(true); window.setTimeout(() => { setReveal(false); setPicked([]); }, 1000); }
+  };
+  const replay = () => { g.reset(); setQNum(1); setPicked([]); setQ(make()); setRound(r => r + 1); };
+  if (finished) return <ResultCard g={g} onReplay={replay} />;
+  return (
+    <div className="space-y-4 text-center">
+      <SessionBar q={qNum} />
+      <p className="text-muted-foreground text-sm">من سورة <b className="text-accent">{q.s.name}</b> — اضغط الآيات الثلاث بترتيبها الصحيح</p>
+      <TimerBar left={left} seconds={15} />
+      <div className="grid gap-2">
+        {q.opts.map(a => {
+          const order = picked.indexOf(a.k);
+          const cls = picked.includes(a.k) || reveal
+            ? "bg-accent/15 border-accent/50 text-accent"
+            : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
+          return (
+            <button key={a.k} onClick={() => tap(a.k)} className={`p-3 rounded-xl border text-right font-amiri text-lg leading-relaxed active:scale-[0.98] transition-colors ${cls}`}>
+              {picked.includes(a.k) && <span className="inline-flex w-6 h-6 items-center justify-center rounded-full bg-accent text-accent-foreground text-xs font-extrabold mr-2">{order + 1}</span>}
+              {a.text}
+            </button>
+          );
+        })}
+      </div>
+      <GameHud g={g} />
+    </div>
+  );
+}
+
 const ENGINES: Record<GameEngine, (p: { def: GameDef; minSurah: number }) => JSX.Element> = {
   order: OrderEngine, memory: MemoryEngine, which: WhichEngine, quiz: QuizEngine, count: CountEngine,
   nextayah: NextAyahEngine, prevayah: PrevAyahEngine, whichsurah: WhichSurahEngine, missingword: MissingWordEngine, surahaudio: SurahAudioEngine,
