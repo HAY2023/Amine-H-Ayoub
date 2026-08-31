@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{margin:0;box-sizing:border-box;font-family:system-ui}
+body{min-height:100vh;background:linear-gradient(160deg,#0b1220,#14532d);color:#fff;display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none}
+.bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);z-index:9}
+.bar b{color:#fbbf24;font-size:1.05rem}
+#exit{padding:6px 14px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer}
+h1{margin:76px 0 6px;font-size:1.1rem;color:#fde68a}
+p{color:#a7f3d0;font-size:.8rem;margin-bottom:14px}
+#ay{font-size:1.7rem;font-weight:800;color:#fff;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:22px 16px;width:min(92vw,440px);text-align:center;margin-bottom:16px;line-height:2}
+#ops{display:flex;flex-direction:column;gap:10px;width:min(92vw,440px)}
+.big{border:0;border-radius:14px;padding:14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#111;font-weight:800;font-size:1.05rem;cursor:pointer;animation:pop .3s}
+.big:active{transform:scale(.97)}
+#hud{margin-top:14px;color:#fbbf24;font-weight:800}
+@keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+</style>
+</head>
+<body>
+<div class="bar"><b>📖 أكمل الآية</b><span id="stars">⭐ 0</span><button id="exit">خروج ✕</button></div>
+<h1>اختر تكملة الآية الكريمة</h1>
+<p>كل إجابة صحيحة = ⭐⭐</p>
+<div id="ay"></div>
+<div id="ops"></div>
+<div id="hud">المستوى 1</div>
+<script>
+var P=[["أَلَا بِذِكْرِ اللَّهِ","تَطْمَئِنُّ الْقُلُوبُ"],["وَاعْتَصِمُوا بِحَبْلِ اللَّهِ","جَمِيعًا وَلَا تَفَرَّقُوا"],["إِنَّ اللَّهَ مَعَ","الصَّابِرِينَ"],["وَقُل رَّبِّ زِدْنِي","عِلْمًا"],["إِنَّمَا الْمُؤْمِنُونَ","إِخْوَةٌ"],["وَتَعَاوَنُوا عَلَى","الْبِرِّ وَالتَّقْوَى"],["رَبَّنَا آتِنَا فِي الدُّنْيَا","حَسَنَةً"],["إِنَّا أَعْطَيْنَاكَ","الْكَوْثَرَ"],["فَإِنَّ مَعَ الْعُسْرِ","يُسْرًا"],["اللَّهُ نُورُ","السَّمَاوَاتِ وَالْأَرْضِ"]];
+var s=0,lv=1;
+function round(){
+  var i=Math.floor(Math.random()*P.length),ops=document.getElementById('ops');
+  document.getElementById('ay').textContent='﴿ '+P[i][0]+' ... ﴾';
+  var set=[P[i][1]],guard=0;
+  while(set.length<3&&guard++<50){var w=P[Math.floor(Math.random()*P.length)][1];if(set.indexOf(w)<0)set.push(w)}
+  set.sort(function(){return Math.random()-.5});ops.innerHTML='';
+  set.forEach(function(v){var b=document.createElement('button');b.className='big';b.textContent=v;
+    b.addEventListener('click',function(){if(v===P[i][1]){s+=2;lv++;document.getElementById('stars').textContent='⭐ '+s;document.getElementById('hud').textContent='المستوى '+lv;try{parent.postMessage({type:'nour:game:stars',amount:2},'*')}catch(x){}}round()});
+    ops.appendChild(b)});
+}
+document.getElementById('exit').addEventListener('click',function(){try{parent.postMessage({type:'nour:game:exit'},'*')}catch(x){}});
+try{parent.postMessage({type:'nour:game:ready'},'*')}catch(x){}
+window.addEventListener('message',function(ev){var d=ev.data||{};if(d.type==='nour:game:profile'&&d.name)document.getElementById('hud').textContent='بطلنا: '+d.name});
+round();
+</script>
+</body>
+</html>
