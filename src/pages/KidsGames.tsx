@@ -5,7 +5,7 @@ import { getAllSurahs } from "../data/quranData";
 import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
 import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked, setCurrentSurah, addPlayMinutes, setAppMode, ownItem, unlockItem } from "../data/kidsProfile";
 import { getGameCatalog, type GameDef, type GameEngine } from "../data/gameCatalog";
-import { fetchRemoteGames } from "../data/remoteGames";
+import { fetchRemoteGames, precacheRemoteGames } from "../data/remoteGames";
 import { ensureCorpus, type SurahText } from "../data/quranText";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
 import { shouldHideMushaf } from "../utils/tauriUtils";
@@ -1085,9 +1085,8 @@ export default function KidsGames() {
     };
   }, [navigate]);
 
-  // تسخين نصوص السور مبكراً كي تفتح الألعاب النصّية فوراً (تُخزَّن محلياً بعد أول مرة)
-  // + جلب فهرس الألعاب البعيدة من السيرفر (ألعاب HTML خارجية — بلا تحديث للتطبيق)
-  useEffect(() => { ensureCorpus().catch(() => { /* ستعيد اللعبة المحاولة عند فتحها */ }); void fetchRemoteGames(); }, []);
+  // تسخين نصوص السور مبكراً + جلب فهرس الألعاب البعيدة + تحميل أكوادها للجهاز في الخلفية (تعمل دون إنترنت)
+  useEffect(() => { ensureCorpus().catch(() => { /* ستعيد اللعبة المحاولة عند فتحها */ }); void (async () => { await fetchRemoteGames(); void precacheRemoteGames(); })(); }, []);
 
   const [showBadges, setShowBadges] = useState(false);
   // نظام فتح الألعاب بالنجوم (المال): لعبة واحدة مجانية والبقية تُفتح بالنجوم المكتسبة
@@ -1128,7 +1127,7 @@ export default function KidsGames() {
   const unlocked = progress.unlocked || profile.goalMinutes <= 0;
   const canPlay = unlocked;
 
-  const myGames = catalog.filter(g => g.ageMin <= profile.age);
+  const myGames = catalog.filter(g => g.ageMin <= profile.age && profile.age <= (g.ageMax ?? 14));
   const def = active ? catalog.find(g => g.id === active) : null;
   const Engine = def ? ENGINES[def.engine] : null;
 

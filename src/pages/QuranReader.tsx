@@ -154,8 +154,8 @@ function _UnusedQuranReader() {
         accumulatedSecs = 0;
         if (mins > 0) {
           const { justUnlocked } = addReadingMinutes(mins);
-          // نقاط القراءة (المال): ٥ نجوم لكل دقيقة — أكثر بكثير من نقاط الألعاب
-          const stars = Math.max(1, Math.round(mins * 5));
+          // نقاط القراءة (المال): نجومتان لكل دقيقة — قليلة لكنها أكثر من نقاط الألعاب
+          const stars = Math.max(1, Math.round(mins * 2));
           addCoins(stars);
           if (justUnlocked) toast({ title: "أحسنت! فتحت ألعاب ركن الأطفال", description: "اذهب إلى ركن الأطفال" });
           else toast({ title: `+${stars} ⭐ من القراءة` });

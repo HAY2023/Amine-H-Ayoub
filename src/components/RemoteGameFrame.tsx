@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, Star } from "lucide-react";
 import { addCoins, getCoins, getProfile } from "../data/kidsProfile";
+import { getCachedGameHtml, cacheGameHtml } from "../data/remoteGames";
 import type { GameDef } from "../data/gameCatalog";
 
 /**
@@ -25,19 +26,26 @@ export default function RemoteGameFrame({ def, onExit }: { def: GameDef; onExit:
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
 
-  // لعبة من نوع "url": نجلب الـ HTML ونشغّله محلياً عبر srcDoc (يتجاوز مشكلة content-type و CORS للعرض)
+  // لعبة من نوع "url": نعرض النسخة المخزّنة على الجهاز فوراً (تعمل دون إنترنت)،
+  // ونحدّث الكود من السيرفر في الخلفية عند توفر الاتصال.
   useEffect(() => {
     let alive = true;
     const r = def.remote;
     if (r?.kind === "url" && r.url) {
       setLoadError(null);
+      const cached = getCachedGameHtml(def.id);
+      if (cached) setSrcDoc(cached);
       fetch(r.url, { cache: "no-store" })
         .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.text(); })
-        .then(html => { if (alive) setSrcDoc(html); })
-        .catch(() => { if (alive) setLoadError(r.url || ""); });
+        .then(html => {
+          if (!alive) return;
+          cacheGameHtml(def.id, html);
+          setSrcDoc(html);
+        })
+        .catch(() => { if (alive && !cached) setLoadError(r.url || ""); });
     }
     return () => { alive = false; };
-  }, [def.remote]);
+  }, [def.remote, def.id]);
 
   useEffect(() => {
     const h = () => setCoins(getCoins());

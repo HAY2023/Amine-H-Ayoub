@@ -7,6 +7,7 @@ import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHid
 
 import PinModal from "../components/PinModal";
 import ParentalGateModal from "../components/ParentalGateModal";
+import AdminGamesModal from "../components/AdminGamesModal";
 import SupportModal from "../components/SupportModal";
 import { toast } from "../hooks/use-toast";
 
@@ -43,6 +44,7 @@ export default function SettingsPage() {
   const [showGate, setShowGate] = useState(false);
 
   const [owner, setOwner] = useState(isMushafDevEnabled);
+  const [showAdmin, setShowAdmin] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   useEffect(() => { const h = () => setOwner(isMushafDevEnabled()); window.addEventListener("mushaf:ownermode", h); return () => window.removeEventListener("mushaf:ownermode", h); }, []);
   const disableOwner = () => { setMushafDev(false); setOwner(false); toast({ title: "أُوقف وضع المالك", description: "عادت رسالة التطوير للمستخدمين" }); };
@@ -253,6 +255,7 @@ export default function SettingsPage() {
         {/* ===== أدوات المالك (تظهر فقط في وضع المالك) ===== */}
         {owner && (
           <Section label="أدوات المالك (قيد التطوير)">
+            <Item icon={<Wrench className="w-5 h-5" />} title="أدمن الألعاب" desc="إدارة ألعاب السيرفر: الرابط، الإخفاء، والتحميل للأجهزة" onClick={() => setShowAdmin(true)} />
             <Item icon={<BookOpen className="w-5 h-5" />} title="المصحف التفاعلي" desc="القارئ — غير مُطلق للمستخدمين بعد" onClick={() => navigate("/")} />
             <Item icon={<Lock className="w-5 h-5" />} title="إيقاف وضع المالك" desc="إظهار رسالة التطوير للمستخدمين" onClick={disableOwner} />
           </Section>
@@ -304,6 +307,7 @@ export default function SettingsPage() {
       )}
 
       {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
+      {showAdmin && <AdminGamesModal onClose={() => setShowAdmin(false)} />}
     </div>
   );
 }

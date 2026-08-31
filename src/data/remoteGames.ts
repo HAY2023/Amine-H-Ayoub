@@ -72,3 +72,33 @@ export const fetchRemoteGames = async (): Promise<number> => {
     return 0;
   }
 };
+
+const HTML_CACHE_KEY = "mushaf:remoteGamesHtml:v1";
+
+const readHtmlCache = (): Record<string, string> => {
+  try { return JSON.parse(localStorage.getItem(HTML_CACHE_KEY) || "{}"); } catch { return {}; }
+};
+
+/** كود لعبة محمَّل سابقاً على الجهاز (يعمل دون إنترنت). */
+export const getCachedGameHtml = (id: string): string | null => readHtmlCache()[id] || null;
+
+export const cacheGameHtml = (id: string, html: string) => {
+  try { const o = readHtmlCache(); o[id] = html; localStorage.setItem(HTML_CACHE_KEY, JSON.stringify(o)); } catch { /* ignore */ }
+};
+
+/**
+ * تحميل أكواد الألعاب البعيدة للجهاز في الخلفية أثناء وجود اتصال —
+ * كي تعمل كل الألعاب لاحقاً دون إنترنت (يستدعى عند فتح ركن الأطفال).
+ */
+export const precacheRemoteGames = async (): Promise<number> => {
+  if (typeof navigator !== "undefined" && !navigator.onLine) return 0;
+  let n = 0;
+  for (const g of getRemoteGames()) {
+    if (g.kind !== "url" || !g.url || getCachedGameHtml(g.id)) continue;
+    try {
+      const res = await fetch(g.url, { cache: "no-store" });
+      if (res.ok) { cacheGameHtml(g.id, await res.text()); n++; }
+    } catch { /* تجاهل — سيعاد لاحقاً */ }
+  }
+  return n;
+};
