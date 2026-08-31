@@ -17,6 +17,7 @@ import { Shuffle, ListOrdered, Settings, Bell, Gamepad2, Lock } from "lucide-rea
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
 import { isTimeAllowed } from "@/data/kidsSchedule";
 import { kidsEnabled as getKidsEnabled, addReadingMinutes, addCoins, setAppMode } from "@/data/kidsProfile";
+import { addXp, addGems } from "@/data/gamification";
 import { checkAndUnlockBadges } from "@/data/kidsBadges";
 import { toast } from "@/hooks/use-toast";
 
@@ -72,6 +73,9 @@ const Index = () => {
           // نقاط القراءة (المال): نجومتان لكل دقيقة — قليلة لكنها أكثر من نقاط الألعاب
           const stars = Math.max(1, Math.round(mins * 2));
           addCoins(stars);
+          // التلعيب: XP خبرة (١٠ لكل دقيقة) + مجوهرات نادرة (١ لكل ٥ دقائق — إنهاء سورة ≈ ٣)
+          addXp(Math.round(mins * 10));
+          addGems(Math.floor(mins / 5));
           checkAndUnlockBadges();
           if (justUnlocked) {
             toast({ title: "🎉 أحسنت! اكتمل وقت الاستماع وفتحت الألعاب" });

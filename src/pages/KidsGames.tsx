@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Bell, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Hash, Grid3x3, Flame, Sparkles, Gamepad2, Puzzle, X } from "lucide-react";
+import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Bell, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Hash, Grid3x3, Flame, Sparkles, Gamepad2, Puzzle, X, Crown } from "lucide-react";
 import { getAllSurahs } from "../data/quranData";
 import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
 import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked, setCurrentSurah, addPlayMinutes, setAppMode, ownItem, unlockItem } from "../data/kidsProfile";
 import { getGameCatalog, type GameDef, type GameEngine } from "../data/gameCatalog";
+import GoldenBoard from "../components/GoldenBoard";
+import { dailyStreakGems, getGems as getGemCount, shouldShowHook } from "../data/gamification";
 import { fetchRemoteGames, precacheRemoteGames } from "../data/remoteGames";
 import { ensureCorpus, type SurahText } from "../data/quranText";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
@@ -1089,6 +1091,30 @@ export default function KidsGames() {
   useEffect(() => { ensureCorpus().catch(() => { /* ستعيد اللعبة المحاولة عند فتحها */ }); void (async () => { await fetchRemoteGames(); void precacheRemoteGames(); })(); }, []);
 
   const [showBadges, setShowBadges] = useState(false);
+
+  // ── السلسلة اليومية بمكافآت المجوهرات (يوم ٧ متتالٍ = ٥٠ 💎 — غياب يوم يصفّرها) ──
+  const [streak, setStreak] = useState(0);
+  const [gems, setGems] = useState(getGemCount());
+  const [showBoard, setShowBoard] = useState(false);
+  useEffect(() => {
+    const r = dailyStreakGems();
+    setStreak(r.count);
+    if (r.isNewDay) toast({ title: `🔥 اليوم ${r.count} متتالٍ! +${r.reward} 💎`, description: "تعال كل يوم — اليوم ٧ متتالٍ = ٥٠ 💎، وغياب يوم واحد يصفّر السلسلة!" });
+  }, []);
+  useEffect(() => {
+    const h = () => setGems(getGemCount());
+    window.addEventListener("mushaf:gam", h);
+    return () => window.removeEventListener("mushaf:gam", h);
+  }, []);
+  // خطاف التسجيل: عند جمع ١٠٠ 💎 تظهر نافذة اللوحة الذهبية (مرة كل جلسة)
+  useEffect(() => {
+    try {
+      if (shouldShowHook() && !sessionStorage.getItem("mushaf:hookShown")) {
+        sessionStorage.setItem("mushaf:hookShown", "1");
+        setShowBoard(true);
+      }
+    } catch { /* ignore */ }
+  }, [gems]);
   // نظام فتح الألعاب بالنجوم (المال): لعبة واحدة مجانية والبقية تُفتح بالنجوم المكتسبة
   const [unlockDef, setUnlockDef] = useState<GameDef | null>(null);
   const isGameOwned = (g: GameDef) => g.cost <= 0 || ownItem(g.id);
@@ -1127,7 +1153,7 @@ export default function KidsGames() {
   const unlocked = progress.unlocked || profile.goalMinutes <= 0;
   const canPlay = unlocked;
 
-  const myGames = catalog.filter(g => g.ageMin <= profile.age && profile.age <= (g.ageMax ?? 14));
+  const myGames = catalog.filter(g => g.ageMin <= profile.age && profile.age <= (g.ageMax ?? 16));
   const def = active ? catalog.find(g => g.id === active) : null;
   const Engine = def ? ENGINES[def.engine] : null;
 
@@ -1248,6 +1274,9 @@ export default function KidsGames() {
           {!active ? (
             <div className="flex items-center gap-1.5">
               <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-accent font-extrabold text-sm px-2.5 h-10"><Star className="w-4 h-4 fill-current" /> {coins}</span>
+              <span title="المجوهرات النادرة — تُجمع بالصبر وتُصرف في كنوز المتجر" className="inline-flex items-center gap-1 rounded-full bg-cyan-500/15 text-cyan-500 font-extrabold text-sm px-2.5 h-10">💎 {gems}</span>
+              <button onClick={() => setShowBoard(true)} aria-label="اللوحة الذهبية" title="اللوحة الذهبية الأسبوعية" className="w-10 h-10 rounded-full bg-amber-500/15 text-amber-500 hover:brightness-95 flex items-center justify-center active:scale-95 border border-amber-500/30 shadow-sm"><Crown className="w-5 h-5" /></button>
+              {streak > 0 && <span title="أيام متتالية — عُد كل يوم لمكافأة أكبر" className="inline-flex items-center gap-1 rounded-full bg-orange-500/15 text-orange-500 font-extrabold text-sm px-2.5 h-10"><Flame className="w-4 h-4 fill-current" /> {streak}</span>}
               <button onClick={() => setShowBadges(true)} aria-label="الأوسمة والإنجازات" title="الأوسمة والإنجازات" className="w-10 h-10 rounded-full bg-amber-500/15 text-amber-500 hover:brightness-95 flex items-center justify-center active:scale-95 border border-amber-500/30 shadow-sm"><Trophy className="w-5 h-5" /></button>
               <button onClick={() => setShowNotifications(true)} aria-label="الإشعارات" className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground hover:brightness-95 flex items-center justify-center active:scale-95"><Bell className="w-5 h-5" /></button>
               <button onClick={openParent} aria-label="إعدادات ولي الأمر" className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground hover:brightness-95 flex items-center justify-center active:scale-95"><Settings className="w-5 h-5" /></button>
@@ -1357,6 +1386,8 @@ export default function KidsGames() {
           </>
         )}
       </div>
+
+      {showBoard && <GoldenBoard onClose={() => setShowBoard(false)} />}
 
       {/* نافذة فتح لعبة بالنجوم (المال) */}
       {unlockDef && (
