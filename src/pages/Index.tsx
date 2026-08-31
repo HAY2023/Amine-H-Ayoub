@@ -16,7 +16,7 @@ import { useTVNavigation } from "@/hooks/useTVNavigation";
 import { Shuffle, ListOrdered, Settings, Bell, Gamepad2, Lock } from "lucide-react";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
 import { isTimeAllowed } from "@/data/kidsSchedule";
-import { kidsEnabled as getKidsEnabled, addReadingMinutes, setAppMode } from "@/data/kidsProfile";
+import { kidsEnabled as getKidsEnabled, addReadingMinutes, addCoins, setAppMode } from "@/data/kidsProfile";
 import { checkAndUnlockBadges } from "@/data/kidsBadges";
 import { toast } from "@/hooks/use-toast";
 
@@ -69,12 +69,17 @@ const Index = () => {
         accumulatedSecs = 0;
         if (mins > 0) {
           const { justUnlocked } = addReadingMinutes(mins);
+          // نقاط القراءة (المال): ٥ نجوم لكل دقيقة — أكثر بكثير من نقاط الألعاب
+          const stars = Math.max(1, Math.round(mins * 5));
+          addCoins(stars);
           checkAndUnlockBadges();
           if (justUnlocked) {
             toast({ title: "🎉 أحسنت! اكتمل وقت الاستماع وفتحت الألعاب" });
             setTimeout(() => {
               navigate("/games");
             }, 1000);
+          } else {
+            toast({ title: `+${stars} ⭐ من القراءة`, description: "واصل الاستماع لتربح المزيد" });
           }
         }
       }
@@ -442,6 +447,7 @@ const Index = () => {
               setKidsLocked(false);
               toast({ title: "تم فك قفل الأطفال بنجاح" });
             } else if (pinAction === "settings") {
+              sessionStorage.setItem("mushaf:settingsUnlocked", "1");
               navigate("/settings");
             }
             setPinAction(null);

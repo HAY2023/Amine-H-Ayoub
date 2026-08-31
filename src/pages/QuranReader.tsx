@@ -6,7 +6,7 @@ import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
 import { getCustomPages, getAllPageImages, getPageOrder } from "@/data/customPages";
 import { getPageSurahRegions } from "@/data/surahRegions";
-import { addReadingMinutes, kidsEnabled as getKidsEnabled } from "@/data/kidsProfile";
+import { addReadingMinutes, addCoins, kidsEnabled as getKidsEnabled } from "@/data/kidsProfile";
 import { getBookmarks, addBookmark, removeBookmark, Bookmark } from "@/data/bookmarks";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
 import ParentalGateModal from "@/components/ParentalGateModal";
@@ -154,7 +154,11 @@ function _UnusedQuranReader() {
         accumulatedSecs = 0;
         if (mins > 0) {
           const { justUnlocked } = addReadingMinutes(mins);
+          // نقاط القراءة (المال): ٥ نجوم لكل دقيقة — أكثر بكثير من نقاط الألعاب
+          const stars = Math.max(1, Math.round(mins * 5));
+          addCoins(stars);
           if (justUnlocked) toast({ title: "أحسنت! فتحت ألعاب ركن الأطفال", description: "اذهب إلى ركن الأطفال" });
+          else toast({ title: `+${stars} ⭐ من القراءة` });
         }
       }
     };
@@ -1343,6 +1347,7 @@ function _UnusedQuranReader() {
               setKidsLocked(true);
               navigate("/games");
             } else if (pinAction === "settings") {
+              sessionStorage.setItem("mushaf:settingsUnlocked", "1");
               navigate("/settings");
             } else {
               setAppMode("parent");

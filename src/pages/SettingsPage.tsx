@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, Baby, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete, Headphones, Power, Download } from "lucide-react";
+import { ArrowRight, Moon, Sun, Baby, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete, Headphones, Power } from "lucide-react";
 import { isMushafDevEnabled, setMushafDev, closeTauriApp } from "../utils/tauriUtils";
 import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHidden, type AppMode } from "../data/kidsProfile";
 
 
 import PinModal from "../components/PinModal";
+import ParentalGateModal from "../components/ParentalGateModal";
 import SupportModal from "../components/SupportModal";
-import DownloadModal from "../components/DownloadModal";
 import { toast } from "../hooks/use-toast";
 
 import { hasKidsPin, setKidsPin, removeKidsPin, setKidsLocked, isKidsMode } from "../data/kidsLock";
@@ -40,10 +40,10 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState<"dark" | "light">(getTheme);
   const [appMode, setMode] = useState<AppMode>(getAppMode);
   const [showPin, setShowPin] = useState(false);
+  const [showGate, setShowGate] = useState(false);
 
   const [owner, setOwner] = useState(isMushafDevEnabled);
   const [showSupport, setShowSupport] = useState(false);
-  const [showDownloads, setShowDownloads] = useState(false);
   useEffect(() => { const h = () => setOwner(isMushafDevEnabled()); window.addEventListener("mushaf:ownermode", h); return () => window.removeEventListener("mushaf:ownermode", h); }, []);
   const disableOwner = () => { setMushafDev(false); setOwner(false); toast({ title: "أُوقف وضع المالك", description: "عادت رسالة التطوير للمستخدمين" }); };
   const [hideKids, setHideKids] = useState(kidsHidden);
@@ -84,6 +84,8 @@ export default function SettingsPage() {
          if (m === "parent") setKidsLocked(false);
          if (m === "kids" && getProfiles().length === 0) addProfile({ name: "طفلي" });
          toast({ title: m === "parent" ? "وضع وليّ الأمر — بلا ركن أطفال" : "وضع الأطفال" });
+         if (m === "kids") navigate("/games");     // الانتقال لركن الأطفال بعد تجهيز الوضع
+         if (m === "parent") navigate("/audio");   // الانتقال لواجهة وليّ الأمر (التلاوات)
       }
     }, 4000);
   };
@@ -94,11 +96,18 @@ export default function SettingsPage() {
     window.addEventListener("mushaf:appmode", handleAppMode);
     return () => window.removeEventListener("mushaf:appmode", handleAppMode);
   }, []);
-  // حماية: إذا كان التطبيق في وضع الأطفال وتوجد كلمة مرور، نطلب التحقق أولاً قبل عرض الإعدادات.
+  // حماية: إذا كان التطبيق في وضع الأطفال نطلب التحقق (رمز أو تحدي حسابي) قبل عرض الإعدادات.
   useEffect(() => {
     if (!isKidsMode()) return;
+    // إذا تم التحقق للتوّ من رمز وليّ الأمر في صفحة أخرى (السماع/المصحف) لا نكرّر السؤال.
+    try {
+      if (sessionStorage.getItem("mushaf:settingsUnlocked") === "1") {
+        sessionStorage.removeItem("mushaf:settingsUnlocked");
+        return;
+      }
+    } catch { /* ignore */ }
     if (!hasKidsPin()) {
-      navigate("/audio");
+      setShowGate(true);
       return;
     }
     setShowPin(true);
@@ -157,27 +166,26 @@ export default function SettingsPage() {
           </div>
         </Section>
 
-        {/* ===== أوضاع التطبيق وحماية الأطفال — تظهر فقط إذا كان التطبيق في وضع الأطفال ===== */}
-        {appMode === "kids" && (
-          <>
-            <Section label="أوضاع التطبيق">
-              <div className="p-3 space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  {([
-                    { m: "parent" as AppMode, Icon: User, label: "لي" },
-                    { m: "kids" as AppMode, Icon: Baby, label: "لأطفالي" },
-                  ]).map(o => (
-                    <button key={o.m} onClick={() => changeMode(o.m)}
-                      className={`flex flex-col items-center gap-1 rounded-xl py-3 text-xs font-bold border transition-all ${appMode === o.m ? "border-accent bg-accent/15 text-accent shadow-soft" : "border-border bg-muted text-muted-foreground hover:border-accent/40"}`}>
-                      <o.Icon className="w-5 h-5" /> {o.label}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">«لي»: بلا ركن أطفال. «لأطفالي»: ركن أطفال آمن.</p>
+        {/* ===== أوضاع التطبيق وحماية الأطفال — ظاهرة دائماً ليمكن التبديل في أي وقت ===== */}
+        <>
+          <Section label="أوضاع التطبيق">
+            <div className="p-3 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { m: "parent" as AppMode, Icon: User, label: "لي" },
+                  { m: "kids" as AppMode, Icon: Baby, label: "لأطفالي" },
+                ]).map(o => (
+                  <button key={o.m} onClick={() => changeMode(o.m)}
+                    className={`flex flex-col items-center gap-1 rounded-xl py-3 text-xs font-bold border transition-all ${appMode === o.m ? "border-accent bg-accent/15 text-accent shadow-soft" : "border-border bg-muted text-muted-foreground hover:border-accent/40"}`}>
+                    <o.Icon className="w-5 h-5" /> {o.label}
+                  </button>
+                ))}
               </div>
-            </Section>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">الوضع الحالي: {appMode === "parent" ? "لي (وليّ الأمر)" : "لأطفالي (ركن الأطفال)"}. «لي»: بلا ركن أطفال. «لأطفالي»: ركن أطفال آمن.</p>
+            </div>
+          </Section>
 
-            <Section label="حماية وركن الأطفال">
+          <Section label="حماية وركن الأطفال">
               <Item
                 icon={<Baby className="w-5 h-5 text-accent" />}
                 title={hideKids ? "إظهار ركن الأطفال والألعاب" : "إخفاء ركن الأطفال والألعاب"}
@@ -205,9 +213,8 @@ export default function SettingsPage() {
                 desc="اطّلع على تقدّم الأطفال وإعداداتهم." 
                 onClick={() => navigate("/parent")}
               />
-            </Section>
-          </>
-        )}
+          </Section>
+        </>
 
         {/* ===== الصوت والتلاوة ===== */}
         <Section label="الصوت والتلاوة">
@@ -239,7 +246,6 @@ export default function SettingsPage() {
 
         {/* ===== التطبيق ===== */}
         <Section label="التطبيق">
-          <Item icon={<Download className="w-5 h-5 text-accent" />} title="تحميل التطبيق لجميع الأجهزة" desc="روابط مباشرة لتحميل نسخة ويندوز، أندرويد، والتلفاز (1.0.0)" onClick={() => setShowDownloads(true)} />
           <Item icon={<MessageSquare className="w-5 h-5 text-accent" />} title="تواصل مع الدعم الفني والإبلاغ" desc="إرسال مشكلة تقنية أو اقتراح لفريق العمل" onClick={() => setShowSupport(true)} />
           <Item icon={<Power className="w-5 h-5 text-destructive" />} title="إغلاق التطبيق والخروج" desc="إغلاق نافذة التطبيق بالكامل وحفظ الجلسة" onClick={() => closeTauriApp()} />
         </Section>
@@ -256,6 +262,14 @@ export default function SettingsPage() {
 
         <p className="text-[11px] text-muted-foreground text-center pt-1 leading-relaxed">العمل الكامل دون إنترنت قيد التوسعة تدريجياً.</p>
       </div>
+
+      {showGate && (
+        <ParentalGateModal
+          title="منطقة الوالدين — الدخول إلى الإعدادات"
+          onSuccess={() => setShowGate(false)}
+          onCancel={() => { setShowGate(false); navigate("/audio"); }}
+        />
+      )}
 
       {showPin && (
         <PinModal
@@ -290,7 +304,6 @@ export default function SettingsPage() {
       )}
 
       {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
-      {showDownloads && <DownloadModal isOpen={showDownloads} onClose={() => setShowDownloads(false)} />}
     </div>
   );
 }

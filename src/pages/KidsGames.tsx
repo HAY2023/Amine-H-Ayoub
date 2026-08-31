@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Bell, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Hash, Grid3x3, Flame, Sparkles, Gamepad2, Puzzle } from "lucide-react";
+import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Bell, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Hash, Grid3x3, Flame, Sparkles, Gamepad2, Puzzle, X } from "lucide-react";
 import { getAllSurahs } from "../data/quranData";
 import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
-import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked, setCurrentSurah, addPlayMinutes, setAppMode } from "../data/kidsProfile";
+import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked, setCurrentSurah, addPlayMinutes, setAppMode, ownItem, unlockItem } from "../data/kidsProfile";
 import { getGameCatalog, type GameDef, type GameEngine } from "../data/gameCatalog";
+import { fetchRemoteGames } from "../data/remoteGames";
 import { ensureCorpus, type SurahText } from "../data/quranText";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
 import { shouldHideMushaf } from "../utils/tauriUtils";
 import ParentalGateModal from "../components/ParentalGateModal";
+import RemoteGameFrame from "../components/RemoteGameFrame";
 import Avatar from "../components/Avatar";
 import NotificationsModal from "../components/NotificationsModal";
 import BadgesModal from "../components/BadgesModal";
@@ -48,7 +50,8 @@ function useGame() {
   const [gain, setGain] = useState(0);
   const correct = () => {
     const ns = streak + 1;
-    const bonus = ns >= 5 ? 30 : ns >= 3 ? 20 : 10;
+    // نقاط الألعاب قليلة عمداً — القراءة هي المصدر الأساسي للنجوم (المال)
+    const bonus = ns >= 5 ? 3 : ns >= 3 ? 2 : 1;
     addCoins(bonus); setGain(bonus); setEarned(e => e + bonus);
     setScore(s => s + 1); setAnswers(a => a + 1); setStreak(ns); setFlash(f => f + 1);
     window.setTimeout(() => setGain(0), 900);
@@ -598,7 +601,7 @@ function SurahAudioEngine({ def, minSurah }: { def: GameDef; minSurah: number })
       setQuestion(makeQuestion());
       setSelected(null);
       setFeedback(null);
-      setRound(r => Math.min(ROUNDS, r + 1));
+      setRound(r => r + 1);
     }, 1200);
   };
 
@@ -710,6 +713,8 @@ function MissingWordPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: 
 const ENGINES: Record<GameEngine, (p: { def: GameDef; minSurah: number }) => JSX.Element> = {
   order: OrderEngine, memory: MemoryEngine, which: WhichEngine, quiz: QuizEngine, count: CountEngine,
   nextayah: NextAyahEngine, prevayah: PrevAyahEngine, whichsurah: WhichSurahEngine, missingword: MissingWordEngine, surahaudio: SurahAudioEngine,
+  // الألعاب البعيدة (HTML من السيرفر) تُخرج من القائمة عبر حدث موحّد
+  remote: ({ def }: { def: GameDef; minSurah: number }) => <RemoteGameFrame def={def} onExit={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />,
 };
 const ICONS: Record<string, typeof Headphones> = { Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Hash, Grid3x3, Gamepad2, BookOpen, Sparkles, Puzzle };
 const iconFor = (key: string) => ICONS[key] || Gamepad2;
@@ -806,9 +811,18 @@ export default function KidsGames() {
   }, [navigate]);
 
   // تسخين نصوص السور مبكراً كي تفتح الألعاب النصّية فوراً (تُخزَّن محلياً بعد أول مرة)
-  useEffect(() => { ensureCorpus().catch(() => { /* ستعيد اللعبة المحاولة عند فتحها */ }); }, []);
+  // + جلب فهرس الألعاب البعيدة من السيرفر (ألعاب HTML خارجية — بلا تحديث للتطبيق)
+  useEffect(() => { ensureCorpus().catch(() => { /* ستعيد اللعبة المحاولة عند فتحها */ }); void fetchRemoteGames(); }, []);
 
   const [showBadges, setShowBadges] = useState(false);
+  // نظام فتح الألعاب بالنجوم (المال): لعبة واحدة مجانية والبقية تُفتح بالنجوم المكتسبة
+  const [unlockDef, setUnlockDef] = useState<GameDef | null>(null);
+  const isGameOwned = (g: GameDef) => g.cost <= 0 || ownItem(g.id);
+  useEffect(() => {
+    const h = () => setActive(null);
+    window.addEventListener("mushaf:remotegame:exit", h);
+    return () => window.removeEventListener("mushaf:remotegame:exit", h);
+  }, []);
 
   useEffect(() => {
     const refresh = () => { setProfile(getProfile()); setProgress(getProgress()); setCoins(getCoins()); setCatalog(getGameCatalog()); };
@@ -902,7 +916,26 @@ export default function KidsGames() {
     }
   };
 
-  const tapGame = (id: string) => { if (canPlay) setActive(id); else toast({ title: "أكمِل قراءتك أولاً لتُفتح الألعاب", variant: "destructive" }); };
+  const tapGame = (id: string) => {
+    if (!canPlay) { toast({ title: "أكمِل قراءتك أولاً لتُفتح الألعاب", variant: "destructive" }); return; }
+    const gg = catalog.find(x => x.id === id);
+    if (!gg) return;
+    if (!isGameOwned(gg)) { setUnlockDef(gg); return; }   // مقفلة بالنجوم — تظهر نافذة الفتح
+    setActive(id);
+  };
+
+  // الشراء بالنجوم مباشرة — بلا إذن إضافي (النجوم تُربح بالقراءة فقط)
+  const buyGame = () => {
+    if (!unlockDef) return;
+    if (unlockItem(unlockDef.id, unlockDef.cost)) {
+      toast({ title: `فُتحت لعبة «${unlockDef.title}»! 🎉` });
+      const id = unlockDef.id;
+      setUnlockDef(null);
+      setActive(id);
+    } else {
+      toast({ title: "نجومك لا تكفي", description: "استمع واقرأ أكثر لتربح نجوماً وتفتح ألعاباً جديدة", variant: "destructive" });
+    }
+  };
 
   const pct = Math.min(100, (progress.minutes / Math.max(1, profile.goalMinutes)) * 100);
 
@@ -1001,6 +1034,7 @@ export default function KidsGames() {
             <div className="grid grid-cols-1 gap-4">
               {myGames.map(g => {
                 const I = iconFor(g.icon);
+                const owned = isGameOwned(g);
                 return (
                   <button key={g.id} onClick={() => tapGame(g.id)}
                     className={`relative overflow-hidden rounded-[1.7rem] p-[2px] active:scale-[0.98] transition-transform text-right ${!canPlay ? "opacity-60" : "hover:shadow-xl hover:shadow-accent/20"}`}>
@@ -1009,11 +1043,26 @@ export default function KidsGames() {
                       <span className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 ${g.tint}`}><I className="w-8 h-8" /></span>
                       <div className="flex-1">
                         <span className="block font-extrabold text-foreground text-xl leading-tight">{g.title}</span>
-                        <span className="inline-block mt-1 text-[11px] font-bold text-muted-foreground bg-secondary rounded-full px-2.5 py-0.5">مناسب لسن {g.ageMin}+</span>
+                        <span className="inline-flex items-center gap-2 mt-1">
+                          <span className="text-[11px] font-bold text-muted-foreground bg-secondary rounded-full px-2.5 py-0.5">مناسب لسن {g.ageMin}+</span>
+                          {g.cost > 0 ? (
+                            <span className="inline-flex items-center gap-0.5 text-[11px] font-extrabold text-accent bg-accent/15 rounded-full px-2 py-0.5"><Star className="w-3 h-3 fill-current" /> {g.cost}</span>
+                          ) : (
+                            <span className="text-[11px] font-extrabold text-success bg-success/15 rounded-full px-2 py-0.5">مجانية</span>
+                          )}
+                        </span>
                       </div>
                       <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-muted-foreground opacity-50 shrink-0"><ArrowRight className="w-4 h-4" /></div>
                     </div>
-                    {!canPlay && <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm rounded-[1.7rem]"><Lock className="w-10 h-10 text-muted-foreground" /></div>}
+                    {!canPlay ? (
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm rounded-[1.7rem]"><Lock className="w-10 h-10 text-muted-foreground" /></div>
+                    ) : !owned && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/55 backdrop-blur-[2px] rounded-[1.7rem]">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-accent text-accent-foreground font-extrabold text-sm px-4 py-2 shadow-lg">
+                          <Lock className="w-4 h-4" /> افتح بـ {g.cost} <Star className="w-4 h-4 fill-current" />
+                        </span>
+                      </div>
+                    )}
                   </button>
                 );
               })}
@@ -1034,6 +1083,27 @@ export default function KidsGames() {
           </>
         )}
       </div>
+
+      {/* نافذة فتح لعبة بالنجوم (المال) */}
+      {unlockDef && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-background/70 backdrop-blur-sm p-4" onClick={() => setUnlockDef(null)}>
+          <div className="card-nour w-full max-w-sm p-6 text-center space-y-4 animate-fade-up" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-accent font-extrabold px-3 py-1.5"><Star className="w-4 h-4 fill-current" /> {coins}</span>
+              <button onClick={() => setUnlockDef(null)} aria-label="إغلاق" className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center active:scale-95 transition-transform"><X className="w-4 h-4" /></button>
+            </div>
+            <p className="text-lg font-extrabold text-foreground">افتح لعبة «{unlockDef.title}»؟</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              التكلفة: <span className="inline-flex items-center gap-1 font-extrabold text-accent align-middle">{unlockDef.cost} <Star className="w-4 h-4 fill-current" /></span>
+              <br />القراءة والاستماع يمنحانك نجوماً أكثر بكثير من الألعاب
+            </p>
+            <div className="flex gap-2">
+              <button onClick={buyGame} className="btn-gold flex-1 py-3 rounded-xl font-bold active:scale-95 transition-transform">فتح بالنجوم</button>
+              <button onClick={() => setUnlockDef(null)} className="flex-1 py-3 rounded-xl font-bold bg-secondary text-secondary-foreground border border-border active:scale-95 transition-transform">إلغاء</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {pinAction && (
         <ParentalGateModal
