@@ -134,3 +134,67 @@ export const syncGameCatalogFromServer = async () => {
     }
   } catch (e) { console.debug("sync game catalog:", e); }
 };
+
+/** إنشاء لعبة مضمّنة باختصار. */
+const G = (id: string, title: string, engine: GameEngine, ageMin: number, ageMax: number, cost: number, icon: string, params: GameDef["params"], ti = 0): GameDef =>
+  ({ id, title, engine, ageMin, ageMax, cost, icon, params: params || {}, tint: t(ti) });
+
+/** ٥٠ لعبة موزّعة على الأعمار: ٤-٦، ٦-٨، ٨-١٠، ١٠-١٢، ١٢-١٤. لعبة واحدة مجانية لكل الأعمار. */
+export const BUILTIN_GAMES: GameDef[] = [
+  G("surahaudio", "اسمع السورة", "surahaudio", 4, 14, 0, "Headphones", null, 0),
+  // ── أعمار ٤-٦ ──
+  G("memory4", "بطاقات السور", "memory", 4, 6, 40, "LayoutGrid", { pairs: 3 }, 2),
+  G("whichsurah4", "اكتشف السورة", "whichsurah", 4, 6, 40, "Sparkles", SHORT, 1),
+  G("order4", "ترتيب الآيات", "order", 4, 6, 45, "ListOrdered", SHORT, 3),
+  G("count4", "عدّ الآيات", "count", 4, 6, 45, "Hash", SHORT, 4),
+  G("missingword4", "الكلمة الضائعة", "missingword", 4, 6, 50, "Puzzle", SHORT, 7),
+  G("quiz4", "اختبار السور", "quiz", 4, 6, 50, "Trophy", SHORT, 5),
+  G("which4", "السورة الأطول", "which", 4, 6, 55, "Scale", SHORT, 6),
+  G("nextayah4", "أكمل الآية", "nextayah", 4, 6, 55, "BookOpen", SHORT, 0),
+  G("prevayah4", "الآية التي قبلها", "prevayah", 4, 6, 60, "BookOpen", SHORT, 2),
+  G("surahorder4", "ترتيب السور", "surahorder", 4, 6, 60, "ListOrdered", SHORT, 3),
+  // ── أعمار ٦-٨ ──
+  G("memory6", "بطاقات السور", "memory", 6, 8, 70, "LayoutGrid", { pairs: 4 }, 4),
+  G("whichsurah6", "اكتشف السورة", "whichsurah", 6, 8, 70, "Sparkles", MID, 5),
+  G("order6", "ترتيب الآيات", "order", 6, 8, 75, "ListOrdered", MID, 6),
+  G("count6", "عدّ الآيات", "count", 6, 8, 75, "Hash", MID, 0),
+  G("missingword6", "الكلمة الضائعة", "missingword", 6, 8, 80, "Puzzle", MID, 2),
+  G("quiz6", "اختبار السور", "quiz", 6, 8, 80, "Trophy", MID, 7),
+  G("which6", "السورة الأطول", "which", 6, 8, 85, "Scale", MID, 1),
+  G("nextayah6", "أكمل الآية", "nextayah", 6, 8, 85, "BookOpen", MID, 3),
+  G("prevayah6", "الآية التي قبلها", "prevayah", 6, 8, 90, "BookOpen", MID, 4),
+  G("surahorder6", "ترتيب السور", "surahorder", 6, 8, 90, "ListOrdered", MID, 5),
+  // ── أعمار ٨-١٠ ──
+  G("memory8", "بطاقات السور", "memory", 8, 10, 95, "LayoutGrid", { pairs: 5 }, 6),
+  G("whichsurah8", "اكتشف السورة", "whichsurah", 8, 10, 95, "Sparkles", FULL, 0),
+  G("order8", "ترتيب الآيات", "order", 8, 10, 100, "ListOrdered", FULL, 2),
+  G("count8", "عدّ الآيات", "count", 8, 10, 100, "Hash", FULL, 7),
+  G("missingword8", "الكلمة الضائعة", "missingword", 8, 10, 105, "Puzzle", FULL, 1),
+  G("quiz8", "اختبار السور", "quiz", 8, 10, 105, "Trophy", FULL, 3),
+  G("which8", "السورة الأطول", "which", 8, 10, 110, "Scale", FULL, 4),
+  G("nextayah8", "أكمل الآية", "nextayah", 8, 10, 110, "BookOpen", FULL, 5),
+  G("prevayah8", "الآية التي قبلها", "prevayah", 8, 10, 115, "BookOpen", FULL, 6),
+  G("surahorder8", "ترتيب السور", "surahorder", 8, 10, 115, "ListOrdered", FULL, 0),
+  // ── أعمار ١٠-١٢ (آيات حقيقية — أصعب) ──
+  G("memory10", "بطاقات السور", "memory", 10, 12, 120, "LayoutGrid", { pairs: 6 }, 1),
+  G("ayahsurah10", "من أي سورة؟", "ayahsurah", 10, 12, 120, "BookOpen", FULL, 2),
+  G("ayahlonger10", "أي آية أطول؟", "ayahlonger", 10, 12, 125, "Scale", FULL, 3),
+  G("ayahorder10", "رتّب الآيات", "ayahorder", 10, 12, 125, "ListOrdered", FULL, 4),
+  G("order10", "ترتيب الآيات", "order", 10, 12, 130, "ListOrdered", FULL, 5),
+  G("missingword10", "الكلمة الضائعة", "missingword", 10, 12, 130, "Puzzle", FULL, 6),
+  G("quiz10", "اختبار السور", "quiz", 10, 12, 135, "Trophy", FULL, 7),
+  G("nextayah10", "أكمل الآية", "nextayah", 10, 12, 135, "BookOpen", FULL, 0),
+  G("prevayah10", "الآية التي قبلها", "prevayah", 10, 12, 140, "BookOpen", FULL, 1),
+  G("surahnum10", "رقم السورة", "surahnum", 10, 12, 140, "Hash", FULL, 2),
+  // ── أعمار ١٢-١٤ (الأصعب) ──
+  G("memory12", "بطاقات السور", "memory", 12, 14, 150, "LayoutGrid", { pairs: 8 }, 3),
+  G("ayahsurah12", "من أي سورة؟", "ayahsurah", 12, 14, 150, "BookOpen", FULL, 4),
+  G("ayahlonger12", "أي آية أطول؟", "ayahlonger", 12, 14, 155, "Scale", FULL, 5),
+  G("ayahorder12", "رتّب الآيات", "ayahorder", 12, 14, 155, "ListOrdered", FULL, 6),
+  G("order12", "ترتيب الآيات", "order", 12, 14, 160, "ListOrdered", FULL, 7),
+  G("missingword12", "الكلمة الضائعة", "missingword", 12, 14, 160, "Puzzle", FULL, 0),
+  G("quiz12", "اختبار السور", "quiz", 12, 14, 165, "Trophy", FULL, 1),
+  G("nextayah12", "أكمل الآية", "nextayah", 12, 14, 165, "BookOpen", FULL, 2),
+  G("prevayah12", "الآية التي قبلها", "prevayah", 12, 14, 170, "BookOpen", FULL, 3),
+  G("surahorder12", "ترتيب السور", "surahorder", 12, 14, 170, "ListOrdered", FULL, 4),
+];
