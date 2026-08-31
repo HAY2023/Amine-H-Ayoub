@@ -823,9 +823,171 @@ function AyahOrderPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
   );
 }
 
+function AyahLongerEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
+  const { corpus, failed, retry } = useCorpus();
+  if (!corpus) return <CorpusGate failed={failed} retry={retry} />;
+  return <AyahLongerPlay corpus={corpus} def={def} minSurah={minSurah} />;
+}
+function AyahLongerPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: GameDef; minSurah: number }) {
+  const pool = poolFor(def, minSurah).map(s => s.number);
+  const eligible = corpus.filter(c => c.ayahs.length >= 2 && pool.includes(c.app));
+  const orderRef = useRef(shuffle(eligible));
+  const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(eligible); return orderRef.current.pop() || eligible[0]; };
+  const wc = (t: string) => t.split(" ").length;
+  const make = () => {
+    let a = getNext(), b = getNext();
+    if (a.app === b.app && eligible.length > 1) b = getNext();
+    let ao = a.ayahs[Math.floor(Math.random() * a.ayahs.length)];
+    let bo = b.ayahs[Math.floor(Math.random() * b.ayahs.length)];
+    let tries = 0;
+    while (wc(ao.text) === wc(bo.text) && tries++ < 10) bo = b.ayahs[Math.floor(Math.random() * b.ayahs.length)];
+    return { ao, bo, an: a.name, bn: b.name, firstLonger: wc(ao.text) > wc(bo.text) };
+  };
+  const [q, setQ] = useState(make);
+  const [round, setRound] = useState(0);
+  const [qNum, setQNum] = useState(1);
+  const [reveal, setReveal] = useState(false);
+  const [chosen, setChosen] = useState<"a" | "b" | null>(null);
+  const g = useGame();
+  const finished = qNum > ROUNDS;
+  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) { setQ(make()); setRound(r => r + 1); } };
+  const left = useRoundTimer(round, 12, () => { g.miss(); setReveal(true); window.setTimeout(() => next(qNum + 1), 1300); }, !reveal && !finished);
+  const choose = (w: "a" | "b") => {
+    if (reveal || finished) return;
+    setChosen(w);
+    if ((w === "a") === q.firstLonger) g.correct(); else g.miss();
+    setReveal(true);
+    window.setTimeout(() => next(qNum + 1), 1300);
+  };
+  const replay = () => { g.reset(); setQNum(1); setQ(make()); setRound(r => r + 1); };
+  if (finished) return <ResultCard g={g} onReplay={replay} />;
+  const card = (w: "a" | "b", text: string, name: string, count: number) => {
+    const isRight = (w === "a") === q.firstLonger;
+    const cls = reveal && isRight ? "bg-success/20 border-success/60 text-success"
+      : reveal && chosen === w ? "bg-destructive/20 border-destructive/60 text-destructive"
+      : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
+    return (
+      <button onClick={() => choose(w)} className={`p-4 rounded-xl border text-right active:scale-[0.98] transition-colors ${cls}`}>
+        <span className="block text-xs font-extrabold text-muted-foreground mb-1">{name}</span>
+        <span className="block font-amiri text-lg leading-relaxed">{text}</span>
+        {reveal && <span className="block mt-1 text-xs font-extrabold text-muted-foreground">{count} كلمة</span>}
+      </button>
+    );
+  };
+  return (
+    <div className="space-y-4 text-center">
+      <SessionBar q={qNum} />
+      <p className="text-muted-foreground text-sm">أيّ الآيتين كلماتها أكثر؟</p>
+      <TimerBar left={left} seconds={12} />
+      <div className="grid grid-cols-2 gap-2">
+        {card("a", q.ao.text, q.an, wc(q.ao.text))}
+        {card("b", q.bo.text, q.bn, wc(q.bo.text))}
+      </div>
+      <GameHud g={g} />
+    </div>
+  );
+}
+
+function SurahOrderEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
+  const pool = poolFor(def, minSurah);
+  const make = () => { const four = shuffle(pool).slice(0, 4); return { four, sol: [...four].sort((x, y) => x.number - y.number) }; };
+  const [q, setQ] = useState(make);
+  const [round, setRound] = useState(0);
+  const [qNum, setQNum] = useState(1);
+  const [picked, setPicked] = useState<number[]>([]);
+  const [reveal, setReveal] = useState(false);
+  const g = useGame();
+  const finished = qNum > ROUNDS;
+  const next = (nn: number) => { setPicked([]); setReveal(false); setQNum(nn); if (nn <= ROUNDS) { setQ(make()); setRound(r => r + 1); } };
+  const left = useRoundTimer(round, 15, () => { g.miss(); setReveal(true); window.setTimeout(() => next(qNum + 1), 1400); }, !reveal && !finished);
+  const tap = (n: number) => {
+    if (reveal || finished || picked.includes(n)) return;
+    const expected = q.sol[picked.length].number;
+    if (n === expected) {
+      const np = [...picked, n]; setPicked(np);
+      if (np.length === 4) { g.correct(); setReveal(true); window.setTimeout(() => next(qNum + 1), 900); }
+    } else { g.miss(); setReveal(true); window.setTimeout(() => { setReveal(false); setPicked([]); }, 1000); }
+  };
+  const replay = () => { g.reset(); setQNum(1); setPicked([]); setQ(make()); setRound(r => r + 1); };
+  if (finished) return <ResultCard g={g} onReplay={replay} />;
+  return (
+    <div className="space-y-4 text-center">
+      <SessionBar q={qNum} />
+      <p className="text-muted-foreground text-sm">اضغط السور الأربع حسب ترتيبها في المصحف</p>
+      <TimerBar left={left} seconds={15} />
+      <div className="grid grid-cols-2 gap-2">
+        {q.four.map(s => {
+          const order = picked.indexOf(s.number);
+          const done = picked.includes(s.number) || reveal;
+          const cls = done ? "bg-accent/15 border-accent/50 text-accent" : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
+          return (
+            <button key={s.number} onClick={() => tap(s.number)} className={`p-4 rounded-xl border font-bold text-lg active:scale-95 transition-colors ${cls}`}>
+              {picked.includes(s.number) && <span className="inline-flex w-6 h-6 items-center justify-center rounded-full bg-accent text-accent-foreground text-xs font-extrabold mr-2">{order + 1}</span>}
+              {s.name}
+              {reveal && <span className="block mt-1 text-xs font-extrabold text-muted-foreground">رقم {s.number}</span>}
+            </button>
+          );
+        })}
+      </div>
+      <GameHud g={g} />
+    </div>
+  );
+}
+
+function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
+  const pool = poolFor(def, minSurah);
+  const orderRef = useRef(shuffle(pool));
+  const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(pool); return orderRef.current.pop() || pool[0]; };
+  const make = () => {
+    const s = getNext();
+    const opts = new Set<number>([s.number]);
+    for (const d of shuffle([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])) {
+      const v = s.number + d;
+      if (v >= 1 && v <= 114) opts.add(v);
+      if (opts.size === 4) break;
+    }
+    return { s, opts: shuffle([...opts]) };
+  };
+  const [q, setQ] = useState(make);
+  const [round, setRound] = useState(0);
+  const [qNum, setQNum] = useState(1);
+  const [reveal, setReveal] = useState(false);
+  const [chosen, setChosen] = useState<number | null>(null);
+  const g = useGame();
+  const finished = qNum > ROUNDS;
+  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) { setQ(make()); setRound(r => r + 1); } };
+  const left = useRoundTimer(round, 10, () => { g.miss(); setReveal(true); window.setTimeout(() => next(qNum + 1), 1300); }, !reveal && !finished);
+  const choose = (n: number) => {
+    if (reveal || finished) return;
+    setChosen(n);
+    if (n === q.s.number) g.correct(); else g.miss();
+    setReveal(true);
+    window.setTimeout(() => next(qNum + 1), 1200);
+  };
+  const replay = () => { g.reset(); setQNum(1); setQ(make()); setRound(r => r + 1); };
+  if (finished) return <ResultCard g={g} onReplay={replay} />;
+  return (
+    <div className="space-y-4 text-center">
+      <SessionBar q={qNum} />
+      <p className="text-foreground text-lg font-bold">ما رقم سورة <span className="text-accent">{q.s.name}</span> في ترتيب المصحف؟</p>
+      <TimerBar left={left} seconds={10} />
+      <div className="grid grid-cols-2 gap-2">
+        {q.opts.map(n => {
+          const cls = reveal && n === q.s.number ? "bg-success/20 border-success/60 text-success"
+            : reveal && n === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
+            : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
+          return <button key={n} onClick={() => choose(n)} className={`p-5 rounded-xl border font-extrabold text-2xl active:scale-95 transition-colors ${cls}`}>{n}</button>;
+        })}
+      </div>
+      <GameHud g={g} />
+    </div>
+  );
+}
+
 const ENGINES: Record<GameEngine, (p: { def: GameDef; minSurah: number }) => JSX.Element> = {
   order: OrderEngine, memory: MemoryEngine, which: WhichEngine, quiz: QuizEngine, count: CountEngine,
   nextayah: NextAyahEngine, prevayah: PrevAyahEngine, whichsurah: WhichSurahEngine, missingword: MissingWordEngine, surahaudio: SurahAudioEngine,
+  ayahsurah: AyahSurahEngine, ayahorder: AyahOrderEngine, ayahlonger: AyahLongerEngine, surahorder: SurahOrderEngine, surahnum: SurahNumEngine,
   // الألعاب البعيدة (HTML من السيرفر) تُخرج من القائمة عبر حدث موحّد
   remote: ({ def }: { def: GameDef; minSurah: number }) => <RemoteGameFrame def={def} onExit={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />,
 };
