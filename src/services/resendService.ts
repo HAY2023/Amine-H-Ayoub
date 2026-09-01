@@ -26,6 +26,20 @@ export async function sendSupportReportEmail(
   const senderDisplay = report.profileName?.trim() || "مستخدم التطبيق";
   const subject = `[تطبيق القرآن] ${report.typeLabel} من: ${senderDisplay}`;
 
+  // نص بسيط كبديل للـ HTML
+  const textBody = `رسالة جديدة من تطبيق القرآن الكريم
+=====================================
+اسم المرسل: ${senderDisplay}
+نوع الرسالة: ${report.typeLabel}
+البريد للرد: ${report.senderEmail || "لم يُحدد"}
+إصدار التطبيق: ${report.appVersion}
+النظام / الجهاز: ${report.platform}
+وقت الإرسال: ${report.timestamp}
+
+نص الرسالة:
+${report.description}
+`;
+
   const htmlBody = `
     <div dir="rtl" style="font-family: Arial, Tahoma, sans-serif; background-color: #f8fafc; padding: 25px; border-radius: 14px; color: #1e293b; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; line-height: 1.6;">
       <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px;">
@@ -78,17 +92,20 @@ ${report.description}
   `;
 
   // دالة مساعدة للإرسال إلى بريد محدد عبر عدة مسارات
-  const sendToEmail = async (targetEmail: string): Promise<boolean> => {
+  const sendToEmail = async (targetEmail: string): Promise<{ ok: boolean; error?: string }> => {
     const payload: any = {
       from: "Quran App <onboarding@resend.dev>",
       to: [targetEmail],
       subject: subject,
+      text: textBody,
       html: htmlBody,
     };
 
     if (report.senderEmail && report.senderEmail.includes("@")) {
       payload.reply_to = report.senderEmail;
     }
+
+    const errors: string[] = [];
 
     // 1. عبر خادم التطبيق المحلي (Vite proxy)
     try {
@@ -97,9 +114,10 @@ ${report.description}
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ apiKey: RESEND_API_KEY, data: payload }),
       });
-      if (r.ok) return true;
+      if (r.ok) return { ok: true };
+      errors.push(`local:${r.status}`);
     } catch {
-      /* تابع */
+      errors.push("local:unreachable");
     }
 
     // 2. عبر CORS Proxy
@@ -112,9 +130,10 @@ ${report.description}
         },
         body: JSON.stringify(payload),
       });
-      if (r.ok) return true;
+      if (r.ok) return { ok: true };
+      errors.push(`proxy:${r.status}`);
     } catch {
-      /* تابع */
+      errors.push("proxy:unreachable");
     }
 
     // 3. مباشر (Tauri / Web)
@@ -127,26 +146,35 @@ ${report.description}
         },
         body: JSON.stringify(payload),
       });
-      if (r.ok) return true;
+      if (r.ok) return { ok: true };
+      const errData = await r.json().catch(() => ({}));
+      errors.push(`direct:${r.status}:${errData?.message || "unknown"}`);
     } catch {
-      /* تابع */
+      errors.push("direct:CORS");
     }
 
-    return false;
+    return { ok: false, error: errors.join(", ") };
   };
 
-  // إرسال للبريدين
-  const [successPrimary, successSecondary] = await Promise.all([
+  // إرسال للبريدين (نجاح واحد يكفي)
+  const results = await Promise.allSettled([
     sendToEmail(primaryAccountEmail),
     sendToEmail(secondaryEmail),
   ]);
 
-  if (successPrimary || successSecondary) {
-    return { success: true };
+  for (const res of results) {
+    if (res.status === "fulfilled" && res.value.ok) {
+      return { success: true };
+    }
   }
+
+  const allErrors = results
+    .map(r => (r.status === "fulfilled" ? r.value.error : String(r.reason)))
+    .filter(Boolean)
+    .join(" | ");
 
   return {
     success: false,
-    error: "تعذر إرسال البريد حالياً. يرجى التحقق من اتصال الإنترنت",
+    error: "تعذر إرسال الرسالة حالياً. تحقق من اتصال الإنترنت وحاول مجدداً. (" + allErrors + ")",
   };
 }

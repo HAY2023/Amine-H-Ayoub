@@ -39,8 +39,13 @@ export interface KidsProgress {
   playExpired: boolean;  // هل انتهى وقت اللعب
 }
 
-/** وجوه (أيقونات lucide — لا إيموجي) وألوان جاهزة لبطاقات الأطفال. القيم مفاتيح تُربط في components/Avatar.tsx */
-export const KID_AVATARS = ["img-boy-1", "img-girl-1", "img-boy-2", "img-girl-2"];
+/** وجوه إسلامية مرسومة ثلاثية الأبعاد وألوان جاهزة لبطاقات الأطفال */
+export const KID_AVATARS = [
+  "img-boy-scholar",
+  "img-girl-scholar",
+  "img-boy-reciter",
+  "img-girl-gold"
+];
 export const KID_COLORS = [
   "from-amber-400 to-orange-500",
   "from-sky-400 to-blue-500",
@@ -65,36 +70,25 @@ const histKey = (id: string) => `${HISTORY_BASE}:${id}`;
 const DEFAULT_FIELDS = { goalMinutes: 5, playMinutes: 0, reward: "أحسنت، لقد فتحت الألعاب", lessonTime: "", coins: 0, inventory: [] as string[], currentSurah: 0 };
 const DEFAULT_PROFILE: KidsProfile = { id: "default", name: "", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0], ...DEFAULT_FIELDS };
 
-/** متجر المكافآت — وجوه (أيقونات) وألوان تُفتح بالنقاط (محتوى داخلي، بلا أي ملفات خارجية). */
-// أطفال بأزياء فخمة تُفتح بالنجوم — كلّما زاد الفخم زاد سعره (مال كثير)
+/** متجر المكافآت — شخصيات إسلامية فخمة ثلاثية الأبعاد تُفتح بالنجوم */
 export const SHOP_AVATARS: ShopItem[] = [
-  // ── الوجوه الأساسية ──
-  { id: "av-img-boy-1", type: "avatar", label: "ولد لطيف", value: "img-boy-1", cost: 50 },
-  { id: "av-img-girl-1", type: "avatar", label: "بنت لطيفة", value: "img-girl-1", cost: 50 },
-  { id: "av-img-boy-6", type: "avatar", label: "ولد مبتسم", value: "img-boy-6", cost: 50 },
-  { id: "av-img-girl-4", type: "avatar", label: "بنت مبتسمة", value: "img-girl-4", cost: 50 },
-  // ── الوجوه الأسطورية الجديدة ──
-  { id: "av-img-boy-7", type: "avatar", label: "ولد ذكي", value: "img-boy-7", cost: 100 },
-  { id: "av-img-girl-5", type: "avatar", label: "بنت ذكية", value: "img-girl-5", cost: 150 },
-  { id: "av-img-boy-8", type: "avatar", label: "ولد بطل", value: "img-boy-8", cost: 300 },
-  { id: "av-img-girl-6", type: "avatar", label: "بنت بطلة", value: "img-girl-6", cost: 400 },
-  { id: "av-img-boy-9", type: "avatar", label: "أمير صغير", value: "img-boy-9", cost: 700 },
-  { id: "av-img-girl-7", type: "avatar", label: "أميرة صغيرة", value: "img-girl-7", cost: 900 },
-
-  { id: "av-img-boy-2", type: "avatar", label: "طالب علم", value: "img-boy-2", cost: 1000 },
-  { id: "av-img-girl-2", type: "avatar", label: "أميرة نبيلة", value: "img-girl-2", cost: 1200 },
-  { id: "av-img-boy-3", type: "avatar", label: "فارس شجاع", value: "img-boy-3", cost: 2500 },
-  { id: "av-img-boy-4", type: "avatar", label: "أمير القلعة", value: "img-boy-4", cost: 5000 },
-  { id: "av-img-girl-3", type: "avatar", label: "ملكة أسطورية", value: "img-girl-3", cost: 10000 },
-  { id: "av-img-boy-5", type: "avatar", label: "ملك أسطوري", value: "img-boy-5", cost: 15000 },
+  { id: "av-img-boy-knight", type: "avatar", label: "الفارس الشجاع بالدرع الإسلامي", value: "img-boy-knight", cost: 3000 },
+  { id: "av-img-girl-purple", type: "avatar", label: "أميرة الحكمة بالقفطان الأرجواني", value: "img-girl-purple", cost: 6000 },
+  { id: "av-img-boy-turban", type: "avatar", label: "أمير القرآن بالعمامة الإسلامية", value: "img-boy-turban", cost: 12000 },
+  { id: "av-img-girl-emerald", type: "avatar", label: "الأميرة الزمردية بالتاج والقفطان", value: "img-girl-emerald", cost: 20000 },
+  { id: "av-img-boy-bisht", type: "avatar", label: "القارئ الملكي بالبشت المذهب", value: "img-boy-bisht", cost: 35000 },
 ];
 export const SHOP_COLORS: ShopItem[] = [
-  { id: "col-sunset", type: "color", label: "غروب", value: "from-pink-500 to-orange-400", cost: 20 },
-  { id: "col-ocean", type: "color", label: "محيط", value: "from-cyan-400 to-indigo-500", cost: 20 },
-  { id: "col-candy", type: "color", label: "حلوى", value: "from-fuchsia-500 to-rose-400", cost: 25 },
-  { id: "col-forest", type: "color", label: "غابة", value: "from-lime-400 to-emerald-600", cost: 25 },
-  { id: "col-gold", type: "color", label: "ذهب", value: "from-yellow-300 to-amber-500", cost: 40 },
-  { id: "col-galaxy", type: "color", label: "مجرّة", value: "from-indigo-500 to-purple-700", cost: 50 },
+  { id: "col-sunset", type: "color", label: "شفق الغروب", value: "from-pink-500 to-orange-400", cost: 150 },
+  { id: "col-ocean", type: "color", label: "محيط النقاء", value: "from-cyan-400 to-indigo-500", cost: 200 },
+  { id: "col-candy", type: "color", label: "بهجة الحلوى", value: "from-fuchsia-500 to-rose-400", cost: 250 },
+  { id: "col-forest", type: "color", label: "واحة الجنان", value: "from-lime-400 to-emerald-600", cost: 300 },
+  { id: "col-turquoise", type: "color", label: "الفيروز الملكي", value: "from-teal-400 to-cyan-600", cost: 400 },
+  { id: "col-ruby", type: "color", label: "الياقوت الفاخر", value: "from-rose-500 to-red-700", cost: 500 },
+  { id: "col-gold", type: "color", label: "الذهب الخالص", value: "from-yellow-300 to-amber-500", cost: 600 },
+  { id: "col-lapis", type: "color", label: "اللازورد الأندلسي", value: "from-blue-600 to-violet-800", cost: 750 },
+  { id: "col-galaxy", type: "color", label: "مجرّة النجوم", value: "from-indigo-500 to-purple-700", cost: 1000 },
+  { id: "col-emerald-gold", type: "color", label: "الزمرد المذهب", value: "from-emerald-500 via-teal-600 to-amber-500", cost: 1500 },
 ];
 export const SHOP_ITEMS: ShopItem[] = [...SHOP_AVATARS, ...SHOP_COLORS];
 

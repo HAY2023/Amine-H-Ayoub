@@ -169,17 +169,34 @@ export default function Avatar({ name, className }: { name: string; className?: 
   }
 
   const legacyMap: Record<string, string> = {
-    boy: "img-boy-1",
-    girl: "img-girl-1",
-    child: "img-boy-2",
-    baby: "img-girl-2",
-    hero: "img-boy-3",
-    ninja: "img-boy-4",
-    king: "img-boy-5",
-    queen: "img-girl-3",
+    boy: "img-boy-scholar",
+    girl: "img-girl-scholar",
+    child: "img-boy-reciter",
+    baby: "img-girl-gold",
+    hero: "img-boy-knight",
+    ninja: "img-boy-turban",
+    king: "img-boy-bisht",
+    queen: "img-girl-emerald",
+    "img-boy-1": "img-boy-scholar",
+    "img-boy-2": "img-boy-scholar",
+    "img-boy-3": "img-boy-knight",
+    "img-boy-4": "img-boy-turban",
+    "img-boy-5": "img-boy-bisht",
+    "img-boy-6": "img-boy-reciter",
+    "img-boy-7": "img-boy-scholar",
+    "img-boy-8": "img-boy-knight",
+    "img-boy-9": "img-boy-turban",
+    "img-girl-1": "img-girl-scholar",
+    "img-girl-2": "img-girl-gold",
+    "img-girl-3": "img-girl-emerald",
+    "img-girl-4": "img-girl-scholar",
+    "img-girl-5": "img-girl-gold",
+    "img-girl-6": "img-girl-purple",
+    "img-girl-7": "img-girl-emerald",
   };
 
-  const imageFile = cleanName.startsWith("img-") ? cleanName : (legacyMap[cleanName] || "img-boy-1");
+  const mapped = legacyMap[cleanName] || cleanName;
+  const imageFile = mapped.startsWith("img-") ? mapped : "img-boy-scholar";
 
   return (
     <img

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Plus, Settings, Sparkles } from "lucide-react";
-import { getProfiles, getAppMode, setAppMode, setActiveProfile, kidsRouteBlocked, getProgress, type KidsProfile } from "../data/kidsProfile";
+import { getProfiles, getAppMode, setAppMode, setActiveProfile, kidsRouteBlocked, getProgress, getActiveId, type KidsProfile } from "../data/kidsProfile";
 import { hasKidsPin, setKidsLocked } from "../data/kidsLock";
 import PinModal from "./PinModal";
 import Avatar from "./Avatar";
@@ -20,6 +20,7 @@ export default function ProfilePicker({ onPicked }: { onPicked?: () => void }) {
   const navigate = useNavigate();
   const profiles: KidsProfile[] = getProfiles();
   const appMode = getAppMode();
+  const activeIdFallback = getActiveId();
   const [showPin, setShowPin] = useState(false);
   // إذا أخفى المالك ركن الأطفال: هذه الصفحة (لا كطبقة فتح) تُحوَّل للسماع
   useEffect(() => { if (kidsRouteBlocked() && !onPicked) navigate("/audio", { replace: true }); }, [navigate, onPicked]);
@@ -76,14 +77,21 @@ export default function ProfilePicker({ onPicked }: { onPicked?: () => void }) {
             <span className="font-bold text-center text-foreground group-hover:text-accent transition-colors">لي نفسي</span>
           </button>
 
-          {/* خيار: لي طفلي (الطفل الأول أو الوهمي) */}
+          {/* خيارات: كل الأطفال المسجّلون (وليس الأول فقط) */}
           {profiles.length > 0 ? (
-            <button onClick={() => pickChild(profiles[0].id)} className="group flex flex-col items-center gap-3 w-24 sm:w-28 active:scale-95 transition-transform">
-              <span className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center ring-2 ring-transparent ring-offset-2 ring-offset-background group-hover:ring-accent rounded-full transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl">
-                <Avatar name={profiles[0].avatar} className="w-24 h-24 sm:w-28 sm:h-28 drop-shadow-md" />
-              </span>
-              <span className="font-bold text-center truncate w-full text-foreground group-hover:text-accent transition-colors">لي طفلي</span>
-            </button>
+            profiles.map((p, idx) => (
+              <button key={p.id} onClick={() => pickChild(p.id)} className="group flex flex-col items-center gap-3 w-24 sm:w-28 active:scale-95 transition-transform">
+                <span className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center ring-2 ring-transparent ring-offset-2 ring-offset-background group-hover:ring-accent rounded-full transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl">
+                  <Avatar name={p.avatar} className="w-24 h-24 sm:w-28 sm:h-28 drop-shadow-md" />
+                  {p.id === activeIdFallback && (
+                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground text-[9px] font-bold px-2 py-0.5 rounded-full shadow">الآن</span>
+                  )}
+                </span>
+                <span className="font-bold text-center truncate w-full text-foreground group-hover:text-accent transition-colors">
+                  {p.name || (profiles.length === 1 ? "لي طفلي" : `الطفل ${idx + 1}`)}
+                </span>
+              </button>
+            ))
           ) : (
             <button onClick={() => { manage(); }} className="group flex flex-col items-center gap-3 w-24 sm:w-28 active:scale-95 transition-transform">
               <span className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-muted border border-dashed border-border flex items-center justify-center ring-2 ring-transparent ring-offset-2 ring-offset-background group-hover:ring-accent/60 shadow-soft transition-all duration-300 group-hover:-translate-y-1"><Plus className="w-12 h-12 text-muted-foreground group-hover:text-accent transition-colors" /></span>
