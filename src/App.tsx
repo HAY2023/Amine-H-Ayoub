@@ -35,6 +35,8 @@ import WelcomeOverlay, { isOnboarded } from "./components/WelcomeOverlay.tsx";
 import ProfilePicker, { isPicked, markPicked } from "./components/ProfilePicker.tsx";
 import { logAppOpen } from "./utils/analytics.ts";
 import { useBackgroundNotifications, showLocalNotification } from "./utils/notifications.ts";
+import { claimDailyRewards, incrementStreak } from "./data/dailyRewards";
+import DeveloperPanel from "./components/DeveloperPanel";
 
 const queryClient = new QueryClient();
 
@@ -106,6 +108,7 @@ const App = () => {
   };
   const [showPicker, setShowPicker] = useState(shouldGate);
   const [showExitGate, setShowExitGate] = useState(false);
+  const [showDevPanel, setShowDevPanel] = useState(false);
 
   useEffect(() => {
     const unlistenPromise = setupTauriCloseHandler(() => {
@@ -184,8 +187,20 @@ const App = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Ctrl+Alt+2 shortcut to toggle developer panel
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.altKey && e.key === '2') {
+        e.preventDefault();
+        setShowDevPanel(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
-    <AudioContextProvider>
+      <AudioContextProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
@@ -216,6 +231,7 @@ const App = () => {
               </Routes>
             </Suspense>
             <SiteLinksOverlay open={showSiteLinks} onClose={() => setShowSiteLinks(false)} />
+            <DeveloperPanel open={showDevPanel} onClose={() => setShowDevPanel(false)} />
             {showWelcome && <WelcomeOverlay onDone={() => { markPicked(); setShowWelcome(false); setShowPicker(false); }} />}
             {!showWelcome && showPicker && <ProfilePicker onPicked={() => setShowPicker(false)} />}
             {showExitGate && (
@@ -235,7 +251,7 @@ const App = () => {
           </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>
-    </AudioContextProvider>
+      </AudioContextProvider>
   );
 };
 

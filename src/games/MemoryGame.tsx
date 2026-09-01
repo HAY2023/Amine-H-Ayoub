@@ -9,13 +9,38 @@ interface CardData {
   text: string;
 }
 
-const pairs: CardData[] = [
-  { id: 1, type: 'surah', text: 'سورة الفيل' }, { id: 1, type: 'meaning', text: '🐘 جيش أبرهة' },
-  { id: 2, type: 'surah', text: 'سورة الناس' }, { id: 2, type: 'meaning', text: '🛡️ الاستعاذة' },
-  { id: 3, type: 'surah', text: 'سورة الشمس' }, { id: 3, type: 'meaning', text: '☀️ وضحاها' },
-  { id: 4, type: 'surah', text: 'سورة التين' }, { id: 4, type: 'meaning', text: '🌳 والزيتون' },
-  { id: 5, type: 'surah', text: 'سورة الفلق' }, { id: 5, type: 'meaning', text: '🌅 من شر ما خلق' },
-  { id: 6, type: 'surah', text: 'سورة قريش' }, { id: 6, type: 'meaning', text: '🐪 الشتاء والصيف' },
+// بنك معاني وقصص السور — يتم اختيار مجموعة عشوائية منها في كل لعبة
+const ALL_SURAH_PAIRS = [
+  { id: 1, surah: 'سورة الفاتحة', meaning: '🤲 أم الكتاب والسبع المثاني' },
+  { id: 2, surah: 'سورة الناس', meaning: '🛡️ الاستعاذة من الوسواس' },
+  { id: 3, surah: 'سورة الفلق', meaning: '🌅 الاستعاذة من شر ما خلق' },
+  { id: 4, surah: 'سورة الإخلاص', meaning: '☝️ قل هو الله أحد' },
+  { id: 5, surah: 'سورة المسد', meaning: '🔥 هلاك أبي لهب' },
+  { id: 6, surah: 'سورة النصر', meaning: '🏆 فتح مكة ودخول الناس في الدين' },
+  { id: 7, surah: 'سورة الكافرون', meaning: '⚖️ لكم دينكم ولي دين' },
+  { id: 8, surah: 'سورة الكوثر', meaning: '🌊 نهر الخير في الجنة' },
+  { id: 9, surah: 'سورة الماعون', meaning: '🍲 إطعام المسكين ومساعدة المحتاج' },
+  { id: 10, surah: 'سورة قريش', meaning: '🐪 رحلة الشتاء والصيف' },
+  { id: 11, surah: 'سورة الفيل', meaning: '🐘 قصة أبرهة وجيش الفيل' },
+  { id: 12, surah: 'سورة الهمزة', meaning: '🚫 النهي عن الغيبة واللمز' },
+  { id: 13, surah: 'سورة العصر', meaning: '⏳ قيمة الوقت والعمل الصالح' },
+  { id: 14, surah: 'سورة التكاثر', meaning: '💰 التنافس في جمع الأموال' },
+  { id: 15, surah: 'سورة القارعة', meaning: '🔔 أهوال يوم القيامة والموازين' },
+  { id: 16, surah: 'سورة العاديات', meaning: '🐎 الخيل التي تعدو سريعاً' },
+  { id: 17, surah: 'سورة الزلزلة', meaning: '🌍 إذا زلزلت الأرض زلزالها' },
+  { id: 18, surah: 'سورة القدر', meaning: '✨ ليلة مباركة خير من ألف شهر' },
+  { id: 19, surah: 'سورة العلق', meaning: '📖 اقرأ باسم ربك الذي خلق' },
+  { id: 20, surah: 'سورة التين', meaning: '🌳 والتين والزيتون وطور سينين' },
+  { id: 21, surah: 'سورة الشرح', meaning: '💖 ألم نشرح لك صدرك' },
+  { id: 22, surah: 'سورة الضحى', meaning: '☀️ ما ودعك ربك وما قلى' },
+  { id: 23, surah: 'سورة الليل', meaning: '🌙 والليل إذا يغشى والنهار إذا تجلى' },
+  { id: 24, surah: 'سورة الشمس', meaning: '🌞 والشمس وضحاها والقمر إذا تلاها' },
+  { id: 25, surah: 'سورة البلد', meaning: '🏙️ القسم بمكة المكرمة' },
+  { id: 26, surah: 'سورة الفجر', meaning: '⭐ والفجر وليال عشر' },
+  { id: 27, surah: 'سورة الغاشية', meaning: '☁️ هل أتاك حديث الغاشية' },
+  { id: 28, surah: 'سورة الأعلى', meaning: '🌿 سبح اسم ربك الأعلى' },
+  { id: 29, surah: 'سورة الطارق', meaning: '🌠 والسماء والطارق والنجم الثاقب' },
+  { id: 30, surah: 'سورة البروج', meaning: '🌌 قصة أصحاب الأخدود' },
 ];
 
 interface MemoryGameProps {
@@ -29,6 +54,7 @@ export default function MemoryGame({ onBack }: MemoryGameProps) {
   const [firstCardIndex, setFirstCardIndex] = useState<number | null>(null);
   const [lockBoard, setLockBoard] = useState(false);
   const [matches, setMatches] = useState(0);
+  const [totalPairs, setTotalPairs] = useState(4);
   const [won, setWon] = useState(false);
 
   useEffect(() => {
@@ -36,10 +62,24 @@ export default function MemoryGame({ onBack }: MemoryGameProps) {
   }, []);
 
   const initGame = () => {
-    const shuffled = [...pairs]
+    // اختيار 4 إلى 6 أزواج عشوائية مختلفة تماماً في كل لعبة
+    const numPairs = 4;
+    setTotalPairs(numPairs);
+    
+    const shuffledPool = [...ALL_SURAH_PAIRS].sort(() => 0.5 - Math.random());
+    const selected = shuffledPool.slice(0, numPairs);
+
+    const generatedCards: CardData[] = [];
+    selected.forEach(item => {
+      generatedCards.push({ id: item.id, type: 'surah', text: item.surah });
+      generatedCards.push({ id: item.id, type: 'meaning', text: item.meaning });
+    });
+
+    const shuffledCards = generatedCards
       .sort(() => 0.5 - Math.random())
       .map(c => ({ ...c, isFlipped: false, isMatched: false }));
-    setCards(shuffled);
+
+    setCards(shuffledCards);
     setFirstCardIndex(null);
     setLockBoard(false);
     setMatches(0);
@@ -69,7 +109,7 @@ export default function MemoryGame({ onBack }: MemoryGameProps) {
     const secondCard = cards[secondCardIndex];
 
     if (firstCard.id === secondCard.id && firstCard.type !== secondCard.type) {
-      // Match found
+      // Match found - تطابق صحيح
       setTimeout(() => {
         const newCards = [...cards];
         newCards[firstCardIndex!].isMatched = true;
@@ -80,12 +120,12 @@ export default function MemoryGame({ onBack }: MemoryGameProps) {
         const newMatches = matches + 1;
         setMatches(newMatches);
 
-        if (newMatches === pairs.length / 2) {
+        if (newMatches === totalPairs) {
           handleWin();
         }
       }, 500);
     } else {
-      // No match
+      // No match - إرجاع البطاقات لوضعها الأصلي
       setTimeout(() => {
         const newCards = [...cards];
         newCards[firstCardIndex!].isFlipped = false;
@@ -107,56 +147,64 @@ export default function MemoryGame({ onBack }: MemoryGameProps) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-md flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-card rounded-3xl shadow-2xl overflow-hidden border border-border">
+    <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-md flex flex-col items-center justify-center p-2 sm:p-4">
+      <div className="w-full max-w-sm sm:max-w-2xl bg-card rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-border">
         {/* Header */}
-        <div className="bg-accent/10 p-4 flex items-center justify-between border-b border-border">
-          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-accent" /> لعبة الذاكرة: السورة ومعناها
+        <div className="bg-accent/10 p-2 sm:p-4 flex items-center justify-between border-b border-border">
+          <h2 className="text-sm sm:text-xl font-bold text-foreground flex items-center gap-1 sm:gap-2">
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
+            <span className="hidden sm:inline">لعبة الذاكرة: السورة ومعناها</span>
+            <span className="sm:hidden">الذاكرة</span>
           </h2>
-          <button 
-            onClick={onBack}
-            className="p-2 rounded-full bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors"
-          >
-            <ArrowRight className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button 
+              onClick={onBack}
+              className="p-1.5 sm:p-2 rounded-full bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors"
+            >
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Game Area */}
-        <div className="p-6">
+        <div className="p-3 sm:p-6">
           {won ? (
-            <div className="text-center py-12 space-y-6">
-              <Trophy className="w-24 h-24 text-accent mx-auto animate-bounce" />
-              <h3 className="text-3xl font-extrabold text-foreground">أحسنت بطل القرآن!</h3>
-              <p className="text-muted-foreground text-lg">لقد طابقت كل السور بمعانيها بنجاح 👏</p>
+            <div className="text-center py-6 sm:py-12 space-y-4 sm:space-y-6">
+              <Trophy className="w-16 h-16 sm:w-24 sm:h-24 text-accent mx-auto animate-bounce" />
+              <h3 className="text-xl sm:text-3xl font-extrabold text-foreground">أحسنت بطل القرآن!</h3>
+              <p className="text-muted-foreground text-sm sm:text-lg">لقد طابقت كل السور بمعانيها بنجاح 👏</p>
+              <p className="text-accent font-bold text-base sm:text-lg">+10 نجوم ⭐</p>
               <button 
                 onClick={initGame}
-                className="mt-6 px-8 py-3 bg-accent text-accent-foreground font-bold rounded-xl shadow-lg hover:shadow-xl hover:bg-accent/90 transition-all active:scale-95"
+                className="mt-4 sm:mt-6 px-6 sm:px-8 py-2 sm:py-3 bg-accent text-accent-foreground font-bold rounded-xl shadow-lg hover:shadow-xl hover:bg-accent/90 transition-all active:scale-95 text-sm sm:text-base"
               >
                 العب مرة أخرى
               </button>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-4 gap-3">
+              {/* شبكة البطاقات المتجاوبة */}
+              <div className="grid grid-cols-4 gap-1.5 sm:gap-3">
                 {cards.map((card, index) => (
                   <button
                     key={index}
                     onClick={() => handleCardClick(index)}
-                    className={`h-24 sm:h-32 rounded-xl text-lg sm:text-xl font-bold transition-all duration-300 transform perspective-1000 ${
+                    disabled={lockBoard || card.isMatched}
+                    className={`aspect-square min-h-[60px] sm:min-h-[100px] rounded-lg sm:rounded-xl text-xs sm:text-base font-bold transition-all duration-300 ${
                       card.isFlipped || card.isMatched 
-                        ? 'bg-card border-2 border-accent text-foreground rotate-y-180' 
+                        ? 'bg-card border-2 border-accent text-foreground' 
                         : 'bg-accent text-transparent hover:bg-accent/90 shadow-md'
-                    } ${card.isMatched ? 'bg-success/20 border-success text-success scale-95 opacity-80' : ''}`}
+                    } ${card.isMatched ? 'bg-success/20 border-success text-success scale-95 opacity-80' : ''} ${lockBoard ? 'cursor-not-allowed' : 'active:scale-95'}`}
                   >
-                    <div className={`w-full h-full flex items-center justify-center p-2 text-center transition-opacity duration-300 ${card.isFlipped || card.isMatched ? 'opacity-100' : 'opacity-0'}`}>
-                      {card.text}
+                    <div className={`w-full h-full flex flex-col items-center justify-center p-1 sm:p-2 text-center break-words leading-tight transition-opacity duration-300 ${card.isFlipped || card.isMatched ? 'opacity-100' : 'opacity-0'}`}>
+                      <span className="line-clamp-2 sm:line-clamp-3">{card.text}</span>
                     </div>
                   </button>
                 ))}
               </div>
-              <div className="mt-8 flex justify-between items-center text-sm font-bold text-muted-foreground">
-                <span>المطابقات: {matches} / {pairs.length / 2}</span>
+              {/* معلومات اللعبة */}
+              <div className="mt-3 sm:mt-6 flex justify-between items-center text-xs sm:text-sm font-bold text-muted-foreground">
+                <span>المطابقات: {matches} / {totalPairs}</span>
                 <button onClick={initGame} className="text-accent hover:underline">إعادة الترتيب</button>
               </div>
             </>

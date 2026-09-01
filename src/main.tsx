@@ -4,6 +4,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { SupportErrorBoundary } from "./components/SupportErrorBoundary";
 import { registerSW } from "virtual:pwa-register";
+import { initCloudAudioAvailability } from "./data/audioUrls";
 
 // PWA: Guard against iframe/preview contexts
 const isInIframe = (() => {
@@ -29,10 +30,20 @@ if ('serviceWorker' in navigator && !isPreviewHost && !isInIframe) {
   registerSW({ immediate: true });
 }
 
-createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <SupportErrorBoundary>
-      <App />
-    </SupportErrorBoundary>
-  </React.StrictMode>
-);
+async function bootstrap() {
+  // جلب قائمة التلاوات المتوفرة من السيرفر قبل فتح التطبيق (بحد أقصى 2 ثانية)
+  await Promise.race([
+    initCloudAudioAvailability(),
+    new Promise(r => setTimeout(r, 2000))
+  ]);
+
+  createRoot(document.getElementById("root")!).render(
+    <React.StrictMode>
+      <SupportErrorBoundary>
+        <App />
+      </SupportErrorBoundary>
+    </React.StrictMode>
+  );
+}
+
+bootstrap();

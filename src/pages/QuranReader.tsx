@@ -159,9 +159,6 @@ function _UnusedQuranReader() {
           // نقاط القراءة (المال): نجومتان لكل دقيقة — قليلة لكنها أكثر من نقاط الألعاب
           const stars = Math.max(1, Math.round(mins * 2));
           addCoins(stars);
-          // التلعيب: XP خبرة (١٠ لكل دقيقة) + مجوهرات نادرة (١ لكل ٥ دقائق)
-          addXp(Math.round(mins * 10));
-          addGems(Math.floor(mins / 5));
           if (justUnlocked) toast({ title: "أحسنت! فتحت ألعاب ركن الأطفال", description: "اذهب إلى ركن الأطفال" });
           else toast({ title: `+${stars} ⭐ من القراءة` });
         }

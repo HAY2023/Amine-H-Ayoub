@@ -339,6 +339,182 @@
   .confetti-piece { animation: none !important; display: none !important; }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════
+   تصميم متجاوب للهاتف والشاشات الصغيرة
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    overflow-x: hidden;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+  }
+
+  /* إصلاح ارتفاع الشاشة على iOS */
+  .h-screen-safe {
+    height: 100vh;
+    height: 100dvh;
+    height: -webkit-fill-available;
+  }
+
+  /* إخفاء شريط التمرير على الهاتف */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  /* أحجام متجاوبة للنص */
+  .text-responsive {
+    font-size: clamp(0.875rem, 2.5vw, 1rem);
+  }
+  
+  .text-responsive-lg {
+    font-size: clamp(1rem, 3vw, 1.25rem);
+  }
+  
+  .text-responsive-xl {
+    font-size: clamp(1.25rem, 4vw, 1.5rem);
+  }
+  
+  .text-responsive-2xl {
+    font-size: clamp(1.5rem, 5vw, 2rem);
+  }
+
+  /* تباعد متجاوب */
+  .p-responsive {
+    padding: clamp(0.5rem, 2vw, 1rem);
+  }
+  
+  .p-responsive-lg {
+    padding: clamp(1rem, 3vw, 1.5rem);
+  }
+  
+  .gap-responsive {
+    gap: clamp(0.5rem, 2vw, 1rem);
+  }
+
+  /* حاوية متجاوبة */
+  .container-mobile {
+    width: 100%;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: clamp(0.5rem, 3vw, 1rem);
+    padding-right: clamp(0.5rem, 3vw, 1rem);
+  }
+}
+
+/* ── شاشات صغيرة جداً (أقل من 360px) ── */
+@media (max-width: 360px) {
+  .game-card {
+    padding: 0.5rem !important;
+  }
+  
+  .game-title {
+    font-size: 0.875rem !important;
+  }
+  
+  .game-btn {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.75rem !important;
+  }
+}
+
+/* ── شاشات الهاتف (360px - 640px) ── */
+@media (max-width: 640px) {
+  .page-nour {
+    padding: 0 !important;
+  }
+  
+  .card-nour {
+    border-radius: 0.75rem !important;
+    margin: 0.5rem !important;
+  }
+  
+  .game-container {
+    padding: 0.5rem !important;
+    min-height: auto !important;
+  }
+  
+  .game-content {
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+  }
+  
+  .game-option {
+    padding: 0.75rem !important;
+    font-size: 0.875rem !important;
+    min-height: 3.5rem !important;
+  }
+  
+  .game-btn {
+    padding: 0.75rem 1rem !important;
+    font-size: 0.875rem !important;
+  }
+  
+  .game-header {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .game-stats {
+    font-size: 0.75rem !important;
+  }
+}
+
+/* ── شاشات التابلت (640px - 1024px) ── */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .game-container {
+    max-width: 90% !important;
+    margin: 0 auto !important;
+  }
+}
+
+/* ── إصلاحات Safari iOS ── */
+@supports (-webkit-touch-callout: none) {
+  .h-screen-safe {
+    height: -webkit-fill-available;
+  }
+  
+  .min-h-screen-safe {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* ── تحسينات اللمس للهاتف ── */
+@media (hover: none) and (pointer: coarse) {
+  button, 
+  [role="button"],
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .game-option:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease;
+  }
+}
+
+/* ── وضع ملء الشاشة ── */
+.fullscreen-game {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--background);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 /* ===== تظليل الآيات
 
 /* ===== تظليل الآيات (يعتمده القارئ) — يبقى كما هو ===== */

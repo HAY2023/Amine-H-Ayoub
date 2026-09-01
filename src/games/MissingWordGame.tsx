@@ -46,55 +46,84 @@ export default function MissingWordGame({ def, onBack }: MissingWordGameProps) {
     const maxS = def.params?.maxSurah || 1;
     
     // Filter surahs based on age/params
-    const allowedSurahs = data.filter(s => s.app <= minS && s.app >= maxS);
-    if (allowedSurahs.length === 0) allowedSurahs.push(data[0]);
+    let allowedSurahs = data.filter(s => s.app <= minS && s.app >= maxS);
+    if (allowedSurahs.length === 0) allowedSurahs = [...data];
+
+    // تجميع كل الآيات الصالحة للاختبار من جميع السور المتاحة
+    interface AyahCandidate {
+      surahName: string;
+      ayahText: string;
+      ayahNum: number;
+    }
+
+    const allCandidates: AyahCandidate[] = [];
+    for (const s of allowedSurahs) {
+      if (!s.ayahs) continue;
+      for (const a of s.ayahs) {
+        const rawWords = a.text.trim().split(/\s+/);
+        if (rawWords.length >= 3) {
+          allCandidates.push({ surahName: s.name, ayahText: a.text.trim(), ayahNum: a.n });
+        }
+      }
+    }
+
+    // خلط كل الآيات عشوائياً لضمان تنوع تام وعدم تكرار نفس الآية
+    const shuffledCandidates = [...allCandidates].sort(() => 0.5 - Math.random());
+    const selectedAyahs = shuffledCandidates.slice(0, 15);
+
+    // جمع بنك كلمات من المصحف كخيارات مشتتة ذكية
+    const allWordsBank: string[] = [];
+    for (const s of data) {
+      for (const a of s.ayahs || []) {
+        for (const w of a.text.split(/\s+/)) {
+          const clean = w.trim();
+          if (clean.length >= 3) allWordsBank.push(clean);
+        }
+      }
+    }
 
     const generated: Question[] = [];
-    
-    // Generate 10 questions to have enough pool
-    for (let i = 0; i < 10; i++) {
-      const s = allowedSurahs[Math.floor(Math.random() * allowedSurahs.length)];
-      if (!s.ayahs || s.ayahs.length === 0) continue;
-      
-      const a = s.ayahs[Math.floor(Math.random() * s.ayahs.length)];
-      const words = a.text.split(" ").filter(w => w.trim().length > 2); // Exclude very short words
-      
-      if (words.length < 2) continue; // Ayah too short
 
-      // Pick a random word to hide
-      const hiddenIndex = Math.floor(Math.random() * words.length);
-      const missingWord = words[hiddenIndex];
-      
-      // Generate distractors
+    for (const candidate of selectedAyahs) {
+      const words = candidate.ayahText.split(/\s+/);
+      // اختيار كلمة مناسبة (ليست قصيرة جداً)
+      const validIndices = words
+        .map((w, idx) => ({ w, idx }))
+        .filter(item => item.w.length >= 3);
+
+      if (validIndices.length === 0) continue;
+
+      const chosen = validIndices[Math.floor(Math.random() * validIndices.length)];
+      const missingWord = chosen.w;
+
+      // تكوين الآية مع وضع الفراغ بدقة في مكان الكلمة المحددة
+      const wordsWithBlank = [...words];
+      wordsWithBlank[chosen.idx] = " (........) ";
+      const formattedAyahText = wordsWithBlank.join(" ");
+
+      // إنشاء الخيارات المشتتة
       const options = new Set<string>();
       options.add(missingWord);
-      
-      // Add random words from the same surah or corpus
+
       let attempts = 0;
-      while (options.size < 4 && attempts < 50) {
-        const rs = allowedSurahs[Math.floor(Math.random() * allowedSurahs.length)];
-        const ra = rs.ayahs[Math.floor(Math.random() * rs.ayahs.length)];
-        const rw = ra.text.split(" ").filter(w => w.trim().length > 2);
-        if (rw.length > 0) {
-          const randWord = rw[Math.floor(Math.random() * rw.length)];
-          // Only add if it's visually different to avoid confusion with same words different diacritics
-          if (normalizeArabic(randWord) !== normalizeArabic(missingWord)) {
-            options.add(randWord);
-          }
+      while (options.size < 4 && attempts < 100) {
+        const randWord = allWordsBank[Math.floor(Math.random() * allWordsBank.length)];
+        if (randWord && normalizeArabic(randWord) !== normalizeArabic(missingWord)) {
+          options.add(randWord);
         }
         attempts++;
       }
-      
-      const optionsArray = Array.from(options).sort(() => Math.random() - 0.5);
-      
+
+      const optionsArray = Array.from(options).sort(() => 0.5 - Math.random());
+
       generated.push({
-        surahName: s.name,
-        ayahText: a.text.replace(missingWord, " (........) "),
+        surahName: candidate.surahName,
+        ayahText: formattedAyahText,
         missingWord,
         options: optionsArray
       });
     }
-    
+
     setQuestions(generated);
     setCurrentIndex(0);
     setScore(0);
@@ -200,16 +229,16 @@ export default function MissingWordGame({ def, onBack }: MissingWordGameProps) {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                 {currentQ.options.map((opt, i) => {
-                  let stateClass = "bg-secondary text-foreground hover:bg-secondary/80 border-transparent";
+                  let stateClass = "bg-card text-foreground hover:bg-accent/10 hover:border-accent border-border shadow-md";
                   if (selectedAnswer === opt) {
                     stateClass = isCorrect 
-                      ? "bg-success/20 border-success text-success scale-105" 
-                      : "bg-destructive/20 border-destructive text-destructive scale-95";
+                      ? "bg-success/20 border-success text-success scale-105 shadow-lg" 
+                      : "bg-destructive/20 border-destructive text-destructive scale-95 shadow-lg";
                   } else if (selectedAnswer !== null && opt === currentQ.missingWord) {
                     // Show correct answer if they got it wrong
-                    stateClass = "bg-success/20 border-success text-success opacity-70";
+                    stateClass = "bg-success/20 border-success text-success opacity-80 shadow-md";
                   }
 
                   return (
@@ -217,7 +246,7 @@ export default function MissingWordGame({ def, onBack }: MissingWordGameProps) {
                       key={i}
                       onClick={() => handleAnswer(opt)}
                       disabled={selectedAnswer !== null}
-                      className={`p-4 rounded-2xl text-xl font-quran font-bold border-2 transition-all duration-300 ${stateClass}`}
+                      className={`p-6 sm:p-8 rounded-2xl text-2xl sm:text-3xl font-quran font-bold border-2 transition-all duration-300 min-h-[80px] sm:min-h-[100px] flex items-center justify-center ${stateClass}`}
                     >
                       {opt}
                     </button>

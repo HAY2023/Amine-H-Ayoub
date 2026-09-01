@@ -271,11 +271,8 @@ export default function CustomAudioManager() {
           onClick={async () => {
             if (window.confirm("هل أنت متأكد من إعادة ترتيب جميع السور للوضع الافتراضي؟")) {
               const newItems = [...items].sort((a, b) => {
-                // ترتيب مخصص: الفاتحة (1) أولاً، ثم ترتيب تصاعدي للبقية (النبأ 78، النازعات 79...)
                 const idA = typeof a.originalId === 'number' ? a.originalId : 999;
                 const idB = typeof b.originalId === 'number' ? b.originalId : 999;
-                if (idA === 1) return -1;
-                if (idB === 1) return 1;
                 return idA - idB;
               });
               newItems.forEach((item, idx) => item.order = idx);

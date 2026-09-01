@@ -183,20 +183,25 @@ export function calculateStreak(): {
     if (tempStreak > longestStreak) longestStreak = tempStreak;
   });
 
-  // حساب أيام الأسبوع الحالي (7 أيام)
+  // حساب أيام الأسبوع الحالي بحيث يكون اليوم هو آخر يوم على اليسار
   const now = new Date();
   const thisWeekDays: boolean[] = [];
+  const dayNamesArr: string[] = [];
+  const arabicDays = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(now.getDate() - i);
     const dStr = d.toISOString().split("T")[0];
     thisWeekDays.push(activeDates.has(dStr));
+    dayNamesArr.push(arabicDays[d.getDay()]);
   }
 
   return {
     currentStreak,
     longestStreak,
     thisWeekDays,
+    dayNamesArr,
   };
 }
 

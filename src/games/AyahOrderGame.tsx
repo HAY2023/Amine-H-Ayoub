@@ -47,30 +47,33 @@ export default function AyahOrderGame({ def, onBack }: AyahOrderGameProps) {
     const minS = def.params?.minSurah || 114;
     const maxS = def.params?.maxSurah || 1;
     
-    // Filter surahs based on age/params (only surahs that have at least 3 ayahs)
-    const allowedSurahs = data.filter(s => s.app <= minS && s.app >= maxS && s.ayahs.length >= 3);
-    if (allowedSurahs.length === 0) allowedSurahs.push(data[0]);
+    // تصفية السور المناسبة والتي تحتوي على 3 آيات على الأقل
+    let allowedSurahs = data.filter(s => s.app <= minS && s.app >= maxS && s.ayahs && s.ayahs.length >= 3);
+    if (allowedSurahs.length === 0) allowedSurahs = data.filter(s => s.ayahs && s.ayahs.length >= 3);
+    if (allowedSurahs.length === 0) allowedSurahs = [data[0]];
+
+    // خلط السور لاختيار سور مختلفة تماماً لكل جولة
+    const shuffledSurahs = [...allowedSurahs].sort(() => 0.5 - Math.random());
+    const selectedSurahs = shuffledSurahs.slice(0, 5);
 
     const generated: GameRound[] = [];
-    
-    for (let i = 0; i < 5; i++) {
-      const s = allowedSurahs[Math.floor(Math.random() * allowedSurahs.length)];
-      
-      // Pick 3 or 4 sequential ayahs depending on age/difficulty (def.ageMin)
-      const numAyahs = def.ageMin >= 8 ? 4 : 3;
-      
+    const numAyahs = def.ageMin >= 8 ? 4 : 3;
+
+    for (const s of selectedSurahs) {
       const maxStartIndex = s.ayahs.length - numAyahs;
-      const startIndex = Math.floor(Math.random() * (maxStartIndex >= 0 ? maxStartIndex + 1 : 1));
+      const startIndex = maxStartIndex > 0 ? Math.floor(Math.random() * (maxStartIndex + 1)) : 0;
       
       const sequence = s.ayahs.slice(startIndex, startIndex + numAyahs).map(a => ({
         ...a,
         id: `s${s.app}-a${a.n}`
       }));
       
-      // Shuffle them (ensure they are not accidentally in perfect order)
-      let shuffled = [...sequence].sort(() => Math.random() - 0.5);
-      while (shuffled.every((a, idx) => a.id === sequence[idx].id) && numAyahs > 1) {
-        shuffled = [...sequence].sort(() => Math.random() - 0.5);
+      // خلط الآيات والتأكد من أنها ليست مرتبة بالصدفة
+      let shuffled = [...sequence].sort(() => 0.5 - Math.random());
+      let shuffleTries = 0;
+      while (shuffled.every((a, idx) => a.id === sequence[idx].id) && sequence.length > 1 && shuffleTries < 10) {
+        shuffled = [...sequence].sort(() => 0.5 - Math.random());
+        shuffleTries++;
       }
       
       generated.push({

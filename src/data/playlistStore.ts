@@ -86,31 +86,40 @@ export async function syncPlaylist(builtinSurahs: SyncSurah[], customAudios: Syn
   const existingConfig = await getPlaylistConfig();
   const configMap = new Map(existingConfig.map(c => [c.id, c]));
   
-  let maxOrder = existingConfig.length > 0 ? Math.max(...existingConfig.map(c => c.order)) : -1;
+  // Sort built-in surahs in standard Quran order: 1 (Al-Fatihah), 2 (Al-Baqarah) to 114 (An-Nas)
+  const sortedBuiltins = [...builtinSurahs].sort((a, b) => a.number - b.number);
+
   const newConfig: PlaylistConfigItem[] = [];
 
-  // Add/Update custom audios
+  // Add custom audios
   for (const ca of customAudios) {
     const id = `custom-${ca.id}`;
-    if (configMap.has(id)) {
-      newConfig.push(configMap.get(id)!);
-      configMap.delete(id);
-    } else {
-      maxOrder++;
-      newConfig.push({ id, type: 'custom', originalId: ca.id, order: maxOrder });
-    }
+    const existing = configMap.get(id);
+    newConfig.push({
+      id,
+      type: 'custom',
+      originalId: ca.id,
+      customName: existing?.customName,
+      isHidden: existing?.isHidden,
+      order: existing?.order ?? 1000,
+    });
+    configMap.delete(id);
   }
 
-  // Add/Update built-in surahs
-  for (const s of builtinSurahs) {
+  // Add built-in surahs in natural Quranic order
+  for (let i = 0; i < sortedBuiltins.length; i++) {
+    const s = sortedBuiltins[i];
     const id = `builtin-${s.number}`;
-    if (configMap.has(id)) {
-      newConfig.push(configMap.get(id)!);
-      configMap.delete(id);
-    } else {
-      maxOrder++;
-      newConfig.push({ id, type: 'builtin', originalId: s.number, order: maxOrder });
-    }
+    const existing = configMap.get(id);
+    newConfig.push({
+      id,
+      type: 'builtin',
+      originalId: s.number,
+      customName: existing?.customName,
+      isHidden: existing?.isHidden,
+      order: i,
+    });
+    configMap.delete(id);
   }
 
   // Sort and normalize orders

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Plus, Settings, Sparkles } from "lucide-react";
-import { getProfiles, getAppMode, setAppMode, setActiveProfile, kidsRouteBlocked, type KidsProfile } from "../data/kidsProfile";
+import { getProfiles, getAppMode, setAppMode, setActiveProfile, kidsRouteBlocked, getProgress, type KidsProfile } from "../data/kidsProfile";
 import { hasKidsPin, setKidsLocked } from "../data/kidsLock";
 import PinModal from "./PinModal";
 import Avatar from "./Avatar";
@@ -30,7 +30,16 @@ export default function ProfilePicker({ onPicked }: { onPicked?: () => void }) {
     setAppMode("kids");
     setKidsLocked(true);
     close();
-    navigate("/games");
+
+    const profile = profiles.find(p => p.id === id);
+    const progress = getProgress();
+    
+    // إذا كان هناك وقت دراسة مطلوب ولم يُنجز بعد، وجّه الطفل للقرآن، وإلا للألعاب
+    if (profile && profile.goalMinutes > 0 && !progress.unlocked) {
+      navigate("/audio");
+    } else {
+      navigate("/games");
+    }
   };
   const asParent = () => {
     setAppMode("parent");

@@ -5,16 +5,32 @@ const BASE = "https://huggingface.co/datasets/hammoualiyoucef20/quran-audio/reso
 
 export const getSurahAudioUrl = (number: number): string => `${BASE}/${number}.mp3`;
 
-// قائمة السور المتوفرة حالياً في التخزين السحابي
-export const CLOUD_AVAILABLE_SURAHS = new Set([
-  1, 114, 113, 112, 111, 6, 7, 8, 9, 10,
-  11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-  21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-  31, 32, 33, 34, 35, 36, 37, 38
-]);
+// قائمة السور المتوفرة حالياً في التخزين السحابي (يتم تعبئتها ديناميكياً عند بدء التطبيق)
+export const CLOUD_AVAILABLE_SURAHS = new Set<number>();
 
-export const hasCloudAudio = (number: number): boolean => CLOUD_AVAILABLE_SURAHS.has(number);
+export const hasCloudAudio = (number: number): boolean => 
+  CLOUD_AVAILABLE_SURAHS.has(number) || (number >= 1 && number <= 114);
 
+/**
+ * جلب قائمة السور المتوفرة من السيرفر السحابي (Hugging Face)
+ * هذا يجعل التطبيق يكتشف السور الجديدة تلقائياً بدون الحاجة لتحديث الكود.
+ */
+export async function initCloudAudioAvailability() {
+  try {
+    const res = await fetch(`https://huggingface.co/api/datasets/hammoualiyoucef20/quran-audio/tree/main?t=${Date.now()}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    data.forEach((item: any) => {
+      if (item.type === 'file' && item.path.endsWith('.mp3')) {
+        const num = parseInt(item.path.replace('.mp3', ''), 10);
+        if (!isNaN(num)) CLOUD_AVAILABLE_SURAHS.add(num);
+      }
+    });
+    console.log(`[Cloud Audio] Loaded ${CLOUD_AVAILABLE_SURAHS.size} available surahs.`);
+  } catch (err) {
+    console.error("Failed to fetch cloud audio tree:", err);
+  }
+}
 /**
  * Robust fetch with exponential backoff retry for audio files
  */

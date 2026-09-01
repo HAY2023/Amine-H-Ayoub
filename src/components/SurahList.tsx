@@ -41,6 +41,25 @@ const SurahList = ({
               <h3 className="text-xl font-bold text-foreground font-amiri">
                 {surah.revelationType === "custom" ? surah.name : `سورة ${surah.name}`}
               </h3>
+              {surah.ayahCount ? (
+                <p className="text-xs text-muted-foreground mt-0.5 font-sans flex items-center gap-1.5">
+                  <span>{surah.ayahCount} آيات</span>
+                  {surah.type && (
+                    <>
+                      <span className="opacity-40">•</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          surah.type === "مكية"
+                            ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                            : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                        }`}
+                      >
+                        {surah.type}
+                      </span>
+                    </>
+                  )}
+                </p>
+              ) : null}
             </div>
 
             {/* Wave animation for active */}

@@ -43,6 +43,7 @@ export default function BadgesModal({ onClose }: Props) {
     currentStreak: 0,
     longestStreak: 0,
     thisWeekDays: [false, false, false, false, false, false, false],
+    dayNamesArr: ["", "", "", "", "", "", ""],
   });
 
   const profile = getProfile();
@@ -63,8 +64,6 @@ export default function BadgesModal({ onClose }: Props) {
       window.removeEventListener("mushaf:coins", handleUnlock);
     };
   }, []);
-
-  const dayNames = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
 
   const unlockedCount = badges.filter((b) => b.unlocked).length;
 
@@ -104,53 +103,75 @@ export default function BadgesModal({ onClose }: Props) {
           </div>
         </div>
 
-        {/* كرت سلسلة الالتزام (Streak Banner) */}
-        <div className="rounded-2xl p-3.5 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 border border-amber-500/30 space-y-2.5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="flex items-center justify-center animate-bounce">
+        {/* كرت سلسلة الالتزام (Streak Banner) - تم تطويره ليكون مليئاً بالحماس */}
+        <div className="shrink-0 rounded-3xl p-5 bg-gradient-to-br from-stone-900 via-stone-950 to-black border border-amber-500/20 space-y-5 shadow-[0_0_25px_rgba(245,158,11,0.15)] relative mt-2 overflow-hidden">
+          {/* تأثيرات إضاءة خلفية للنار */}
+          <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 blur-[40px] rounded-full -mr-10 -mt-10 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-600/10 blur-[30px] rounded-full -ml-10 -mb-10 pointer-events-none"></div>
+
+          <div className="flex items-center justify-between relative z-10">
+            <div className="flex items-center gap-3">
+              <span className={`flex items-center justify-center ${streakInfo.currentStreak > 0 ? "animate-pulse" : "opacity-50"}`}>
                 <Flame 
-                  className={`transition-all duration-300 ${
-                    streakInfo.currentStreak >= 7 ? "w-10 h-10 text-red-500 fill-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" :
-                    streakInfo.currentStreak >= 5 ? "w-8 h-8 text-orange-500 fill-orange-500 drop-shadow-[0_0_6px_rgba(249,115,22,0.7)]" :
-                    streakInfo.currentStreak >= 3 ? "w-7 h-7 text-amber-500 fill-amber-500 drop-shadow-[0_0_4px_rgba(245,158,11,0.6)]" :
-                    streakInfo.currentStreak >= 1 ? "w-6 h-6 text-yellow-500 fill-yellow-500 drop-shadow-[0_0_2px_rgba(234,179,8,0.5)]" :
-                    "w-5 h-5 text-muted-foreground"
+                  className={`transition-all duration-500 ease-out ${
+                    streakInfo.currentStreak >= 7 ? "w-12 h-12 text-red-500 fill-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.9)] scale-110" :
+                    streakInfo.currentStreak >= 5 ? "w-10 h-10 text-orange-500 fill-orange-500 drop-shadow-[0_0_15px_rgba(249,115,22,0.8)] scale-105" :
+                    streakInfo.currentStreak >= 3 ? "w-9 h-9 text-amber-500 fill-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.7)]" :
+                    streakInfo.currentStreak >= 1 ? "w-8 h-8 text-yellow-500 fill-yellow-500 drop-shadow-[0_0_6px_rgba(234,179,8,0.6)]" :
+                    "w-8 h-8 text-zinc-700 fill-zinc-800"
                   }`} 
                 />
               </span>
               <div>
-                <span className="block font-extrabold text-sm text-foreground">
-                  سلسلة الالتزام: {streakInfo.currentStreak} {streakInfo.currentStreak === 1 ? "يوم" : "أيام"} متتالية! 🔥
+                <span className="block font-black text-lg text-white tracking-wide drop-shadow-md">
+                  سلسلة الحماس: <span className="text-amber-400">{streakInfo.currentStreak} {streakInfo.currentStreak === 1 ? "يوم" : "أيام"}</span> 🔥
                 </span>
-                <span className="block text-[11px] text-muted-foreground">
+                <span className="block text-[11px] text-amber-200/60 font-medium mt-0.5">
                   أطول سلسلة حققتها: {streakInfo.longestStreak} يوماً
                 </span>
               </div>
             </div>
-            <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+            <span className="text-xs font-black text-amber-950 bg-gradient-to-r from-amber-400 to-orange-500 px-3 py-1.5 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.4)] animate-pulse shrink-0">
               واظب يومياً
             </span>
           </div>
 
-          {/* دوائر أيام الأسبوع */}
-          <div className="flex items-center justify-between gap-1 pt-1">
-            {streakInfo.thisWeekDays.map((active, idx) => (
-              <div key={idx} className="flex flex-col items-center gap-1 flex-1">
-                <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                    active
-                      ? "bg-amber-500 text-white ring-2 ring-amber-400 shadow-md scale-105"
-                      : "bg-muted text-muted-foreground border border-border"
-                  }`}
-                >
-                  {active ? "✓" : "○"}
+          {/* دوائر أيام الأسبوع (شكل مسار متصل) */}
+          <div className="pt-2 pb-2 relative z-10 w-full">
+            {/* خط المسار الخلفي الثابت */}
+            <div className="absolute top-[22px] left-[10%] right-[10%] h-1 bg-zinc-800/80 rounded-full shadow-inner"></div>
+            
+            <div className="flex items-center justify-between gap-1 relative">
+              {[6, 0, 1, 2, 3, 4, 5].map((idx) => {
+                const active = streakInfo.thisWeekDays[idx];
+                return (
+                <div key={idx} className="flex flex-col items-center gap-2 flex-1 relative group">
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 z-10 ${
+                      active
+                        ? "bg-gradient-to-br from-amber-400 to-orange-600 ring-4 ring-stone-900 shadow-[0_0_15px_rgba(245,158,11,0.7)] scale-110"
+                        : "bg-zinc-900 ring-2 ring-zinc-800 shadow-inner group-hover:bg-zinc-800"
+                    }`}
+                  >
+                    {active ? (
+                      <Flame className="w-5 h-5 fill-white text-white drop-shadow-md" />
+                    ) : (
+                      <div className="w-2 h-2 rounded-full bg-zinc-700/50"></div>
+                    )}
+                  </div>
+                  <span className={`text-[11px] font-bold truncate w-full text-center transition-colors ${
+                    idx === 6 
+                      ? "text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)] scale-110" 
+                      : active 
+                        ? "text-amber-200/90" 
+                        : "text-zinc-500"
+                  }`}>
+                    {idx === 6 ? "اليوم" : (streakInfo.dayNamesArr[idx] || "")}
+                  </span>
                 </div>
-                <span className="text-[10px] text-muted-foreground font-medium truncate w-full text-center">
-                  {dayNames[idx]}
-                </span>
-              </div>
-            ))}
+                );
+              })}
+            </div>
           </div>
         </div>
 

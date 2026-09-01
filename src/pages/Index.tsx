@@ -86,9 +86,6 @@ const Index = () => {
           // نقاط القراءة (المال): نجومتان لكل دقيقة — قليلة لكنها أكثر من نقاط الألعاب
           const stars = Math.max(1, Math.round(mins * 2));
           addCoins(stars);
-          // التلعيب: XP خبرة (١٠ لكل دقيقة) + مجوهرات نادرة (١ لكل ٥ دقائق — إنهاء سورة ≈ ٣)
-          addXp(Math.round(mins * 10));
-          addGems(Math.floor(mins / 5));
           checkAndUnlockBadges();
           if (justUnlocked) {
             toast({ title: "🎉 أحسنت! اكتمل وقت الاستماع وفتحت الألعاب" });
@@ -143,7 +140,7 @@ const Index = () => {
   }, []);
 
   // Unified Playlist State
-  const [combinedSurahs, setCombinedSurahs] = useState<SurahItem[]>([]);
+  const [combinedSurahs, setCombinedSurahs] = useState<SurahItem[]>(() => surahs);
 
   useEffect(() => {
     if (loading || surahs.length === 0) return;
@@ -223,10 +220,10 @@ const Index = () => {
   }, [surahs, currentSurah]);
 
   const displaySurahs = useMemo(() => {
-    const base = isShuffled ? shuffledSurahs : combinedSurahs;
+    const base = isShuffled ? shuffledSurahs : (combinedSurahs.length > 0 ? combinedSurahs : surahs);
     if (!search.trim()) return base;
     return base.filter((s) => s.name.includes(search.trim()));
-  }, [combinedSurahs, shuffledSurahs, isShuffled, search]);
+  }, [combinedSurahs, shuffledSurahs, isShuffled, search, surahs]);
 
   const handleShuffle = useCallback(() => {
     if (isShuffled) {

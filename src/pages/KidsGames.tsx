@@ -6,7 +6,6 @@ import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
 import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked, setCurrentSurah, addPlayMinutes, setAppMode, ownItem, unlockItem } from "../data/kidsProfile";
 import { getGameCatalog, type GameDef, type GameEngine } from "../data/gameCatalog";
 
-import { fetchRemoteGames, precacheRemoteGames } from "../data/remoteGames";
 import { ensureCorpus, type SurahText } from "../data/quranText";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
 import { shouldHideMushaf } from "../utils/tauriUtils";
@@ -27,20 +26,26 @@ async function enterKioskMode() {
 async function exitKioskMode() {
   // تم إيقاف تكبير الشاشة التلقائي بناءً على طلب المستخدم
 }
+
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
 const shuffle = <T,>(a: T[]): T[] => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
 const SURAHS = getAllSurahs();
 
-/** بِركة السور لِلعبة حسب معاملاتها (نطاق السورة/عدد الآيات) — يتيح ألعاباً جديدة بمحتوى مختلف. */
-const poolFor = (def: GameDef, minSurahOverride: number = 38) => {
-  const { maxSurah, minAyah, maxAyah } = def.params || {};
-  const maxS = def.params?.minSurah || minSurahOverride;
-  const out = SURAHS.filter(s =>
-    s.number !== 1 && s.number <= maxS &&
-    (maxSurah == null || s.number >= maxSurah) &&
+const poolFor = (def: GameDef, minSurahOverride: number = 78) => {
+  const { minAyah, maxAyah } = def.params || {};
+  
+  // نعتمد حصرياً على السورة التي اختارها المستخدم (minSurahOverride)
+  const maxIndex = SURAHS.findIndex(s => s.number === minSurahOverride);
+  // إذا لم نجدها، نعتمد سورة النبأ (رقم 78) كافتراضي
+  const safeMaxIndex = maxIndex >= 0 ? maxIndex : SURAHS.findIndex(s => s.number === 78);
+
+  const out = SURAHS.filter((s, idx) =>
+    idx > 0 && idx <= safeMaxIndex &&
     (minAyah == null || s.ayahCount >= minAyah) &&
-    (maxAyah == null || s.ayahCount <= maxAyah));
-  return out.length >= 4 ? out : SURAHS.filter(s => s.number !== 1 && s.number <= maxS);
+    (maxAyah == null || s.ayahCount <= maxAyah)
+  );
+
+  return out.length >= 4 ? out : SURAHS.filter((s, idx) => idx > 0 && idx <= safeMaxIndex);
 };
 
 /* ───────────────── نواة الحماس ───────────────── */
@@ -267,16 +272,16 @@ function WhichEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   if (finished) return <ResultCard g={g} onReplay={replay} />;
   const maxCount = Math.max(...two.map(s => s.ayahCount));
   return (
-    <div className="space-y-4 text-center">
+    <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
-      <p className="text-muted-foreground text-sm">أيّ سورة عدد آياتها أكثر؟</p>
+      <p className="text-muted-foreground text-base sm:text-lg font-medium">أيّ سورة عدد آياتها أكثر؟</p>
       <TimerBar left={left} seconds={8} />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {two.map(s => (
           <button key={s.number} onClick={() => choose(s)}
-            className={`p-6 rounded-xl border font-bold text-xl active:scale-95 transition-colors ${reveal && s.ayahCount === maxCount ? "bg-success/20 border-success/60 text-success" : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground"}`}>
+            className={`p-4 sm:p-6 rounded-xl border font-bold text-lg sm:text-xl active:scale-95 transition-colors ${reveal && s.ayahCount === maxCount ? "bg-success/20 border-success/60 text-success" : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground"}`}>
             <span className="block">{s.name}</span>
-            {reveal && <span className="block mt-1 text-sm font-extrabold text-muted-foreground">{s.ayahCount} آيات</span>}
+            {reveal && <span className="block mt-1 text-xs sm:text-sm font-extrabold text-muted-foreground">{s.ayahCount} آيات</span>}
           </button>
         ))}
       </div>
@@ -292,7 +297,8 @@ function QuizEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
     if (!orderRef.current.length) orderRef.current = shuffle(pool);
     const s = orderRef.current.pop() || pool[0];
     const opts = new Set<number>([s.ayahCount]);
-    for (const d of shuffle([-3, -2, -1, 1, 2, 3])) {
+    // خيارات أقرب للإجابة الصحيحة (فروق أصغر = سؤال أصعب)
+    for (const d of shuffle([-2, -1, 1, 2])) {
       const v = s.ayahCount + d;
       if (v >= 1) opts.add(v);
       if (opts.size === 4) break;
@@ -318,16 +324,16 @@ function QuizEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const replay = () => { g.reset(); setQNum(1); setQ(make()); setRound(r => r + 1); };
   if (finished) return <ResultCard g={g} onReplay={replay} />;
   return (
-    <div className="space-y-4 text-center">
+    <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
-      <p className="text-foreground text-lg font-bold">كم عدد آيات سورة <span className="text-accent">{q.s.name}</span>؟</p>
+      <p className="text-foreground text-base sm:text-lg font-bold">كم عدد آيات سورة <span className="text-accent">{q.s.name}</span>؟</p>
       <TimerBar left={left} seconds={8} />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {q.opts.map((n, i) => {
           const cls = reveal && n === q.s.ayahCount ? "bg-success/20 border-success/60 text-success"
             : reveal && n === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
             : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
-          return <button key={i} onClick={() => answer(n)} className={`p-5 rounded-xl border font-extrabold text-2xl active:scale-95 transition-colors ${cls}`}>{n}</button>;
+          return <button key={i} onClick={() => answer(n)} className={`p-4 sm:p-5 rounded-xl border font-extrabold text-xl sm:text-2xl active:scale-95 transition-colors ${cls}`}>{n}</button>;
         })}
       </div>
       <GameHud g={g} />
@@ -692,20 +698,20 @@ function MissingWordPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: 
   return (
     <div className="space-y-4 text-center">
       <SessionBar q={qNum} />
-      <p className="text-muted-foreground text-sm">أكمل الكلمة الناقصة في سورة <b className="text-accent">{q.s.name}</b></p>
-      <div className="p-4 rounded-2xl bg-accent/10 border border-accent/40 font-amiri text-2xl leading-loose text-foreground flex flex-wrap justify-center gap-x-2 gap-y-3" dir="rtl">
+      <p className="text-muted-foreground text-base sm:text-lg font-medium">أكمل الكلمة الناقصة في سورة <b className="text-accent">{q.s.name}</b></p>
+      <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-accent/10 border border-accent/40 font-amiri text-xl sm:text-2xl leading-loose text-foreground flex flex-wrap justify-center gap-x-2 sm:gap-x-3 gap-y-2 sm:gap-y-3 game-content" dir="rtl">
         {q.words.map((w, i) => (
-          <span key={i} className={i === q.hiddenIdx ? "text-transparent bg-secondary/50 border-b-2 border-dashed border-accent min-w-[60px] inline-block text-center relative" : ""}>
-            {i === q.hiddenIdx ? (reveal ? <span className={`absolute inset-0 flex items-center justify-center font-bold ${q.answer === chosen ? "text-success" : "text-accent"}`}>{q.answer}</span> : "...") : w}
+          <span key={i} className={i === q.hiddenIdx ? "text-transparent bg-secondary/50 border-b-2 border-dashed border-accent min-w-[50px] sm:min-w-[70px] inline-block text-center relative" : ""}>
+            {i === q.hiddenIdx ? (reveal ? <span className={`absolute inset-0 flex items-center justify-center font-bold text-base sm:text-lg ${q.answer === chosen ? "text-success" : "text-accent"}`}>{q.answer}</span> : "...") : w}
           </span>
         ))}
       </div>
-      <div className="grid gap-2">
+      <div className="grid gap-2 sm:gap-3">
         {q.opts.map((opt, i) => {
           const cls = reveal && opt === q.answer ? "bg-success/20 border-success/60 text-success"
             : reveal && opt === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
             : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
-          return <button key={i} onClick={() => choose(opt)} className={`p-3 rounded-xl border text-center font-amiri font-bold text-xl active:scale-[0.98] transition-colors ${cls}`}>{opt}</button>;
+          return <button key={i} onClick={() => choose(opt)} className={`p-3 sm:p-4 rounded-xl border text-center font-amiri font-bold text-lg sm:text-xl active:scale-[0.98] transition-colors game-option ${cls}`}>{opt}</button>;
         })}
       </div>
       <GameHud g={g} />
@@ -750,17 +756,17 @@ function AyahSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
   const replay = () => { g.reset(); setQNum(1); setQ(make()); setRound(r => r + 1); };
   if (finished) return <ResultCard g={g} onReplay={replay} />;
   return (
-    <div className="space-y-4 text-center">
+    <div className="space-y-2 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
-      <p className="text-muted-foreground text-sm">من أي سورة هذه الآية الكريمة؟</p>
+      <p className="text-muted-foreground text-xs sm:text-sm">من أي سورة هذه الآية الكريمة؟</p>
       <TimerBar left={left} seconds={12} />
-      <div className="p-4 rounded-2xl bg-accent/10 border border-accent/40 font-amiri text-xl leading-loose text-foreground">{q.ayah.text}</div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-accent/10 border border-accent/40 font-amiri text-base sm:text-xl leading-loose text-foreground game-content">{q.ayah.text}</div>
+      <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
         {q.opts.map(o => {
           const cls = reveal && o.app === q.s.app ? "bg-success/20 border-success/60 text-success"
             : reveal && o.app === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
             : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
-          return <button key={o.app} onClick={() => choose(o.app)} className={`p-4 rounded-xl border font-bold active:scale-95 transition-colors ${cls}`}>{o.name}</button>;
+          return <button key={o.app} onClick={() => choose(o.app)} className={`p-2 sm:p-4 rounded-lg sm:rounded-xl border font-bold active:scale-95 transition-colors text-sm sm:text-base game-option ${cls}`}>{o.name}</button>;
         })}
       </div>
       <GameHud g={g} />
@@ -870,19 +876,19 @@ function AyahLongerPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: G
       : reveal && chosen === w ? "bg-destructive/20 border-destructive/60 text-destructive"
       : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
     return (
-      <button onClick={() => choose(w)} className={`p-4 rounded-xl border text-right active:scale-[0.98] transition-colors ${cls}`}>
-        <span className="block text-xs font-extrabold text-muted-foreground mb-1">{name}</span>
-        <span className="block font-amiri text-lg leading-relaxed">{text}</span>
-        {reveal && <span className="block mt-1 text-xs font-extrabold text-muted-foreground">{count} كلمة</span>}
+      <button onClick={() => choose(w)} className={`p-3 sm:p-5 rounded-xl border text-right active:scale-[0.98] transition-colors min-h-[100px] sm:min-h-[140px] flex flex-col justify-center ${cls}`}>
+        <span className="block text-xs sm:text-sm font-extrabold text-muted-foreground mb-1 sm:mb-2">{name}</span>
+        <span className="block font-amiri text-base sm:text-xl leading-relaxed">{text}</span>
+        {reveal && <span className="block mt-1 sm:mt-2 text-xs sm:text-sm font-extrabold text-muted-foreground">{count} كلمة</span>}
       </button>
     );
   };
   return (
-    <div className="space-y-4 text-center">
+    <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
-      <p className="text-muted-foreground text-sm">أيّ الآيتين كلماتها أكثر؟</p>
+      <p className="text-muted-foreground text-base sm:text-lg font-medium">أيّ الآيتين كلماتها أكثر؟</p>
       <TimerBar left={left} seconds={12} />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4">
         {card("a", q.ao.text, q.an, wc(q.ao.text))}
         {card("b", q.bo.text, q.bn, wc(q.bo.text))}
       </div>
@@ -914,20 +920,20 @@ function SurahOrderEngine({ def, minSurah }: { def: GameDef; minSurah: number })
   const replay = () => { g.reset(); setQNum(1); setPicked([]); setQ(make()); setRound(r => r + 1); };
   if (finished) return <ResultCard g={g} onReplay={replay} />;
   return (
-    <div className="space-y-4 text-center">
+    <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
-      <p className="text-muted-foreground text-sm">اضغط السور الأربع حسب ترتيبها في المصحف</p>
+      <p className="text-muted-foreground text-base sm:text-lg font-medium">اضغط السور الأربع حسب ترتيبها في المصحف</p>
       <TimerBar left={left} seconds={15} />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {q.four.map(s => {
           const order = picked.indexOf(s.number);
           const done = picked.includes(s.number) || reveal;
           const cls = done ? "bg-accent/15 border-accent/50 text-accent" : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
           return (
-            <button key={s.number} onClick={() => tap(s.number)} className={`p-4 rounded-xl border font-bold text-lg active:scale-95 transition-colors ${cls}`}>
-              {picked.includes(s.number) && <span className="inline-flex w-6 h-6 items-center justify-center rounded-full bg-accent text-accent-foreground text-xs font-extrabold mr-2">{order + 1}</span>}
+            <button key={s.number} onClick={() => tap(s.number)} className={`p-3 sm:p-5 rounded-xl border font-bold text-base sm:text-lg active:scale-95 transition-colors min-h-[60px] sm:min-h-[80px] flex items-center justify-center ${cls}`}>
+              {picked.includes(s.number) && <span className="inline-flex w-5 h-5 sm:w-6 sm:h-6 items-center justify-center rounded-full bg-accent text-accent-foreground text-[10px] sm:text-xs font-extrabold mr-1 sm:mr-2">{order + 1}</span>}
               {s.name}
-              {reveal && <span className="block mt-1 text-xs font-extrabold text-muted-foreground">رقم {s.number}</span>}
+              {reveal && <span className="block mt-1 text-[10px] sm:text-xs font-extrabold text-muted-foreground">رقم {s.number}</span>}
             </button>
           );
         })}
@@ -944,7 +950,8 @@ function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const make = () => {
     const s = getNext();
     const opts = new Set<number>([s.number]);
-    for (const d of shuffle([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])) {
+    // خيارات أقرب للإجابة الصحيحة (فروق أصغر = سؤال أصعب)
+    for (const d of shuffle([-3, -2, -1, 1, 2, 3])) {
       const v = s.number + d;
       if (v >= 1 && v <= 114) opts.add(v);
       if (opts.size === 4) break;
@@ -970,16 +977,16 @@ function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const replay = () => { g.reset(); setQNum(1); setQ(make()); setRound(r => r + 1); };
   if (finished) return <ResultCard g={g} onReplay={replay} />;
   return (
-    <div className="space-y-4 text-center">
+    <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
-      <p className="text-foreground text-lg font-bold">ما رقم سورة <span className="text-accent">{q.s.name}</span> في ترتيب المصحف؟</p>
+      <p className="text-foreground text-base sm:text-lg font-bold">ما رقم سورة <span className="text-accent">{q.s.name}</span> في ترتيب المصحف؟</p>
       <TimerBar left={left} seconds={10} />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {q.opts.map(n => {
           const cls = reveal && n === q.s.number ? "bg-success/20 border-success/60 text-success"
             : reveal && n === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
             : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
-          return <button key={n} onClick={() => choose(n)} className={`p-5 rounded-xl border font-extrabold text-2xl active:scale-95 transition-colors ${cls}`}>{n}</button>;
+          return <button key={n} onClick={() => choose(n)} className={`p-4 sm:p-5 rounded-xl border font-extrabold text-xl sm:text-2xl active:scale-95 transition-colors min-h-[60px] sm:min-h-[80px] ${cls}`}>{n}</button>;
         })}
       </div>
       <GameHud g={g} />
@@ -1086,8 +1093,8 @@ export default function KidsGames() {
     };
   }, [navigate]);
 
-  // تسخين نصوص السور مبكراً + جلب فهرس الألعاب البعيدة + تحميل أكوادها للجهاز في الخلفية (تعمل دون إنترنت)
-  useEffect(() => { ensureCorpus().catch(() => { /* ستعيد اللعبة المحاولة عند فتحها */ }); void (async () => { await fetchRemoteGames(); void precacheRemoteGames(); })(); }, []);
+  // تسخين نصوص السور مبكراً (تعمل دون إنترنت)
+  useEffect(() => { ensureCorpus().catch(() => { /* ستعيد اللعبة المحاولة عند فتحها */ }); }, []);
 
   const [showBadges, setShowBadges] = useState(false);
 
@@ -1241,8 +1248,8 @@ export default function KidsGames() {
   }
 
   return (
-    <div className="min-h-screen page-nour text-foreground" dir="rtl">
-      <div className="mx-auto max-w-md px-4 py-4 space-y-4">
+    <div className="min-h-screen-safe page-nour text-foreground" dir="rtl">
+      <div className="mx-auto w-full max-w-md px-3 py-3 sm:px-4 sm:py-4 space-y-3 sm:space-y-4 container-mobile">
         <header className="flex items-center justify-between gap-2">
           <button onClick={headerBack} className="flex h-10 items-center gap-1.5 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold hover:brightness-95 active:scale-95 border border-border">
             <ArrowRight className="h-4 w-4" /> {active ? "الرجوع للألعاب" : "الخروج للتلاوات"}
@@ -1261,8 +1268,8 @@ export default function KidsGames() {
         </header>
 
         {def && Engine ? (
-          <div className="card-nour p-4 animate-fade-up">
-            <h2 className="text-center font-bold text-accent mb-4 flex items-center justify-center gap-2">{(() => { const I = iconFor(def.icon); return <I className="w-5 h-5" />; })()} {def.title}</h2>
+          <div className="card-nour p-2 sm:p-4 animate-fade-up game-container">
+            <h2 className="text-center font-bold text-accent mb-2 sm:mb-4 flex items-center justify-center gap-2 text-sm sm:text-base">{(() => { const I = iconFor(def.icon); return <I className="w-4 h-4 sm:w-5 sm:h-5" />; })()} {def.title}</h2>
             <Engine def={def} minSurah={profile.currentSurah || 38} />
           </div>
         ) : (
@@ -1310,18 +1317,18 @@ export default function KidsGames() {
               <button onClick={() => setShowSurahSelector(true)} className="text-xs font-bold text-accent bg-accent/15 px-3 py-1.5 rounded-full hover:bg-accent/25 transition-colors">تغيير السورة ({SURAHS.find(s => s.number === profile.currentSurah)?.name})</button>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
               {myGames.map(g => {
                 const I = iconFor(g.icon);
                 const owned = isGameOwned(g);
                 return (
                   <button key={g.id} onClick={() => tapGame(g.id)}
-                    className={`relative overflow-hidden rounded-[1.7rem] p-[2px] active:scale-[0.98] transition-transform text-right ${!canPlay ? "opacity-60" : "hover:shadow-xl hover:shadow-accent/20"}`}>
+                    className={`relative overflow-hidden rounded-[1.2rem] sm:rounded-[1.7rem] p-[2px] active:scale-[0.98] transition-transform text-right ${!canPlay ? "opacity-60" : "hover:shadow-xl hover:shadow-accent/20"}`}>
                     <div className={`absolute inset-0 opacity-80 ${g.tint}`} />
-                    <div className="relative bg-card/95 backdrop-blur-md rounded-[1.6rem] p-4 flex items-center gap-4">
-                      <span className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 ${g.tint}`}><I className="w-8 h-8" /></span>
-                      <div className="flex-1">
-                        <span className="block font-extrabold text-foreground text-xl leading-tight">{g.title}</span>
+                    <div className="relative bg-card/95 backdrop-blur-md rounded-[1.1rem] sm:rounded-[1.6rem] p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+                      <span className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 ${g.tint}`}><I className="w-6 h-6 sm:w-8 sm:h-8" /></span>
+                      <div className="flex-1 min-w-0">
+                        <span className="block font-extrabold text-foreground text-base sm:text-xl leading-tight truncate">{g.title}</span>
                         <span className="inline-flex items-center gap-2 mt-1">
                           <span className="text-[11px] font-bold text-muted-foreground bg-secondary rounded-full px-2.5 py-0.5">مناسب لسن {g.ageMin}+</span>
                           {g.cost > 0 ? (
