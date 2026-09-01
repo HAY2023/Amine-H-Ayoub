@@ -1,32 +1,25 @@
 /**
- * ظپظ‡ط±ط³ ط§ظ„ط£ظ„ط¹ط§ط¨ â€” ظ¥ظ  ظ„ط¹ط¨ط© ظ…ظˆط²ظ‘ط¹ط© ط¹ظ„ظ‰ ظ†ط·ط§ظ‚ط§طھ ط§ظ„ط£ط¹ظ…ط§ط± (ظƒظ„ ظ„ط¹ط¨ط© طھط¸ظ‡ط± ظ„ط¹ظ…ط±ظ‡ط§ ظپظ‚ط·).
- * ط£ط³ظ…ط§ط، ط¹ط§ط¯ظٹط© ط¨ظ„ط§ ظ…ط¨ط§ظ„ط؛ط©طŒ ظˆطµط¹ظˆط¨ط© ظƒظ„ ظ„ط¹ط¨ط© ظ…ط¶ط¨ظˆط·ط© ط¨ظ…ط¹ط§ظ…ظ„ط§طھظ‡ط§ ظˆظ†ط·ط§ظ‚ ط³ظˆط±ظ‡ط§.
+ * فهرس الألعاب المدمجة (Native)
  */
 import { supabase, hasValidSupabaseKey } from "../lib/supabase";
 
-export type GameEngine = "order" | "memory" | "memory_meaning" | "which" | "quiz" | "count" | "nextayah" | "prevayah" | "whichsurah" | "missingword" | "surahaudio" | "ayahsurah" | "ayahorder" | "ayahlonger" | "surahorder" | "surahnum" | "remote";
-
-/** ظ…طµط¯ط± ظ„ط¹ط¨ط© ط®ط§ط±ط¬ظٹط© طھظڈط­ظ…ظژظ‘ظ„ ظ…ظ† ط§ظ„ط³ظٹط±ظپط± (HTML ظ…ط¶ظ…ظ‘ظ† ط£ظˆ ط±ط§ط¨ط·) â€” ظ…ط¹ط²ظˆظ„ط© ط¹ظ† ظƒظˆط¯ ط§ظ„طھط·ط¨ظٹظ‚. */
-export interface RemoteGameSource { kind: "url" | "html"; url?: string; html?: string; desc?: string; }
+export type GameEngine = "order" | "memory" | "memory_meaning" | "which" | "quiz" | "count" | "nextayah" | "prevayah" | "whichsurah" | "missingword" | "surahaudio" | "ayahsurah" | "ayahorder" | "ayahlonger" | "surahorder" | "surahnum";
 
 export interface GameDef {
   id: string;
   title: string;
   engine: GameEngine;
-  ageMin: number;        // ط£طµط؛ط± ط¹ظ…ط± ظ…ظ†ط§ط³ط¨
-  ageMax?: number;       // ط£ظƒط¨ط± ط¹ظ…ط± â€” ط¨ط¹ط¯ظ‡ط§ طھط®طھظپظٹ ط§ظ„ظ„ط¹ط¨ط© (ظ„ط¹ط¨ط© ظ„ظƒظ„ ط¹ظ…ط±)
-  cost: number;          // ظ  = ظ…ط¬ط§ظ†ظٹطŒ >ظ  = ظٹظڈط´طھط±ظ‰ ط¨ط§ظ„ظ†ط¬ظˆظ…
+  ageMin: number;
+  ageMax?: number;
+  cost: number;
   tint: string;
   icon: string;
   params?: { pairs?: number; minSurah?: number; maxSurah?: number; minAyah?: number; maxAyah?: number };
   custom?: boolean;
-  remote?: RemoteGameSource;
 }
 
 const CATALOG_KEY = "mushaf:gameCatalog:v1";
-const HIDDEN_REMOTE_KEY = "mushaf:remoteGamesHidden";
 
-/** طھط¯ط±ظ‘ط¬ط§طھ ط£ظ„ظˆط§ظ† ط¬ط§ظ‡ط²ط© (ظ…ظˆط¬ظˆط¯ط© ط£طµظ„ط§ظ‹ ظپظٹ CSS) â€” طھظڈظˆط²ظژظ‘ط¹ ط¨ط§ظ„طھظ†ط§ظˆط¨. */
 const T = [
   "bg-gradient-to-br from-sky-400 to-cyan-500 text-white shadow-cyan-500/30",
   "bg-gradient-to-br from-pink-500 to-rose-400 text-white shadow-pink-500/30",
@@ -39,42 +32,17 @@ const T = [
 ];
 const t = (i: number) => T[i % T.length];
 
-/** ظ†ط·ط§ظ‚ط§طھ ط§ظ„ط³ظˆط±: ظ‚طµظٹط±ط© = ط³ظ‡ظ„طŒ ظˆط³ط· = ظ…طھظˆط³ط·طŒ ظƒط§ظ…ظ„ = طµط¹ط¨. */
 const SHORT = { minSurah: 38 };
 const MID = { minSurah: 114, maxSurah: 20 };
 const FULL = { minSurah: 114 };
 
-let remoteList: RemoteRemoteItem[] = [];
 let serverGames: GameDef[] = [];
-
-/** ط¹ظ†طµط± ظپظٹ ظ…ظ„ظپ ط§ظ„ط£ظ„ط¹ط§ط¨ ط§ظ„ط¨ط¹ظٹط¯ط© ط¹ظ„ظ‰ ط§ظ„ط³ظٹط±ظپط±. */
-export interface RemoteRemoteItem {
-  id: string; title: string; icon?: string; ageMin?: number; cost?: number;
-  kind: "url" | "html"; url?: string; html?: string; desc?: string;
-}
-
-export const setRemoteGamesList = (list: RemoteRemoteItem[]) => { remoteList = list; };
-
-const hiddenIds = (): string[] => {
-  if (typeof window === "undefined") return [];
-  try { const v = JSON.parse(localStorage.getItem(HIDDEN_REMOTE_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; }
-};
-export const hideRemoteGame = (id: string) => {
-  try { const h = hiddenIds(); if (!h.includes(id)) localStorage.setItem(HIDDEN_REMOTE_KEY, JSON.stringify([...h, id])); } catch { /* ignore */ }
-  if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:gamecatalog"));
-};
-export const showRemoteGame = (id: string) => {
-  try { localStorage.setItem(HIDDEN_REMOTE_KEY, JSON.stringify(hiddenIds().filter(x => x !== id))); } catch { /* ignore */ }
-  if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:gamecatalog"));
-};
-export const getHiddenRemoteIds = hiddenIds;
 
 const isValid = (g: unknown): g is GameDef => {
   const d = g as GameDef;
   if (!d || typeof d.id !== "string" || typeof d.title !== "string" || typeof d.cost !== "number") return false;
-  const engines: string[] = ["order", "memory", "memory_meaning", "which", "quiz", "count", "nextayah", "prevayah", "whichsurah", "missingword", "surahaudio", "ayahsurah", "ayahorder", "ayahlonger", "surahorder", "surahnum", "remote"];
+  const engines: string[] = ["order", "memory", "memory_meaning", "which", "quiz", "count", "nextayah", "prevayah", "whichsurah", "missingword", "surahaudio", "ayahsurah", "ayahorder", "ayahlonger", "surahorder", "surahnum"];
   if (!engines.includes(d.engine)) return false;
-  if (d.engine === "remote") return !!d.remote && (d.remote.kind === "html" ? typeof d.remote.html === "string" : typeof d.remote.url === "string");
   return true;
 };
 
@@ -83,29 +51,15 @@ const readServerLocal = (): GameDef[] => {
   try { const r = localStorage.getItem(CATALOG_KEY); const v = r ? JSON.parse(r) : []; return Array.isArray(v) ? v.filter(isValid).map(g => ({ ...g, custom: true })) : []; } catch { return []; }
 };
 
-const toRemoteDef = (r: RemoteRemoteItem, i: number): GameDef => ({
-  id: `ext-${r.id}`, title: r.title, engine: "remote",
-  ageMin: typeof r.ageMin === "number" && r.ageMin > 0 ? r.ageMin : 4,
-  ageMax: 14,
-  cost: typeof r.cost === "number" && r.cost >= 0 ? r.cost : 20,
-  tint: t(i + 2), icon: typeof r.icon === "string" && r.icon ? r.icon : "Gamepad2",
-  custom: true, remote: { kind: r.kind, url: r.url, html: r.html, desc: r.desc },
-});
-
-/** ط§ظ„ظپظ‡ط±ط³ ط§ظ„ظƒط§ظ…ظ„: ط§ظ„ظ…ط¶ظ…ظ‘ظ† (ط­ط³ط¨ ط§ظ„ط¹ظ…ط±) + ط£ظ„ط¹ط§ط¨ ط§ظ„ط³ظٹط±ظپط± + ط§ظ„ط£ظ„ط¹ط§ط¨ ط§ظ„ط¨ط¹ظٹط¯ط© ط؛ظٹط± ط§ظ„ظ…ط®ظپظٹط©. */
 export const getGameCatalog = (): GameDef[] => {
   const server = serverGames.length ? serverGames : readServerLocal();
   const map = new Map<string, GameDef>();
   for (const g of BUILTIN_GAMES) map.set(g.id, g);
   for (const g of server) map.set(g.id, { tint: "bg-slate-500/20 text-slate-200", icon: "Gamepad2", ageMin: 5, ...g, custom: true });
-  const hidden = hiddenIds();
-  remoteList.forEach((r, i) => { if (!hidden.includes(r.id)) map.set(`ext-${r.id}`, toRemoteDef(r, i)); });
-  return [...map.values()];
+  return Array.from(map.values());
 };
 
-export const getGameDef = (id: string): GameDef | undefined => getGameCatalog().find(g => g.id === id);
-
-export const getCustomGames = (): GameDef[] => (serverGames.length ? serverGames : readServerLocal());
+export const getCustomGames = (): GameDef[] => getGameCatalog().filter(g => g.custom);
 
 const persistServer = (list: GameDef[]) => {
   serverGames = list;
@@ -135,12 +89,9 @@ export const syncGameCatalogFromServer = async () => {
   } catch (e) { console.debug("sync game catalog:", e); }
 };
 
-/** ط¥ظ†ط´ط§ط، ظ„ط¹ط¨ط© ظ…ط¶ظ…ظ‘ظ†ط© ط¨ط§ط®طھطµط§ط±. */
-/** إنشاء لعبة مضمَّنة باختصار. */
 const G = (id: string, title: string, engine: GameEngine, ageMin: number, ageMax: number, cost: number, icon: string, params: GameDef["params"], ti = 0): GameDef =>
   ({ id, title, engine, ageMin, ageMax, cost, icon, params: params || {}, tint: t(ti) });
 
-/** 50 لعبة موزّعة على الأعمار: 4-6، 6-8، 8-10، 10-12، 12-14. لعبة واحدة مجانية لكل الأعمار. */
 export const BUILTIN_GAMES: GameDef[] = [
   G("surahaudio", "اسمع السورة", "surahaudio", 4, 16, 0, "Headphones", null, 0),
   // ── أعمار 4-6 ──
@@ -152,53 +103,51 @@ export const BUILTIN_GAMES: GameDef[] = [
   G("missingword4", "الكلمة الضائعة", "missingword", 4, 6, 50, "Puzzle", SHORT, 7),
   G("quiz4", "اختبار السور", "quiz", 4, 6, 50, "Trophy", SHORT, 5),
   G("which4", "السورة الأطول", "which", 4, 6, 55, "Scale", SHORT, 6),
-  G("nextayah4", "ط£ظƒظ…ظ„ ط§ظ„ط¢ظٹط©", "nextayah", 4, 6, 55, "BookOpen", SHORT, 0),
-  G("prevayah4", "ط§ظ„ط¢ظٹط© ط§ظ„طھظٹ ظ‚ط¨ظ„ظ‡ط§", "prevayah", 4, 6, 60, "BookOpen", SHORT, 2),
-  G("surahorder4", "طھط±طھظٹط¨ ط§ظ„ط³ظˆط±", "surahorder", 4, 6, 60, "ListOrdered", SHORT, 3),
-  // â”€â”€ ط£ط¹ظ…ط§ط± ظ¦-ظ¨ â”€â”€
-  G("memory6", "ط¨ط·ط§ظ‚ط§طھ ط§ظ„ط³ظˆط±", "memory", 6, 8, 70, "LayoutGrid", { pairs: 4 }, 4),
-  G("whichsurah6", "ط§ظƒطھط´ظپ ط§ظ„ط³ظˆط±ط©", "whichsurah", 6, 8, 70, "Sparkles", MID, 5),
-  G("order6", "طھط±طھظٹط¨ ط§ظ„ط¢ظٹط§طھ", "order", 6, 8, 75, "ListOrdered", MID, 6),
-  G("count6", "ط¹ط¯ظ‘ ط§ظ„ط¢ظٹط§طھ", "count", 6, 8, 75, "Hash", MID, 0),
-  G("missingword6", "ط§ظ„ظƒظ„ظ…ط© ط§ظ„ط¶ط§ط¦ط¹ط©", "missingword", 6, 8, 80, "Puzzle", MID, 2),
-  G("quiz6", "ط§ط®طھط¨ط§ط± ط§ظ„ط³ظˆط±", "quiz", 6, 8, 80, "Trophy", MID, 7),
-  G("which6", "ط§ظ„ط³ظˆط±ط© ط§ظ„ط£ط·ظˆظ„", "which", 6, 8, 85, "Scale", MID, 1),
-  G("nextayah6", "ط£ظƒظ…ظ„ ط§ظ„ط¢ظٹط©", "nextayah", 6, 8, 85, "BookOpen", MID, 3),
-  G("prevayah6", "ط§ظ„ط¢ظٹط© ط§ظ„طھظٹ ظ‚ط¨ظ„ظ‡ط§", "prevayah", 6, 8, 90, "BookOpen", MID, 4),
-  G("surahorder6", "طھط±طھظٹط¨ ط§ظ„ط³ظˆط±", "surahorder", 6, 8, 90, "ListOrdered", MID, 5),
-  // â”€â”€ ط£ط¹ظ…ط§ط± ظ¨-ظ،ظ  â”€â”€
-  G("memory8", "ط¨ط·ط§ظ‚ط§طھ ط§ظ„ط³ظˆط±", "memory", 8, 10, 95, "LayoutGrid", { pairs: 5 }, 6),
-  G("whichsurah8", "ط§ظƒطھط´ظپ ط§ظ„ط³ظˆط±ط©", "whichsurah", 8, 10, 95, "Sparkles", FULL, 0),
-  G("order8", "طھط±طھظٹط¨ ط§ظ„ط¢ظٹط§طھ", "order", 8, 10, 100, "ListOrdered", FULL, 2),
-  G("count8", "ط¹ط¯ظ‘ ط§ظ„ط¢ظٹط§طھ", "count", 8, 10, 100, "Hash", FULL, 7),
-  G("missingword8", "ط§ظ„ظƒظ„ظ…ط© ط§ظ„ط¶ط§ط¦ط¹ط©", "missingword", 8, 10, 105, "Puzzle", FULL, 1),
-  G("quiz8", "ط§ط®طھط¨ط§ط± ط§ظ„ط³ظˆط±", "quiz", 8, 10, 105, "Trophy", FULL, 3),
-  G("which8", "ط§ظ„ط³ظˆط±ط© ط§ظ„ط£ط·ظˆظ„", "which", 8, 10, 110, "Scale", FULL, 4),
-  G("nextayah8", "ط£ظƒظ…ظ„ ط§ظ„ط¢ظٹط©", "nextayah", 8, 10, 110, "BookOpen", FULL, 5),
-  G("prevayah8", "ط§ظ„ط¢ظٹط© ط§ظ„طھظٹ ظ‚ط¨ظ„ظ‡ط§", "prevayah", 8, 10, 115, "BookOpen", FULL, 6),
-  G("surahorder8", "طھط±طھظٹط¨ ط§ظ„ط³ظˆط±", "surahorder", 8, 10, 115, "ListOrdered", FULL, 0),
-  // â”€â”€ ط£ط¹ظ…ط§ط± ظ،ظ -ظ،ظ¢ (ط¢ظٹط§طھ ط­ظ‚ظٹظ‚ظٹط© â€” ط£طµط¹ط¨) â”€â”€
-  G("memory10", "ط¨ط·ط§ظ‚ط§طھ ط§ظ„ط³ظˆط±", "memory", 10, 12, 120, "LayoutGrid", { pairs: 6 }, 1),
-  G("ayahsurah10", "ظ…ظ† ط£ظٹ ط³ظˆط±ط©طں", "ayahsurah", 10, 12, 120, "BookOpen", FULL, 2),
-  G("ayahlonger10", "ط£ظٹ ط¢ظٹط© ط£ط·ظˆظ„طں", "ayahlonger", 10, 12, 125, "Scale", FULL, 3),
-  G("ayahorder10", "ط±طھظ‘ط¨ ط§ظ„ط¢ظٹط§طھ", "ayahorder", 10, 12, 125, "ListOrdered", FULL, 4),
-  G("order10", "طھط±طھظٹط¨ ط§ظ„ط¢ظٹط§طھ", "order", 10, 12, 130, "ListOrdered", FULL, 5),
-  G("missingword10", "ط§ظ„ظƒظ„ظ…ط© ط§ظ„ط¶ط§ط¦ط¹ط©", "missingword", 10, 12, 130, "Puzzle", FULL, 6),
-  G("quiz10", "ط§ط®طھط¨ط§ط± ط§ظ„ط³ظˆط±", "quiz", 10, 12, 135, "Trophy", FULL, 7),
-  G("nextayah10", "ط£ظƒظ…ظ„ ط§ظ„ط¢ظٹط©", "nextayah", 10, 12, 135, "BookOpen", FULL, 0),
-  G("prevayah10", "ط§ظ„ط¢ظٹط© ط§ظ„طھظٹ ظ‚ط¨ظ„ظ‡ط§", "prevayah", 10, 12, 140, "BookOpen", FULL, 1),
-  G("surahnum10", "ط±ظ‚ظ… ط§ظ„ط³ظˆط±ط©", "surahnum", 10, 12, 140, "Hash", FULL, 2),
-  // â”€â”€ ط£ط¹ظ…ط§ط± ظ،ظ¢-ظ،ظ¤ (ط§ظ„ط£طµط¹ط¨) â”€â”€
-  G("memory12", "ط¨ط·ط§ظ‚ط§طھ ط§ظ„ط³ظˆط±", "memory", 12, 16, 150, "LayoutGrid", { pairs: 8 }, 3),
-  G("ayahsurah12", "ظ…ظ† ط£ظٹ ط³ظˆط±ط©طں", "ayahsurah", 12, 16, 150, "BookOpen", FULL, 4),
-  G("ayahlonger12", "ط£ظٹ ط¢ظٹط© ط£ط·ظˆظ„طں", "ayahlonger", 12, 16, 155, "Scale", FULL, 5),
-  G("ayahorder12", "ط±طھظ‘ط¨ ط§ظ„ط¢ظٹط§طھ", "ayahorder", 12, 16, 155, "ListOrdered", FULL, 6),
-  G("order12", "طھط±طھظٹط¨ ط§ظ„ط¢ظٹط§طھ", "order", 12, 16, 160, "ListOrdered", FULL, 7),
-  G("missingword12", "ط§ظ„ظƒظ„ظ…ط© ط§ظ„ط¶ط§ط¦ط¹ط©", "missingword", 12, 16, 160, "Puzzle", FULL, 0),
-  G("quiz12", "ط§ط®طھط¨ط§ط± ط§ظ„ط³ظˆط±", "quiz", 12, 16, 165, "Trophy", FULL, 1),
-  G("nextayah12", "ط£ظƒظ…ظ„ ط§ظ„ط¢ظٹط©", "nextayah", 12, 16, 165, "BookOpen", FULL, 2),
-  G("prevayah12", "ط§ظ„ط¢ظٹط© ط§ظ„طھظٹ ظ‚ط¨ظ„ظ‡ط§", "prevayah", 12, 16, 170, "BookOpen", FULL, 3),
-  G("surahorder12", "طھط±طھظٹط¨ ط§ظ„ط³ظˆط±", "surahorder", 12, 16, 170, "ListOrdered", FULL, 4),
+  G("nextayah4", "أكمل الآية", "nextayah", 4, 6, 55, "BookOpen", SHORT, 0),
+  G("prevayah4", "الآية التي قبلها", "prevayah", 4, 6, 60, "BookOpen", SHORT, 2),
+  G("surahorder4", "ترتيب السور", "surahorder", 4, 6, 60, "ListOrdered", SHORT, 3),
+  // ── أعمار 6-8 ──
+  G("memory6", "بطاقات السور", "memory", 6, 8, 70, "LayoutGrid", { pairs: 4 }, 4),
+  G("whichsurah6", "اكتشف السورة", "whichsurah", 6, 8, 70, "Sparkles", MID, 5),
+  G("order6", "ترتيب الآيات", "order", 6, 8, 75, "ListOrdered", MID, 6),
+  G("count6", "عدّ الآيات", "count", 6, 8, 75, "Hash", MID, 0),
+  G("missingword6", "الكلمة الضائعة", "missingword", 6, 8, 80, "Puzzle", MID, 2),
+  G("quiz6", "اختبار السور", "quiz", 6, 8, 80, "Trophy", MID, 7),
+  G("which6", "السورة الأطول", "which", 6, 8, 85, "Scale", MID, 1),
+  G("nextayah6", "أكمل الآية", "nextayah", 6, 8, 85, "BookOpen", MID, 3),
+  G("prevayah6", "الآية التي قبلها", "prevayah", 6, 8, 90, "BookOpen", MID, 4),
+  G("surahorder6", "ترتيب السور", "surahorder", 6, 8, 90, "ListOrdered", MID, 5),
+  // ── أعمار 8-10 ──
+  G("memory8", "بطاقات السور", "memory", 8, 10, 95, "LayoutGrid", { pairs: 5 }, 6),
+  G("whichsurah8", "اكتشف السورة", "whichsurah", 8, 10, 95, "Sparkles", FULL, 0),
+  G("order8", "ترتيب الآيات", "order", 8, 10, 100, "ListOrdered", FULL, 2),
+  G("count8", "عدّ الآيات", "count", 8, 10, 100, "Hash", FULL, 7),
+  G("missingword8", "الكلمة الضائعة", "missingword", 8, 10, 105, "Puzzle", FULL, 1),
+  G("quiz8", "اختبار السور", "quiz", 8, 10, 105, "Trophy", FULL, 3),
+  G("which8", "السورة الأطول", "which", 8, 10, 110, "Scale", FULL, 4),
+  G("nextayah8", "أكمل الآية", "nextayah", 8, 10, 110, "BookOpen", FULL, 5),
+  G("prevayah8", "الآية التي قبلها", "prevayah", 8, 10, 115, "BookOpen", FULL, 6),
+  G("surahorder8", "ترتيب السور", "surahorder", 8, 10, 115, "ListOrdered", FULL, 0),
+  // ── أعمار 10-12 (آيات حقيقية — أصعب) ──
+  G("memory10", "بطاقات السور", "memory", 10, 12, 120, "LayoutGrid", { pairs: 6 }, 1),
+  G("ayahsurah10", "من أي سورة؟", "ayahsurah", 10, 12, 120, "BookOpen", FULL, 2),
+  G("ayahlonger10", "أي آية أطول؟", "ayahlonger", 10, 12, 125, "Scale", FULL, 3),
+  G("ayahorder10", "رتّب الآيات", "ayahorder", 10, 12, 125, "ListOrdered", FULL, 4),
+  G("order10", "ترتيب الآيات", "order", 10, 12, 130, "ListOrdered", FULL, 5),
+  G("missingword10", "الكلمة الضائعة", "missingword", 10, 12, 130, "Puzzle", FULL, 6),
+  G("quiz10", "اختبار السور", "quiz", 10, 12, 135, "Trophy", FULL, 7),
+  G("nextayah10", "أكمل الآية", "nextayah", 10, 12, 135, "BookOpen", FULL, 0),
+  G("prevayah10", "الآية التي قبلها", "prevayah", 10, 12, 140, "BookOpen", FULL, 1),
+  G("surahnum10", "رقم السورة", "surahnum", 10, 12, 140, "Hash", FULL, 2),
+  // ── أعمار 12-14 (الأصعب) ──
+  G("memory12", "بطاقات السور", "memory", 12, 16, 150, "LayoutGrid", { pairs: 8 }, 3),
+  G("ayahsurah12", "من أي سورة؟", "ayahsurah", 12, 16, 150, "BookOpen", FULL, 4),
+  G("ayahlonger12", "أي آية أطول؟", "ayahlonger", 12, 16, 155, "Scale", FULL, 5),
+  G("ayahorder12", "رتّب الآيات", "ayahorder", 12, 16, 155, "ListOrdered", FULL, 6),
+  G("order12", "ترتيب الآيات", "order", 12, 16, 160, "ListOrdered", FULL, 7),
+  G("missingword12", "الكلمة الضائعة", "missingword", 12, 16, 160, "Puzzle", FULL, 0),
+  G("quiz12", "اختبار السور", "quiz", 12, 16, 165, "Trophy", FULL, 1),
+  G("nextayah12", "أكمل الآية", "nextayah", 12, 16, 165, "BookOpen", FULL, 2),
+  G("prevayah12", "الآية التي قبلها", "prevayah", 12, 16, 170, "BookOpen", FULL, 3),
+  G("surahorder12", "ترتيب السور", "surahorder", 12, 16, 170, "ListOrdered", FULL, 4),
 ];
-
-

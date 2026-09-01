@@ -11,9 +11,9 @@ import { ensureCorpus, type SurahText } from "../data/quranText";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
 import { shouldHideMushaf } from "../utils/tauriUtils";
 import ParentalGateModal from "../components/ParentalGateModal";
-import RemoteGameFrame from "../components/RemoteGameFrame";
 import MemoryGame from "../games/MemoryGame";
 import MissingWordGame from "../games/MissingWordGame";
+import AyahOrderGame from "../games/AyahOrderGame";
 import Avatar from "../components/Avatar";
 import NotificationsModal from "../components/NotificationsModal";
 import BadgesModal from "../components/BadgesModal";
@@ -988,11 +988,9 @@ function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
 }
 
 const ENGINES: Record<GameEngine, (p: { def: GameDef; minSurah: number }) => JSX.Element> = {
-  order: OrderEngine, memory: MemoryEngine, memory_meaning: () => <MemoryGame onBack={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />, which: WhichEngine, quiz: QuizEngine, count: CountEngine,
+  order: ({ def }) => <AyahOrderGame def={def} onBack={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />, memory: MemoryEngine, memory_meaning: () => <MemoryGame onBack={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />, which: WhichEngine, quiz: QuizEngine, count: CountEngine,
   nextayah: NextAyahEngine, prevayah: PrevAyahEngine, whichsurah: WhichSurahEngine, missingword: ({ def }) => <MissingWordGame def={def} onBack={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />, surahaudio: SurahAudioEngine,
   ayahsurah: AyahSurahEngine, ayahorder: AyahOrderEngine, ayahlonger: AyahLongerEngine, surahorder: SurahOrderEngine, surahnum: SurahNumEngine,
-  // الألعاب البعيدة (HTML من السيرفر) تُخرج من القائمة عبر حدث موحّد
-  remote: ({ def }: { def: GameDef; minSurah: number }) => <RemoteGameFrame def={def} onExit={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />,
 };
 const ICONS: Record<string, typeof Headphones> = { Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Hash, Grid3x3, Gamepad2, BookOpen, Sparkles, Puzzle, Brain };
 const iconFor = (key: string) => ICONS[key] || Gamepad2;
