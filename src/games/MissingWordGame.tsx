@@ -4,6 +4,7 @@ import { addCoins } from '../data/kidsProfile';
 import { toast } from '../hooks/use-toast';
 import { ensureCorpus, SurahText, normalizeArabic } from '../data/quranText';
 import { GameDef } from '../data/gameCatalog';
+import { createPortal } from 'react-dom';
 
 interface MissingWordGameProps {
   def: GameDef;
@@ -143,16 +144,17 @@ export default function MissingWordGame({ def, onBack }: MissingWordGameProps) {
   };
 
   if (loading || questions.length === 0) {
-    return (
+    return createPortal(
       <div className="fixed inset-0 z-[100] bg-background flex items-center justify-center">
         <Sparkles className="w-10 h-10 animate-spin text-accent" />
-      </div>
+      </div>,
+      document.body
     );
   }
 
   const currentQ = questions[currentIndex];
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-md flex flex-col items-center justify-center p-4 font-quran text-right" dir="rtl">
       <div className="w-full max-w-2xl bg-card rounded-3xl shadow-2xl overflow-hidden border border-border flex flex-col h-[80vh] sm:h-auto">
         {/* Header */}
@@ -232,6 +234,7 @@ export default function MissingWordGame({ def, onBack }: MissingWordGameProps) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

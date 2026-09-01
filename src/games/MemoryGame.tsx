@@ -22,6 +22,8 @@ interface MemoryGameProps {
   onBack: () => void;
 }
 
+import { createPortal } from 'react-dom';
+
 export default function MemoryGame({ onBack }: MemoryGameProps) {
   const [cards, setCards] = useState<(CardData & { isFlipped: boolean, isMatched: boolean })[]>([]);
   const [firstCardIndex, setFirstCardIndex] = useState<number | null>(null);
@@ -104,7 +106,7 @@ export default function MemoryGame({ onBack }: MemoryGameProps) {
     });
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-md flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-2xl bg-card rounded-3xl shadow-2xl overflow-hidden border border-border">
         {/* Header */}
@@ -161,6 +163,7 @@ export default function MemoryGame({ onBack }: MemoryGameProps) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
