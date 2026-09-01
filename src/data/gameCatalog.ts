@@ -1,10 +1,10 @@
-﻿/**
+/**
  * ظپظ‡ط±ط³ ط§ظ„ط£ظ„ط¹ط§ط¨ â€” ظ¥ظ  ظ„ط¹ط¨ط© ظ…ظˆط²ظ‘ط¹ط© ط¹ظ„ظ‰ ظ†ط·ط§ظ‚ط§طھ ط§ظ„ط£ط¹ظ…ط§ط± (ظƒظ„ ظ„ط¹ط¨ط© طھط¸ظ‡ط± ظ„ط¹ظ…ط±ظ‡ط§ ظپظ‚ط·).
  * ط£ط³ظ…ط§ط، ط¹ط§ط¯ظٹط© ط¨ظ„ط§ ظ…ط¨ط§ظ„ط؛ط©طŒ ظˆطµط¹ظˆط¨ط© ظƒظ„ ظ„ط¹ط¨ط© ظ…ط¶ط¨ظˆط·ط© ط¨ظ…ط¹ط§ظ…ظ„ط§طھظ‡ط§ ظˆظ†ط·ط§ظ‚ ط³ظˆط±ظ‡ط§.
  */
 import { supabase, hasValidSupabaseKey } from "../lib/supabase";
 
-export type GameEngine = "order" | "memory" | "which" | "quiz" | "count" | "nextayah" | "prevayah" | "whichsurah" | "missingword" | "surahaudio" | "ayahsurah" | "ayahorder" | "ayahlonger" | "surahorder" | "surahnum" | "remote";
+export type GameEngine = "order" | "memory" | "memory_meaning" | "which" | "quiz" | "count" | "nextayah" | "prevayah" | "whichsurah" | "missingword" | "surahaudio" | "ayahsurah" | "ayahorder" | "ayahlonger" | "surahorder" | "surahnum" | "remote";
 
 /** ظ…طµط¯ط± ظ„ط¹ط¨ط© ط®ط§ط±ط¬ظٹط© طھظڈط­ظ…ظژظ‘ظ„ ظ…ظ† ط§ظ„ط³ظٹط±ظپط± (HTML ظ…ط¶ظ…ظ‘ظ† ط£ظˆ ط±ط§ط¨ط·) â€” ظ…ط¹ط²ظˆظ„ط© ط¹ظ† ظƒظˆط¯ ط§ظ„طھط·ط¨ظٹظ‚. */
 export interface RemoteGameSource { kind: "url" | "html"; url?: string; html?: string; desc?: string; }
@@ -72,7 +72,7 @@ export const getHiddenRemoteIds = hiddenIds;
 const isValid = (g: unknown): g is GameDef => {
   const d = g as GameDef;
   if (!d || typeof d.id !== "string" || typeof d.title !== "string" || typeof d.cost !== "number") return false;
-  const engines: string[] = ["order", "memory", "which", "quiz", "count", "nextayah", "prevayah", "whichsurah", "missingword", "surahaudio", "ayahsurah", "ayahorder", "ayahlonger", "surahorder", "surahnum", "remote"];
+  const engines: string[] = ["order", "memory", "memory_meaning", "which", "quiz", "count", "nextayah", "prevayah", "whichsurah", "missingword", "surahaudio", "ayahsurah", "ayahorder", "ayahlonger", "surahorder", "surahnum", "remote"];
   if (!engines.includes(d.engine)) return false;
   if (d.engine === "remote") return !!d.remote && (d.remote.kind === "html" ? typeof d.remote.html === "string" : typeof d.remote.url === "string");
   return true;
@@ -136,20 +136,22 @@ export const syncGameCatalogFromServer = async () => {
 };
 
 /** ط¥ظ†ط´ط§ط، ظ„ط¹ط¨ط© ظ…ط¶ظ…ظ‘ظ†ط© ط¨ط§ط®طھطµط§ط±. */
+/** إنشاء لعبة مضمَّنة باختصار. */
 const G = (id: string, title: string, engine: GameEngine, ageMin: number, ageMax: number, cost: number, icon: string, params: GameDef["params"], ti = 0): GameDef =>
   ({ id, title, engine, ageMin, ageMax, cost, icon, params: params || {}, tint: t(ti) });
 
-/** ظ¥ظ  ظ„ط¹ط¨ط© ظ…ظˆط²ظ‘ط¹ط© ط¹ظ„ظ‰ ط§ظ„ط£ط¹ظ…ط§ط±: ظ¤-ظ¦طŒ ظ¦-ظ¨طŒ ظ¨-ظ،ظ طŒ ظ،ظ -ظ،ظ¢طŒ ظ،ظ¢-ظ،ظ¤. ظ„ط¹ط¨ط© ظˆط§ط­ط¯ط© ظ…ط¬ط§ظ†ظٹط© ظ„ظƒظ„ ط§ظ„ط£ط¹ظ…ط§ط±. */
+/** 50 لعبة موزّعة على الأعمار: 4-6، 6-8، 8-10، 10-12، 12-14. لعبة واحدة مجانية لكل الأعمار. */
 export const BUILTIN_GAMES: GameDef[] = [
-  G("surahaudio", "ط§ط³ظ…ط¹ ط§ظ„ط³ظˆط±ط©", "surahaudio", 4, 16, 0, "Headphones", null, 0),
-  // â”€â”€ ط£ط¹ظ…ط§ط± ظ¤-ظ¦ â”€â”€
-  G("memory4", "ط¨ط·ط§ظ‚ط§طھ ط§ظ„ط³ظˆط±", "memory", 4, 6, 40, "LayoutGrid", { pairs: 3 }, 2),
-  G("whichsurah4", "ط§ظƒطھط´ظپ ط§ظ„ط³ظˆط±ط©", "whichsurah", 4, 6, 40, "Sparkles", SHORT, 1),
-  G("order4", "طھط±طھظٹط¨ ط§ظ„ط¢ظٹط§طھ", "order", 4, 6, 45, "ListOrdered", SHORT, 3),
-  G("count4", "ط¹ط¯ظ‘ ط§ظ„ط¢ظٹط§طھ", "count", 4, 6, 45, "Hash", SHORT, 4),
-  G("missingword4", "ط§ظ„ظƒظ„ظ…ط© ط§ظ„ط¶ط§ط¦ط¹ط©", "missingword", 4, 6, 50, "Puzzle", SHORT, 7),
-  G("quiz4", "ط§ط®طھط¨ط§ط± ط§ظ„ط³ظˆط±", "quiz", 4, 6, 50, "Trophy", SHORT, 5),
-  G("which4", "ط§ظ„ط³ظˆط±ط© ط§ظ„ط£ط·ظˆظ„", "which", 4, 6, 55, "Scale", SHORT, 6),
+  G("surahaudio", "اسمع السورة", "surahaudio", 4, 16, 0, "Headphones", null, 0),
+  // ── أعمار 4-6 ──
+  G("memory_meaning1", "لعبة الذاكرة", "memory_meaning", 4, 16, 0, "Brain", null, 0),
+  G("memory4", "بطاقات السور", "memory", 4, 6, 40, "LayoutGrid", { pairs: 3 }, 2),
+  G("whichsurah4", "اكتشف السورة", "whichsurah", 4, 6, 40, "Sparkles", SHORT, 1),
+  G("order4", "ترتيب الآيات", "order", 4, 6, 45, "ListOrdered", SHORT, 3),
+  G("count4", "عدّ الآيات", "count", 4, 6, 45, "Hash", SHORT, 4),
+  G("missingword4", "الكلمة الضائعة", "missingword", 4, 6, 50, "Puzzle", SHORT, 7),
+  G("quiz4", "اختبار السور", "quiz", 4, 6, 50, "Trophy", SHORT, 5),
+  G("which4", "السورة الأطول", "which", 4, 6, 55, "Scale", SHORT, 6),
   G("nextayah4", "ط£ظƒظ…ظ„ ط§ظ„ط¢ظٹط©", "nextayah", 4, 6, 55, "BookOpen", SHORT, 0),
   G("prevayah4", "ط§ظ„ط¢ظٹط© ط§ظ„طھظٹ ظ‚ط¨ظ„ظ‡ط§", "prevayah", 4, 6, 60, "BookOpen", SHORT, 2),
   G("surahorder4", "طھط±طھظٹط¨ ط§ظ„ط³ظˆط±", "surahorder", 4, 6, 60, "ListOrdered", SHORT, 3),

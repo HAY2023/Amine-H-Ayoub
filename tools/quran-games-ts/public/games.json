@@ -1,0 +1,13 @@
+[
+  {
+    "id": "game_memory_1",
+    "title": "لعبة الذاكرة: السورة ومعناها",
+    "icon": "🧠",
+    "ageMin": 4,
+    "ageMax": 7,
+    "cost": 0,
+    "kind": "url",
+    "url": "https://HAY2023.github.io/Amine-H-Ayoub/kids-games/index.html",
+    "desc": "طابق كل سورة مع قصتها أو معناها، المستوى الأول للصغار (4 إلى 7 سنوات)."
+  }
+]

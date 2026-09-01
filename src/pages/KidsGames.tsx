@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Bell, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Hash, Grid3x3, Flame, Sparkles, Gamepad2, Puzzle, X, Crown } from "lucide-react";
+import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Bell, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Hash, Grid3x3, Flame, Sparkles, Gamepad2, Puzzle, X, Crown, Brain } from "lucide-react";
 import { getAllSurahs } from "../data/quranData";
 import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
 import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked, setCurrentSurah, addPlayMinutes, setAppMode, ownItem, unlockItem } from "../data/kidsProfile";
@@ -12,6 +12,8 @@ import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
 import { shouldHideMushaf } from "../utils/tauriUtils";
 import ParentalGateModal from "../components/ParentalGateModal";
 import RemoteGameFrame from "../components/RemoteGameFrame";
+import MemoryGame from "../games/MemoryGame";
+import MissingWordGame from "../games/MissingWordGame";
 import Avatar from "../components/Avatar";
 import NotificationsModal from "../components/NotificationsModal";
 import BadgesModal from "../components/BadgesModal";
@@ -986,13 +988,13 @@ function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
 }
 
 const ENGINES: Record<GameEngine, (p: { def: GameDef; minSurah: number }) => JSX.Element> = {
-  order: OrderEngine, memory: MemoryEngine, which: WhichEngine, quiz: QuizEngine, count: CountEngine,
-  nextayah: NextAyahEngine, prevayah: PrevAyahEngine, whichsurah: WhichSurahEngine, missingword: MissingWordEngine, surahaudio: SurahAudioEngine,
+  order: OrderEngine, memory: MemoryEngine, memory_meaning: () => <MemoryGame onBack={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />, which: WhichEngine, quiz: QuizEngine, count: CountEngine,
+  nextayah: NextAyahEngine, prevayah: PrevAyahEngine, whichsurah: WhichSurahEngine, missingword: ({ def }) => <MissingWordGame def={def} onBack={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />, surahaudio: SurahAudioEngine,
   ayahsurah: AyahSurahEngine, ayahorder: AyahOrderEngine, ayahlonger: AyahLongerEngine, surahorder: SurahOrderEngine, surahnum: SurahNumEngine,
   // الألعاب البعيدة (HTML من السيرفر) تُخرج من القائمة عبر حدث موحّد
   remote: ({ def }: { def: GameDef; minSurah: number }) => <RemoteGameFrame def={def} onExit={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />,
 };
-const ICONS: Record<string, typeof Headphones> = { Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Hash, Grid3x3, Gamepad2, BookOpen, Sparkles, Puzzle };
+const ICONS: Record<string, typeof Headphones> = { Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Hash, Grid3x3, Gamepad2, BookOpen, Sparkles, Puzzle, Brain };
 const iconFor = (key: string) => ICONS[key] || Gamepad2;
 
 /* ───────────────── ركن الأطفال ───────────────── */
