@@ -108,8 +108,16 @@ export default function BadgesModal({ onClose }: Props) {
         <div className="rounded-2xl p-3.5 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 border border-amber-500/30 space-y-2.5 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="w-9 h-9 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-md animate-bounce">
-                <Flame className="w-5 h-5 fill-current" />
+              <span className="flex items-center justify-center animate-bounce">
+                <Flame 
+                  className={`transition-all duration-300 ${
+                    streakInfo.currentStreak >= 7 ? "w-10 h-10 text-red-500 fill-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" :
+                    streakInfo.currentStreak >= 5 ? "w-8 h-8 text-orange-500 fill-orange-500 drop-shadow-[0_0_6px_rgba(249,115,22,0.7)]" :
+                    streakInfo.currentStreak >= 3 ? "w-7 h-7 text-amber-500 fill-amber-500 drop-shadow-[0_0_4px_rgba(245,158,11,0.6)]" :
+                    streakInfo.currentStreak >= 1 ? "w-6 h-6 text-yellow-500 fill-yellow-500 drop-shadow-[0_0_2px_rgba(234,179,8,0.5)]" :
+                    "w-5 h-5 text-muted-foreground"
+                  }`} 
+                />
               </span>
               <div>
                 <span className="block font-extrabold text-sm text-foreground">

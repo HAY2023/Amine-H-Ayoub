@@ -12,6 +12,7 @@ import SupportModal from "../components/SupportModal";
 import { toast } from "../hooks/use-toast";
 
 import { hasKidsPin, setKidsPin, removeKidsPin, setKidsLocked, isKidsMode } from "../data/kidsLock";
+import AppFooter from "../components/AppFooter";
 import { isBackgroundAudioEnabled, setBackgroundAudioEnabled } from "../utils/backgroundAudio";
 import { applyTheme, getTheme } from "../utils/theme";
 const THEME_KEY = "mushaf:theme";
@@ -308,6 +309,7 @@ export default function SettingsPage() {
 
       {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
       {showAdmin && <AdminGamesModal onClose={() => setShowAdmin(false)} />}
+      <AppFooter />
     </div>
   );
 }

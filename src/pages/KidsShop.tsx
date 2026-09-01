@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Star, Lock, Sparkles, Palette } from "lucide-react";
 import { getCoins, getProfile, ownItem, unlockItem, equipAvatar, equipColor, kidsRouteBlocked, KID_AVATARS, KID_COLORS, SHOP_AVATARS, SHOP_COLORS } from "../data/kidsProfile";
-import { GEM_ITEMS, getGems, getOwnedGemItems, ownGemItem, buyGemItem } from "../data/gamification";
+
 import Avatar from "../components/Avatar";
 import TreasureBox from "../components/TreasureBox";
 import { toast } from "../hooks/use-toast";
@@ -22,17 +22,7 @@ export default function KidsShop() {
   }, []);
 
   const coins = getCoins();
-  const gems = getGems();
 
-  const buyGem = (item: typeof GEM_ITEMS[number]) => {
-    if (buyGemItem(item)) {
-      if (item.kind === "avatar") equipAvatar(item.value);
-      refresh();
-      toast({ title: `👑 مبروك! أصبح «${item.title}» ملكك`, description: "كنز نادر يملكه الصبورون فقط" });
-    } else {
-      toast({ title: "مجوهرات غير كافية 💎", description: "أكمل سور واقرأ يومياً — الكنوز للصابرين!", variant: "destructive" });
-    }
-  };
   const profile = getProfile();
 
   const equipAv = (value: string) => { equipAvatar(value); refresh(); toast({ title: "تم اختيار الوجه" }); };
@@ -58,34 +48,7 @@ export default function KidsShop() {
         </header>
         <p className="text-xs text-muted-foreground text-center leading-relaxed">اجمع النجوم من الألعاب، ثم افتح بها وجوهاً وألواناً جديدة لشخصيتك.</p>
 
-        {/* الكنوز النادرة (المجوهرات 💎) — أسعار خيالية للصابرين */}
-        <section className="space-y-2 animate-fade-up p-4 rounded-2xl border-2 border-cyan-500/40 bg-cyan-500/5">
-          <div className="flex items-center justify-between">
-            <h2 className="font-bold text-cyan-500 flex items-center gap-2">💎 الكنوز النادرة</h2>
-            <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/15 text-cyan-500 font-extrabold text-sm px-2.5 py-1">💎 {gems}</span>
-          </div>
-          <p className="text-[11px] text-muted-foreground leading-relaxed">مجوهرات نادرة تُجمع من القراءة اليومية والسلسلة المتتالية — أصحابها القلة الصابرون فقط!</p>
-          <div className="grid gap-2">
-            {GEM_ITEMS.map(item => {
-              const owned = ownGemItem(item.id);
-              return (
-                <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border">
-                  <span className="w-10 h-10 rounded-xl bg-cyan-500/15 text-cyan-500 flex items-center justify-center text-lg shrink-0">👑</span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block font-bold text-foreground text-sm">{item.title}</span>
-                    <span className="block text-[11px] text-muted-foreground">{item.desc}</span>
-                  </span>
-                  <button onClick={() => buyGem(item)}
-                    className={cn("shrink-0 px-3 py-2 rounded-xl text-xs font-extrabold active:scale-95 transition-transform",
-                      owned ? "bg-success/15 text-success" : "bg-cyan-500 text-white")}>
-                    {owned ? "مملوك ✓" : `💎 ${item.cost}`}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-          <p className="text-[10px] text-muted-foreground text-center">مملوك لك: {getOwnedGemItems().length} من {GEM_ITEMS.length} كنوز</p>
-        </section>
+
 
         {/* صندوق الكنز اليومي — مرة واحدة كل يوم */}
         <TreasureBox />

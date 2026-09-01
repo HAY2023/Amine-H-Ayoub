@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import AppHeader from "@/components/AppHeader";
+import AppFooter from "@/components/AppFooter";
 import PointsDisplay from "@/components/PointsDisplay";
 import SurahList from "@/components/SurahList";
 import SearchBar from "@/components/SearchBar";
@@ -16,8 +17,8 @@ import { useTVNavigation } from "@/hooks/useTVNavigation";
 import { Shuffle, ListOrdered, Settings, Bell, Gamepad2, Lock } from "lucide-react";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
 import { isTimeAllowed } from "@/data/kidsSchedule";
-import { kidsEnabled as getKidsEnabled, addReadingMinutes, addCoins, setAppMode } from "@/data/kidsProfile";
-import { addXp, addGems } from "@/data/gamification";
+import { kidsEnabled as getKidsEnabled, addReadingMinutes, addCoins, setAppMode, getProgress } from "@/data/kidsProfile";
+
 import { checkAndUnlockBadges } from "@/data/kidsBadges";
 import { toast } from "@/hooks/use-toast";
 
@@ -57,6 +58,18 @@ const Index = () => {
   const isAudioPlayingRef = useRef(false);
   useEffect(() => { isAudioPlayingRef.current = isAudioPlaying; }, [isAudioPlaying]);
   useEffect(() => { const h = () => setKidsMode(isKidsMode()); window.addEventListener("mushaf:kidsmode", h); return () => window.removeEventListener("mushaf:kidsmode", h); }, []);
+
+  const [playExpired, setPlayExpired] = useState(() => getProgress().playExpired);
+  useEffect(() => {
+    const h = () => setPlayExpired(getProgress().playExpired);
+    h();
+    window.addEventListener("mushaf:activeprofile", h);
+    window.addEventListener("focus", h);
+    return () => {
+      window.removeEventListener("mushaf:activeprofile", h);
+      window.removeEventListener("focus", h);
+    };
+  }, []);
 
   // ── الإعدادات: محميّة برمز ولي الأمر فقط في وضع الأطفال ──
   const openSettings = () => { if (isKidsMode() && hasKidsPin()) setPinAction("settings"); else navigate("/settings"); };
@@ -301,6 +314,16 @@ const Index = () => {
         {/* شريط التنقل العلوي */}
         {kidsMode ? (
           <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
+            {!playExpired && (
+              <button
+                onClick={() => navigate("/games")}
+                className="h-10 px-3.5 rounded-full bg-accent/90 backdrop-blur border border-accent shadow-soft flex items-center gap-1.5 text-xs font-bold text-accent-foreground hover:brightness-110 active:scale-95 transition-all"
+                title="الذهاب إلى الألعاب"
+              >
+                <Gamepad2 className="w-4 h-4" />
+                <span>الألعاب</span>
+              </button>
+            )}
             <button
               onClick={() => {
                 if (hasKidsPin()) {
@@ -461,6 +484,9 @@ const Index = () => {
       )}
 
       {showNotifications && <NotificationsModal onClose={() => setShowNotifications(false)} />}
+
+      {/* تذييل الموقع — يُخفى بالكامل في وضع الأطفال */}
+      <AppFooter />
     </div>
   );
 };

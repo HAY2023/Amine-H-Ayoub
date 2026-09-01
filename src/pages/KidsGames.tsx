@@ -5,8 +5,7 @@ import { getAllSurahs } from "../data/quranData";
 import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
 import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked, setCurrentSurah, addPlayMinutes, setAppMode, ownItem, unlockItem } from "../data/kidsProfile";
 import { getGameCatalog, type GameDef, type GameEngine } from "../data/gameCatalog";
-import GoldenBoard from "../components/GoldenBoard";
-import { dailyStreakGems, getGems as getGemCount, shouldShowHook } from "../data/gamification";
+
 import { fetchRemoteGames, precacheRemoteGames } from "../data/remoteGames";
 import { ensureCorpus, type SurahText } from "../data/quranText";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
@@ -1092,29 +1091,7 @@ export default function KidsGames() {
 
   const [showBadges, setShowBadges] = useState(false);
 
-  // ── السلسلة اليومية بمكافآت المجوهرات (يوم ٧ متتالٍ = ٥٠ 💎 — غياب يوم يصفّرها) ──
-  const [streak, setStreak] = useState(0);
-  const [gems, setGems] = useState(getGemCount());
-  const [showBoard, setShowBoard] = useState(false);
-  useEffect(() => {
-    const r = dailyStreakGems();
-    setStreak(r.count);
-    if (r.isNewDay) toast({ title: `🔥 اليوم ${r.count} متتالٍ! +${r.reward} 💎`, description: "تعال كل يوم — اليوم ٧ متتالٍ = ٥٠ 💎، وغياب يوم واحد يصفّر السلسلة!" });
-  }, []);
-  useEffect(() => {
-    const h = () => setGems(getGemCount());
-    window.addEventListener("mushaf:gam", h);
-    return () => window.removeEventListener("mushaf:gam", h);
-  }, []);
-  // خطاف التسجيل: عند جمع ١٠٠ 💎 تظهر نافذة اللوحة الذهبية (مرة كل جلسة)
-  useEffect(() => {
-    try {
-      if (shouldShowHook() && !sessionStorage.getItem("mushaf:hookShown")) {
-        sessionStorage.setItem("mushaf:hookShown", "1");
-        setShowBoard(true);
-      }
-    } catch { /* ignore */ }
-  }, [gems]);
+
   // نظام فتح الألعاب بالنجوم (المال): لعبة واحدة مجانية والبقية تُفتح بالنجوم المكتسبة
   const [unlockDef, setUnlockDef] = useState<GameDef | null>(null);
   const isGameOwned = (g: GameDef) => g.cost <= 0 || ownItem(g.id);
@@ -1274,9 +1251,8 @@ export default function KidsGames() {
           {!active ? (
             <div className="flex items-center gap-1.5">
               <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-accent font-extrabold text-sm px-2.5 h-10"><Star className="w-4 h-4 fill-current" /> {coins}</span>
-              <span title="المجوهرات النادرة — تُجمع بالصبر وتُصرف في كنوز المتجر" className="inline-flex items-center gap-1 rounded-full bg-cyan-500/15 text-cyan-500 font-extrabold text-sm px-2.5 h-10">💎 {gems}</span>
-              <button onClick={() => setShowBoard(true)} aria-label="اللوحة الذهبية" title="اللوحة الذهبية الأسبوعية" className="w-10 h-10 rounded-full bg-amber-500/15 text-amber-500 hover:brightness-95 flex items-center justify-center active:scale-95 border border-amber-500/30 shadow-sm"><Crown className="w-5 h-5" /></button>
-              {streak > 0 && <span title="أيام متتالية — عُد كل يوم لمكافأة أكبر" className="inline-flex items-center gap-1 rounded-full bg-orange-500/15 text-orange-500 font-extrabold text-sm px-2.5 h-10"><Flame className="w-4 h-4 fill-current" /> {streak}</span>}
+
+
               <button onClick={() => setShowBadges(true)} aria-label="الأوسمة والإنجازات" title="الأوسمة والإنجازات" className="w-10 h-10 rounded-full bg-amber-500/15 text-amber-500 hover:brightness-95 flex items-center justify-center active:scale-95 border border-amber-500/30 shadow-sm"><Trophy className="w-5 h-5" /></button>
               <button onClick={() => setShowNotifications(true)} aria-label="الإشعارات" className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground hover:brightness-95 flex items-center justify-center active:scale-95"><Bell className="w-5 h-5" /></button>
               <button onClick={openParent} aria-label="إعدادات ولي الأمر" className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground hover:brightness-95 flex items-center justify-center active:scale-95"><Settings className="w-5 h-5" /></button>
@@ -1371,7 +1347,7 @@ export default function KidsGames() {
               })}
               
               {/* زر الخروج المباشر إلى التلاوات */}
-              <button onClick={exitKidsCorner} className="mt-2 relative overflow-hidden rounded-[1.7rem] p-[2px] active:scale-[0.98] transition-transform text-right hover:shadow-xl hover:shadow-accent/30">
+              <button onClick={() => navigate("/audio")} className="mt-2 relative overflow-hidden rounded-[1.7rem] p-[2px] active:scale-[0.98] transition-transform text-right hover:shadow-xl hover:shadow-accent/30">
                 <div className="absolute inset-0 bg-accent/20" />
                 <div className="relative bg-card/95 backdrop-blur-md rounded-[1.6rem] p-4 flex items-center gap-4 border border-accent/40">
                   <span className="w-16 h-16 rounded-2xl bg-accent/20 text-accent flex items-center justify-center shrink-0"><Headphones className="w-8 h-8" /></span>
@@ -1387,7 +1363,7 @@ export default function KidsGames() {
         )}
       </div>
 
-      {showBoard && <GoldenBoard onClose={() => setShowBoard(false)} />}
+
 
       {/* نافذة فتح لعبة بالنجوم (المال) */}
       {unlockDef && (

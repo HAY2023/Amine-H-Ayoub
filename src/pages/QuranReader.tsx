@@ -3,11 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, Bell, SplitSquareHorizontal, Volume2, Menu, Eye, EyeOff, List, Lock, Baby, Bookmark as BookmarkIcon, Trash2, Plus, Wrench } from "lucide-react";
 import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
+import AppFooter from "@/components/AppFooter";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
 import { getCustomPages, getAllPageImages, getPageOrder } from "@/data/customPages";
 import { getPageSurahRegions } from "@/data/surahRegions";
-import { addReadingMinutes, addCoins, kidsEnabled as getKidsEnabled } from "@/data/kidsProfile";
-import { addXp, addGems } from "@/data/gamification";
+import { addReadingMinutes, addCoins, kidsEnabled as getKidsEnabled, getProgress } from "@/data/kidsProfile";
+
 import { getBookmarks, addBookmark, removeBookmark, Bookmark } from "@/data/bookmarks";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
 import ParentalGateModal from "@/components/ParentalGateModal";
@@ -270,6 +271,18 @@ function _UnusedQuranReader() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(getBookmarks);
   useEffect(() => { const h = () => setKidsModeState(isKidsMode()); window.addEventListener("mushaf:kidsmode", h); return () => window.removeEventListener("mushaf:kidsmode", h); }, []);
   useEffect(() => { const h = () => setKidsCorner(getKidsEnabled()); window.addEventListener("mushaf:appmode", h); return () => window.removeEventListener("mushaf:appmode", h); }, []);
+
+  const [playExpired, setPlayExpired] = useState(() => getProgress().playExpired);
+  useEffect(() => {
+    const h = () => setPlayExpired(getProgress().playExpired);
+    h();
+    window.addEventListener("mushaf:activeprofile", h);
+    window.addEventListener("focus", h);
+    return () => {
+      window.removeEventListener("mushaf:activeprofile", h);
+      window.removeEventListener("focus", h);
+    };
+  }, []);
 
   useEffect(() => {
     const handleVisibility = () => {
@@ -1272,7 +1285,7 @@ function _UnusedQuranReader() {
             !kidsMode && { key: "back", icon: <ArrowRight className="w-5 h-5 text-foreground" />, label: "رجوع", onClick: () => navigate("/audio"), active: false },
             { key: "hide", icon: hideShading ? <Eye className="w-5 h-5 text-foreground" /> : <EyeOff className="w-5 h-5 text-foreground" />, label: hideShading ? "إظهار التظليل" : "إخفاء التظليل", onClick: () => setHideShading(v => !v), active: hideShading },
             { key: "surahs", icon: <List className="w-5 h-5 text-foreground" />, label: "قائمة السور", onClick: () => setSurahListOpen(true), active: surahListOpen },
-            kidsMode && { key: "games", icon: <Baby className="w-5 h-5 text-foreground" />, label: "الألعاب", onClick: () => navigate("/games"), active: false },
+            kidsMode && !playExpired && { key: "games", icon: <Baby className="w-5 h-5 text-foreground" />, label: "الألعاب", onClick: () => navigate("/games"), active: false },
             kidsMode
               ? { key: "lock", icon: <Lock className="w-5 h-5 text-foreground" />, label: "خروج من ركن الأطفال", onClick: requestExitKids, active: true }
               : (kidsCorner && { key: "kids", icon: <Baby className="w-5 h-5 text-foreground" />, label: "ركن الأطفال", onClick: enterKids, active: false }),
@@ -1593,6 +1606,7 @@ function _UnusedQuranReader() {
       )}
 
       {showNotifications && <NotificationsModal onClose={() => setShowNotifications(false)} />}
+      <AppFooter />
     </div>
   );
 }

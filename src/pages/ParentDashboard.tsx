@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, BookOpen, Clock, Bell, Baby, Check, Gift, Plus, Trash2, Minus, Star, X, TrendingUp, Award, Zap, Target, Trophy } from "lucide-react";
+import AppFooter from "../components/AppFooter";
 import { getProfile, updateProfile, getProgress, getHistory, getProfiles, getActiveId, setActiveProfile, addProfile, removeProfile, getAppMode, setAppMode, kidsRouteBlocked, KID_AVATARS, KID_COLORS, KidsProfile, KidsProgress, DayLog } from "../data/kidsProfile";
 import { getKidsSchedule, saveKidsSchedule, KidsSchedule } from "../data/kidsSchedule";
 import { isKidsMode, setKidsLocked } from "../data/kidsLock";
@@ -398,6 +399,7 @@ export default function ParentDashboard() {
           </div>
         </div>
       )}
+      <AppFooter />
     </div>
   );
 }
