@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom';
 
 interface MissingWordGameProps {
   def: GameDef;
+  minSurah?: number;
   onBack: () => void;
 }
 
@@ -18,7 +19,7 @@ interface Question {
   options: string[];
 }
 
-export default function MissingWordGame({ def, onBack }: MissingWordGameProps) {
+export default function MissingWordGame({ def, minSurah, onBack }: MissingWordGameProps) {
   const [corpus, setCorpus] = useState<SurahText[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
