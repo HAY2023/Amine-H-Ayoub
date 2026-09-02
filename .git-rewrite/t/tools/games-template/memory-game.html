@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>لعبة الذاكرة: السورة ومعناها</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0fdf4; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+    h1 { color: #166534; text-align: center; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 600px; width: 100%; margin-top: 20px; }
+    .card { background-color: #22c55e; height: 100px; border-radius: 12px; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: bold; color: white; transition: transform 0.3s, background-color 0.3s; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); user-select: none; text-align: center; padding: 5px; box-sizing: border-box; }
+    .card.flipped { background-color: #ffffff; color: #166534; border: 2px solid #22c55e; transform: rotateY(180deg); }
+    .card.matched { background-color: #dcfce7; color: #166534; border: 2px solid #86efac; cursor: default; }
+    .card span { transform: rotateY(180deg); display: block; }
+    .card:not(.flipped) span { transform: none; }
+    #message { margin-top: 20px; font-size: 20px; font-weight: bold; color: #166534; height: 30px; }
+    button { margin-top: 20px; padding: 10px 20px; background-color: #166534; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    button:hover { background-color: #14532d; }
+  </style>
+</head>
+<body>
+  <h1>لعبة الذاكرة: طابق السورة بمعناها</h1>
+  <div id="message"></div>
+  <div class="grid" id="grid"></div>
+  <button onclick="initGame()">إعادة اللعب</button>
+
+  <script>
+    const pairs = [
+      { id: 1, type: 'surah', text: 'سورة الفيل' }, { id: 1, type: 'meaning', text: '🐘 جيش أبرهة' },
+      { id: 2, type: 'surah', text: 'سورة الناس' }, { id: 2, type: 'meaning', text: '🛡️ الاستعاذة' },
+      { id: 3, type: 'surah', text: 'سورة الشمس' }, { id: 3, type: 'meaning', text: '☀️ وضحاها' },
+      { id: 4, type: 'surah', text: 'سورة التين' }, { id: 4, type: 'meaning', text: '🌳 والزيتون' },
+      { id: 5, type: 'surah', text: 'سورة الفلق' }, { id: 5, type: 'meaning', text: '🌅 من شر ما خلق' },
+      { id: 6, type: 'surah', text: 'سورة قريش' }, { id: 6, type: 'meaning', text: '🐪 الشتاء والصيف' },
+    ];
+
+    let cards = [];
+    let firstCard = null;
+    let lockBoard = false;
+    let matches = 0;
+
+    function initGame() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      document.getElementById('message').innerText = '';
+      cards = [...pairs].sort(() => 0.5 - Math.random());
+      firstCard = null;
+      lockBoard = false;
+      matches = 0;
+
+      cards.forEach((item, index) => {
+        const el = document.createElement('div');
+        el.className = 'card';
+        el.dataset.id = item.id;
+        el.dataset.index = index;
+        el.innerHTML = '<span>❓</span>';
+        el.addEventListener('click', flipCard);
+        grid.appendChild(el);
+      });
+    }
+
+    function flipCard() {
+      if (lockBoard) return;
+      if (this === firstCard) return;
+
+      this.classList.add('flipped');
+      const item = cards[this.dataset.index];
+      this.innerHTML = `<span>${item.text}</span>`;
+
+      if (!firstCard) {
+        firstCard = this;
+        return;
+      }
+
+      checkForMatch(this);
+    }
+
+    function checkForMatch(secondCard) {
+      const isMatch = firstCard.dataset.id === secondCard.dataset.id;
+      isMatch ? disableCards(secondCard) : unflipCards(secondCard);
+    }
+
+    function disableCards(secondCard) {
+      firstCard.removeEventListener('click', flipCard);
+      secondCard.removeEventListener('click', flipCard);
+      firstCard.classList.add('matched');
+      secondCard.classList.add('matched');
+      resetBoard();
+      matches++;
+      
+      if (matches === pairs.length / 2) {
+        document.getElementById('message').innerText = '🎉 أحسنت! طابقت كل السور بنجاح!';
+        // إبلاغ التطبيق الأب بنجاح اللعبة لربح النجوم
+        try { window.parent.postMessage({ type: 'mushaf:game_win' }, '*'); } catch (e) {}
+      }
+    }
+
+    function unflipCards(secondCard) {
+      lockBoard = true;
+      setTimeout(() => {
+        firstCard.classList.remove('flipped');
+        secondCard.classList.remove('flipped');
+        firstCard.innerHTML = '<span>❓</span>';
+        secondCard.innerHTML = '<span>❓</span>';
+        resetBoard();
+      }, 1000);
+    }
+
+    function resetBoard() {
+      [firstCard, lockBoard] = [null, false];
+    }
+
+    initGame();
+  </script>
+</body>
+</html>

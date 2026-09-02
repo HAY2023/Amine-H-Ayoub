@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{margin:0;box-sizing:border-box;font-family:system-ui}
+body{min-height:100vh;background:linear-gradient(180deg,#0b1220,#1e3a8a);color:#fff;overflow:hidden;user-select:none;-webkit-user-select:none}
+.bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);z-index:9}
+.bar b{color:#fbbf24;font-size:1.05rem}
+#exit{padding:6px 14px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer}
+.s{position:fixed;font-size:2.5rem;cursor:pointer;z-index:2;filter:drop-shadow(0 0 8px rgba(251,191,36,.8))}
+</style>
+</head>
+<body>
+<div class="bar"><b>✨ النجوم الهابطة</b><span id="stars">⭐ 0</span><button id="exit">خروج ✕</button></div>
+<script>
+var s=0;
+function drop(){
+  var e=document.createElement('div');e.className='s';
+  e.textContent=Math.random()<.15?'💎':'⭐';var v=Math.random()<.15?3:1;
+  e.style.left=(8+Math.random()*80)+'vw';e.style.top='-50px';document.body.appendChild(e);
+  var y=-50,iv=setInterval(function(){y+=3+Math.random()*2;e.style.top=y+'px';if(y>innerHeight+40){clearInterval(iv);e.remove()}},28);
+  e.addEventListener('click',function(){clearInterval(iv);e.remove();s+=v;document.getElementById('stars').textContent='⭐ '+s;try{parent.postMessage({type:'nour:game:stars',amount:v},'*')}catch(x){}});
+}
+var loop=setInterval(drop,1100);
+document.getElementById('exit').addEventListener('click',function(){clearInterval(loop);try{parent.postMessage({type:'nour:game:exit'},'*')}catch(x){}});
+try{parent.postMessage({type:'nour:game:ready'},'*')}catch(x){}
+</script>
+</body>
+</html>

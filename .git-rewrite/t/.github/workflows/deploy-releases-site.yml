@@ -1,0 +1,95 @@
+name: Deploy Releases Site & Updater
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'releases-site/**'
+      - '.github/workflows/deploy-releases-site.yml'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  deploy-site:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Clean up obsolete releases and set v1.0.0 as Latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for tag in "v1.0.1" "v1.0.15"; do
+            gh release delete "$tag" --yes --cleanup-tag || true
+          done
+          gh release edit "v1.0.0" --title "Quran v1.0.0" --latest || true
+
+      - name: Generate updater.json
+        run: |
+          LATEST_RELEASE=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest" || echo "{}")
+          VERSION=$(echo "$LATEST_RELEASE" | jq -r '.tag_name // "v1.0.0"')
+          PUB_DATE=$(echo "$LATEST_RELEASE" | jq -r '.published_at // "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"')
+          NOTES=$(echo "$LATEST_RELEASE" | jq -r '.body // "New Release"')
+          
+          WINDOWS_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[]? | select(.name | endswith(".msi.zip")) | .browser_download_url' | head -1)
+          if [ -z "$WINDOWS_URL" ] || [ "$WINDOWS_URL" = "null" ]; then
+            WINDOWS_URL="https://github.com/${{ github.repository }}/releases"
+          fi
+          
+          mkdir -p releases-site
+          cat <<EOF > releases-site/updater.json
+          {
+            "version": "$VERSION",
+            "notes": "$NOTES",
+            "pub_date": "$PUB_DATE",
+            "platforms": {
+              "windows-x86_64": {
+                "signature": "",
+                "url": "$WINDOWS_URL"
+              }
+            }
+          }
+          EOF
+
+      - name: Sync releases.json to Hugging Face
+        if: always()
+        run: |
+          if [ -n "${{ secrets.HF_TOKEN }}" ]; then
+            echo "Syncing to Hugging Face..."
+            curl -f -X POST \
+              -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
+              --data-binary "@releases-site/releases.json" \
+              "https://huggingface.co/api/datasets/hammoualiyoucef20/quran-app-releases/upload/main/releases.json" || true
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        continue-on-error: true
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        continue-on-error: true
+        with:
+          path: './releases-site'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Deploy to gh-pages branch fallback
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          npx --yes gh-pages -d releases-site -b gh-pages -m "deploy: update releases site [skip ci]" || true

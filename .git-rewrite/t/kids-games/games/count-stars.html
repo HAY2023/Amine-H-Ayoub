@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{margin:0;box-sizing:border-box;font-family:system-ui}
+body{min-height:100vh;background:linear-gradient(180deg,#0b1220,#0f766e);color:#fff;display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none}
+.bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);z-index:9}
+.bar b{color:#fbbf24;font-size:1.05rem}
+#exit{padding:6px 14px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer}
+h1{margin:76px 0 4px;font-size:1.1rem;color:#fde68a}
+p{color:#99f6e4;font-size:.8rem;margin-bottom:12px}
+#q{font-size:2.6rem;line-height:1.6;width:min(90vw,420px);min-height:130px;text-align:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;margin-bottom:16px}
+#ops{display:flex;gap:12px}
+#ops button{width:78px;height:60px;border:0;border-radius:14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#111;font-size:1.4rem;font-weight:800;cursor:pointer}
+#ops button:active{transform:scale(.94)}
+#hud{margin-top:14px;color:#fbbf24;font-weight:800}
+</style>
+</head>
+<body>
+<div class="bar"><b>🔢 عدّ النجوم</b><span id="stars">⭐ 0</span><button id="exit">خروج ✕</button></div>
+<h1>كم نجمة ترى؟</h1>
+<p>كل إجابة صحيحة = ⭐</p>
+<div id="q"></div>
+<div id="ops"></div>
+<div id="hud">المستوى 1</div>
+<script>
+var s=0,lv=1;
+function round(){
+  var n=3+Math.floor(Math.random()*7),q=document.getElementById('q');q.textContent='';
+  for(var i=0;i<n;i++){q.appendChild(document.createTextNode('⭐'));if(i%4===3)q.appendChild(document.createElement('br'))}
+  var ops=document.getElementById('ops');ops.innerHTML='';var set=[n];
+  while(set.length<3){var r=1+Math.floor(Math.random()*10);if(set.indexOf(r)<0)set.push(r)}
+  set.sort(function(){return Math.random()-.5});
+  set.forEach(function(v){var b=document.createElement('button');b.textContent=v;
+    b.addEventListener('click',function(){if(v===n){s++;lv++;document.getElementById('stars').textContent='⭐ '+s;document.getElementById('hud').textContent='المستوى '+lv;try{parent.postMessage({type:'nour:game:stars',amount:1},'*')}catch(x){}}round()});
+    ops.appendChild(b)});
+}
+document.getElementById('exit').addEventListener('click',function(){try{parent.postMessage({type:'nour:game:exit'},'*')}catch(x){}});
+try{parent.postMessage({type:'nour:game:ready'},'*')}catch(x){}
+round();
+</script>
+</body>
+</html>

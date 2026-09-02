@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{margin:0;box-sizing:border-box;font-family:system-ui}
+body{min-height:100vh;background:linear-gradient(160deg,#0b1220,#7c2d12);color:#fff;display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none}
+.bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);z-index:9}
+.bar b{color:#fbbf24;font-size:1.05rem}
+#exit{padding:6px 14px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer}
+h1{margin:76px 0 6px;font-size:1.1rem;color:#fde68a}
+p{color:#fdba74;font-size:.8rem;margin-bottom:16px}
+#ops{display:flex;gap:12px;width:min(92vw,440px)}
+.big{flex:1;border:0;border-radius:18px;padding:26px 10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#111;font-weight:800;font-size:1.2rem;cursor:pointer;animation:pop .3s}
+.big:active{transform:scale(.97)}
+#hud{margin-top:16px;color:#fbbf24;font-weight:800}
+@keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+</style>
+</head>
+<body>
+<div class="bar"><b>📏 أي سورة أطول؟</b><span id="stars">⭐ 0</span><button id="exit">خروج ✕</button></div>
+<h1>أي السورتين أطول (عدد الآيات)؟</h1>
+<p>كل إجابة صحيحة = ⭐⭐</p>
+<div id="ops"></div>
+<div id="hud">المستوى 1</div>
+<script>
+var P=[["الفاتحة","الإخلاص",0],["البقرة","الفاتحة",0],["آل عمران","البقرة",1],["يوسف","الكهف",0],["مريم","طه",1],["النبأ","الملك",0],["الكافرون","الكوثر",0],["الفلق","الناس",1],["الفجر","البلد",0],["القيامة","الإنسان",0],["الهمزة","التكاثر",0],["الماعون","قريش",1]];
+var s=0,lv=1;
+function round(){
+  var i=Math.floor(Math.random()*P.length),ops=document.getElementById('ops');ops.innerHTML='';
+  var a=document.createElement('button');a.className='big';a.textContent='سورة '+P[i][0];
+  var b=document.createElement('button');b.className='big';b.textContent='سورة '+P[i][1];
+  var right=P[i][2]===0?a:b;
+  [a,b].forEach(function(x){x.addEventListener('click',function(){if(x===right){s+=2;lv++;document.getElementById('stars').textContent='⭐ '+s;document.getElementById('hud').textContent='المستوى '+lv;try{parent.postMessage({type:'nour:game:stars',amount:2},'*')}catch(e){}}round()})});
+  ops.appendChild(a);ops.appendChild(b);
+}
+document.getElementById('exit').addEventListener('click',function(){try{parent.postMessage({type:'nour:game:exit'},'*')}catch(e){}});
+try{parent.postMessage({type:'nour:game:ready'},'*')}catch(e){}
+round();
+</script>
+</body>
+</html>

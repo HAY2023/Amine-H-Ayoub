@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{margin:0;box-sizing:border-box;font-family:system-ui}
+body{min-height:100vh;background:linear-gradient(160deg,#0b1220,#4c1d95);color:#fff;display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none}
+.bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);z-index:9}
+.bar b{color:#fbbf24;font-size:1.05rem}
+#exit{padding:6px 14px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer}
+h1{margin:76px 0 6px;font-size:1.1rem;color:#fde68a}
+p{color:#c4b5fd;font-size:.8rem;margin-bottom:14px}
+#pool{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:min(92vw,440px);margin-bottom:16px;min-height:52px}
+#pool .t{border:0;border-radius:12px;padding:12px 18px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;font-weight:800;font-size:1.1rem;cursor:pointer}
+#pool .t:active{transform:scale(.94)}
+#done{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:min(92vw,440px);min-height:52px}
+#done .t{border-radius:12px;padding:12px 18px;background:rgba(255,255,255,.1);border:1px solid #fbbf24;color:#fde68a;font-weight:800;font-size:1.1rem}
+#hud{margin-top:12px;color:#fbbf24;font-weight:800}
+</style>
+</head>
+<body>
+<div class="bar"><b>🔢 ترتيب السور</b><span id="stars">⭐ 0</span><button id="exit">خروج ✕</button></div>
+<h1>اضغط السور حسب ترتيبها في المصحف</h1>
+<p>ترتيب صحيح كامل = ⭐⭐ لكل سورة</p>
+<div id="done"></div><div id="pool"></div>
+<div id="hud">المستوى 1</div>
+<script>
+var S=[["الفاتحة",1],["البقرة",2],["آل عمران",3],["النساء",4],["المائدة",5],["الأنعام",6],["الأعراف",7],["الأنفال",8],["التوبة",9],["يونس",10],["هود",11],["يوسف",12],["الرعد",13],["إبراهيم",14],["الحجر",15],["النحل",16],["الإسراء",17],["الكهف",18],["مريم",19],["طه",20]];
+var s=0,lv=1,pick=[];
+function round(){
+  pick=[];var done=document.getElementById('done');done.innerHTML='';var pool=document.getElementById('pool');pool.innerHTML='';
+  var idx=[];while(idx.length<4){var r=Math.floor(Math.random()*S.length);if(idx.indexOf(r)<0)idx.push(r)}
+  var four=idx.map(function(i){return S[i]}).sort(function(){return Math.random()-.5});
+  four.forEach(function(x){var b=document.createElement('button');b.className='t';b.textContent=x[0];
+    b.addEventListener('click',function(){pick.push(x);var t=document.createElement('span');t.className='t';t.textContent=x[0];done.appendChild(t);b.remove();
+      if(pick.length===4){var ok=pick.every(function(p,i){return i===0||pick[i-1][1]<p[1]});
+        if(ok){s+=2;document.getElementById('stars').textContent='⭐ '+s;try{parent.postMessage({type:'nour:game:stars',amount:2},'*')}catch(e){}}
+        setTimeout(round,700)}});
+    pool.appendChild(b)});
+}
+document.getElementById('exit').addEventListener('click',function(){try{parent.postMessage({type:'nour:game:exit'},'*')}catch(e){}});
+try{parent.postMessage({type:'nour:game:ready'},'*')}catch(e){}
+round();
+</script>
+</body>
+</html>

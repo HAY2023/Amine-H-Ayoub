@@ -1,0 +1,382 @@
+[
+  {
+    "id": "TC001",
+    "title": "Load and play a selected recitation",
+    "description": "This test verifies that a user can open the reader, choose a surah, and start audio playback successfully.",
+    "category": "Quran Reading",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /reader"
+      },
+      {
+        "type": "action",
+        "description": "Select a surah from the list"
+      },
+      {
+        "type": "action",
+        "description": "Start audio playback"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected surah is active"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify audio playback is in progress"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Change playback behavior while listening",
+    "description": "This test verifies that a user can adjust repeat or auto-next settings during recitation and continue listening with the chosen behavior applied.",
+    "category": "Quran Reading",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /reader"
+      },
+      {
+        "type": "action",
+        "description": "Select a surah from the list"
+      },
+      {
+        "type": "action",
+        "description": "Start audio playback"
+      },
+      {
+        "type": "action",
+        "description": "Toggle repeat or auto-next behavior"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the playback behavior setting is applied"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify audio playback continues"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Seek through a recitation",
+    "description": "This test verifies that a user can move backward or forward within a recitation and continue from the new position.",
+    "category": "Quran Reading",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /reader"
+      },
+      {
+        "type": "action",
+        "description": "Select a surah from the list"
+      },
+      {
+        "type": "action",
+        "description": "Start audio playback"
+      },
+      {
+        "type": "action",
+        "description": "Seek backward or forward in the track"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the playback position changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify audio playback continues from the new position"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Skip between tracks during listening",
+    "description": "This test verifies that a user can move to the previous or next track while listening and keep audio playback working.",
+    "category": "Quran Reading",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /reader"
+      },
+      {
+        "type": "action",
+        "description": "Select a surah from the list"
+      },
+      {
+        "type": "action",
+        "description": "Start audio playback"
+      },
+      {
+        "type": "action",
+        "description": "Skip to the previous or next track"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the active track changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify audio playback continues"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Browse avatars and buy one with points",
+    "description": "This test verifies that a user can view avatars, purchase one with points, and see the updated selection afterward.",
+    "category": "Character Shop",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /shop"
+      },
+      {
+        "type": "action",
+        "description": "View the available avatars"
+      },
+      {
+        "type": "action",
+        "description": "Choose an avatar to purchase"
+      },
+      {
+        "type": "action",
+        "description": "Complete the purchase"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the avatar selection updates"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify points are deducted"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Check for updates and open the release page when available",
+    "description": "This test verifies that a user can check for updates, see update details when a newer version exists, and open the release download page from settings.",
+    "category": "App Settings and Updates",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings"
+      },
+      {
+        "type": "action",
+        "description": "Check for updates"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify update details are visible when a new version is available"
+      },
+      {
+        "type": "action",
+        "description": "Open the release download page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the release page opens"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "Confirm the app is already up to date",
+    "description": "This test verifies that a user can check for updates in settings and see the up-to-date state when no update is available.",
+    "category": "App Settings and Updates",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings"
+      },
+      {
+        "type": "action",
+        "description": "Check for updates"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an up-to-date state is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC008",
+    "title": "Keep browsing after a successful avatar purchase",
+    "description": "This test verifies that a user can buy an avatar and continue browsing other avatars without leaving the shop.",
+    "category": "Character Shop",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /shop"
+      },
+      {
+        "type": "action",
+        "description": "View the available avatars"
+      },
+      {
+        "type": "action",
+        "description": "Choose an avatar to purchase"
+      },
+      {
+        "type": "action",
+        "description": "Complete the purchase"
+      },
+      {
+        "type": "action",
+        "description": "Continue browsing other avatars"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the purchased avatar remains selected"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify other avatars are still available to browse"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC009",
+    "title": "Continue listening after changing reader context",
+    "description": "This test verifies that a user can navigate away from the reader and return without losing the selected recitation state.",
+    "category": "Quran Reading",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /reader"
+      },
+      {
+        "type": "action",
+        "description": "Select a surah from the list"
+      },
+      {
+        "type": "action",
+        "description": "Start audio playback"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Return to /reader"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the previously selected surah remains active"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the recitation state is restored"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC010",
+    "title": "Navigate between home, reader, shop, and settings",
+    "description": "This test verifies that a user can move between the main app sections from home and each destination remains reachable.",
+    "category": "App Navigation",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the reader section"
+      },
+      {
+        "type": "action",
+        "description": "Open the shop section"
+      },
+      {
+        "type": "action",
+        "description": "Open the settings section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the settings section is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the main sections remain accessible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC011",
+    "title": "Prevent buying an avatar without enough points",
+    "description": "This test verifies that the shop blocks a purchase when the user does not have sufficient points and keeps the current balance unchanged.",
+    "category": "Character Shop",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /shop"
+      },
+      {
+        "type": "action",
+        "description": "Choose an avatar that costs more points than available"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to complete the purchase"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an insufficient points message is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the avatar selection does not change"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC012",
+    "title": "Stay on the same avatar after repeated purchase attempts",
+    "description": "This test verifies that repeated rapid purchase attempts do not create multiple avatar purchases or duplicate point deductions.",
+    "category": "Character Shop",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /shop"
+      },
+      {
+        "type": "action",
+        "description": "View the available avatars"
+      },
+      {
+        "type": "action",
+        "description": "Choose an avatar to purchase"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to complete the purchase twice quickly"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify only one purchase is recorded"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify points are deducted once"
+      }
+    ],
+    "priority": "Low"
+  }
+]

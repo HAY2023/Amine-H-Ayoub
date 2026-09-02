@@ -1,0 +1,594 @@
+name: Publish Distribution Releases
+
+# يعمل فقط عند دفع وسم إصدار (مثل v1.0.0) أو تشغيل يدوي
+on:
+  workflow_dispatch:
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# ═══════════════════════════════════════════════════════════════════
+# هذا المسار يتكون من مرحلتين:
+#   مرحلة 1 — البناء: 4 وظائف مستقلة تعمل بالتوازي الكامل
+#   مرحلة 2 — النشر: 4 وظائف تسلسلية تُحدّث releases.json واحدة تلو الأخرى
+#
+# كل وظيفة بناء مستقلة تماماً: نجاح ويندوز لا يعتمد على نجاح ماك أو لينكس
+# كل وظيفة نشر تعتمد فقط على وظيفة بنائها الخاصة
+# ═══════════════════════════════════════════════════════════════════
+
+jobs:
+  # ╔═══════════════════════════════════════════╗
+  # ║     مرحلة 1: البناء بالتوازي الكامل       ║
+  # ╚═══════════════════════════════════════════╝
+
+  # ───────────── ويندوز ─────────────
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - run: npm ci
+
+      - name: Generate app icon
+        run: npx --yes @tauri-apps/cli@^2 icon src-tauri/icons/app-icon.png
+
+      - name: Build Windows desktop app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "قرآن أطفال ${{ github.ref_name }}"
+          releaseBody: "نسخ التطبيق: حمّل الملف المناسب لجهازك."
+          releaseDraft: true
+          prerelease: false
+
+  # ───────────── ماك ─────────────
+  build-macos:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - run: npm ci
+
+      - name: Generate app icon
+        run: npx --yes @tauri-apps/cli@^2 icon src-tauri/icons/app-icon.png
+
+      - name: Build macOS desktop app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "قرآن أطفال ${{ github.ref_name }}"
+          releaseDraft: true
+
+  # ───────────── لينكس ─────────────
+  build-linux:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - run: npm ci
+
+      - name: Generate app icon
+        run: npx --yes @tauri-apps/cli@^2 icon src-tauri/icons/app-icon.png
+
+      - name: Build Linux desktop app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "قرآن أطفال ${{ github.ref_name }}"
+          releaseDraft: true
+
+  # ───────────── أندرويد (بناء إنتاج موقّع) ─────────────
+  # ⚠️ ملاحظة: نستهدف aarch64 فقط لتفادي خطأ "No space left on device"
+  #    الذي يحدث عند بناء 4 معماريات على GitHub Runner (14GB فقط).
+  #    معمارية aarch64 تغطي ~95% من أجهزة Android الحديثة.
+  #    لإضافة armv7 لاحقاً، يمكن فصله إلى job مستقل أو استخدام runner أكبر.
+  build-android:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # تحرير مساحة القرص قبل البناء
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android/sdk/platforms /usr/local/lib/android/sdk/build-tools/3[0-2]* /opt/ghc
+          sudo apt-get clean
+          df -h
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager "ndk;26.1.10909125"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+
+      # فقط aarch64 — لتوفير المساحة وتغطية الغالبية العظمى من الأجهزة
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - run: npm ci
+      - run: npm install -D @tauri-apps/cli@^2
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Initialize Android project
+        run: npx tauri android init || true
+
+      - name: Inject custom app icon into Android project
+        run: |
+          npx tauri icon src-tauri/icons/app-icon.png
+          mkdir -p src-tauri/gen/android/app/src/main/res
+          cp -rf src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/ || true
+
+      # بناء نسخة Release لمعمارية aarch64 (APK و AAB)
+      - name: Build release APK & AAB (aarch64)
+        run: |
+          npx tauri android build --apk --target aarch64
+          npx tauri android build --aab --target aarch64 || true
+
+      # توقيع APK بمفتاح الإنتاج
+      - name: Sign APK with production keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          # البحث عن ملف APK الناتج
+          APK_RAW=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -type f | head -1)
+          echo "Found raw APK at: $APK_RAW"
+
+          if [ -z "$APK_RAW" ]; then
+            echo "::error::No APK found in build outputs!"
+            exit 1
+          fi
+
+          APK_DIR=$(dirname "$APK_RAW")
+          APK_FINAL="$APK_DIR/app-universal-release.apk"
+
+          BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools/" | sort -V | tail -1)"
+          echo "Using build-tools: $BUILD_TOOLS_DIR"
+
+          # محاذاة zipalign إلى ملف نهائي موحد
+          "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$APK_RAW" "$APK_FINAL"
+
+          SIGNED=false
+          KEYSTORE_FILE="${{ runner.temp }}/release.keystore"
+
+          # 1. محاولة التوقيع باستخدام أسرار المستودع إن وُجدت
+          if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASS" ]; then
+            echo "Attempting to use repository secret keystore..."
+            echo "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE_FILE" 2>/dev/null || true
+
+            ACTUAL_KEY_PASS="${KEY_PASS:-$KEYSTORE_PASS}"
+
+            if keytool -list -keystore "$KEYSTORE_FILE" -storepass "$KEYSTORE_PASS" > /dev/null 2>&1; then
+              echo "Keystore verified successfully with keytool."
+              
+              DETECTED_ALIAS="$KEY_ALIAS"
+              if [ -z "$DETECTED_ALIAS" ]; then
+                DETECTED_ALIAS=$(keytool -list -keystore "$KEYSTORE_FILE" -storepass "$KEYSTORE_PASS" | grep -E "PrivateKeyEntry|trustedCertEntry" | cut -d',' -f1 | head -1 | xargs)
+                echo "Auto-detected alias: $DETECTED_ALIAS"
+              fi
+
+              SIGN_ARGS=(sign --ks "$KEYSTORE_FILE" --ks-pass "pass:$KEYSTORE_PASS")
+              if [ -n "$DETECTED_ALIAS" ]; then
+                SIGN_ARGS+=(--ks-key-alias "$DETECTED_ALIAS")
+              fi
+              if [ -n "$ACTUAL_KEY_PASS" ]; then
+                SIGN_ARGS+=(--key-pass "pass:$ACTUAL_KEY_PASS")
+              fi
+              SIGN_ARGS+=("$APK_FINAL")
+
+              if "$BUILD_TOOLS_DIR/apksigner" "${SIGN_ARGS[@]}"; then
+                echo "✅ APK successfully signed with secret keystore."
+                SIGNED=true
+              else
+                echo "::warning::Failed to sign with repository secret keystore. Falling back to generated release key."
+              fi
+            else
+              echo "::warning::Secret keystore verification failed (wrong password or corrupted base64). Falling back to generated release key."
+            fi
+          fi
+
+          # 2. خطة بديلة: إذا لم تتوفر الأسرار أو كانت غير صالحة، نولد مفتاحاً صالحاً للتوقيع حتى يكون APK قابلاً للتثبيت 100%
+          if [ "$SIGNED" != "true" ]; then
+            echo "Generating fallback release keystore to ensure valid signed APK..."
+            FALLBACK_KS="${{ runner.temp }}/fallback-release.keystore"
+            keytool -genkeypair -v \
+              -keystore "$FALLBACK_KS" \
+              -alias "quran_release" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass "qurankids2026" \
+              -keypass "qurankids2026" \
+              -dname "CN=QuranKids, OU=App, O=QuranKids, L=Algiers, ST=Algiers, C=DZ"
+            
+            "$BUILD_TOOLS_DIR/apksigner" sign \
+              --ks "$FALLBACK_KS" \
+              --ks-pass "pass:qurankids2026" \
+              --ks-key-alias "quran_release" \
+              --key-pass "pass:qurankids2026" \
+              "$APK_FINAL"
+            
+            echo "✅ APK signed with fallback release keystore."
+            SIGNED=true
+          fi
+
+          # 3. التحقق النهائي من صحة التوقيع
+          "$BUILD_TOOLS_DIR/apksigner" verify --verbose "$APK_FINAL"
+          echo "Verified APK at: $APK_FINAL"
+
+      # رفع APK و AAB إلى GitHub Release
+      - name: Attach signed APK and AAB to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: |
+            src-tauri/gen/android/app/build/outputs/apk/**/app-universal-release.apk
+            src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
+
+  # ───────────── iOS (حزمة IPA لأجهزة iPhone / iPad) ─────────────
+  build-ios:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios, x86_64-apple-ios
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - run: npm ci
+      - run: npm install -D @tauri-apps/cli@^2
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Initialize and build iOS
+        run: |
+          npx tauri ios init || true
+          npx tauri icon src-tauri/icons/app-icon.png
+          npx tauri ios build --export-method development || true
+
+      - name: Attach iOS packages to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: |
+            src-tauri/gen/apple/build/**/*.ipa
+            src-tauri/gen/apple/build/**/*.app
+
+  # ╔═══════════════════════════════════════════════════════════════╗
+  # ║  مرحلة 2: تحديث releases.json (تسلسلي عبر concurrency)     ║
+  # ╠═══════════════════════════════════════════════════════════════╣
+  # ║  ⚠️ ملاحظة مهمة:                                            ║
+  # ║  مجموعة التزامن releases-json-write تضمن أن وظيفة واحدة    ║
+  # ║  فقط تكتب على releases.json في أي لحظة.                     ║
+  # ║  إذا انتهت أكثر من منصة بناءً في نفس الوقت تقريباً،        ║
+  # ║  فإن الوظائف الأخرى تنتظر دورها — هذا سلوك متعمد ومقصود   ║
+  # ║  وليس تعليقاً (hang). قد يستمر الانتظار عدة دقائق.         ║
+  # ╚═══════════════════════════════════════════════════════════════╝
+
+  # ───────────── نشر ويندوز ─────────────
+  publish-windows:
+    needs: build-windows
+    if: success()
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    # ⚠️ انتظار تسلسلي متعمد — يمنع تعارض كتابتين متزامنتين على releases.json
+    concurrency:
+      group: releases-json-write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Update releases.json for Windows
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = 'releases-site/releases.json';
+            
+            let data = { platforms: { windows: { releases: [] }, macos: { releases: [] }, linux: { releases: [] }, android: { releases: [] } } };
+            try { 
+              if (fs.existsSync(path)) data = JSON.parse(fs.readFileSync(path, 'utf8')); 
+            } catch (e) {
+              console.log('Initializing fresh releases.json');
+            }
+            if (!data.platforms) data.platforms = { windows: { releases: [] }, macos: { releases: [] }, linux: { releases: [] }, android: { releases: [] } };
+            if (!data.platforms.windows) data.platforms.windows = { releases: [] };
+
+            const tag = '${{ github.ref_name }}';
+            const ver = tag.replace(/^v/, '');
+            const repo = '${{ github.repository }}';
+            const date = new Date().toISOString().split('T')[0];
+
+            const exists = data.platforms.windows.releases.some(r => r.version === tag);
+            if (!exists) {
+              data.platforms.windows.releases.unshift({
+                version: tag,
+                date: date,
+                url: 'https://github.com/' + repo + '/releases/download/' + tag + '/hajj-ayoub-amine_' + ver + '_x64-setup.exe',
+                size: '',
+                changelog: ['إصدار جديد'],
+                active: false
+              });
+            }
+
+            fs.mkdirSync('releases-site', { recursive: true });
+            fs.writeFileSync(path, JSON.stringify(data, null, 2));
+            console.log('✅ Windows release ' + tag + ' added to releases.json');
+          "
+
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add releases-site/releases.json
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "chore(windows): add release ${{ github.ref_name }}"
+          git pull --rebase origin gh-pages
+          git push origin gh-pages
+
+  # ───────────── نشر ماك ─────────────
+  publish-macos:
+    needs: build-macos
+    if: success()
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    concurrency:
+      group: releases-json-write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Update releases.json for macOS
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = 'releases-site/releases.json';
+            let data = { platforms: { windows: { releases: [] }, macos: { releases: [] }, linux: { releases: [] }, android: { releases: [] } } };
+            try { 
+              if (fs.existsSync(path)) data = JSON.parse(fs.readFileSync(path, 'utf8')); 
+            } catch (e) {
+              console.log('Initializing fresh releases.json');
+            }
+            if (!data.platforms) data.platforms = { windows: { releases: [] }, macos: { releases: [] }, linux: { releases: [] }, android: { releases: [] } };
+            if (!data.platforms.macos) data.platforms.macos = { releases: [] };
+
+            const tag = '${{ github.ref_name }}';
+            const ver = tag.replace(/^v/, '');
+            const repo = '${{ github.repository }}';
+            const date = new Date().toISOString().split('T')[0];
+
+            const exists = data.platforms.macos.releases.some(r => r.version === tag);
+            if (!exists) {
+              data.platforms.macos.releases.unshift({
+                version: tag,
+                date: date,
+                url: 'https://github.com/' + repo + '/releases/download/' + tag + '/hajj-ayoub-amine_' + ver + '_aarch64.dmg',
+                size: '',
+                changelog: ['إصدار جديد'],
+                active: false
+              });
+            }
+
+            fs.mkdirSync('releases-site', { recursive: true });
+            fs.writeFileSync(path, JSON.stringify(data, null, 2));
+            console.log('✅ macOS release ' + tag + ' added');
+          "
+
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add releases-site/releases.json
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "chore(macos): add release ${{ github.ref_name }}"
+          git pull --rebase origin gh-pages
+          git push origin gh-pages
+
+  # ───────────── نشر لينكس ─────────────
+  publish-linux:
+    needs: build-linux
+    if: success()
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    concurrency:
+      group: releases-json-write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Update releases.json for Linux
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = 'releases-site/releases.json';
+            let data = { platforms: { windows: { releases: [] }, macos: { releases: [] }, linux: { releases: [] }, android: { releases: [] } } };
+            try { 
+              if (fs.existsSync(path)) data = JSON.parse(fs.readFileSync(path, 'utf8')); 
+            } catch (e) {
+              console.log('Initializing fresh releases.json');
+            }
+            if (!data.platforms) data.platforms = { windows: { releases: [] }, macos: { releases: [] }, linux: { releases: [] }, android: { releases: [] } };
+            if (!data.platforms.linux) data.platforms.linux = { releases: [] };
+
+            const tag = '${{ github.ref_name }}';
+            const ver = tag.replace(/^v/, '');
+            const repo = '${{ github.repository }}';
+            const date = new Date().toISOString().split('T')[0];
+
+            const exists = data.platforms.linux.releases.some(r => r.version === tag);
+            if (!exists) {
+              data.platforms.linux.releases.unshift({
+                version: tag,
+                date: date,
+                url: 'https://github.com/' + repo + '/releases/download/' + tag + '/hajj-ayoub-amine_' + ver + '_amd64.AppImage',
+                size: '',
+                changelog: ['إصدار جديد'],
+                active: false
+              });
+            }
+
+            fs.mkdirSync('releases-site', { recursive: true });
+            fs.writeFileSync(path, JSON.stringify(data, null, 2));
+            console.log('✅ Linux release ' + tag + ' added');
+          "
+
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add releases-site/releases.json
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "chore(linux): add release ${{ github.ref_name }}"
+          git pull --rebase origin gh-pages
+          git push origin gh-pages
+
+  # ───────────── نشر أندرويد ─────────────
+  publish-android:
+    needs: build-android
+    if: success()
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    concurrency:
+      group: releases-json-write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Update releases.json for Android
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = 'releases-site/releases.json';
+            let data = { platforms: { windows: { releases: [] }, macos: { releases: [] }, linux: { releases: [] }, android: { releases: [] } } };
+            try { 
+              if (fs.existsSync(path)) data = JSON.parse(fs.readFileSync(path, 'utf8')); 
+            } catch (e) {
+              console.log('Initializing fresh releases.json');
+            }
+            if (!data.platforms) data.platforms = { windows: { releases: [] }, macos: { releases: [] }, linux: { releases: [] }, android: { releases: [] } };
+            if (!data.platforms.android) data.platforms.android = { releases: [] };
+
+            const tag = '${{ github.ref_name }}';
+            const repo = '${{ github.repository }}';
+            const date = new Date().toISOString().split('T')[0];
+
+            const exists = data.platforms.android.releases.some(r => r.version === tag);
+            if (!exists) {
+              data.platforms.android.releases.unshift({
+                version: tag,
+                date: date,
+                url: 'https://github.com/' + repo + '/releases/download/' + tag + '/app-universal-release.apk',
+                size: '',
+                changelog: ['إصدار جديد'],
+                active: false
+              });
+            }
+
+            fs.mkdirSync('releases-site', { recursive: true });
+            fs.writeFileSync(path, JSON.stringify(data, null, 2));
+            console.log('✅ Android release ' + tag + ' added');
+          "
+
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add releases-site/releases.json
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "chore(android): add release ${{ github.ref_name }}"
+          git pull --rebase origin gh-pages
+          git push origin gh-pages

@@ -1,0 +1,183 @@
+/**
+ * فهرس الألعاب المدمجة (Native)
+ */
+import { supabase, hasValidSupabaseKey } from "../lib/supabase";
+
+export type GameEngine = "order" | "memory" | "memory_meaning" | "which" | "quiz" | "count" | "nextayah" | "prevayah" | "whichsurah" | "missingword" | "surahaudio" | "ayahsurah" | "ayahorder" | "ayahlonger" | "surahorder" | "surahnum";
+
+export interface GameDef {
+  id: string;
+  title: string;
+  engine: GameEngine;
+  ageMin: number;
+  ageMax?: number;
+  cost: number;
+  tint: string;
+  icon: string;
+  params?: { pairs?: number; minSurah?: number; maxSurah?: number; minAyah?: number; maxAyah?: number };
+  custom?: boolean;
+}
+
+const CATALOG_KEY = "mushaf:gameCatalog:v1";
+const PRICE_OVERRIDE_KEY = "mushaf:gamePriceOverrides:v1";
+
+const T = [
+  "bg-gradient-to-br from-sky-400 to-cyan-500 text-white shadow-cyan-500/30",
+  "bg-gradient-to-br from-pink-500 to-rose-400 text-white shadow-pink-500/30",
+  "bg-gradient-to-br from-violet-400 to-purple-500 text-white shadow-purple-500/30",
+  "bg-gradient-to-br from-teal-400 to-emerald-500 text-white shadow-emerald-500/30",
+  "bg-gradient-to-br from-orange-400 to-red-500 text-white shadow-orange-500/30",
+  "bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow-amber-500/30",
+  "bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-indigo-500/30",
+  "bg-gradient-to-br from-fuchsia-400 to-pink-500 text-white shadow-fuchsia-500/30",
+];
+const t = (i: number) => T[i % T.length];
+
+const SHORT = { minSurah: 38 };
+const MID = { minSurah: 114, maxSurah: 20 };
+const FULL = { minSurah: 114 };
+
+const HIDDEN_REMOTE_KEY = "mushaf:remoteGamesHidden";
+
+const hiddenIds = (): string[] => {
+  if (typeof window === "undefined") return [];
+  try { const v = JSON.parse(localStorage.getItem(HIDDEN_REMOTE_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; }
+};
+export const hideRemoteGame = (id: string) => {
+  try { const h = hiddenIds(); if (!h.includes(id)) localStorage.setItem(HIDDEN_REMOTE_KEY, JSON.stringify([...h, id])); } catch { /* ignore */ }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:gamecatalog"));
+};
+export const showRemoteGame = (id: string) => {
+  try { localStorage.setItem(HIDDEN_REMOTE_KEY, JSON.stringify(hiddenIds().filter(x => x !== id))); } catch { /* ignore */ }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:gamecatalog"));
+};
+export const getHiddenRemoteIds = hiddenIds;
+export const setRemoteGamesList = (_list: any[]) => { /* No-op since remote games are removed */ };
+
+let serverGames: GameDef[] = [];
+
+const isValid = (g: unknown): g is GameDef => {
+  const d = g as GameDef;
+  if (!d || typeof d.id !== "string" || typeof d.title !== "string" || typeof d.cost !== "number") return false;
+  const engines: string[] = ["order", "memory", "memory_meaning", "which", "quiz", "count", "nextayah", "prevayah", "whichsurah", "missingword", "surahaudio", "ayahsurah", "ayahorder", "ayahlonger", "surahorder", "surahnum"];
+  if (!engines.includes(d.engine)) return false;
+  return true;
+};
+
+const readServerLocal = (): GameDef[] => {
+  if (typeof window === "undefined") return [];
+  try { const r = localStorage.getItem(CATALOG_KEY); const v = r ? JSON.parse(r) : []; return Array.isArray(v) ? v.filter(isValid).map(g => ({ ...g, custom: true })) : []; } catch { return []; }
+};
+
+export const getGameCatalog = (): GameDef[] => {
+  const server = serverGames.length ? serverGames : readServerLocal();
+  const map = new Map<string, GameDef>();
+  for (const g of BUILTIN_GAMES) map.set(g.id, g);
+  for (const g of server) map.set(g.id, { tint: "bg-slate-500/20 text-slate-200", icon: "Gamepad2", ageMin: 5, ...g, custom: true });
+  
+  // Apply price overrides for built-in games
+  const overrides = getPriceOverrides();
+  for (const g of map.values()) {
+    if (overrides[g.id] !== undefined) {
+      map.set(g.id, { ...g, cost: overrides[g.id] });
+    }
+  }
+  
+  return Array.from(map.values());
+};
+
+const getPriceOverrides = (): Record<string, number> => {
+  if (typeof window === "undefined") return {};
+  try {
+    const r = localStorage.getItem(PRICE_OVERRIDE_KEY);
+    const v = r ? JSON.parse(r) : {};
+    return typeof v === "object" && v !== null ? v as Record<string, number> : {};
+  } catch { return {}; }
+};
+
+export const setGameCost = (gameId: string, cost: number) => {
+  const overrides = getPriceOverrides();
+  overrides[gameId] = cost;
+  try { localStorage.setItem(PRICE_OVERRIDE_KEY, JSON.stringify(overrides)); } catch { /* ignore */ }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:gamecatalog"));
+};
+
+export const getCustomGames = (): GameDef[] => getGameCatalog().filter(g => g.custom);
+
+export const resetGamePrices = () => {
+  try { localStorage.removeItem(PRICE_OVERRIDE_KEY); } catch { /* ignore */ }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:gamecatalog"));
+};
+
+const persistServer = (list: GameDef[]) => {
+  serverGames = list;
+  try { localStorage.setItem(CATALOG_KEY, JSON.stringify(list)); } catch { /* ignore */ }
+  if (hasValidSupabaseKey()) supabase.from("store").upsert({ key: CATALOG_KEY, value: list }).then(() => {}, () => {});
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:gamecatalog"));
+};
+
+export const addGameDef = (def: GameDef) => {
+  const list = getCustomGames().filter(g => g.id !== def.id);
+  persistServer([...list, { ...def, custom: true }]);
+};
+
+export const removeGameDef = (id: string) => { persistServer(getCustomGames().filter(g => g.id !== id)); };
+
+export const syncGameCatalogFromServer = async () => {
+  if (typeof window === "undefined" || !hasValidSupabaseKey()) return;
+  if (typeof navigator !== "undefined" && !navigator.onLine) return;
+  try {
+    const { data } = await supabase.from("store").select("value").eq("key", CATALOG_KEY).maybeSingle();
+    if (data && Array.isArray(data.value)) {
+      const list = (data.value as GameDef[]).filter(isValid).map(g => ({ ...g, custom: true }));
+      serverGames = list;
+      localStorage.setItem(CATALOG_KEY, JSON.stringify(list));
+      window.dispatchEvent(new Event("mushaf:gamecatalog"));
+    }
+  } catch (e) { console.debug("sync game catalog:", e); }
+};
+
+const G = (id: string, title: string, engine: GameEngine, ageMin: number, ageMax: number, cost: number, icon: string, params: GameDef["params"], ti = 0): GameDef =>
+  ({ id, title, engine, ageMin, ageMax, cost, icon, params: params || {}, tint: t(ti) });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// قائمة الألعاب الفريدة - بدون تكرار
+// كل لعبة موجودة مرة واحدة فقط مع نطاق عمر واسع (4-16 سنة)
+// ═══════════════════════════════════════════════════════════════════════════════
+export const BUILTIN_GAMES: GameDef[] = [
+  // ── ألعاب الاستماع ──
+  G("surahaudio", "اسمع السورة", "surahaudio", 4, 16, 0, "Headphones", null, 0),
+
+  // ── ألعاب الذاكرة ──
+  G("memory", "بطاقات السور", "memory", 4, 16, 50, "LayoutGrid", { pairs: 4 }, 1),
+  G("memory_meaning", "لعبة الذاكرة", "memory_meaning", 4, 16, 55, "Brain", null, 2),
+
+  // ── ألعاب الاكتشاف ──
+  G("whichsurah", "اكتشف السورة", "whichsurah", 4, 16, 60, "Sparkles", FULL, 3),
+
+  // ── ألعاب الترتيب ──
+  G("order", "ترتيب الآيات", "order", 4, 16, 65, "ListOrdered", FULL, 4),
+  G("ayahorder", "رتّب الآيات", "ayahorder", 4, 16, 70, "ListOrdered", FULL, 5),
+  G("surahorder", "ترتيب السور", "surahorder", 4, 16, 75, "ListOrdered", FULL, 6),
+
+  // ── ألعاب العد ──
+  G("count", "عدّ الآيات", "count", 4, 16, 45, "Hash", FULL, 7),
+
+  // ── ألعاب الكلمات ──
+  G("missingword", "الكلمة الضائعة", "missingword", 4, 16, 80, "Puzzle", FULL, 0),
+
+  // ── ألعاب الاختبار ──
+  G("quiz", "اختبار السور", "quiz", 4, 16, 85, "Trophy", FULL, 1),
+
+  // ── ألعاب المقارنة ──
+  G("which", "السورة الأطول", "which", 4, 16, 90, "Scale", FULL, 2),
+  G("ayahlonger", "أي آية أطول؟", "ayahlonger", 4, 16, 95, "Scale", FULL, 3),
+
+  // ── ألعاب الإكمال ──
+  G("nextayah", "أكمل الآية", "nextayah", 4, 16, 55, "BookOpen", FULL, 4),
+  G("prevayah", "الآية التي قبلها", "prevayah", 4, 16, 60, "BookOpen", FULL, 5),
+
+  // ── ألعاب التعرف ──
+  G("ayahsurah", "من أي سورة؟", "ayahsurah", 4, 16, 100, "BookOpen", FULL, 6),
+  G("surahnum", "رقم السورة", "surahnum", 4, 16, 105, "Hash", FULL, 7),
+];

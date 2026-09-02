@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{margin:0;box-sizing:border-box;font-family:system-ui}
+body{min-height:100vh;background:linear-gradient(160deg,#0b1220,#312e81);color:#fff;display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none}
+.bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);z-index:9}
+.bar b{color:#fbbf24;font-size:1.05rem}
+#exit{padding:6px 14px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer}
+h1{margin:76px 0 4px;font-size:1.1rem;color:#fde68a}
+p{color:#a5b4fc;font-size:.8rem;margin-bottom:14px}
+#g{display:grid;gap:9px;width:min(88vw,380px);margin-bottom:12px}
+#g .o{aspect-ratio:1;border:0;border-radius:16px;cursor:pointer;transition:transform .1s,opacity .2s;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+#g .o:active{transform:scale(.92)}
+#lv{font-size:1rem;font-weight:800;color:#c7d2fe;margin-bottom:8px}
+#hud{margin-top:6px;color:#fbbf24;font-weight:800;font-size:1.1rem}
+.shake{animation:sh .3s}
+@keyframes sh{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+</style>
+</head>
+<body>
+<div class="bar"><b>🎯 المربع المختلف</b><span id="stars">⭐ 0</span><button id="exit">خروج ✕</button></div>
+<h1>جد المربع ذا اللون المختلف</h1>
+<p>اللون يتغير كل جولة — والصعوبة تزداد!</p>
+<div id="lv">المستوى 1</div>
+<div id="g"></div>
+<div id="hud">⭐ 0</div>
+<script>
+var s=0,lv=1;
+function round(){
+  var g=document.getElementById('g');g.innerHTML='';
+  var n=lv<=2?3:lv<=4?4:lv<=6?5:6;                       // الشبكة تكبر تدريجياً
+  var hue=Math.floor(Math.random()*360),sat=55+Math.floor(Math.random()*35); // لون جديد عشوائي كل جولة
+  var odd=Math.floor(Math.random()*n*n);
+  var dl=Math.max(5,16-Math.floor(lv*1.2));              // فرق اللون يصعب تدريجياً
+  g.style.gridTemplateColumns='repeat('+n+',1fr)';
+  for(var i=0;i<n*n;i++){(function(isOdd){
+    var b=document.createElement('button');b.className='o';
+    b.style.background='hsl('+hue+' '+sat+'% '+(isOdd?62:62-dl)+'%)';
+    b.addEventListener('click',function(){
+      if(isOdd){s++;lv++;document.getElementById('stars').textContent='⭐ '+s;document.getElementById('lv').textContent='المستوى '+lv;document.getElementById('hud').textContent='⭐ '+s;try{parent.postMessage({type:'nour:game:stars',amount:1},'*')}catch(e){}round()}
+      else{b.classList.add('shake');b.style.opacity=.35;setTimeout(function(){b.classList.remove('shake');b.style.opacity=1},300)}
+    });
+    g.appendChild(b)})(i===odd)}
+}
+document.getElementById('exit').addEventListener('click',function(){try{parent.postMessage({type:'nour:game:exit'},'*')}catch(e){}});
+try{parent.postMessage({type:'nour:game:ready'},'*')}catch(e){}
+round();
+</script>
+</body>
+</html>

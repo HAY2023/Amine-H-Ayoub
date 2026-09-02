@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{margin:0;box-sizing:border-box;font-family:system-ui}
+body{min-height:100vh;background:linear-gradient(160deg,#0b1220,#1e1b4b);color:#fff;display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none}
+.bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);z-index:9}
+.bar b{color:#fbbf24;font-size:1.05rem}
+#exit{padding:6px 14px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer}
+h1{margin:76px 0 4px;font-size:1.1rem;color:#fde68a}
+p{color:#c4b5fd;font-size:.8rem;margin-bottom:14px}
+#g{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;width:min(92vw,420px)}
+.c{aspect-ratio:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:2.1rem;cursor:pointer;transition:opacity .3s,transform .15s}
+.c:active{transform:scale(.94)}
+#hud{margin-top:14px;color:#fbbf24;font-weight:800;font-size:1.1rem}
+</style>
+</head>
+<body>
+<div class="bar"><b>🧠 الذاكرة القرآنية</b><span id="stars">⭐ 0</span><button id="exit">خروج ✕</button></div>
+<h1>طابق أزواج رموز القرآن</h1>
+<p>كل زوج متطابق = ⭐⭐ — وأكمل كل الجولات تنال المزيد!</p>
+<div id="g"></div>
+<div id="hud">⭐ 0</div>
+<script>
+var ALL=['🕌','🕋','📖','🌙','⭐','🤲','💧','🌅'],cards=[],open=[],lock=false,s=0,found=0,E=[];
+function newRound(){
+  E=[];var cp=ALL.slice();while(E.length<4)E.push(cp.splice(Math.floor(Math.random()*cp.length),1)[0]);
+  cards=[];open=[];lock=false;found=0;var g=document.getElementById('g');g.innerHTML='';
+  E.concat(E).sort(function(){return Math.random()-.5}).forEach(function(e){
+    var d=document.createElement('div');d.className='c';d.dataset.e=e;g.appendChild(d);cards.push(d);
+    d.addEventListener('click',function(){
+      if(lock||d.dataset.done||open.indexOf(d)>-1)return;d.textContent=d.dataset.e;open.push(d);
+      if(open.length===2){lock=true;setTimeout(function(){
+        if(open[0].dataset.e===open[1].dataset.e){open.forEach(function(o){o.dataset.done=1;o.style.opacity=.3});s+=2;found++;document.getElementById('stars').textContent='⭐ '+s;document.getElementById('hud').textContent='⭐ '+s;try{parent.postMessage({type:'nour:game:stars',amount:2},'*')}catch(x){}if(found===E.length){setTimeout(newRound,900)}}
+        else{open.forEach(function(o){o.textContent=''})}
+        open=[];lock=false},650)}});
+  });
+}
+document.getElementById('exit').addEventListener('click',function(){try{parent.postMessage({type:'nour:game:exit'},'*')}catch(x){}});
+try{parent.postMessage({type:'nour:game:ready'},'*')}catch(x){}
+newRound();
+</script>
+</body>
+</html>

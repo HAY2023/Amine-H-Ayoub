@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{margin:0;box-sizing:border-box;font-family:system-ui}
+body{min-height:100vh;background:linear-gradient(160deg,#0b1220,#134e4a);color:#fff;display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none}
+.bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);z-index:9}
+.bar b{color:#fbbf24;font-size:1.05rem}
+#exit{padding:6px 14px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer}
+h1{margin:76px 0 6px;font-size:1.1rem;color:#fde68a}
+p{color:#5eead4;font-size:.8rem;margin-bottom:10px}
+#hint{font-size:2rem;font-weight:800;color:#fde68a;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;width:min(92vw,440px);text-align:center;margin-bottom:14px;letter-spacing:4px;min-height:56px}
+#pool{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:min(92vw,440px);min-height:52px;margin-bottom:12px}
+#pool .t{border:0;border-radius:12px;padding:12px 16px;background:linear-gradient(135deg,#14b8a6,#0d9488);color:#042f2e;font-weight:800;font-size:1.2rem;cursor:pointer}
+#pool .t:active{transform:scale(.94)}
+#hud{margin-top:10px;color:#fbbf24;font-weight:800}
+.shake{animation:sh .3s}
+@keyframes sh{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+</style>
+</head>
+<body>
+<div class="bar"><b>🔤 رتّب الحروف</b><span id="stars">⭐ 0</span><button id="exit">خروج ✕</button></div>
+<h1>اضغط الحروف لتركيب الكلمة</h1>
+<p>كلمة صحيحة كاملة = ⭐⭐</p>
+<div id="hint">؟</div>
+<div id="pool"></div>
+<div id="hud">المستوى 1</div>
+<script>
+var W=["مكة","الحمد","النور","الصبر","الجنة","الصلاة","الصدق","الرزق"];
+var s=0,lv=1,next=0;
+function round(){
+  next=0;var w=W[Math.floor(Math.random()*W.length)].split('');
+  document.getElementById('hint').textContent='؟'.repeat(w.length);
+  var pool=document.getElementById('pool');pool.innerHTML='';
+  w.map(function(c,i){return [c,i]}).sort(function(){return Math.random()-.5}).forEach(function(p){
+    var b=document.createElement('button');b.className='t';b.textContent=p[0];
+    b.addEventListener('click',function(){
+      if(p[1]===next){next++;b.remove();var h=document.getElementById('hint');h.textContent=h.textContent.replace('؟',p[0]);
+        if(next===w.length){s+=2;lv++;document.getElementById('stars').textContent='⭐ '+s;document.getElementById('hud').textContent='المستوى '+lv;try{parent.postMessage({type:'nour:game:stars',amount:2},'*')}catch(e){}setTimeout(round,600)}}
+      else{b.classList.add('shake');setTimeout(function(){b.classList.remove('shake')},320)}
+    });
+    pool.appendChild(b)});
+}
+document.getElementById('exit').addEventListener('click',function(){try{parent.postMessage({type:'nour:game:exit'},'*')}catch(e){}});
+try{parent.postMessage({type:'nour:game:ready'},'*')}catch(e){}
+round();
+</script>
+</body>
+</html>

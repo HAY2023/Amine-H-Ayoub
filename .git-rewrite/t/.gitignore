@@ -1,0 +1,62 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vercel
+.env
+
+# External binaries & logs
+cloudflared.exe
+vite-err.txt
+vite-log.txt
+release.zip
+ayah.js
+eslint-output.*
+build-output.txt
+lint-output.txt
+
+# Supabase temporary files
+supabase/.temp/
+
+# Build outputs
+build/
+coverage/
+src-tauri/target/
+*.db
+
+# Claude Code local files
+.claude/
+
+testsprite_tests/tmp/
+testsprite_tests/tmp/config.json
+
+# Temporary build dumps & test scratch files
+tmp-*/
+tmp_*
+sw-*.js
+test-*.js
+test-*.mjs
+test.mjs
+tmp-sw.js
+
+tools/—›⁄-«· ·«Ê« -Ã«Â“.cmd

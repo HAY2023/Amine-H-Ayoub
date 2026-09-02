@@ -1,0 +1,6 @@
+tree 0233f596f3149152f0fc9e4baf65a927eac29977
+parent 35d115e3a0214865de71e5bb4adb69684abb248b
+author Iman <ailmanmosque8@gmail.com> 1788293301 +0100
+committer Iman <ailmanmosque8@gmail.com> 1788293301 +0100
+
+feat: implement SVG-based Avatar generator and ProfilePicker component with associated avatar assets and services.
