@@ -50,6 +50,16 @@ const poolFor = (def: GameDef, minSurahOverride: number = 78) => {
 
   return out.length >= 4 ? out : SURAHS.filter((s, idx) => idx > 0 && idx <= safeMaxIndex);
 };
+// سور مجاورة للسورة المختارة (تُستخدم للمشتّات/الترتيب في بعض الألعاب)
+const neighborPool = (def: GameDef, minSurahOverride: number, n: number) => {
+  const chosen = SURAHS.find(s => s.number === minSurahOverride);
+  if (!chosen) return poolFor(def, minSurahOverride);
+  const neighbors = SURAHS
+    .filter(s => s.number !== chosen.number)
+    .sort((a, b) => Math.abs(a.number - chosen.number) - Math.abs(b.number - chosen.number))
+    .slice(0, n - 1);
+  return [chosen, ...neighbors];
+};
 
 /* ───────────────── نواة الحماس ───────────────── */
 function useGame() {
@@ -521,22 +531,12 @@ function WhichSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: G
   const orderRef = useRef(shuffle(eligible));
   const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(eligible); return orderRef.current.pop() || eligible[0]; };
   const make = (prevApp?: number) => {
-    let s = getNext(); // السورة المختارة
+    let s = getNext();
+    if (s.app === prevApp && eligible.length > 1) s = getNext();
     const ayahs = s.ayahs.filter(a => !(s.std === 1 && a.n === 1));
     const a = ayahs[Math.floor(Math.random() * ayahs.length)] || s.ayahs[0];
-    // المشتّات: سور مجاورة للمختارة (متشابهة — طويلة قريبة وترتيب قريب)
-    // نستخدم القائمة الثابتة مباشرة لضمان وجود المشتّات حتى لو لم تتوفر في المصحف المحلي
-    const neighbors = neighborPool(def, minSurah, 4)
-      .filter(n => n.number !== s.app)
-      .slice(0, 2)
-      .map(n => {
-        // نبحث في المصحف المحلي أولاً، وإلا نستخدم البيانات الثابتة
-        const fromCorpus = corpus.find(c => c.app === n.number);
-        if (fromCorpus) return fromCorpus;
-        // نُحوّل البيانات الثابتة إلى شكل SurahText لضمان الاتساق
-        return { app: n.number, name: n.name, ayahs: [], std: 0 } as SurahText;
-      });
-    return { text: a.text, answer: s, opts: shuffle([s, ...neighbors]) };
+    const others = shuffle(eligible.filter(c => c.app !== s.app)).slice(0, 2);
+    return { text: a.text, answer: s, opts: shuffle([s, ...others]) };
   };
   const [q, setQ] = useState(() => make());
   const [qNum, setQNum] = useState(1);
@@ -744,12 +744,10 @@ function AyahSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
   const eligible = corpus.filter(c => c.ayahs.length >= 2 && pool.includes(c.app));
   const orderRef = useRef(shuffle(eligible));
   const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(eligible); return orderRef.current.pop() || eligible[0]; };
-  // المشتّات من كل سور المصحف (ليس فقط المختارة) لضمان وجود خيارات متعددة
-  const allSurahsForDistractors = corpus.filter(c => c.ayahs.length >= 2);
   const make = () => {
     const s = getNext();
     const ayah = s.ayahs[Math.floor(Math.random() * s.ayahs.length)];
-    const wrong = shuffle(allSurahsForDistractors.filter(c => c.app !== s.app)).slice(0, 3);
+    const wrong = shuffle(eligible.filter(c => c.app !== s.app)).slice(0, 3);
     return { s, ayah, opts: shuffle([s, ...wrong]) };
   };
   const [q, setQ] = useState(make);
@@ -857,14 +855,9 @@ function AyahLongerPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: G
   const eligible = corpus.filter(c => c.ayahs.length >= 2 && pool.includes(c.app));
   const orderRef = useRef(shuffle(eligible));
   const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(eligible); return orderRef.current.pop() || eligible[0]; };
-  // لسؤال "أيّ آية أطول" نحتاج سورتين مختلفتان — نستخدم كل المصحف للسورة الثانية
-  const allSurahs = corpus.filter(c => c.ayahs.length >= 2);
   const wc = (t: string) => t.split(" ").length;
   const make = () => {
-    let a = getNext();
-    // السورة الثانية من أي سورة أخرى في المصحف (لضمان التنوع)
-    const others = shuffle(allSurahs.filter(c => c.app !== a.app));
-    let b = others[0] || a;
+    let a = getNext(), b = getNext();
     if (a.app === b.app && eligible.length > 1) b = getNext();
     let ao = a.ayahs[Math.floor(Math.random() * a.ayahs.length)];
     let bo = b.ayahs[Math.floor(Math.random() * b.ayahs.length)];

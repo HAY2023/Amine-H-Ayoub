@@ -65,15 +65,28 @@ CREATE TABLE IF NOT EXISTS public.support_conversations (
 );
 
 CREATE INDEX IF NOT EXISTS idx_support_conv_device ON public.support_conversations(device_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_support_conv_device_unique
+  ON public.support_conversations(device_id);
 ALTER TABLE public.support_conversations ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public read from support_conversations" ON public.support_conversations;
 DROP POLICY IF EXISTS "Allow public insert to support_conversations" ON public.support_conversations;
 DROP POLICY IF EXISTS "Allow public update to support_conversations" ON public.support_conversations;
+DROP POLICY IF EXISTS "Allow device read from support_conversations" ON public.support_conversations;
+DROP POLICY IF EXISTS "Allow device insert to support_conversations" ON public.support_conversations;
+DROP POLICY IF EXISTS "Allow device update to support_conversations" ON public.support_conversations;
 
-CREATE POLICY "Allow public read from support_conversations" ON public.support_conversations FOR SELECT USING (true);
-CREATE POLICY "Allow public insert to support_conversations" ON public.support_conversations FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update to support_conversations" ON public.support_conversations FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow device read from support_conversations" ON public.support_conversations FOR SELECT USING (
+  device_id = COALESCE(current_setting('request.headers', true)::json->>'x-device-id', '')
+);
+CREATE POLICY "Allow device insert to support_conversations" ON public.support_conversations FOR INSERT WITH CHECK (
+  device_id = COALESCE(current_setting('request.headers', true)::json->>'x-device-id', '')
+);
+CREATE POLICY "Allow device update to support_conversations" ON public.support_conversations FOR UPDATE USING (
+  device_id = COALESCE(current_setting('request.headers', true)::json->>'x-device-id', '')
+) WITH CHECK (
+  device_id = COALESCE(current_setting('request.headers', true)::json->>'x-device-id', '')
+);
 
 
 -- ==============================================================================
@@ -93,10 +106,23 @@ ALTER TABLE public.support_messages ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read from support_messages" ON public.support_messages;
 DROP POLICY IF EXISTS "Allow public insert to support_messages" ON public.support_messages;
 DROP POLICY IF EXISTS "Allow public update to support_messages" ON public.support_messages;
+DROP POLICY IF EXISTS "Allow device read from support_messages" ON public.support_messages;
+DROP POLICY IF EXISTS "Allow device insert from support_messages" ON public.support_messages;
 
-CREATE POLICY "Allow public read from support_messages" ON public.support_messages FOR SELECT USING (true);
-CREATE POLICY "Allow public insert to support_messages" ON public.support_messages FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update to support_messages" ON public.support_messages FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow device read from support_messages" ON public.support_messages FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM public.support_conversations c
+    WHERE c.id = support_messages.conversation_id
+      AND c.device_id = COALESCE(current_setting('request.headers', true)::json->>'x-device-id', '')
+  )
+);
+CREATE POLICY "Allow device insert from support_messages" ON public.support_messages FOR INSERT WITH CHECK (
+  sender = 'user' AND EXISTS (
+    SELECT 1 FROM public.support_conversations c
+    WHERE c.id = support_messages.conversation_id
+      AND c.device_id = COALESCE(current_setting('request.headers', true)::json->>'x-device-id', '')
+  )
+);
 
 
 -- ==============================================================================
