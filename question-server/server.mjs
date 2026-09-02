@@ -61,10 +61,17 @@ function genMissingWord(s) {
   const missing = chosen.w;
   const norm = normalize(missing);
 
-  // مشتّات: من كلمات السورة نفسها (متشابهة) ثم عامة
+  // مشتّات قريبة شكلاً وطولاً حتى تكون الإجابة صعبة دون أن تكون عشوائية.
   const surahWords = [...new Set(s.ayahs.flatMap(a => a.text.split(/\s+/)).map(w => w.trim()).filter(w => w.replace(/[^\u0600-\u06FF]/g, "").length >= 3))];
   const options = new Set([missing]);
-  for (const w of shuffle(surahWords)) { if (options.size >= 3) break; if (normalize(w) !== norm) options.add(w); }
+  const similar = (w) => {
+    const clean = normalize(w);
+    return clean !== norm && Math.abs(clean.length - norm.length) <= 2 &&
+      (clean[0] === norm[0] || clean.slice(0, 2) === norm.slice(0, 2));
+  };
+  for (const w of shuffle(surahWords)) { if (options.size >= 4) break; if (similar(w)) options.add(w); }
+  const rangeWords = corpus.filter(c => c.app >= s.app).flatMap(c => c.ayahs.flatMap(a => a.text.split(/\s+/)));
+  for (const w of shuffle(rangeWords)) { if (options.size >= 4) break; if (similar(w)) options.add(w); }
   let guard = 0;
   while (options.size < 4 && guard++ < 300) { const w = pick(generalWordBank); if (normalize(w) !== norm) options.add(w); }
   if (options.size < 4) return null;
@@ -112,7 +119,7 @@ function genWhichSurah(s) {
   const ayahs = s.ayahs.filter(a => !(s.std === 1 && a.n === 1));
   if (!ayahs.length) return null;
   const ayah = pick(ayahs);
-  const similar = corpus.filter(c => c.app !== s.app)
+  const similar = corpus.filter(c => c.app !== s.app && c.app >= s.app)
     .sort((x, y) => (Math.abs(x.ayahs.length - s.ayahs.length) + Math.abs(x.app - s.app) / 20)
       - (Math.abs(y.ayahs.length - s.ayahs.length) + Math.abs(y.app - s.app) / 20))
     .slice(0, 6);
@@ -314,7 +321,10 @@ Object.assign(GENERATORS, {
 
 /** توليد أسئلة لطلب العميل */
 function generateQuestions({ surah, type = "all", count = 10 }) {
-  const sources = surah ? corpus.filter(s => s.app === Number(surah)) : corpus;
+  const selectedSurah = Number(surah);
+  const sources = surah
+    ? corpus.filter(s => s.app >= selectedSurah)
+    : corpus;
   if (!sources.length) return [];
   const types = type === "all" ? Object.keys(GENERATORS) : [type];
   const out = [];
@@ -323,7 +333,10 @@ function generateQuestions({ surah, type = "all", count = 10 }) {
   while (out.length < count && guard++ < count * 60) {
     const s = pick(sources);
     const q = GENERATORS[pick(types)](s);
-    if (q && !seen.has(q.id)) { seen.add(q.id); out.push(q); }
+    if (q && (!surah || (typeof q.surahNum === "number" && q.surahNum >= selectedSurah)) && !seen.has(q.id)) {
+      seen.add(q.id);
+      out.push(q);
+    }
   }
   return out;
 }

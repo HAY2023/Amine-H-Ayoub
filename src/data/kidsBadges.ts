@@ -38,15 +38,6 @@ export const ALL_BADGES_CONFIG = [
     target: 7,
   },
   {
-    id: "weekly_hero",
-    title: "وسام بطل الأسبوع 🛡️",
-    description: "أكمل وقت الاستماع المحدد لـ 5 أيام خلال الأسبوع",
-    icon: "ShieldCheck",
-    category: "reading" as const,
-    rewardCoins: 40,
-    target: 5,
-  },
-  {
     id: "streak_14",
     title: "بطل المثابرة 🎖️",
     description: "سلسلة استماع متواصلة لـ 14 يوماً",
@@ -144,7 +135,7 @@ export function calculateStreak(): {
 
   // حساب السلسلة المتتالية ابتداءً من اليوم أو أمس
   let currentStreak = 0;
-  let checkDate = new Date();
+  const checkDate = new Date();
 
   // إذا لم يستمع اليوم بعد، نتحقق من أمس
   if (!hasTodayActivity) {
@@ -226,16 +217,12 @@ export function getBadgesList(): Badge[] {
   const totalMinutes =
     history.reduce((acc, cur) => acc + cur.minutes, 0) + (progress?.minutes || 0);
   const totalCoins = profile?.coins || 0;
-  const completedDaysThisWeek = history.slice(-7).filter((d) => d.minutes >= profile.goalMinutes).length;
-
   return ALL_BADGES_CONFIG.map((cfg) => {
     const isUnlocked = !!unlockedMap[cfg.id];
     let curVal = 0;
 
     if (cfg.category === "streak") {
       curVal = currentStreak;
-    } else if (cfg.id === "weekly_hero") {
-      curVal = completedDaysThisWeek;
     } else if (cfg.id === "listener_60") {
       curVal = Math.floor(totalMinutes);
     } else if (cfg.id === "collector_50" || cfg.id === "collector_100") {
@@ -284,8 +271,6 @@ export function checkAndUnlockBadges(): { unlockedBadges: Badge[]; totalStreak: 
   const totalMinutes =
     history.reduce((acc, cur) => acc + cur.minutes, 0) + (progress?.minutes || 0);
   const totalCoins = profile?.coins || 0;
-  const completedDaysThisWeek = history.slice(-7).filter((d) => d.minutes >= (profile?.goalMinutes || 5)).length;
-
   const newlyUnlocked: Badge[] = [];
 
   ALL_BADGES_CONFIG.forEach((cfg) => {
@@ -295,8 +280,6 @@ export function checkAndUnlockBadges(): { unlockedBadges: Badge[]; totalStreak: 
 
     if (cfg.category === "streak") {
       shouldUnlock = currentStreak >= cfg.target;
-    } else if (cfg.id === "weekly_hero") {
-      shouldUnlock = completedDaysThisWeek >= cfg.target;
     } else if (cfg.id === "listener_60") {
       shouldUnlock = totalMinutes >= cfg.target;
     } else if (cfg.id === "collector_50" || cfg.id === "collector_100") {

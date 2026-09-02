@@ -19,9 +19,7 @@ import NotificationsModal from "../components/NotificationsModal";
 import BadgesModal from "../components/BadgesModal";
 import { toast } from "../hooks/use-toast";
 import { isTimeAllowed } from "../data/kidsSchedule";
-import { getWeekly, recordWeeklyAnswer, type WeeklyState } from "../data/weeklyChallenge";
 import { calculateStreak } from "../data/kidsBadges";
-import { addCoins as weeklyAddCoins } from "../data/kidsProfile";
 
 async function enterKioskMode() {
   // تم إيقاف تكبير الشاشة التلقائي بناءً على طلب المستخدم
@@ -35,31 +33,43 @@ const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/aud
 const shuffle = <T,>(a: T[]): T[] => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
 const SURAHS = getAllSurahs();
 
+function drawCanvasStar(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, color: string) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+    const size = i % 2 === 0 ? radius : radius * 0.42;
+    const px = x + Math.cos(angle) * size;
+    const py = y + Math.sin(angle) * size;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
 const poolFor = (def: GameDef, minSurahOverride: number = 78) => {
   const { minAyah, maxAyah } = def.params || {};
-  
-  // الأسئلة من سورة يس (36) إلى السورة المختارة (ما تحتها في المصحف)
-  const MIN_SURAH = 36; // سورة يس — الحد الأدنى للأسئلة
-  const minSurahNum = Math.max(MIN_SURAH, minSurahOverride);
-  const maxIndex = SURAHS.findIndex(s => s.number === minSurahNum);
-  const safeMaxIndex = maxIndex >= 0 ? maxIndex : SURAHS.findIndex(s => s.number === 78);
+  // يبدأ النطاق من السورة المختارة ويتجه إلى السور التالية في ترتيب المصحف.
+  const minSurahNum = Math.min(114, Math.max(1, minSurahOverride));
+  const minIndex = SURAHS.findIndex(s => s.number === minSurahNum);
+  const safeMinIndex = minIndex >= 0 ? minIndex : SURAHS.findIndex(s => s.number === 78);
 
   const out = SURAHS.filter((s, idx) =>
-    idx > 0 && idx <= safeMaxIndex &&
+    idx >= safeMinIndex &&
     (minAyah == null || s.ayahCount >= minAyah) &&
     (maxAyah == null || s.ayahCount <= maxAyah)
   );
 
-  return out.length >= 4 ? out : SURAHS.filter((s, idx) => idx > 0 && idx <= safeMaxIndex);
+  return out.length >= 4 ? out : SURAHS.filter((s, idx) => idx >= safeMinIndex);
 };
 // سور مجاورة للسورة المختارة (تُستخدم للمشتّات/الترتيب في بعض الألعاب)
 const neighborPool = (def: GameDef, minSurahOverride: number, n: number) => {
   const chosen = SURAHS.find(s => s.number === minSurahOverride);
   if (!chosen) return poolFor(def, minSurahOverride);
-  const neighbors = SURAHS
-    .filter(s => s.number !== chosen.number)
-    .sort((a, b) => Math.abs(a.number - chosen.number) - Math.abs(b.number - chosen.number))
-    .slice(0, n - 1);
+  const chosenIndex = SURAHS.findIndex(s => s.number === chosen.number);
+  const neighbors = SURAHS.slice(chosenIndex, chosenIndex + n).filter(s => s.number !== chosen.number);
   return [chosen, ...neighbors];
 };
 
@@ -686,11 +696,19 @@ function MissingWordPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: 
       if (answer.length > 3) break;
     }
 
-    const allWords = s.ayahs.flatMap(ay => ay.text.split(" ")).filter(w => w !== answer && w.length > 2);
-    const distractors = shuffle(Array.from(new Set(allWords))).slice(0, 2);
+    const normalizeWord = (word: string) => word.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "").replace(/[^\u0621-\u064A]/g, "");
+    const answerShape = normalizeWord(answer);
+    const similarWords = (words: string[]) => shuffle(Array.from(new Set(words.filter(word => {
+      const normalized = normalizeWord(word);
+      return normalized !== answerShape && normalized.length >= 3 &&
+        Math.abs(normalized.length - answerShape.length) <= 2 &&
+        (normalized[0] === answerShape[0] || normalized.slice(0, 2) === answerShape.slice(0, 2));
+    }))));
+    const allWords = s.ayahs.flatMap(ay => ay.text.split(" "));
+    const distractors = similarWords(allWords).slice(0, 2);
     if (distractors.length < 2) {
-      const extra = corpus.flatMap(c => c.ayahs.flatMap(ay => ay.text.split(" "))).filter(w => w !== answer && w.length > 2);
-      distractors.push(...shuffle(Array.from(new Set(extra))).slice(0, 2 - distractors.length));
+      const extra = corpus.filter(c => pool.includes(c.app)).flatMap(c => c.ayahs.flatMap(ay => ay.text.split(" ")));
+      distractors.push(...similarWords(extra).slice(0, 2 - distractors.length));
     }
     return { s, words, hiddenIdx, answer, opts: shuffle([answer, ...distractors]) };
   };
@@ -859,7 +877,8 @@ function AyahLongerPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: G
   const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(eligible); return orderRef.current.pop() || eligible[0]; };
   const wc = (t: string) => t.split(" ").length;
   const make = () => {
-    let a = getNext(), b = getNext();
+    const a = getNext();
+    let b = getNext();
     if (a.app === b.app && eligible.length > 1) b = getNext();
     let ao = a.ayahs[Math.floor(Math.random() * a.ayahs.length)];
     let bo = b.ayahs[Math.floor(Math.random() * b.ayahs.length)];
@@ -1041,10 +1060,6 @@ export default function KidsGames() {
     try { return localStorage.getItem("mushaf:surahConfirmDay") !== new Date().toDateString(); } catch { return true; }
   });
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showWeekly, setShowWeekly] = useState(false);
-  const [weeklyLoading, setWeeklyLoading] = useState(true);
-  const [weekly, setWeekly] = useState<WeeklyState | null>(null);
-  const [weeklyPick, setWeeklyPick] = useState<string | null>(null);
 
   // شهادة التقدم (زر المشكلة)
   const [showCertificate, setShowCertificate] = useState(false);
@@ -1053,17 +1068,17 @@ export default function KidsGames() {
 
   // شاشة النشر والاحتفال عند الوصول للميلستون
   const [showMilestone, setShowMilestone] = useState(false);
-  const [milestoneData, setMilestoneData] = useState({ days: 0, title: "", message: "", emoji: "" });
+  const [milestoneData, setMilestoneData] = useState({ days: 0, title: "", message: "" });
 
   // الميلستونات: 1، 7، 14، 21، 30 (شهر)، 60 (شهرين)، وبعد 5 أشهر عشوائي
   const MILESTONES = [1, 7, 14, 21, 30, 60];
-  const MILESTONE_NAMES: Record<number, { title: string; message: string; emoji: string }> = {
-    1: { title: "بداية رائعة!", message: "بدأت رحلتك مع القرآن — يوم واحد من النور", emoji: "🌟" },
-    7: { title: "أسبوع كامل!", message: "7 أيام متتالية — أنت بطل حقيقي!", emoji: "🔥" },
-    14: { title: "أسبوعين من العطاء!", message: "14 يوماً متتالياً — الاستمرارية سر النجاح", emoji: "💎" },
-    21: { title: "21 يوماً!", message: "عادة راسخة! 21 يوماً من التعلم المتواصل", emoji: "🏆" },
-    30: { title: "شهر كامل!", message: "30 يوماً — شهر من القرآن والضوء", emoji: "🌙" },
-    60: { title: "شهرين من التميز!", message: "60 يوماً — أنت الآن بطل القرآن الأسطوري", emoji: "👑" },
+  const MILESTONE_NAMES: Record<number, { title: string; message: string }> = {
+    1: { title: "بداية رائعة!", message: "بدأت رحلتك مع القرآن — يوم واحد من النور" },
+    7: { title: "أسبوع كامل!", message: "7 أيام متتالية — أنت بطل حقيقي!" },
+    14: { title: "أسبوعين من العطاء!", message: "14 يوماً متتالياً — الاستمرارية سر النجاح" },
+    21: { title: "21 يوماً!", message: "عادة راسخة! 21 يوماً من التعلم المتواصل" },
+    30: { title: "شهر كامل!", message: "30 يوماً — شهر من القرآن والضوء" },
+    60: { title: "شهرين من التميز!", message: "60 يوماً — أنت الآن بطل القرآن الأسطوري" },
   };
 
   // رسالة التشجيع: تظهر مرة في اليوم عند إنجاز وقت الدراسة والدخول للألعاب
@@ -1118,7 +1133,7 @@ export default function KidsGames() {
       if (!timeCheck.allowed) {
         toast({ title: "انتهى وقت اللعب ⏰", description: timeCheck.reason, variant: "destructive" });
         if (hasKidsPin()) setKidsLocked(false);
-        navigate("/");
+        navigate("/audio");
         return;
       }
       
@@ -1131,7 +1146,7 @@ export default function KidsGames() {
            if (justExpired || progress.playExpired) {
              toast({ title: "انتهى وقت اللعب ⏰", description: "تم العودة إلى صفحة القرآن.", variant: "destructive" });
              // خروج مباشر إلى صفحة القرآن بدون طلب كلمة المرور
-             navigate("/");
+             navigate("/audio");
              return;
            }
         }
@@ -1142,7 +1157,7 @@ export default function KidsGames() {
     if (!initialCheck.allowed || getProgress().playExpired) {
         toast({ title: "انتهى وقت اللعب ⏰", description: initialCheck.reason || "تم العودة إلى صفحة القرآن.", variant: "destructive" });
         // خروج مباشر إلى صفحة القرآن بدون طلب كلمة المرور
-        navigate("/");
+        navigate("/audio");
         return;
     }
     const scheduleInterval = setInterval(() => checkSchedule(false), 30000); // Check every 30s instead of 60s
@@ -1188,13 +1203,15 @@ export default function KidsGames() {
     const evts = ["focus", "mushaf:games_unlocked", "mushaf:coins", "mushaf:gamecatalog", "mushaf:activeprofile"];
     evts.forEach(e => window.addEventListener(e, refresh));
 
-    const handleBadgeUnlocked = (e: any) => {
-      const badges = e.detail;
+    const handleBadgeUnlocked = (e: Event) => {
+      const badges = (e as CustomEvent<unknown>).detail;
       if (Array.isArray(badges) && badges.length > 0) {
-        badges.forEach((b: any) => {
+        badges.forEach((badge) => {
+          if (!badge || typeof badge !== "object") return;
+          const unlockedBadge = badge as { title?: string; rewardCoins?: number };
           toast({
-            title: `🏆 مبارك! وسام جديد: ${b.title}`,
-            description: `حصلت على ${b.rewardCoins} نجمة إضافية!`,
+            title: `🏆 مبارك! وسام جديد: ${unlockedBadge.title || "إنجاز جديد"}`,
+            description: `حصلت على ${unlockedBadge.rewardCoins || 0} نجمة إضافية!`,
           });
         });
       }
@@ -1231,10 +1248,10 @@ export default function KidsGames() {
       const randomChance = Math.random() < (1 / 30);
       if (randomChance) {
         const randomMessages = [
-          { title: "أسطورة القرآن!", message: `${currentStreak} يوماً — أنت الآن من العظماء`, emoji: "🦁" },
-          { title: "بطل لا يُقهر!", message: `${currentStreak} يوماً من التميز والعطاء`, emoji: "⚡" },
-          { title: "نجم القرآن!", message: `${currentStreak} يوماً — أنت قدوة لكل الأطفال`, emoji: "⭐" },
-          { title: "ملك الحفظ!", message: `${currentStreak} يوماً — مسيرة لا تُنسى`, emoji: "🏅" },
+          { title: "أسطورة القرآن!", message: `${currentStreak} يوماً — أنت الآن من العظماء` },
+          { title: "بطل لا يُقهر!", message: `${currentStreak} يوماً من التميز والعطاء` },
+          { title: "نجم القرآن!", message: `${currentStreak} يوماً — أنت قدوة لكل الأطفال` },
+          { title: "ملك الحفظ!", message: `${currentStreak} يوماً — مسيرة لا تُنسى` },
         ];
         const randomMilestone = randomMessages[Math.floor(Math.random() * randomMessages.length)];
         setMilestoneData({ days: currentStreak, ...randomMilestone });
@@ -1349,42 +1366,6 @@ export default function KidsGames() {
     setShowSurahConfirm(false);
   };
 
-  // فتح نافذة التحدي الأسبوعي (تحميل أول مرة)
-  const openWeekly = async () => {
-    setShowWeekly(true);
-    setWeeklyLoading(true);
-    setWeeklyPick(null);
-    setWeekly(await getWeekly(profile.currentSurah || 0));
-    setWeeklyLoading(false);
-  };
-
-  // إجابة على سؤال التحدي
-  const answerWeekly = (qid: string, opt: string) => {
-    if (!weekly || weeklyPick) return;
-    const q = weekly.questions.find(x => x.id === qid);
-    if (!q || weekly.answered.includes(qid)) return;
-    setWeeklyPick(opt);
-    const correct = opt === q.answer;
-    if (correct) weeklyAddCoins(5);
-    const st = recordWeeklyAnswer(qid, correct);
-    if (st) {
-      if (correct) { setCoins(getCoins()); }
-      toast({ title: correct ? "إجابة صحيحة! 🎉 +5 نجوم" : "إجابة غير صحيحة", variant: correct ? "default" : "destructive" });
-    }
-    if (correct && st?.completed && !st.claimed) {
-      weeklyAddCoins(15);
-      setCoins(getCoins());
-      st.claimed = true;
-      try { localStorage.setItem("mushaf:weeklyChallenge:v1", JSON.stringify(st)); } catch { /* ignore */ }
-      toast({ title: "🎊 أكملت التحدي الأسبوعي!", description: "أحسنت بطل القرآن! استلمت 15 نجمة إضافية" });
-    }
-    // نُعيد تعيين الاختيار أولاً ثم نُحدّث الحالة بعد تأخير قصير لعرض الإجابة
-    setTimeout(() => {
-      setWeeklyPick(null);
-      if (st) setWeekly({ ...st });
-    }, 1200);
-  };
-
   // إغلاق رسالة التشجيع لنفس اليوم
   const dismissEncourage = () => {
     try { localStorage.setItem("mushaf:encouragedToday", JSON.stringify({ date: new Date().toDateString(), off: false })); } catch { /* ignore */ }
@@ -1490,7 +1471,7 @@ export default function KidsGames() {
     const curSurahName = `سورة ${SURAHS.find(s => s.number === profile.currentSurah)?.name || "النبأ"}`;
     const stats = [
       { label: "الدراسة", value: `${progress.minutes} دقيقة`, color: "#58cc02" },
-      { label: "النجوم", value: `${getCoins()} ⭐`, color: "#ffc800" },
+      { label: "النجوم", value: `${getCoins()} نجمة`, color: "#ffc800" },
       { label: "السلسلة", value: `${streakDays || 1} أيام`, color: "#ff9600" },
     ];
 
@@ -1587,15 +1568,15 @@ export default function KidsGames() {
     ctx.lineWidth = 3;
     ctx.strokeRect(30, 30, 540, 740);
 
-    // نجوم احتفالية
-    ctx.fillStyle = "#fde68a";
-    ctx.font = "40px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("✨  ✨  ✨", 300, 70);
-
-    // الإيموجي الكبير
-    ctx.font = "bold 100px Arial";
-    ctx.fillText(milestoneData.emoji, 300, 160);
+    // زخارف نجوم مرسومة حتى تبقى الشهادة واضحة في كل جهاز.
+    drawCanvasStar(ctx, 220, 72, 18, "#fde68a");
+    drawCanvasStar(ctx, 300, 72, 24, "#fbbf24");
+    drawCanvasStar(ctx, 380, 72, 18, "#fde68a");
+    drawCanvasStar(ctx, 300, 150, 62, "#fbbf24");
+    ctx.fillStyle = "#92400e";
+    ctx.beginPath();
+    ctx.arc(300, 150, 28, 0, Math.PI * 2);
+    ctx.fill();
 
     // العنوان
     ctx.fillStyle = "#fde68a";
@@ -1647,9 +1628,9 @@ export default function KidsGames() {
     ctx.fillText("تطبيق القرآن الكريم للأطفال", 300, 660);
 
     // زخرفة سفلية
-    ctx.fillStyle = "#fde68a";
-    ctx.font = "40px Arial";
-    ctx.fillText("✨  ✨  ✨", 300, 740);
+    drawCanvasStar(ctx, 220, 740, 18, "#fde68a");
+    drawCanvasStar(ctx, 300, 740, 24, "#fbbf24");
+    drawCanvasStar(ctx, 380, 740, 18, "#fde68a");
 
     // تحويل لملف للمشاركة
     canvas.toBlob(async (blob) => {
@@ -1660,7 +1641,7 @@ export default function KidsGames() {
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         try {
           await navigator.share({
-            title: `🎉 ${milestoneData.title}`,
+            title: milestoneData.title,
             text: `${milestoneData.message} — ${milestoneData.days} يوم متتالية في تعلم القرآن!`,
             files: [file],
           });
@@ -1832,17 +1813,6 @@ export default function KidsGames() {
               <span className="inline-flex items-center gap-1 text-accent font-extrabold"><Star className="w-4 h-4 fill-current" /> {coins}</span>
             </button>
 
-            {/* بطاقة التحدي الأسبوعي (زر دائم - بأسلوب Duolingo) */}
-            <button onClick={openWeekly} className="relative z-10 w-full overflow-hidden rounded-2xl bg-gradient-to-l from-purple-500/20 to-card border border-purple-400/40 shadow-soft flex items-center gap-3 active:scale-[0.99] hover:shadow-xl hover:shadow-purple-500/20 transition-all">
-              <div className="absolute inset-0 opacity-60 bg-gradient-to-br from-purple-500/30 to-fuchsia-500/10" />
-              <span className="relative w-11 h-11 rounded-xl bg-purple-500/90 text-white flex items-center justify-center shrink-0 shadow-lg"><Crown className="w-6 h-6" /></span>
-              <span className="relative flex-1 text-right">
-                <span className="block font-extrabold text-foreground">🎯 التحدي الأسبوعي</span>
-                <span className="block text-[11px] text-muted-foreground">أجب على الأسئلة واربح حتى +35 نجمة هذا الأسبوع</span>
-              </span>
-              <span className="relative inline-flex items-center gap-1 text-purple-400 font-extrabold shrink-0"><ArrowRight className="w-4 h-4" /></span>
-            </button>
-
             <div className="flex items-center justify-between mt-8 mb-3 px-1">
               <h3 className="font-extrabold text-xl text-foreground flex items-center gap-2"><Trophy className="w-6 h-6 text-accent" /> الألعاب الأسطورية</h3>
               <button onClick={requestSurahChange} className="text-xs font-bold text-accent bg-accent/15 px-3 py-1.5 rounded-full hover:bg-accent/25 transition-colors">تغيير السورة ({SURAHS.find(s => s.number === profile.currentSurah)?.name})</button>
@@ -1953,81 +1923,14 @@ export default function KidsGames() {
               أنهيتَ وقت دراستك اليوم! أنتَ مستعد للتحدي الآن.
             </p>
             <div className="flex flex-col gap-2">
-              <button onClick={() => { dismissEncourage(); openWeekly(); }} className="w-full p-3 rounded-xl bg-purple-500 hover:bg-purple-600 text-white font-bold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg">
-                <Crown className="w-5 h-5" /> التحدي الأسبوعي 🎯
+              <button onClick={dismissEncourage} className="w-full p-3 rounded-xl bg-accent hover:bg-accent/90 text-accent-foreground font-bold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg">
+                <Gamepad2 className="w-5 h-5" /> دخول الألعاب
               </button>
               <button onClick={dismissEncourage} className="w-full p-2.5 rounded-xl bg-secondary text-secondary-foreground font-bold active:scale-95 transition-all">
                 دخول الألعاب
               </button>
             </div>
                     </div>
-        </div>
-      )}
-
-      {/* نافذة التحدي الأسبوعي */}
-      {showWeekly && (
-        <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto" onClick={() => setShowWeekly(false)}>
-          <div className="w-full max-w-sm bg-card rounded-3xl shadow-2xl border border-border p-5 animate-fade-up" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/15 text-purple-500 font-extrabold text-xs px-3 py-1.5"><Crown className="w-3.5 h-3.5" /> التحدي الأسبوعي</span>
-              <button onClick={() => setShowWeekly(false)} aria-label="إغلاق" className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center active:scale-95 transition-transform"><X className="w-4 h-4" /></button>
-            </div>
-
-            {weeklyLoading || !weekly ? (
-              <div className="py-12 text-center text-muted-foreground text-sm">جارٍ تحضير التحدي...</div>
-            ) : weekly.completed ? (
-              <div className="text-center space-y-4 py-4">
-                <div className="mx-auto w-20 h-20 rounded-full bg-success/15 flex items-center justify-center text-5xl">🏆</div>
-                <h3 className="text-lg font-extrabold text-foreground">أكملتَ التحدي الأسبوعي!</h3>
-                <p className="text-sm text-muted-foreground">نتيجة: {weekly.correctCount} من {weekly.questions.length} صحيحة</p>
-                <p className="text-sm text-success font-bold">استلمتَ حتى 35 نجمة هذا الأسبوع</p>
-                <button onClick={() => setShowWeekly(false)} className="w-full p-3 rounded-xl bg-accent text-accent-foreground font-bold active:scale-95 transition-all">إغلاق</button>
-              </div>
-            ) : (
-              <>
-                <div className="mb-4">
-                  <div className="flex justify-between text-[11px] font-bold text-muted-foreground mb-1">
-                    <span>السؤال {weekly.answered.length + 1} / {weekly.questions.length}</span>
-                    <span className="text-accent">{weekly.correctCount} صحيح · {weekly.wrongCount} خطأ</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-secondary overflow-hidden">
-                    <div className="h-full bg-accent transition-all" style={{ width: `${(weekly.answered.length / weekly.questions.length) * 100}%` }} />
-                  </div>
-                </div>
-
-                {(() => {
-                  const q = weekly.questions.find(x => !weekly.answered.includes(x.id));
-                  if (!q) return null;
-                  const chosen = weeklyPick;
-                  return (
-                    <div className="space-y-3">
-                      <p className="text-center text-sm font-bold text-muted-foreground whitespace-pre-line leading-relaxed">{q.prompt}</p>
-                      <div className="grid gap-2">
-                        {q.options.map((opt) => {
-                          const isAnswer = q.answer === opt;
-                          const isPicked = chosen === opt;
-                          const cls = chosen
-                            ? isAnswer
-                              ? "bg-success/20 border-success/60 text-success"
-                              : isPicked
-                              ? "bg-destructive/20 border-destructive/60 text-destructive"
-                              : "bg-secondary border-border text-muted-foreground opacity-60"
-                            : "bg-secondary border-border text-secondary-foreground hover:border-accent/50";
-                          return (
-                            <button key={opt} onClick={() => answerWeekly(q.id, opt)} disabled={!!chosen}
-                              className={`p-3 rounded-xl border font-bold text-sm text-right active:scale-[0.98] transition-colors ${cls}`}>
-                              {opt}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                                })()}
-                </>
-                            )
-            }
-          </div>
         </div>
       )}
 
@@ -2103,7 +2006,7 @@ export default function KidsGames() {
             </div>
 
             <div className="relative space-y-4">
-              <div className="text-7xl animate-bounce drop-shadow-lg">{milestoneData.emoji}</div>
+              <div className="mx-auto w-20 h-20 rounded-full bg-amber-400/20 border border-amber-300/50 flex items-center justify-center text-amber-300 animate-bounce"><Award className="w-12 h-12" /></div>
               <h2 className="text-3xl font-extrabold text-amber-300 drop-shadow-md">{milestoneData.title}</h2>
               <p className="text-amber-100 text-lg leading-relaxed">{milestoneData.message}</p>
 

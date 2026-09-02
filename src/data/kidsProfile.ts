@@ -71,32 +71,21 @@ const DEFAULT_PROFILE: KidsProfile = { id: "default", name: "", age: 6, avatar: 
 export const SHOP_AVATARS: ShopItem[] = [
   // ── المستوى الأول: طلاب وحفظة الذكر ──
   { id: "av-img-girl-scholar", type: "avatar", label: "طالبة العلم المجتهدة", value: "img-girl-scholar", cost: 500 },
-  { id: "av-img-boy-taqiyah-gold", type: "avatar", label: "الفتى المتميز بالطاقية المنقوشة", value: "img-boy-taqiyah-gold", cost: 1000 },
   { id: "av-img-girl-hijab-rose", type: "avatar", label: "فتاة القرآن بالخمار الوردي", value: "img-girl-hijab-rose", cost: 1500 },
-  { id: "av-img-boy-reciter", type: "avatar", label: "المرتل الصغير المتقن", value: "img-boy-reciter", cost: 2000 },
-  { id: "av-img-boy-quran-blue", type: "avatar", label: "بلبل التلاوة بالرداء السماوي", value: "img-boy-quran-blue", cost: 3000 },
-  { id: "av-img-girl-gold", type: "avatar", label: "أميرة النور بالخمار المذهب", value: "img-girl-gold", cost: 4000 },
-  { id: "av-img-girl-tiara-pearl", type: "avatar", label: "الأميرة الصغيرة بتاج اللؤلؤ", value: "img-girl-tiara-pearl", cost: 5000 },
 
   // ── المستوى الثاني: فرسان وأميرات الحكمة ──
   { id: "av-img-boy-knight", type: "avatar", label: "الفارس الشجاع بالدرع الإسلامي", value: "img-boy-knight", cost: 7500 },
-  { id: "av-img-boy-knight-ruby", type: "avatar", label: "فارس العزيمة بالوشاح الياقوتي", value: "img-boy-knight-ruby", cost: 10000 },
-  { id: "av-img-girl-purple", type: "avatar", label: "أميرة الحكمة بالقفطان الأرجواني", value: "img-girl-purple", cost: 12000 },
   { id: "av-img-girl-hijab-emerald", type: "avatar", label: "حافظة الذكر بالحجاب الزمردي", value: "img-girl-hijab-emerald", cost: 15000 },
 
   // ── المستوى الثالث: أمراء وأميرات القرآن ──
   { id: "av-img-boy-turban", type: "avatar", label: "أمير القرآن بالعمامة الملكية", value: "img-boy-turban", cost: 20000 },
   { id: "av-img-girl-emerald", type: "avatar", label: "الأميرة الزمردية بالتاج والقفطان", value: "img-girl-emerald", cost: 25000 },
-  { id: "av-img-girl-kaftan-gold", type: "avatar", label: "أميرة الأندلس بالقفطان الذهبي", value: "img-girl-kaftan-gold", cost: 30000 },
 
   // ── المستوى الرابع: القارئ الملكي وسلطان الحفاظ ──
   { id: "av-img-boy-bisht", type: "avatar", label: "القارئ الملكي بالبشت الأسود المذهب", value: "img-boy-bisht", cost: 40000 },
-  { id: "av-img-boy-bisht-white", type: "avatar", label: "القارئ المتميز بالبشت الأبيض المذهب", value: "img-boy-bisht-white", cost: 50000 },
-  { id: "av-img-boy-bisht-gold", type: "avatar", label: "سلطان الحفاظ بالبشت المرصع", value: "img-boy-bisht-gold", cost: 60000 },
 
   // ── المستوى الأسطوري الأعلى: ألقاب الختمة الكبرى ──
   { id: "av-img-girl-emerald-queen", type: "avatar", label: "ملكة القرآن بالتاج الملكي المرصع", value: "img-girl-emerald-queen", cost: 75000 },
-  { id: "av-img-boy-turban-master", type: "avatar", label: "أمير المقرئين بالعمامة الهاشمية", value: "img-boy-turban-master", cost: 90000 },
   { id: "av-img-boy-knight-legend", type: "avatar", label: "فارس الأندلس الأسطوري بالدرع المذهب", value: "img-boy-knight-legend", cost: 100000 },
 ];
 export const SHOP_COLORS: ShopItem[] = [
