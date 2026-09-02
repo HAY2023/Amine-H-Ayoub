@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Bell, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Hash, Grid3x3, Flame, Sparkles, Gamepad2, Puzzle, X, Crown, Brain, Camera, Award, Download, Clock } from "lucide-react";
 import { getAllSurahs } from "../data/quranData";
@@ -39,7 +39,9 @@ const poolFor = (def: GameDef, minSurahOverride: number = 78) => {
   const { minAyah, maxAyah } = def.params || {};
   
   // الأسئلة من سورة يس (36) إلى السورة المختارة (ما تحتها في المصحف)
-  const maxIndex = SURAHS.findIndex(s => s.number === minSurahOverride);
+  const MIN_SURAH = 36; // سورة يس — الحد الأدنى للأسئلة
+  const minSurahNum = Math.max(MIN_SURAH, minSurahOverride);
+  const maxIndex = SURAHS.findIndex(s => s.number === minSurahNum);
   const safeMaxIndex = maxIndex >= 0 ? maxIndex : SURAHS.findIndex(s => s.number === 78);
 
   const out = SURAHS.filter((s, idx) =>
@@ -1129,7 +1131,6 @@ export default function KidsGames() {
            if (justExpired || progress.playExpired) {
              toast({ title: "انتهى وقت اللعب ⏰", description: "تم العودة إلى صفحة القرآن.", variant: "destructive" });
              // خروج مباشر إلى صفحة القرآن بدون طلب كلمة المرور
-             setKidsLocked(false);
              navigate("/");
              return;
            }
@@ -1141,7 +1142,6 @@ export default function KidsGames() {
     if (!initialCheck.allowed || getProgress().playExpired) {
         toast({ title: "انتهى وقت اللعب ⏰", description: initialCheck.reason || "تم العودة إلى صفحة القرآن.", variant: "destructive" });
         // خروج مباشر إلى صفحة القرآن بدون طلب كلمة المرور
-        setKidsLocked(false);
         navigate("/");
         return;
     }
@@ -2136,3 +2136,4 @@ export default function KidsGames() {
     </div>
   );
 }
+

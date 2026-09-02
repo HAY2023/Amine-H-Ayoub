@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/supabase", () => ({
-  hasValidSupabaseKey: true,
+  hasValidSupabaseKey: () => true,
   supabase: {
     functions: { invoke: mocks.invokeMock },
     from: mocks.fromMock,

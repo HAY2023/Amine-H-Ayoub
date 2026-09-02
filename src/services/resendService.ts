@@ -39,7 +39,7 @@ function prettifySupportError(error: unknown): string {
 export async function sendSupportReportEmail(
   report: SupportReportData,
 ): Promise<{ success: boolean; error?: string }> {
-  if (!hasValidSupabaseKey) {
+  if (!hasValidSupabaseKey()) {
     return {
       success: false,
       error: "خدمة الدعم غير مُعدّة في نسخة التطبيق الحالية. يجب ضبط إعدادات Supabase ثم إعادة النشر.",
