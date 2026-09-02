@@ -159,14 +159,23 @@ function _UnusedQuranReader() {
           // نقاط القراءة (المال): نجومتان لكل دقيقة — قليلة لكنها أكثر من نقاط الألعاب
           const stars = Math.max(1, Math.round(mins * 2));
           addCoins(stars);
-          if (justUnlocked) toast({ title: "أحسنت! فتحت ألعاب ركن الأطفال", description: "اذهب إلى ركن الأطفال" });
-          else toast({ title: `+${stars} ⭐ من القراءة` });
+          if (justUnlocked) {
+            toast({ title: "🎉 أحسنت! اكتمل وقت الاستماع وفتحت الألعاب" });
+            // يفتح الألعاب مباشرة عندما يتوفر الوقت — لا ننتظر
+            navigate("/games", { replace: true });
+          } else {
+            toast({ title: `+${stars} ⭐ من القراءة` });
+          }
         }
       }
     };
 
     const id = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      // لا نحتسب إلا أثناء تشغيل فعلي للصوت (وليس تحميلاً/تخزيناً مؤقتاً)
+      const a = audioRef.current;
+      const isActuallyPlaying = !!a && !a.paused && !a.ended && a.readyState >= 3;
+      if (!isActuallyPlaying) return;
       accumulatedSecs += 5;
       if (accumulatedSecs >= 30) {
         flushMinutes();

@@ -5,6 +5,7 @@ import AppFooter from "../components/AppFooter";
 import { getProfile, updateProfile, getProgress, getHistory, getProfiles, getActiveId, setActiveProfile, addProfile, removeProfile, getAppMode, setAppMode, kidsRouteBlocked, KID_AVATARS, KID_COLORS, KidsProfile, KidsProgress, DayLog } from "../data/kidsProfile";
 import { getKidsSchedule, saveKidsSchedule, KidsSchedule } from "../data/kidsSchedule";
 import { isKidsMode, setKidsLocked } from "../data/kidsLock";
+import { calculateStreak } from "../data/kidsBadges";
 import Avatar from "../components/Avatar";
 import BadgesModal from "../components/BadgesModal";
 import { toast } from "../hooks/use-toast";
@@ -31,10 +32,12 @@ export default function ParentDashboard() {
   const [activeId, setActiveId] = useState<string>(getActiveId);
   const [profile, setProfile] = useState<KidsProfile>(getProfile);
   const getFullHistory = (): DayLog[] => {
+    // getHistory() تُرجع السجل تنازلياً (الأحدث في البداية عبر unshift)
+    // نعيد ترتيبه تصاعدياً (الأقدم أولاً) ليكون عدُّ الأيام المتتالية صحيحاً
     const past = getHistory();
     const cur = getProgress();
     const todayDate = cur.date || new Date().toISOString().split("T")[0];
-    const pastFiltered = past.filter(d => d.date !== todayDate);
+    const pastFiltered = past.filter(d => d.date !== todayDate).slice().reverse();
     const todayLog: DayLog = {
       date: todayDate,
       minutes: cur.minutes || 0,
@@ -77,18 +80,12 @@ export default function ParentDashboard() {
     totalMinutes: totalMins,
     avgMinutes: activeDays.length > 0 ? Math.round(totalMins / activeDays.length) : (history.length > 0 ? Math.round(totalMins / history.length) : 0),
     bestDay: Math.max(0, ...history.map(d => d.minutes)),
-    consecutiveDays: (() => {
-      let count = 0;
-      for (let i = history.length - 1; i >= 0; i--) {
-        if (history[i].minutes > 0) count++;
-        else break;
-      }
-      return count;
-    })(),
+    consecutiveDays: calculateStreak().currentStreak,
     thisWeekReading: totalMins,
     completedDays: history.filter(d => d.minutes >= profile.goalMinutes && profile.goalMinutes > 0).length,
     percentComplete: Math.min(100, Math.round((progress.minutes / Math.max(1, profile.goalMinutes)) * 100)),
   };
+  const playPct = Math.min(100, Math.round(((progress.played || 0) / Math.max(1, profile.playMinutes || 1)) * 100));
 
   // يحفظ الحقول القابلة للتحرير فقط (دمج فوق التخزين الحيّ) حتى لا تُمحى النجوم/المخزون/وقت الدرس
   const saveChild = () => {
@@ -228,6 +225,15 @@ export default function ParentDashboard() {
           <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary/50">
             <Gift className={`w-5 h-5 ${progress.unlocked ? "text-success" : "text-muted-foreground"}`} />
             <span className={progress.unlocked ? "text-success font-bold" : "text-muted-foreground"}>{progress.unlocked ? "✓ الألعاب مفتوحة" : "✗ الألعاب مقفلة"}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-1 text-muted-foreground"><Clock className="w-4 h-4" /> اللعب</span>
+            <span className="text-foreground font-bold">{playPct}%</span>
+          </div>
+          <Bar value={progress.played || 0} max={profile.playMinutes || 1} color="bg-gradient-to-r from-red-500 to-rose-500" />
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{progress.played || 0} دقيقة</span>
+            <span>حد: {profile.playMinutes > 0 ? `${profile.playMinutes} دقيقة` : "بلا حد"}</span>
           </div>
         </div>
 

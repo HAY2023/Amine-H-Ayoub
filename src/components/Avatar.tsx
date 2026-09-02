@@ -198,9 +198,11 @@ export default function Avatar({ name, className }: { name: string; className?: 
   const mapped = legacyMap[cleanName] || cleanName;
   const imageFile = mapped.startsWith("img-") ? mapped : "img-boy-scholar";
 
+  // ملاحظة: ملفات الأفاتار هي بصيغة JPEG على الرغم من امتداد .png —
+  // يتم تحميلها بامتداد .jpg الصحيح لتجنّب مشاكل توافق المتصفحات
   return (
     <img
-      src={`/avatars/${imageFile}.png`}
+      src={`/avatars/${imageFile}.jpg`}
       alt={imageFile}
       className={cn("object-contain rounded-full shadow-sm w-full h-full bg-accent/10 p-0.5", className)}
       loading="lazy"

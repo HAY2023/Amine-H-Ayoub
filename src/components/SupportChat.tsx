@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { X, MessageSquare, Send, Loader2, Paperclip, UploadCloud, CheckCheck, RefreshCw, Image as ImageIcon } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { hasValidSupabaseKey, supabase } from "@/lib/supabase";
 import { getDeviceId } from "@/utils/deviceInfo";
 import { toast } from "@/hooks/use-toast";
 
@@ -22,6 +22,7 @@ export default function SupportChat({
   onClose?: () => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [convId, setConvId] = useState<string>(() => {
     try {
       return getDeviceId() || "user_device";
@@ -29,6 +30,7 @@ export default function SupportChat({
       return "user_device";
     }
   });
+  const convIdRef = useRef(convId);
 
   const [messages, setMessages] = useState<SupportMessage[]>(() => {
     try {
@@ -71,32 +73,42 @@ export default function SupportChat({
     async function initChat() {
       try {
         setLoading(true);
+        setConnectionError(null);
+        if (!hasValidSupabaseKey()) {
+          throw new Error("Supabase غير مُعدّ في إعدادات التطبيق");
+        }
         const deviceId = getDeviceId() || `device_${Date.now()}`;
 
-        let { data: conv } = await supabase
+        let conv;
+        const { data, error: conversationError } = await supabase
           .from("support_conversations")
           .select("id")
           .eq("device_id", deviceId)
           .maybeSingle();
+        if (conversationError) throw conversationError;
+        conv = data;
 
         if (!conv) {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from("support_conversations")
             .insert({ device_id: deviceId, user_name: "مستخدم التطبيق" })
             .select("id")
             .maybeSingle();
 
+          if (error) throw error;
           if (data) conv = data;
         }
 
         if (conv?.id) {
           setConvId(conv.id);
+          convIdRef.current = conv.id;
 
-          const { data: msgs } = await supabase
+          const { data: msgs, error: messagesError } = await supabase
             .from("support_messages")
             .select("id, sender, body, created_at")
             .eq("conversation_id", conv.id)
             .order("created_at", { ascending: true });
+          if (messagesError) throw messagesError;
 
           if (msgs && msgs.length > 0) {
             setMessages(msgs as SupportMessage[]);
@@ -130,9 +142,16 @@ export default function SupportChat({
                 });
               }
             );
-          subscription = channel.subscribe();
+          subscription = channel.subscribe((status) => {
+            if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+              setConnectionError("تعذر الاتصال المباشر، ستتم محاولة تحديث الرسائل تلقائيًا.");
+            }
+          });
+        } else {
+          throw new Error("تعذر إنشاء محادثة الدعم الفني");
         }
       } catch (err) {
+        setConnectionError(err instanceof Error ? err.message : "تعذر الاتصال بالدعم الفني");
         console.debug("Support init info:", err);
       } finally {
         setLoading(false);
@@ -140,13 +159,15 @@ export default function SupportChat({
     }
 
     const pollInterval = setInterval(async () => {
-      if (!convId || convId === "user_device") return;
+      const activeConvId = convIdRef.current;
+      if (!activeConvId || activeConvId === "user_device") return;
       try {
-        const { data: latestMsgs } = await supabase
+        const { data: latestMsgs, error } = await supabase
           .from("support_messages")
           .select("id, sender, body, created_at")
-          .eq("conversation_id", convId)
+          .eq("conversation_id", activeConvId)
           .order("created_at", { ascending: true });
+        if (error) throw error;
 
         if (latestMsgs && latestMsgs.length > 0) {
           setMessages((prev) => {
@@ -166,7 +187,7 @@ export default function SupportChat({
           });
         }
       } catch {
-        /* ignore */
+        setConnectionError("تعذر تحديث رسائل الدعم، تحقق من اتصال الإنترنت.");
       }
     }, 2500);
 
@@ -212,21 +233,28 @@ export default function SupportChat({
       });
 
       if (convId && convId !== "user_device") {
-        await supabase.from("support_messages").insert({
+        const { error: messageError } = await supabase.from("support_messages").insert({
           conversation_id: convId,
           sender: "user",
           body: `[IMAGE] ${base64}`,
         });
-        await supabase
+        if (messageError) throw messageError;
+        const { error: conversationError } = await supabase
           .from("support_conversations")
           .update({ last_message: "📷 صورة مرفقة", last_message_at: new Date().toISOString() })
           .eq("id", convId);
+        if (conversationError) throw conversationError;
+        setConnectionError(null);
+      } else {
+        throw new Error("لم يتم إنشاء محادثة الدعم الفني");
       }
 
+      setConnectionError(null);
       toast({ title: "تم إرسال الصورة بنجاح ✅", description: "وصلت لقطة الشاشة إلى المشرف." });
     } catch (err) {
       console.debug("Upload note:", err);
-      toast({ title: "تم حفظ الصورة محلياً", description: "سيتم إرسالها للمشرف عند استقرار الاتصال." });
+      setMessages((prev) => prev.filter((message) => message.id !== tempId));
+      toast({ title: "تعذر إرسال الصورة", description: "تحقق من اتصال الدعم وحاول مرة أخرى.", variant: "destructive" });
     } finally {
       setSending(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -261,18 +289,27 @@ export default function SupportChat({
 
     try {
       if (convId && convId !== "user_device") {
-        await supabase.from("support_messages").insert({
+        const { error: messageError } = await supabase.from("support_messages").insert({
           conversation_id: convId,
           sender: "user",
           body: text,
         });
-        await supabase
+        if (messageError) throw messageError;
+        const { error: conversationError } = await supabase
           .from("support_conversations")
           .update({ last_message: text, last_message_at: new Date().toISOString() })
           .eq("id", convId);
+        if (conversationError) throw conversationError;
+      } else {
+        throw new Error("لم يتم إنشاء محادثة الدعم الفني");
       }
+      setConnectionError(null);
     } catch (err) {
       console.debug("Send note:", err);
+      setMessages((prev) => prev.filter((message) => message.id !== tempId));
+      setInput(text);
+      setConnectionError("تعذر إرسال الرسالة. تحقق من إعدادات Supabase أو اتصال الإنترنت.");
+      toast({ title: "تعذر إرسال الرسالة", description: "حاول مرة أخرى بعد التحقق من الاتصال.", variant: "destructive" });
     } finally {
       setSending(false);
     }
@@ -341,6 +378,11 @@ export default function SupportChat({
       )}
 
       {/* Messages Scroll Area */}
+      {connectionError && (
+        <div className="mx-4 mt-3 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive" role="status">
+          {connectionError}
+        </div>
+      )}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-muted/20">
         {loading && messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-muted-foreground gap-2">

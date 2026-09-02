@@ -45,11 +45,14 @@ const ALL_SURAH_PAIRS = [
 
 interface MemoryGameProps {
   onBack: () => void;
+  def?: GameDef;
+  minSurah?: number;
 }
 
 import { createPortal } from 'react-dom';
+import { GameDef } from '../data/gameCatalog';
 
-export default function MemoryGame({ onBack }: MemoryGameProps) {
+export default function MemoryGame({ onBack, def, minSurah }: MemoryGameProps) {
   const [cards, setCards] = useState<(CardData & { isFlipped: boolean, isMatched: boolean })[]>([]);
   const [firstCardIndex, setFirstCardIndex] = useState<number | null>(null);
   const [lockBoard, setLockBoard] = useState(false);
@@ -62,12 +65,24 @@ export default function MemoryGame({ onBack }: MemoryGameProps) {
   }, []);
 
   const initGame = () => {
-    // اختيار 4 إلى 6 أزواج عشوائية مختلفة تماماً في كل لعبة
     const numPairs = 4;
     setTotalPairs(numPairs);
-    
-    const shuffledPool = [...ALL_SURAH_PAIRS].sort(() => 0.5 - Math.random());
-    const selected = shuffledPool.slice(0, numPairs);
+
+    const list = ALL_SURAH_PAIRS;
+    // نبدأ بمطابقة السورة المختارة + أزواجها المتجاورة (المتشابهات) إن وُجدت
+    let start = 0;
+    if (minSurah) {
+      const chosenIdx = list.findIndex(p => p.surah.includes(String(minSurah)) || String(minSurah) === p.surah.replace(/\D/g, ""));
+      // إيجاد أفضل عنصر قريب للسورة المختارة بالأرقام إن توفر
+      const nums = list.map(p => Number((p.surah.match(/\d+/) || [])[0]) || 0);
+      let best = nums.findIndex(n => n === minSurah);
+      if (best < 0) {
+        // أقرب رقم
+        best = nums.reduce((acc, n, i) => Math.abs(n - minSurah) < Math.abs(nums[acc] - minSurah) ? i : acc, 0);
+      }
+      if (best >= 0) start = Math.max(0, Math.min(best, list.length - numPairs));
+    }
+    const selected = list.slice(start, start + numPairs);
 
     const generatedCards: CardData[] = [];
     selected.forEach(item => {

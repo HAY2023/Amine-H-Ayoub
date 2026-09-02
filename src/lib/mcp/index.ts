@@ -13,7 +13,7 @@ export default defineMcp({
   title: "المصحف المعلم برواية ورش — MCP",
   version: "0.1.0",
   instructions:
-    "Tools for the Learn Quran Kids app (Warsh narration by Amin Haj Ayoub). " +
+    "Tools for the Quran-Amine H Ayoub app (Warsh narration by Amin Haj Ayoub). " +
     "Use `list_surahs` to list all 114 surahs, `get_surah` to look up one by number, " +
     "and `whoami` to confirm the signed-in user.",
   auth: auth.oauth.issuer({

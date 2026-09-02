@@ -4,6 +4,7 @@ import { addCoins } from '../data/kidsProfile';
 import { toast } from '../hooks/use-toast';
 import { ensureCorpus, SurahText, normalizeArabic } from '../data/quranText';
 import { GameDef } from '../data/gameCatalog';
+import { pullNewQuestions, addQuestions, removeQuestion, getAnsweredIds, getBank, fetchFromQuestionServer, type BankQuestion } from '../data/questionBank';
 import { createPortal } from 'react-dom';
 
 interface MissingWordGameProps {
@@ -12,11 +13,7 @@ interface MissingWordGameProps {
   onBack: () => void;
 }
 
-interface Question {
-  surahName: string;
-  ayahText: string;
-  missingWord: string;
-  options: string[];
+interface Question extends BankQuestion {
 }
 
 export default function MissingWordGame({ def, minSurah, onBack }: MissingWordGameProps) {
@@ -42,82 +39,104 @@ export default function MissingWordGame({ def, minSurah, onBack }: MissingWordGa
     setLoading(false);
   };
 
-  const generateQuestions = (data: SurahText[]) => {
-    const minS = def.params?.minSurah || 114;
-    const maxS = def.params?.maxSurah || 1;
-    
-    // Filter surahs based on age/params
-    let allowedSurahs = data.filter(s => s.app <= minS && s.app >= maxS);
-    if (allowedSurahs.length === 0) allowedSurahs = [...data];
+  const generateQuestions = async (data: SurahText[]) => {
+    // السورة الحالية المعيّنة من وليّ الأمر — الأسئلة منها حصرياً
+    const surahNum = minSurah || def.params?.minSurah || 0;
+    const targetSurah = surahNum ? data.find(s => s.app === surahNum) : null;
 
-    // تجميع كل الآيات الصالحة للاختبار من جميع السور المتاحة
+    // الأسئلة من السورة المختارة فقط (كل آياتها الصالحة) — وإن لم تُحدَّد نستخدم القصائر
+    const sourceSurahs = targetSurah ? [targetSurah] : [...data].sort((a, b) => (a.ayahs?.length || 0) - (b.ayahs?.length || 0)).slice(0, 5);
+
     interface AyahCandidate {
       surahName: string;
       ayahText: string;
       ayahNum: number;
+      surahNum: number;
     }
 
     const allCandidates: AyahCandidate[] = [];
-    for (const s of allowedSurahs) {
+    for (const s of sourceSurahs) {
       if (!s.ayahs) continue;
       for (const a of s.ayahs) {
         const rawWords = a.text.trim().split(/\s+/);
         if (rawWords.length >= 3) {
-          allCandidates.push({ surahName: s.name, ayahText: a.text.trim(), ayahNum: a.n });
+          allCandidates.push({ surahName: s.name, ayahText: a.text.trim(), ayahNum: a.n, surahNum: s.app });
         }
       }
     }
 
-    // خلط كل الآيات عشوائياً لضمان تنوع تام وعدم تكرار نفس الآية
+    // خلط كل الآيات — كل آية تُستخدم مرة واحدة فقط (لا تكرار ولا تشابه)
     const shuffledCandidates = [...allCandidates].sort(() => 0.5 - Math.random());
-    const selectedAyahs = shuffledCandidates.slice(0, 15);
+    const selectedAyahs = shuffledCandidates.slice(0, 20);
 
-    // جمع بنك كلمات من المصحف كخيارات مشتتة ذكية
+    // بنك كلمات السورة نفسها أولاً (مشتّات صعبة ومتشابهة شكلاً) + بنك عام للتنويع
+    const surahWordsBank: string[] = [];
     const allWordsBank: string[] = [];
+    for (const s of sourceSurahs) {
+      for (const a of s.ayahs || []) {
+        for (const w of a.text.split(/\s+/)) {
+          const clean = w.trim().replace(/[^\u0600-\u06FF]/g, "");
+          if (clean.length >= 3) surahWordsBank.push(clean);
+        }
+      }
+    }
     for (const s of data) {
       for (const a of s.ayahs || []) {
         for (const w of a.text.split(/\s+/)) {
           const clean = w.trim();
-          if (clean.length >= 3) allWordsBank.push(clean);
+          if (clean.length >= 4) allWordsBank.push(clean);
         }
       }
     }
 
+    const usedMissing = new Set<string>(); // منع تكرار نفس الكلمة المفقودة
     const generated: Question[] = [];
 
     for (const candidate of selectedAyahs) {
       const words = candidate.ayahText.split(/\s+/);
-      // اختيار كلمة مناسبة (ليست قصيرة جداً)
+      // اختيار كلمة صعبة (أطول = أصعب) وغير مستخدمة في سؤال سابق
       const validIndices = words
         .map((w, idx) => ({ w, idx }))
-        .filter(item => item.w.length >= 3);
+        .filter(item => item.w.replace(/[^\u0600-\u06FF]/g, "").length >= 4 && !usedMissing.has(normalizeArabic(item.w)));
 
       if (validIndices.length === 0) continue;
 
-      const chosen = validIndices[Math.floor(Math.random() * validIndices.length)];
+      // نفضّل الكلمات الأطول (أصعب في التمييز)
+      validIndices.sort((a, b) => b.w.length - a.w.length);
+      const chosen = validIndices[Math.floor(Math.random() * Math.min(3, validIndices.length))];
       const missingWord = chosen.w;
+      usedMissing.add(normalizeArabic(missingWord));
 
       // تكوين الآية مع وضع الفراغ بدقة في مكان الكلمة المحددة
       const wordsWithBlank = [...words];
       wordsWithBlank[chosen.idx] = " (........) ";
       const formattedAyahText = wordsWithBlank.join(" ");
 
-      // إنشاء الخيارات المشتتة
+      // خيارات مشتّتة: من كلمات السورة نفسها (متشابهة شكلاً = أصعب) + عامة
       const options = new Set<string>();
       options.add(missingWord);
+      const norm = normalizeArabic(missingWord);
 
+      const tryAdd = (randWord: string | undefined) => {
+        if (randWord && randWord !== missingWord && normalizeArabic(randWord) !== norm) options.add(randWord);
+      };
+
+      // 2 من السورة نفسها إن توفرت
+      const surahPool = [...new Set(surahWordsBank)].sort(() => 0.5 - Math.random());
+      for (const w of surahPool) { if (options.size >= 3) break; tryAdd(w); }
+      // الباقي من بنك المصحف العام
       let attempts = 0;
-      while (options.size < 4 && attempts < 100) {
-        const randWord = allWordsBank[Math.floor(Math.random() * allWordsBank.length)];
-        if (randWord && normalizeArabic(randWord) !== normalizeArabic(missingWord)) {
-          options.add(randWord);
-        }
+      while (options.size < 4 && attempts < 200) {
+        tryAdd(allWordsBank[Math.floor(Math.random() * allWordsBank.length)]);
         attempts++;
       }
 
       const optionsArray = Array.from(options).sort(() => 0.5 - Math.random());
+      if (optionsArray.length < 4) continue;
 
       generated.push({
+        id: `${candidate.surahNum}-${candidate.ayahNum}-${normalizeArabic(missingWord)}`,
+        surahNum: candidate.surahNum,
         surahName: candidate.surahName,
         ayahText: formattedAyahText,
         missingWord,
@@ -125,7 +144,31 @@ export default function MissingWordGame({ def, minSurah, onBack }: MissingWordGa
       });
     }
 
-    setQuestions(generated);
+    // حفظ الأسئلة المولدة في البنك + استدعاء أسئلة جديدة من السيرفر (بديلة عمّا أُجيب سابقاً)
+    // الأسئلة المُجابة سابقاً (المحذوفة من الجهاز) لا تعود أبداً
+    const answered = new Set(getAnsweredIds());
+    const freshGenerated = generated.filter(q => !answered.has(q.id));
+
+    // أولوية لسيرفر الأسئلة (توليد عشوائي على الخادم) — والمحلي احتياط
+    let serverQs: BankQuestion[] = [];
+    try {
+      serverQs = await fetchFromQuestionServer(surahNum, 15, "missingword");
+    } catch { /* بدون سيرفر */ }
+
+    const bankQs = getBank().filter(q => q.surahNum === surahNum && !answered.has(q.id));
+    const seenLocal = new Set(freshGenerated.map(q => q.id));
+    const merged: Question[] = [
+      ...serverQs,
+      ...freshGenerated,
+      ...bankQs.filter(q => !seenLocal.has(q.id) && !serverQs.some(s => s.id === q.id)),
+    ];
+    try {
+      const fromSupabase = await pullNewQuestions(surahNum, merged.map(q => q.id));
+      merged.push(...fromSupabase);
+    } catch { /* بدون سيرفر — تكفي المحلية */ }
+
+    addQuestions(freshGenerated);
+    setQuestions(merged);
     setCurrentIndex(0);
     setScore(0);
     setWon(false);
@@ -137,8 +180,15 @@ export default function MissingWordGame({ def, minSurah, onBack }: MissingWordGa
     if (selectedAnswer !== null) return; // Already answered this one
     
     setSelectedAnswer(option);
-    const correct = option === questions[currentIndex].missingWord;
+    const currentQ = questions[currentIndex];
+    const correct = option === currentQ.missingWord;
     setIsCorrect(correct);
+
+    // بعد الإجابة: حذف السؤال من الجهاز + استدعاء سؤال جديد بديل من السيرفر في الخلفية
+    removeQuestion(currentQ.id);
+    pullNewQuestions(currentQ.surahNum, questions.map(q => q.id))
+      .then(fresh => { if (fresh.length) setQuestions(prev => [...prev, ...fresh]); })
+      .catch(() => { /* بدون إنترنت — يكفي البنك المحلي */ });
     
     if (correct) {
       const newScore = score + 1;
@@ -159,7 +209,7 @@ export default function MissingWordGame({ def, minSurah, onBack }: MissingWordGa
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      // Re-generate if we run out of questions
+      // نفدت الأسئلة — إعادة توليد (من البنك المحلي + السيرفر)
       generateQuestions(corpus);
     }
   };

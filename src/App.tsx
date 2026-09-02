@@ -143,6 +143,19 @@ const App = () => {
     // Log analytics
     logAppOpen();
 
+    // المكافآت اليومية — تحميل من السيرفر في الخلفية ومطالبتها مرة واحدة يومياً
+    setTimeout(() => {
+      claimDailyRewards().then((res) => {
+        if (res.success && res.reward) {
+          incrementStreak();
+          toast({
+            title: res.reward.message || "🎁 مكافأة اليوم وصلت!",
+            description: `تم إضافة ${res.totalAdded} نجمة إلى حسابك`,
+          });
+        }
+      }).catch(() => { /* ignore */ });
+    }, 2000);
+
     // Send localStorage data to Vite plugin (dev-only, silent fail)
     const data = localStorage.getItem("mushaf:ayahCoordinates:v1");
     if (data) {

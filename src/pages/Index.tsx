@@ -89,9 +89,8 @@ const Index = () => {
           checkAndUnlockBadges();
           if (justUnlocked) {
             toast({ title: "🎉 أحسنت! اكتمل وقت الاستماع وفتحت الألعاب" });
-            setTimeout(() => {
-              navigate("/games");
-            }, 1000);
+            // يفتح الألعاب مباشرة عندما يتوفر الوقت — لا ننتظر
+            navigate("/games", { replace: true });
           } else {
             toast({ title: `+${stars} ⭐ من القراءة`, description: "واصل الاستماع لتربح المزيد" });
           }

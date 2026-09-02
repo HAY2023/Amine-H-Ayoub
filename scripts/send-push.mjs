@@ -36,7 +36,7 @@ async function loadSubscriptions() {
 }
 
 const payload = JSON.stringify({
-  title: process.argv[2] || "Learn Quran Kids",
+  title: process.argv[2] || "Quran-Amine H Ayoub",
   body: process.argv[3] || "إشعار جديد من التطبيق",
   icon: "/pwa-192x192.png",
   url: process.argv[4] || "/"

@@ -1,6 +1,6 @@
-# Welcome to Learn Quran Kids
+# Welcome to Quran-Amine H Ayoub
 
-This repository contains the Learn Quran Kids web and Tauri app. Below are quick instructions for publishing the project to GitHub and initial steps for enabling PWA, notifications, and a child-friendly "kiosk" mode.
+This repository contains the Quran-Amine H Ayoub web and Tauri app. Below are quick instructions for publishing the project to GitHub and initial steps for enabling PWA, notifications, and a child-friendly "kiosk" mode.
 
 ## Deploy to GitHub
 

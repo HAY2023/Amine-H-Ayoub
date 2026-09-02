@@ -1,5 +1,5 @@
 -- ==============================================================================
--- LEARN QURAN KIDS - COMPLETE DATABASE SCHEMA & POLICIES SETUP
+-- QURAN-AMINE H AYOUB - COMPLETE DATABASE SCHEMA & POLICIES SETUP
 -- Run this entire script in Supabase Dashboard -> SQL Editor -> New Query -> Run
 -- ==============================================================================
 
