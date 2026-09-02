@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Plus, Settings, Sparkles } from "lucide-react";
-import { getProfiles, getAppMode, setAppMode, setActiveProfile, kidsRouteBlocked, getProgress, getActiveId, type KidsProfile } from "../data/kidsProfile";
+import { getProfiles, getAppMode, setAppMode, setActiveProfile, kidsRouteBlocked, getProgress, getActiveId, setKidsHidden, type KidsProfile } from "../data/kidsProfile";
 import { hasKidsPin, setKidsLocked } from "../data/kidsLock";
 import PinModal from "./PinModal";
 import Avatar from "./Avatar";

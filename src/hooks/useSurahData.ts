@@ -33,15 +33,15 @@ function getAudioForSurah(n: number): string {
   return getSurahAudioUrl(n);
 }
 
-// ربع يس فقط (الفاتحة 1، ومن يس 36 إلى الناس 114 مع استبعاد سورة الحديد 57 حتى يتم رفعها)
+// ربع يس فقط (الفاتحة 1، ومن يس 36 إلى الناس 114 مع إضافة سورة الحديد 57 من السيرفر المحلي)
 const LOCAL_SURAHS: SurahItem[] = allSurahNames
-  .filter((s) => (s.number === 1 || (s.number >= 36 && s.number <= 114)) && s.number !== 57)
+  .filter((s) => (s.number === 1 || (s.number >= 36 && s.number <= 114)))
   .map((s) => ({
     number: s.number,
     name: s.name,
     ayahCount: s.ayahCount,
     type: s.type,
-    audioSrc: getAudioForSurah(s.number),
+    audioSrc: s.number === 57 ? "http://localhost:12345/12345.mp3" : getAudioForSurah(s.number),
   }));
 
 const HF_CACHE_KEY = "mushaf:hf-surahs-cache-v4";
@@ -80,7 +80,7 @@ export function useSurahData() {
 
         const data = await response.json();
 
-        // استخراج أرقام السور (ربع يس فقط واستبعاد سورة الحديد 57 إن لم تكن متوفرة)
+        // استخراج أرقام السور (ربع يس فقط)
         serverSurahNumbers = (data as HuggingFaceFile[])
           .filter((file) => file.path.endsWith('.mp3'))
           .map((file) => {
@@ -89,7 +89,7 @@ export function useSurahData() {
             return isNaN(num) ? null : num;
           })
           .filter((num: number | null): num is number => 
-            num !== null && (num === 1 || (num >= 36 && num <= 114)) && num !== 57
+            num !== null && (num === 1 || (num >= 36 && num <= 114))
           );
 
         // حفظ النتيجة في localStorage للمرّات القادمة
@@ -105,7 +105,7 @@ export function useSurahData() {
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed)) {
-            manualSurahs = parsed.filter((n): n is number => typeof n === 'number' && n !== 57);
+            manualSurahs = parsed.filter((n): n is number => typeof n === 'number');
           }
         }
       } catch {
@@ -115,7 +115,7 @@ export function useSurahData() {
       // دمج السور المحلية المضمنة مع المكتشفة من السيرفر والمضافة يدوياً
       const uniqueNumbers = Array.from(
         new Set([...LOCAL_SURAHS.map((s) => s.number), ...serverSurahNumbers, ...manualSurahs])
-      ).filter(n => (n === 1 || (n >= 36 && n <= 114)) && n !== 57)
+      ).filter(n => (n === 1 || (n >= 36 && n <= 114)))
        .sort((a, b) => {
          if (a === 1) return -1;
          if (b === 1) return 1;
@@ -138,7 +138,7 @@ export function useSurahData() {
           name,
           ayahCount,
           type,
-          audioSrc: getAudioForSurah(num)
+          audioSrc: num === 57 ? "http://localhost:12345/12345.mp3" : getAudioForSurah(num)
         };
       });
 
@@ -151,7 +151,7 @@ export function useSurahData() {
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed)) {
-            manualSurahs = parsed.filter((n): n is number => typeof n === 'number' && n !== 57);
+            manualSurahs = parsed.filter((n): n is number => typeof n === 'number');
           }
         }
       } catch {
@@ -160,7 +160,7 @@ export function useSurahData() {
 
       const uniqueNumbers = Array.from(
         new Set([...LOCAL_SURAHS.map((s) => s.number), ...manualSurahs])
-      ).filter(n => (n === 1 || (n >= 36 && n <= 114)) && n !== 57)
+      ).filter(n => (n === 1 || (n >= 36 && n <= 114)))
        .sort((a, b) => {
          if (a === 1) return -1;
          if (b === 1) return 1;
@@ -176,7 +176,7 @@ export function useSurahData() {
           name: globalMatch ? globalMatch.name : `سورة ${num}`,
           ayahCount: globalMatch ? globalMatch.ayahCount : undefined,
           type: globalMatch ? globalMatch.type : undefined,
-          audioSrc: getAudioForSurah(num)
+          audioSrc: num === 57 ? "http://localhost:12345/12345.mp3" : getAudioForSurah(num)
         };
       });
 

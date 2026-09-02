@@ -19,7 +19,19 @@ export default function SplitViewPanel({ surahs, currentPlaying, isPlaying, onSe
 
   const filteredSurahs = useMemo(() => {
     if (!search.trim()) return surahs;
-    return surahs.filter(s => s.name.includes(search.trim()));
+    const q = search.trim();
+    const qNum = parseInt(q, 10);
+    const isNumberSearch = /^\d+$/.test(q);
+    
+    return surahs.filter(s => {
+      // إذا كان البحث رقماً، ابحث بالرقم
+      if (isNumberSearch) {
+        // تطابق كامل أو بداية الرقم
+        return String(s.number) === q || String(s.number).startsWith(q);
+      }
+      // وإلا ابحث بالاسم
+      return s.name.includes(q);
+    });
   }, [surahs, search]);
 
   const playingIdx = currentPlaying !== null ? surahs.findIndex(s => s.number === currentPlaying) : -1;
@@ -87,7 +99,7 @@ export default function SplitViewPanel({ surahs, currentPlaying, isPlaying, onSe
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="بحث عن سورة..."
+            placeholder="بحث بالاسم أو الرقم..."
             className="w-full pr-9 pl-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/30 outline-none focus:border-amber-400/50 focus:bg-white/8 transition-all"
             dir="rtl"
           />
