@@ -13,8 +13,7 @@ interface MissingWordGameProps {
   onBack: () => void;
 }
 
-interface Question extends BankQuestion {
-}
+type Question = BankQuestion;
 
 export default function MissingWordGame({ def, minSurah, onBack }: MissingWordGameProps) {
   const [corpus, setCorpus] = useState<SurahText[]>([]);
@@ -40,12 +39,11 @@ export default function MissingWordGame({ def, minSurah, onBack }: MissingWordGa
   };
 
   const generateQuestions = async (data: SurahText[]) => {
-    // السورة الحالية المعيّنة من وليّ الأمر — الأسئلة منها حصرياً
+    // تبدأ الأسئلة من السورة الحالية وتمتد إلى السور التالية في ترتيب المصحف.
     const surahNum = minSurah || def.params?.minSurah || 0;
-    const targetSurah = surahNum ? data.find(s => s.app === surahNum) : null;
-
-    // الأسئلة من السورة المختارة فقط (كل آياتها الصالحة) — وإن لم تُحدَّد نستخدم القصائر
-    const sourceSurahs = targetSurah ? [targetSurah] : [...data].sort((a, b) => (a.ayahs?.length || 0) - (b.ayahs?.length || 0)).slice(0, 5);
+    const sourceSurahs = surahNum
+      ? data.filter(s => s.app >= surahNum)
+      : [...data].sort((a, b) => (a.ayahs?.length || 0) - (b.ayahs?.length || 0)).slice(0, 5);
 
     interface AyahCandidate {
       surahName: string;
@@ -155,7 +153,7 @@ export default function MissingWordGame({ def, minSurah, onBack }: MissingWordGa
       serverQs = await fetchFromQuestionServer(surahNum, 15, "missingword");
     } catch { /* بدون سيرفر */ }
 
-    const bankQs = getBank().filter(q => q.surahNum === surahNum && !answered.has(q.id));
+    const bankQs = getBank().filter(q => (!surahNum || q.surahNum >= surahNum) && !answered.has(q.id));
     const seenLocal = new Set(freshGenerated.map(q => q.id));
     const merged: Question[] = [
       ...serverQs,

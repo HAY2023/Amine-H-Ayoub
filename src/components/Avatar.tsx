@@ -11,7 +11,8 @@ const HAIR: Record<string, string> = { black: "#2E2A28", brown: "#6B4A2B", blond
 type HairStyle = "short" | "spiky" | "curly" | "bob" | "ponytail" | "bald";
 type Acc =
   | "none" | "bow" | "crown" | "tiara" | "bigcrown" | "mask" | "ninja" | "gradcap"
-  | "beret" | "detective" | "helmet" | "sunglasses" | "starglasses" | "freckles" | "headband" | "wink";
+  | "beret" | "detective" | "helmet" | "sunglasses" | "starglasses" | "freckles" | "headband" | "wink"
+  | "turban" | "hijab" | "royalcap" | "crescent";
 
 interface Cfg { skin: string; hair: HairStyle; hc: string; acc: Acc; }
 
@@ -40,9 +41,29 @@ export const AVATAR_CONFIG: Record<string, Cfg> = {
   superstar: { skin: SKIN.tan,   hair: "spiky",    hc: HAIR.black,  acc: "starglasses" },
   champion:  { skin: SKIN.brown, hair: "short",    hc: HAIR.black,  acc: "headband" },
   royal:     { skin: SKIN.light, hair: "bob",      hc: HAIR.auburn, acc: "bigcrown" },
+
+  // ── صور جديدة مخصصة للأطفال في التطبيق — أزياء إسلامية أنيقة ──
+  "img-boy-scholar": { skin: SKIN.tan, hair: "short", hc: HAIR.black, acc: "purplecap" },
+  "img-boy-turban": { skin: SKIN.tan, hair: "short", hc: HAIR.black, acc: "turban" },
+  "img-boy-bisht": { skin: SKIN.deep, hair: "short", hc: HAIR.black, acc: "royalcap" },
+  "img-boy-knight": { skin: SKIN.tan, hair: "short", hc: HAIR.brown, acc: "helmet" },
+  "img-boy-knight-legend": { skin: SKIN.tan, hair: "short", hc: HAIR.brown, acc: "crown" },
+  "img-girl-scholar": { skin: SKIN.light, hair: "bob", hc: HAIR.brown, acc: "hijab" },
+  "img-girl-hijab-rose": { skin: SKIN.light, hair: "bob", hc: HAIR.auburn, acc: "hijab" },
+  "img-girl-hijab-emerald": { skin: SKIN.light, hair: "bob", hc: HAIR.black, acc: "hijab" },
+  "img-girl-emerald": { skin: SKIN.light, hair: "bob", hc: HAIR.blonde, acc: "tiara" },
+  "img-girl-emerald-queen": { skin: SKIN.light, hair: "bob", hc: HAIR.blonde, acc: "bigcrown" },
+  "img-girl-gold": { skin: SKIN.light, hair: "bob", hc: HAIR.auburn, acc: "bow" },
+  "img-girl-purple": { skin: SKIN.light, hair: "ponytail", hc: HAIR.auburn, acc: "hijab" },
+  "img-boy-reciter": { skin: SKIN.tan, hair: "short", hc: HAIR.black, acc: "crescent" },
 };
 
 const GOLD = "#F4C63B", GOLD_D = "#D9A62B";
+const CUSTOM_ART_KEYS = new Set([
+  "img-boy-scholar", "img-boy-reciter", "img-boy-knight", "img-boy-knight-legend",
+  "img-boy-turban", "img-boy-bisht", "img-girl-scholar", "img-girl-hijab-rose",
+  "img-girl-hijab-emerald", "img-girl-emerald", "img-girl-emerald-queen", "img-girl-gold", "img-girl-purple"
+]);
 const eyesHidden = (a: Acc) => a === "sunglasses" || a === "starglasses" || a === "mask";
 
 /** شعر خلفي (يُرسم قبل الوجه): كعكة/ذيل جانبي. */
@@ -99,9 +120,31 @@ function Accessory({ acc }: { acc: Acc }) {
       return <g><rect x="29" y="48" width="17" height="11" rx="4" fill="#232323" /><rect x="54" y="48" width="17" height="11" rx="4" fill="#232323" /><rect x="46" y="51" width="8" height="3" fill="#232323" /><path d="M37.5 49 l1.3 2.6 2.9 .3 -2.1 2 .6 2.8 -2.6 -1.4 -2.6 1.4 .6 -2.8 -2.1 -2 2.9 -.3 Z" fill={GOLD} /></g>;
     case "headband":
       return <g><rect x="18" y="40" width="64" height="7" rx="3" fill="#E67E22" /><path d="M50 39 l-4 6 h8 Z" fill={GOLD} /></g>;
+    case "turban":
+      return <g><path d="M17 46 C22 26, 78 26, 83 46 L81 36 Q50 20 19 36 Z" fill="#6F4CC4" stroke="#9B8AE8" strokeWidth="2.5" /><path d="M24 44 Q50 36 76 44" fill="none" stroke="#F3E8FF" strokeWidth="3" strokeLinecap="round" /><circle cx="77" cy="27" r="3.8" fill="#DCCBFF" /><circle cx="50" cy="20" r="2.8" fill="#F5D36F" /><path d="M50 19 C52 12 58 9 62 13" fill="none" stroke="#F5D36F" strokeWidth="2" /></g>;
+    case "hijab":
+      return <g><path d="M18 44 Q50 16 82 44 L84 54 Q50 68 16 54 Z" fill="#8D5ADF" stroke="#C8B4FF" strokeWidth="2.4" /><path d="M29 44 Q50 27 71 44" fill="none" stroke="#F3E8FF" strokeWidth="2.4" strokeLinecap="round" /><circle cx="50" cy="39" r="4" fill="#F3D0E3" /></g>;
+    case "purplecap":
+      return <g><path d="M16 44 Q50 26 84 44 L80 52 Q50 60 20 52 Z" fill="#7C4CC8" stroke="#F2E4FF" strokeWidth="2.2" /><path d="M25 47 Q50 35 75 47" fill="none" stroke="#F5D36F" strokeWidth="2.6" strokeLinecap="round" /><path d="M35 58 Q50 63 65 58" fill="none" stroke="#E8D7FF" strokeWidth="2" strokeLinecap="round" /></g>;
+    case "royalcap":
+      return <g><path d="M18 45 Q50 21 82 45 L74 51 Q50 62 26 51 Z" fill="#5D4AB0" stroke="#E8DBFF" strokeWidth="2.2" /><path d="M31 46 Q50 33 69 46" fill="none" stroke="#F8E49A" strokeWidth="2.8" strokeLinecap="round" /><path d="M44 19 L50 13 L56 19" fill="none" stroke="#F8E49A" strokeWidth="2.8" strokeLinecap="round" /></g>;
+    case "crescent":
+      return <g><path d="M19 45 C19 30, 34 18, 49 18 C35 26, 29 41, 35 56 C26 56, 19 52, 19 45 Z" fill="#F3D36A" /><path d="M65 45 Q80 31 81 47 Q80 61 66 55 Z" fill="#F3D36A" /></g>;
     default:
       return null;
   }
+}
+
+function Body({ acc }: { acc: Acc }) {
+  const robeColor = acc === "hijab" || acc === "purplecap" ? "#6D4ACD" : acc === "turban" || acc === "royalcap" ? "#5B3A9A" : "#7A46BD";
+  return (
+    <g>
+      <path d="M24 75 L16 100 H84 L76 75 Z" fill={robeColor} />
+      <path d="M34 75 Q50 68 66 75 L62 100 H38 Z" fill="#8E64E8" opacity="0.6" />
+      <path d="M38 75 H62 L67 100 H33 Z" fill="#A67BFF" opacity="0.4" />
+      <circle cx="50" cy="76" r="2.5" fill="#F8E9FF" opacity="0.8" />
+    </g>
+  );
 }
 
 /** ملامح الوجه: عينان + خدّان + ابتسامة (تتكيّف مع الزينة). */
@@ -148,12 +191,26 @@ export default function Avatar({ name, className }: { name: string; className?: 
   const cleanName = name.startsWith("av-") ? name.replace(/^av-/, "") : name;
   const cfg = AVATAR_CONFIG[cleanName];
 
-  if (imgFailed) {
+  const customAvatar = cfg && CUSTOM_ART_KEYS.has(name) || cfg && name.startsWith("img-");
+
+  if (cleanName === "chatgpt-main") {
+    return (
+      <img
+        src="/avatars/chatgpt-main.png"
+        alt="chatgpt-main"
+        className={cn("object-cover rounded-full w-full h-full bg-accent/10", className)}
+        loading="lazy"
+      />
+    );
+  }
+
+  if (imgFailed || customAvatar) {
     if (cfg) {
       return (
         <svg viewBox="0 0 100 100" className={cn("select-none bg-secondary/30 rounded-full", className)} role="img" aria-label={name}>
           <BackHair hair={cfg.hair} hc={cfg.hc} />
-          <circle cx="50" cy="54" r="28" fill={cfg.skin} />
+          <Body acc={cfg.acc} />
+          <circle cx="50" cy="52" r="26" fill={cfg.skin} />
           <FrontHair hair={cfg.hair} hc={cfg.hc} />
           <Face acc={cfg.acc} />
           <Accessory acc={cfg.acc} />
@@ -198,13 +255,15 @@ export default function Avatar({ name, className }: { name: string; className?: 
   const mapped = legacyMap[cleanName] || cleanName;
   const imageFile = mapped.startsWith("img-") ? mapped : "img-boy-scholar";
 
-  // ملاحظة: ملفات الأفاتار هي بصيغة JPEG على الرغم من امتداد .png —
-  // يتم تحميلها بامتداد .jpg الصحيح لتجنّب مشاكل توافق المتصفحات
+  // إذا كان الاسم المختار يساوي الملف الذي تم تحميله مباشرة من مجلد Downloads،
+  // استخدم مساره الظاهر في public/avatars مباشرة بدون أي تحويلات.
+  const directPath = cleanName === "chatgpt-main" ? "/avatars/chatgpt-main.png" : undefined;
+
   return (
     <img
-      src={`/avatars/${imageFile}.jpg`}
+      src={directPath || `/avatars/${imageFile}.jpg`}
       alt={imageFile}
-      className={cn("object-contain rounded-full shadow-sm w-full h-full bg-accent/10 p-0.5", className)}
+      className={cn("object-cover rounded-full shadow-sm w-full h-full bg-accent/10 p-0.5", className)}
       loading="lazy"
       onError={() => setImgFailed(true)}
     />

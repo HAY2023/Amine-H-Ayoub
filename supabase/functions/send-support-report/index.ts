@@ -34,7 +34,7 @@ serve(async (req) => {
     }
 
     const apiKey = Deno.env.get("RESEND_API_KEY");
-    const targetEmails = (Deno.env.get("SUPPORT_EMAILS") || Deno.env.get("SUPPORT_EMAIL") || "hammoualiyoucef20@gmail.com")
+    const targetEmails = (Deno.env.get("SUPPORT_EMAILS") || Deno.env.get("SUPPORT_EMAIL") || "hammoualiyoucef20@gmail.com,Amine.hyoub@gmail.com")
       .split(",")
       .map((email) => email.trim())
       .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));

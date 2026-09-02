@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom';
 
 interface AyahOrderGameProps {
   def: GameDef;
+  minSurah?: number;
   onBack: () => void;
 }
 
@@ -17,7 +18,7 @@ interface GameRound {
   shuffled: { n: number; text: string; id: string }[];
 }
 
-export default function AyahOrderGame({ def, onBack }: AyahOrderGameProps) {
+export default function AyahOrderGame({ def, minSurah, onBack }: AyahOrderGameProps) {
   const [corpus, setCorpus] = useState<SurahText[]>([]);
   const [rounds, setRounds] = useState<GameRound[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -44,11 +45,10 @@ export default function AyahOrderGame({ def, onBack }: AyahOrderGameProps) {
   };
 
   const generateRounds = (data: SurahText[]) => {
-    const minS = def.params?.minSurah || 114;
-    const maxS = def.params?.maxSurah || 1;
+    const minS = minSurah || def.params?.minSurah || 1;
     
     // تصفية السور المناسبة والتي تحتوي على 3 آيات على الأقل
-    let allowedSurahs = data.filter(s => s.app <= minS && s.app >= maxS && s.ayahs && s.ayahs.length >= 3);
+    let allowedSurahs = data.filter(s => s.app >= minS && s.ayahs && s.ayahs.length >= 3);
     if (allowedSurahs.length === 0) allowedSurahs = data.filter(s => s.ayahs && s.ayahs.length >= 3);
     if (allowedSurahs.length === 0) allowedSurahs = [data[0]];
 

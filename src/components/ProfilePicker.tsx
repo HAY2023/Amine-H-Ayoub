@@ -29,6 +29,7 @@ export default function ProfilePicker({ onPicked }: { onPicked?: () => void }) {
   const pickChild = (id: string) => {
     setActiveProfile(id);
     setAppMode("kids");
+    setKidsHidden(false);
     setKidsLocked(true);
     close();
 
@@ -44,6 +45,7 @@ export default function ProfilePicker({ onPicked }: { onPicked?: () => void }) {
   };
   const asParent = () => {
     setAppMode("parent");
+    setKidsHidden(true);
     setKidsLocked(false);
     close();
     navigate("/audio");

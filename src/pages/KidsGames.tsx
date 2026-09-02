@@ -591,11 +591,10 @@ function SurahAudioEngine({ def, minSurah }: { def: GameDef; minSurah: number })
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
   const [round, setRound] = useState(1);
   const g = useGame();
-  // الجواب من السورة المختارة، والخيارات من جيرانها المتشابهين
-  const chosen = poolFor(def, minSurah)[0];
-  const optionPool = neighborPool(def, minSurah, 4).filter(s => hasCloudAudio(s.number) || s.number === 1);
   const makeQuestion = () => {
-    const correct0 = chosen;
+    const available = poolFor(def, minSurah).filter(s => hasCloudAudio(s.number) || s.number === 1);
+    const correct0 = available[Math.floor(Math.random() * available.length)] || poolFor(def, minSurah)[0];
+    const optionPool = neighborPool(def, correct0.number, 4).filter(s => hasCloudAudio(s.number) || s.number === 1);
     const others = shuffle(optionPool.filter(s => s.number !== correct0.number)).slice(0, 3);
     return { surah: correct0, options: shuffle([correct0, ...others].map((s) => ({ number: s.number, name: s.name }))) };
   };
@@ -992,7 +991,8 @@ function SurahOrderEngine({ def, minSurah }: { def: GameDef; minSurah: number })
 
 function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const make = () => {
-    const s = poolFor(def, minSurah)[0];
+    const pool = poolFor(def, minSurah);
+    const s = pool[Math.floor(Math.random() * pool.length)] || pool[0];
     const opts = new Set<number>([s.number]);
     // خيارات أقرب للإجابة الصحيحة (فروق أصغر = سؤال أصعب)
     for (const d of shuffle([-3, -2, -1, 1, 2, 3])) {
@@ -1039,7 +1039,7 @@ function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
 }
 
 const ENGINES: Record<GameEngine, (p: { def: GameDef; minSurah: number }) => JSX.Element> = {
-  order: ({ def }) => <AyahOrderGame def={def} onBack={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />, memory: MemoryEngine, memory_meaning: ({ def, minSurah }) => <MemoryGame def={def} minSurah={minSurah} onBack={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />, which: WhichEngine, quiz: QuizEngine, count: CountEngine,
+  order: ({ def, minSurah }) => <AyahOrderGame def={def} minSurah={minSurah} onBack={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />, memory: MemoryEngine, memory_meaning: ({ def, minSurah }) => <MemoryGame def={def} minSurah={minSurah} onBack={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />, which: WhichEngine, quiz: QuizEngine, count: CountEngine,
   nextayah: NextAyahEngine, prevayah: PrevAyahEngine, whichsurah: WhichSurahEngine, missingword: ({ def, minSurah }) => <MissingWordGame def={def} minSurah={minSurah} onBack={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />, surahaudio: SurahAudioEngine,
   ayahsurah: AyahSurahEngine, ayahorder: AyahOrderEngine, ayahlonger: AyahLongerEngine, surahorder: SurahOrderEngine, surahnum: SurahNumEngine,
 };
@@ -1381,159 +1381,139 @@ export default function KidsGames() {
   // إنشاء شهادة التقدم كصورة
   const generateCertificate = () => {
     const canvas = document.createElement("canvas");
-    canvas.width = 600;
-    canvas.height = 880;
+    canvas.width = 720;
+    canvas.height = 980;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // خلفية نابضة بأسلوب Duolingo
-    const bg = ctx.createLinearGradient(0, 0, 600, 880);
-    bg.addColorStop(0, "#58cc02");   // أخضر زاهي
-    bg.addColorStop(0.6, "#89e219");
-    bg.addColorStop(1, "#a5d204");
+    // خلفية خضراء فاتحة أنيقة
+    const bg = ctx.createLinearGradient(0, 0, 720, 980);
+    bg.addColorStop(0, "#8fe650");
+    bg.addColorStop(0.5, "#7bdc3b");
+    bg.addColorStop(1, "#67c51f");
     ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, 600, 880);
+    ctx.fillRect(0, 0, 720, 980);
 
-    // شريط علوي فاتح
-    ctx.fillStyle = "rgba(255,255,255,0.18)";
-    ctx.fillRect(0, 0, 600, 90);
+    // شبكة ناعمة في الأعلى
+    ctx.fillStyle = "rgba(255,255,255,0.12)";
+    for (let y = 0; y < 980; y += 38) {
+      ctx.fillRect(0, y, 720, 1);
+    }
 
-    // البطاقة البيضاء المركزية
-    ctx.fillStyle = "#ffffff";
+    // بطاقة مركزية كبيرة
+    ctx.fillStyle = "#f8f4ed";
     ctx.beginPath();
-    ctx.roundRect(30, 100, 540, 690, 30);
+    ctx.roundRect(52, 98, 616, 760, 42);
     ctx.fill();
 
-    // إطار البطاقة
-    ctx.strokeStyle = "rgba(0,0,0,0.12)";
+    // إطار ذهبي رقيق
+    ctx.strokeStyle = "#d9ab2f";
     ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.roundRect(30, 100, 540, 690, 30);
+    ctx.roundRect(52, 98, 616, 760, 42);
     ctx.stroke();
 
-    // شريط علوي داخلي أخضر
-    ctx.fillStyle = "#58cc02";
+    // شريط علوي أخضر لامع
+    ctx.fillStyle = "#4ea932";
     ctx.beginPath();
-    ctx.roundRect(30, 100, 540, 110, 30);
+    ctx.roundRect(52, 98, 616, 96, 38);
     ctx.fill();
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(30, 160, 540, 50);
 
-    // أيقونة دائرية (نجمة ملونة) بدلاً من رمز ۞
+    // نجمة ذهبية مركزية
     ctx.save();
-    ctx.translate(300, 155);
-    ctx.fillStyle = "#ffc800";
+    ctx.translate(360, 168);
+    ctx.fillStyle = "#f4c542";
     ctx.beginPath();
-    ctx.arc(0, 0, 42, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 5;
-    ctx.stroke();
-    // نجمتان جانبيتان
-    ctx.fillStyle = "#ffffff";
-    for (const [dx, dy, r] of [[-70, -20, 12], [70, -20, 12]]) {
-      ctx.beginPath();
-      ctx.arc(dx, dy, r, 0, Math.PI * 2);
-      ctx.fill();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const r = i % 2 === 0 ? 42 : 18;
+      const x = Math.cos(a) * r;
+      const y = Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
-    ctx.fillStyle = "#ff9600";
-    ctx.font = "bold 40px Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("★", 0, 2);
+    ctx.closePath();
+    ctx.fill();
     ctx.restore();
 
-    // العنوان
-    ctx.fillStyle = "#4b4b4b";
-    ctx.font = "bold 40px Arial";
+    // نجوم جانبية صغيرة
+    const smallStars = [[150, 120], [560, 120], [150, 720], [560, 720]];
+    for (const [x, y] of smallStars) {
+      drawCanvasStar(ctx, x, y, 12, "#f4c542");
+    }
+
+    // عنوان الشهادة
+    ctx.fillStyle = "#3a3a3a";
+    ctx.font = "bold 46px 'Tahoma', 'Arial'";
     ctx.textAlign = "center";
-    ctx.textBaseline = "alphabetic";
-    ctx.fillText("شهادة الإنجاز", 300, 285);
+    ctx.fillText("شهادة الإنجاز", 360, 290);
 
-    // نص رئيسي
-    ctx.fillStyle = "#777777";
-    ctx.font = "22px Arial";
-    ctx.fillText("تُمنح هذه الشهادة تقديراً لـ", 300, 330);
+    ctx.fillStyle = "#666666";
+    ctx.font = "22px 'Tahoma', 'Arial'";
+    ctx.fillText("تم منح هذه الشهادة تقديراً لـ", 360, 335);
 
-    // اسم الطفل (مع ظل)
-    ctx.fillStyle = "rgba(0,0,0,0.15)";
-    ctx.font = "bold 50px Arial";
-    ctx.fillText(profile.name || "بطل القرآن", 302, 392);
-    ctx.fillStyle = "#58cc02";
-    ctx.fillText(profile.name || "بطل القرآن", 300, 390);
+    const studentName = profile.name || "بطل القرآن";
+    ctx.fillStyle = "rgba(0,0,0,0.12)";
+    ctx.font = "bold 56px 'Tahoma', 'Arial'";
+    ctx.fillText(studentName, 365, 430);
+    ctx.fillStyle = "#5d9f2a";
+    ctx.fillText(studentName, 360, 425);
 
-    // السبب
-    ctx.fillStyle = "#777777";
-    ctx.font = "22px Arial";
-    ctx.fillText("لمواظبته على تعلّم القرآن الكريم", 300, 430);
+    ctx.fillStyle = "#666666";
+    ctx.font = "22px 'Tahoma', 'Arial'";
+    ctx.fillText("لمواظبته على تعلم القرآن الكريم", 360, 480);
 
-    // شرائط إنجاز (Duolingo-style) كل منها بطاقة صغيرة
-    const curSurahName = `سورة ${SURAHS.find(s => s.number === profile.currentSurah)?.name || "النبأ"}`;
     const stats = [
-      { label: "الدراسة", value: `${progress.minutes} دقيقة`, color: "#58cc02" },
-      { label: "النجوم", value: `${getCoins()} نجمة`, color: "#ffc800" },
-      { label: "السلسلة", value: `${streakDays || 1} أيام`, color: "#ff9600" },
+      { label: "الدراسة", value: `${progress.minutes} دقيقة`, color: "#5ccf57" },
+      { label: "النجوم", value: `${getCoins()} نجمة`, color: "#f4c542" },
+      { label: "السلسلة", value: `${streakDays || 1} أيام`, color: "#ff9f43" },
     ];
 
-    let sy = 470;
-    for (const s of stats) {
-      // بطاقة
-      ctx.fillStyle = "#f2f2f2";
+    // بطاقات الإحصائيات
+    let cardY = 520;
+    for (const stat of stats) {
+      ctx.fillStyle = "#efefef";
       ctx.beginPath();
-      ctx.roundRect(80, sy, 440, 66, 16);
+      ctx.roundRect(110, cardY, 500, 72, 18);
       ctx.fill();
-      // دائرة أيقونة
-      ctx.fillStyle = s.color;
+
+      ctx.fillStyle = stat.color;
       ctx.beginPath();
-      ctx.arc(130, sy + 33, 20, 0, Math.PI * 2);
+      ctx.arc(155, cardY + 36, 18, 0, Math.PI * 2);
       ctx.fill();
-      // نص القيمة
-      ctx.fillStyle = "#4b4b4b";
-      ctx.font = "bold 20px Arial";
+
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#333333";
+      ctx.font = "bold 24px 'Tahoma', 'Arial'";
+      ctx.fillText(stat.value, 540, cardY + 42);
+
       ctx.textAlign = "left";
-      ctx.fillText(s.value, 300, sy + 40);
-      // نص التسمية
-      ctx.fillStyle = "#8a8a8a";
-      ctx.font = "15px Arial";
-      ctx.fillText(s.label, 280, sy + 24);
-      ctx.textAlign = "center";
-      sy += 78;
+      ctx.fillStyle = "#858585";
+      ctx.font = "16px 'Tahoma', 'Arial'";
+      ctx.fillText(stat.label, 180, cardY + 26);
+      cardY += 90;
     }
 
     // السورة الحالية
-    ctx.fillStyle = "#4b4b4b";
-    ctx.font = "bold 24px Arial";
-    ctx.fillText(curSurahName, 300, sy + 25);
+    ctx.textAlign = "center";
+    const curSurahName = `سورة ${SURAHS.find(s => s.number === profile.currentSurah)?.name || "النبأ"}`;
+    ctx.fillStyle = "#3e3e3e";
+    ctx.font = "bold 26px 'Tahoma', 'Arial'";
+    ctx.fillText(curSurahName, 360, 775);
 
-    // ختم التطبيق
-    ctx.strokeStyle = "rgba(88,204,2,0.5)";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(480, 650, 46, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.fillStyle = "#58cc02";
-    ctx.font = "bold 30px Arial";
-    ctx.fillText("✓", 480, 660);
+    // توقيع التطبيق
+    ctx.fillStyle = "#3c3c3c";
+    ctx.font = "bold 28px 'Tahoma', 'Arial'";
+    ctx.fillText("Quran-Amine H Ayoub", 360, 825);
+    ctx.fillStyle = "#7a7a7a";
+    ctx.font = "17px 'Tahoma', 'Arial'";
+    ctx.fillText("تطبيق القرآن الكريم للأطفال", 360, 855);
 
-    // التذييل
-    ctx.fillStyle = "#4b4b4b";
-    ctx.font = "bold 22px Arial";
-    ctx.fillText("Quran-Amine H Ayoub", 300, 720);
-    ctx.fillStyle = "#8a8a8a";
-    ctx.font = "16px Arial";
-    ctx.fillText("تطبيق القرآن الكريم للأطفال", 300, 748);
-
-    // التاريخ
-    ctx.fillStyle = "#bbbbbb";
-    ctx.font = "16px Arial";
     const today = new Date();
-    ctx.fillText(`${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`, 300, 776);
+    ctx.fillStyle = "#aaa";
+    ctx.font = "17px 'Tahoma', 'Arial'";
+    ctx.fillText(`${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`, 360, 885);
 
-    // شريط سفلي أخضر
-    ctx.fillStyle = "#58cc02";
-    ctx.fillRect(0, 810, 600, 70);
-
-    // تحميل الصورة
+    // تحميل الصورة الخام
     const link = document.createElement("a");
     link.download = `شهادة-${profile.name || "بطل"}-${today.toISOString().split("T")[0]}.png`;
     link.href = canvas.toDataURL("image/png");
@@ -1546,98 +1526,105 @@ export default function KidsGames() {
   // مشاركة صورة الميلستون (مشاركة + تحميل)
   const shareMilestone = async () => {
     const canvas = document.createElement("canvas");
-    canvas.width = 600;
-    canvas.height = 800;
+    canvas.width = 640;
+    canvas.height = 820;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // خلفية متدرجة احتفالية
-    const gradient = ctx.createLinearGradient(0, 0, 600, 800);
-    gradient.addColorStop(0, "#451a03");
-    gradient.addColorStop(0.3, "#78350f");
-    gradient.addColorStop(0.7, "#92400e");
-    gradient.addColorStop(1, "#7c2d12");
+    // خلفية بنية متدرجة عصرية
+    const gradient = ctx.createLinearGradient(0, 0, 640, 820);
+    gradient.addColorStop(0, "#4f2213");
+    gradient.addColorStop(0.35, "#7d3e16");
+    gradient.addColorStop(0.7, "#a14b1d");
+    gradient.addColorStop(1, "#8a3a14");
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 600, 800);
+    ctx.fillRect(0, 0, 640, 820);
 
     // إطار ذهبي
-    ctx.strokeStyle = "#fbbf24";
+    ctx.strokeStyle = "#f5c256";
     ctx.lineWidth = 8;
-    ctx.strokeRect(20, 20, 560, 760);
-    ctx.strokeStyle = "#fde68a";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(30, 30, 540, 740);
+    ctx.strokeRect(22, 22, 596, 776);
+    ctx.strokeStyle = "#fce7a3";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(34, 34, 572, 752);
 
-    // زخارف نجوم مرسومة حتى تبقى الشهادة واضحة في كل جهاز.
-    drawCanvasStar(ctx, 220, 72, 18, "#fde68a");
-    drawCanvasStar(ctx, 300, 72, 24, "#fbbf24");
-    drawCanvasStar(ctx, 380, 72, 18, "#fde68a");
-    drawCanvasStar(ctx, 300, 150, 62, "#fbbf24");
-    ctx.fillStyle = "#92400e";
+    // نجوم باللون الذهبي في الأعلى
+    drawCanvasStar(ctx, 170, 78, 18, "#f6d17a");
+    drawCanvasStar(ctx, 320, 76, 26, "#f5c256");
+    drawCanvasStar(ctx, 470, 78, 18, "#f6d17a");
+
+    // نجمة كبيرة في الوسط
+    drawCanvasStar(ctx, 320, 176, 62, "#f5c256");
+    ctx.fillStyle = "#8d3c17";
     ctx.beginPath();
-    ctx.arc(300, 150, 28, 0, Math.PI * 2);
+    ctx.arc(320, 176, 28, 0, Math.PI * 2);
     ctx.fill();
 
-    // العنوان
-    ctx.fillStyle = "#fde68a";
-    ctx.font = "bold 40px Arial";
-    ctx.fillText(milestoneData.title, 300, 240);
+    // العنوان العربي الرئيسي
+    ctx.fillStyle = "#f9e7b8";
+    ctx.font = "bold 42px 'Tahoma', 'Arial'";
+    ctx.textAlign = "center";
+    ctx.fillText("إبداعية رائعة", 320, 260);
 
     // خط فاصل
-    ctx.strokeStyle = "#fbbf24";
+    ctx.strokeStyle = "#f5c256";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(80, 260);
-    ctx.lineTo(520, 260);
+    ctx.moveTo(95, 290);
+    ctx.lineTo(545, 290);
     ctx.stroke();
 
-    // الرسالة
-    ctx.fillStyle = "#fef3c7";
-    ctx.font = "24px Arial";
-    ctx.fillText(milestoneData.message, 300, 310);
+    // نص الرسالة
+    ctx.fillStyle = "#f5e4c5";
+    ctx.font = "24px 'Tahoma', 'Arial'";
+    ctx.fillText("بدأت رحلة تعلم القرآن", 320, 340);
 
     // صندوق الإحصائيات
-    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
     ctx.beginPath();
-    ctx.roundRect(80, 350, 440, 160, 20);
+    ctx.roundRect(110, 380, 420, 170, 26);
     ctx.fill();
 
-    ctx.textAlign = "right";
-    ctx.fillStyle = "#fde68a";
-    ctx.font = "bold 28px Arial";
-    ctx.fillText(`${milestoneData.days} يوم متتالية`, 500, 400);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "22px Arial";
-    const curSurah = SURAHS.find(s => s.number === profile.currentSurah);
-    ctx.fillText(`سورة ${curSurah?.name || "النبأ"}`, 500, 440);
-    ctx.fillText(`${getCoins()} نجمة مكتسبة`, 500, 480);
-
-    // التاريخ والتطبيق
     ctx.textAlign = "center";
-    ctx.fillStyle = "#d4af37";
-    ctx.font = "bold 26px Arial";
+    ctx.fillStyle = "#fbe7a1";
+    ctx.font = "bold 48px 'Tahoma', 'Arial'";
+    ctx.fillText("1", 320, 455);
+
+    ctx.fillStyle = "#fdf3d6";
+    ctx.font = "bold 26px 'Tahoma', 'Arial'";
+    ctx.fillText("يوم متتالية", 320, 505);
+
+    const curSurah = SURAHS.find(s => s.number === profile.currentSurah);
+    ctx.fillStyle = "#fff8e6";
+    ctx.font = "24px 'Tahoma', 'Arial'";
+    ctx.fillText(`سورة ${curSurah?.name || "النبأ"}`, 320, 548);
+
+    ctx.fillStyle = "#ffe299";
+    ctx.font = "bold 20px 'Tahoma', 'Arial'";
+    ctx.fillText(`${getCoins()} نجمة مكتسبة`, 320, 595);
+
+    // التاريخ
     const today = new Date();
-    ctx.fillText(`${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`, 300, 570);
+    ctx.fillStyle = "#f4cb5d";
+    ctx.font = "bold 28px 'Tahoma', 'Arial'";
+    ctx.fillText(`${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`, 320, 660);
 
-    ctx.fillStyle = "#fde68a";
-    ctx.font = "bold 24px Arial";
-    ctx.fillText("Quran-Amine H Ayoub", 300, 630);
-    ctx.font = "16px Arial";
-    ctx.fillStyle = "#aaa";
-    ctx.fillText("تطبيق القرآن الكريم للأطفال", 300, 660);
+    ctx.fillStyle = "#fce7a3";
+    ctx.font = "bold 28px 'Tahoma', 'Arial'";
+    ctx.fillText("Quran-Amine H Ayoub", 320, 710);
+    ctx.fillStyle = "#d9d1c4";
+    ctx.font = "18px 'Tahoma', 'Arial'";
+    ctx.fillText("تطبيق القرآن الكريم للأطفال", 320, 742);
 
-    // زخرفة سفلية
-    drawCanvasStar(ctx, 220, 740, 18, "#fde68a");
-    drawCanvasStar(ctx, 300, 740, 24, "#fbbf24");
-    drawCanvasStar(ctx, 380, 740, 18, "#fde68a");
+    // زينة سفلية
+    drawCanvasStar(ctx, 180, 786, 16, "#f6d17a");
+    drawCanvasStar(ctx, 320, 786, 24, "#f5c256");
+    drawCanvasStar(ctx, 460, 786, 16, "#f6d17a");
 
-    // تحويل لملف للمشاركة
     canvas.toBlob(async (blob) => {
       if (!blob) return;
       const file = new File([blob], `ميلستون-${milestoneData.days}يوم.png`, { type: "image/png" });
 
-      // محاولة المشاركة عبر Web Share API
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         try {
           await navigator.share({
@@ -1652,7 +1639,6 @@ export default function KidsGames() {
         }
       }
 
-      // تحميل كـ fallback
       const link = document.createElement("a");
       link.download = `ميلستون-${milestoneData.days}يوم-${profile.name || "بطل"}.png`;
       link.href = URL.createObjectURL(blob);

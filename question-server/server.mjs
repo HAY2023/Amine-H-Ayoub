@@ -302,13 +302,14 @@ const SURAH_MEANINGS = [
   { surah: "سورة الطارق", meaning: "🌠 والسماء والطارق والنجم الثاقب" },
   { surah: "سورة البروج", meaning: "🌌 قصة أصحاب الأخدود" },
 ];
-function genMemoryMeaning() {
+function genMemoryMeaning(s) {
   const numPairs = 4;
   const maxStart = Math.max(0, SURAH_MEANINGS.length - numPairs);
   const start = Math.floor(Math.random() * (maxStart + 1));
   const pairs = SURAH_MEANINGS.slice(start, start + numPairs);
   return {
     id: `memmeaning-${start}-${rnd()}`, type: "memory_meaning",
+    surahNum: s.app, surahName: s.name,
     prompt: "طابق السورة بمعناها",
     pairs,
   };
