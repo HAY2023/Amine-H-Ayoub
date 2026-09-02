@@ -1127,8 +1127,11 @@ export default function KidsGames() {
            const { justExpired, progress } = addPlayMinutes(mins);
            lastPlayTick = now;
            if (justExpired || progress.playExpired) {
-             toast({ title: "انتهى وقت اللعب ⏰", description: "لقد استنفدت وقت اللعب المخصص لك. يلزم رمز ولي الأمر للخروج.", variant: "destructive" });
-             setPinAction("exit");
+             toast({ title: "انتهى وقت اللعب ⏰", description: "تم العودة إلى صفحة القرآن.", variant: "destructive" });
+             // خروج مباشر إلى صفحة القرآن بدون طلب كلمة المرور
+             setKidsLocked(false);
+             navigate("/");
+             return;
            }
         }
       }
@@ -1136,8 +1139,11 @@ export default function KidsGames() {
     // initial check on mount, without adding minutes yet
     const initialCheck = isTimeAllowed();
     if (!initialCheck.allowed || getProgress().playExpired) {
-        toast({ title: "انتهى وقت اللعب ⏰", description: initialCheck.reason || "لقد استنفدت وقت اللعب. يلزم رمز ولي الأمر للخروج.", variant: "destructive" });
-        setPinAction("exit");
+        toast({ title: "انتهى وقت اللعب ⏰", description: initialCheck.reason || "تم العودة إلى صفحة القرآن.", variant: "destructive" });
+        // خروج مباشر إلى صفحة القرآن بدون طلب كلمة المرور
+        setKidsLocked(false);
+        navigate("/");
+        return;
     }
     const scheduleInterval = setInterval(() => checkSchedule(false), 30000); // Check every 30s instead of 60s
     
