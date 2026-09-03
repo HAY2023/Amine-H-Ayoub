@@ -102,3 +102,14 @@ export const precacheRemoteGames = async (): Promise<number> => {
   }
   return n;
 };
+
+// تحميل فوري للألعاب المخزنة في الذاكرة عند بدء تشغيل التطبيق
+if (typeof window !== "undefined") {
+  setTimeout(() => {
+    const initCached = readCache();
+    if (initCached.length > 0) {
+      setRemoteGamesList(initCached);
+    }
+    void fetchRemoteGames();
+  }, 100);
+}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Check, Wrench, User, Baby, Plus, Trash2, Minus, KeyRound, Shield, BookOpen, Headphones, Settings, Star, Gamepad2, Puzzle, Trophy, Sparkles, BookmarkCheck, ArrowLeftRight } from "lucide-react";
 
-import { setAppMode, addProfile, setActiveProfile, kidsHidden, setKidsHidden, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
+import { setAppMode, addProfile, setActiveProfile, kidsHidden, setKidsHidden, setPureMode, isPureMode, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
 import { setKidsPin, setKidsLocked } from "../data/kidsLock";
 import Avatar from "./Avatar";
 
@@ -28,7 +28,7 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
 
 
   // إذا أخفى المالك ركن الأطفال: إطلاق بالسماع فقط — نتخطّى خطوات الأطفال ونثبّت وضع وليّ الأمر
-  const kidsOff = kidsHidden();
+  const kidsOff = kidsHidden() || isPureMode();
   const effMode: AppMode = kidsOff ? "parent" : (mode ?? "parent");
   // مفاتيح الخطوات: وضع وليّ الأمر يعرض شاشة اختيار نوع الاستخدام؛ وضع الأطفال يعرض خطوة ركن الأطفال ورمز وليّ الأمر
   const stepKeys = kidsOff
@@ -47,9 +47,13 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
     const finalMode = mode ?? effMode;
     setAppMode(finalMode);
     if (finalMode === "parent") {
+      // الوضع العادي: منع كامل لأي وصول للأطفال (حتى في وضع المطور)
+      // وضع التنقل المرن: يُسمح للمالك بالتجربة
+      setPureMode(parentStyle === "pure");
       setKidsHidden(parentStyle === "pure");
       setKidsLocked(false);
     } else {
+      setPureMode(false);
       setKidsHidden(false);
       setKidsLocked(true);
       if (pinValid) setKidsPin(pin);
@@ -119,9 +123,37 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
               </div>
               <div className="space-y-1">
                 <h1 className="text-4xl font-extrabold text-gradient-gold leading-tight">مرحباً بك</h1>
-                <p className="text-accent text-sm">بصوت القارئ الشيخ حاج أيوب أمين</p>
+                <p className="text-accent text-sm font-bold">بصوت القارئ الشيخ حاج أيوب أمين</p>
               </div>
-              <p className="text-muted-foreground leading-relaxed max-w-xs mx-auto">{kidsOff ? "استمع إلى تلاوات القرآن الكريم برواية ورش بصوت الشيخ حاج أيوب أمين." : "تطبيق تعليم القرآن للأطفال — استمع للتلاوات العطرة مع ألعاب تعليمية وركن أطفال آمن."}</p>
+
+              {/* وصف التطبيق */}
+              <div className="w-full max-w-sm mx-auto space-y-3 p-4 rounded-2xl bg-card/60 border border-border/50 shadow-soft">
+                <p className="text-foreground font-bold text-base leading-relaxed">
+                  🌟 تطبيق تفاعلي لحفظ القرآن الكريم بالتكرار
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-accent/10 border border-accent/20">
+                    <Headphones className="w-4 h-4 text-accent shrink-0" />
+                    <span className="font-medium">استمع للتلاوات</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/20">
+                    <Gamepad2 className="w-4 h-4 text-sky-500 shrink-0" />
+                    <span className="font-medium">ألعاب تعليمية</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                    <Trophy className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span className="font-medium">جوائز ومكافآت</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                    <BookmarkCheck className="w-4 h-4 text-purple-500 shrink-0" />
+                    <span className="font-medium">تتبع التقدم</span>
+                  </div>
+                </div>
+                <p className="text-muted-foreground text-sm leading-relaxed pt-1">
+                  {kidsOff ? "استمع إلى تلاوات القرآن الكريم برواية ورش بصوت الشيخ حاج أيوب أمين." : "استمع للتلاوات العطرة مع ألعاب تعليمية وركن أطفال آمن."}
+                </p>
+              </div>
+
               <div aria-hidden className="mx-auto w-24 h-px bg-gradient-to-l from-transparent via-accent/60 to-transparent" />
             </div>
           )}

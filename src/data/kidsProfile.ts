@@ -26,8 +26,16 @@ export interface KidsProfile {
   currentSurah?: number; // السورة الحالية التي يحفظها الطفل (تُستخدم لتحديد نطاق الألعاب)
 }
 
-/** عنصر في متجر المكافآت — يُشترى بالنقاط. */
-export interface ShopItem { id: string; type: "avatar" | "color"; label: string; value: string; cost: number; }
+export interface ShopItem {
+  id: string;
+  type: "avatar" | "color";
+  label: string;
+  value: string;
+  cost: number;
+  badge?: string;
+  description?: string;
+  tier?: "starter" | "bronze" | "silver" | "gold" | "diamond" | "legendary";
+}
 
 export interface DayLog { date: string; minutes: number; played: number; }
 
@@ -67,26 +75,187 @@ const histKey = (id: string) => `${HISTORY_BASE}:${id}`;
 const DEFAULT_FIELDS = { goalMinutes: 5, playMinutes: 0, reward: "أحسنت، لقد فتحت الألعاب", lessonTime: "", coins: 0, inventory: [] as string[], currentSurah: 0 };
 const DEFAULT_PROFILE: KidsProfile = { id: "default", name: "", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0], ...DEFAULT_FIELDS };
 
-/** متجر المكافآت — شخصيات إسلامية فخمة ثلاثية الأبعاد تُفتح بالنجوم بأسعار متدرجة */
+/** متجر المكافآت — شخصيات إسلامية فخمة ثلاثية الأبعاد تُفتح بالنجوم بأسعار عالية متدرجة */
 export const SHOP_AVATARS: ShopItem[] = [
-  // ── المستوى الأول: طلاب وحفظة الذكر ──
-  { id: "av-img-girl-scholar", type: "avatar", label: "طالبة العلم المجتهدة", value: "img-girl-scholar", cost: 500 },
-  { id: "av-img-girl-hijab-rose", type: "avatar", label: "فتاة القرآن بالخمار الوردي", value: "img-girl-hijab-rose", cost: 1500 },
+  // ── المستوى البرونزي: طلاب وحفظة الذكر (15,000 - 25,000 نجمة) ──
+  {
+    id: "av-img-boy-reciter",
+    type: "avatar",
+    label: "القارئ الصغير بالجبة البيضاء",
+    value: "img-boy-reciter",
+    cost: 15000,
+    badge: "مميّز",
+    tier: "bronze",
+    description: "طالب مجتهد يبدأ رحلة ترتيل وتجويد القرآن الكريم بصوت ندي."
+  },
+  {
+    id: "av-img-girl-scholar",
+    type: "avatar",
+    label: "طالبة العلم بالخمار الوردي",
+    value: "img-girl-scholar",
+    cost: 25000,
+    badge: "مميّزة",
+    tier: "bronze",
+    description: "فتاة القرآن المثابرة التي تقضي أوقاتها بين آيات الذكر الحكيم."
+  },
 
-  // ── المستوى الثاني: فرسان وأميرات الحكمة ──
-  { id: "av-img-boy-knight", type: "avatar", label: "الفارس الشجاع بالدرع الإسلامي", value: "img-boy-knight", cost: 7500 },
-  { id: "av-img-girl-hijab-emerald", type: "avatar", label: "حافظة الذكر بالحجاب الزمردي", value: "img-girl-hijab-emerald", cost: 15000 },
+  // ── المستوى الفضي: نجباء القرآن وزهرات الجنان (50,000 - 75,000 نجمة) ──
+  {
+    id: "av-img-boy-taqiyah-gold",
+    type: "avatar",
+    label: "بطل القرآن بالطاقية الذهبية",
+    value: "img-boy-taqiyah-gold",
+    cost: 50000,
+    badge: "نادر",
+    tier: "silver",
+    description: "طالب متفوق تألق في مجالس التسميع وحصل على طاقية الشرف الذهبية."
+  },
+  {
+    id: "av-img-girl-gold",
+    type: "avatar",
+    label: "زهرة الجنان بالرداء المذهب",
+    value: "img-girl-gold",
+    cost: 75000,
+    badge: "نادرة",
+    tier: "silver",
+    description: "أميرة الهدى بالزي الأندلسي المذهب التي تتلألأ بحفظ السور الكريمة."
+  },
 
-  // ── المستوى الثالث: أمراء وأميرات القرآن ──
-  { id: "av-img-boy-turban", type: "avatar", label: "أمير القرآن بالعمامة الملكية", value: "img-boy-turban", cost: 20000 },
-  { id: "av-img-girl-emerald", type: "avatar", label: "الأميرة الزمردية بالتاج والقفطان", value: "img-girl-emerald", cost: 25000 },
+  // ── المستوى الذهبي: سفراء النور وبلابل التلاوة (100,000 - 250,000 نجمة) ──
+  {
+    id: "av-img-boy-reciter-green",
+    type: "avatar",
+    label: "القارئ الأخضر الزمردي بنقوش المحراب",
+    value: "img-boy-reciter-green",
+    cost: 100000,
+    badge: "ذهبي",
+    tier: "gold",
+    description: "قارئ نديّ يرتدي الجبة الخضراء الفاخرة المستوحاة من رياض الجنة."
+  },
+  {
+    id: "av-img-boy-royal-blue",
+    type: "avatar",
+    label: "أمير الذكر بالرداء الأزرق الملكي",
+    value: "img-boy-royal-blue",
+    cost: 150000,
+    badge: "ملكي",
+    tier: "gold",
+    description: "صاحب الصوت الشجي برداء المحراب الأزرق الملكي والتطريز الفضي الأنيق."
+  },
+  {
+    id: "av-img-boy-turquoise-vest",
+    type: "avatar",
+    label: "سفير النور بالصدرية الفيروزية المذهبة",
+    value: "img-boy-turquoise-vest",
+    cost: 200000,
+    badge: "ملكي",
+    tier: "gold",
+    description: "بطل الهمم العالية بزي المشرق الفيروزي المطرز بخيوط الذهب."
+  },
+  {
+    id: "av-img-boy-indigo-scarf",
+    type: "avatar",
+    label: "بلبل التلاوة بالشال النيلي الأنيق",
+    value: "img-boy-indigo-scarf",
+    cost: 250000,
+    badge: "VIP",
+    tier: "gold",
+    description: "من أتقن مخارج الحروف وأحكام التجويد بالشال النيلي التراثي الرفيع."
+  },
 
-  // ── المستوى الرابع: القارئ الملكي وسلطان الحفاظ ──
-  { id: "av-img-boy-bisht", type: "avatar", label: "القارئ الملكي بالبشت الأسود المذهب", value: "img-boy-bisht", cost: 40000 },
+  // ── المستوى الماسي: فرسان وأميرات الحكمة (350,000 - 500,000 نجمة) ──
+  {
+    id: "av-img-boy-knight-ruby",
+    type: "avatar",
+    label: "فارس القرآن بالدرع المذهب والوشاح",
+    value: "img-boy-knight-ruby",
+    cost: 350000,
+    badge: "فارس VIP",
+    tier: "diamond",
+    description: "فارس شجاع يحمي قلبه بآيات الله ويزدان بالدرع الذهبي والوشاح الأخضر."
+  },
+  {
+    id: "av-img-boy-turban",
+    type: "avatar",
+    label: "أمير الحفاظ بالعمامة النبيلة",
+    value: "img-boy-turban",
+    cost: 400000,
+    badge: "أمير الحفاظ",
+    tier: "diamond",
+    description: "حكيم البراعم بالعمامة البيضاء الوقورة، ينشر السلام والنور أينما حلّ."
+  },
+  {
+    id: "av-img-girl-hijab-emerald",
+    type: "avatar",
+    label: "أميرة الحجاب باللؤلؤ والهلال",
+    value: "img-girl-hijab-emerald",
+    cost: 500000,
+    badge: "أميرة الوقار",
+    tier: "diamond",
+    description: "حافظة متوجة بتاج الهلال الفضي واللؤلؤ، تلبس حجاب العفة البنفسجي المخملي."
+  },
 
-  // ── المستوى الأسطوري الأعلى: ألقاب الختمة الكبرى ──
-  { id: "av-img-girl-emerald-queen", type: "avatar", label: "ملكة القرآن بالتاج الملكي المرصع", value: "img-girl-emerald-queen", cost: 75000 },
-  { id: "av-img-boy-knight-legend", type: "avatar", label: "فارس الأندلس الأسطوري بالدرع المذهب", value: "img-boy-knight-legend", cost: 100000 },
+  // ── المستوى الأسطوري الأعلى: سلاطين وحملة كتاب الله (600,000 - 1,000,000 نجمة) ──
+  {
+    id: "av-img-boy-sultan-navy",
+    type: "avatar",
+    label: "سلطان الحكمة بالبشت الكحلي الملكي",
+    value: "img-boy-sultan-navy",
+    cost: 600000,
+    badge: "أسطوري ⭐",
+    tier: "legendary",
+    description: "سلطان أهل القرآن بالبشت الكحلي المذهب المطرز بالذهب الخالص."
+  },
+  {
+    id: "av-img-boy-crimson-master",
+    type: "avatar",
+    label: "شيخ الحفاظ بالجلابة العنابية والعمامة",
+    value: "img-boy-crimson-master",
+    cost: 750000,
+    badge: "أسطوري ⭐",
+    tier: "legendary",
+    description: "رمز الإتقان بالجلابة العنابية الأصيلة والعمامة الملكية البيضاء الفاخرة."
+  },
+  {
+    id: "av-img-boy-crescent-purple",
+    type: "avatar",
+    label: "أمير الهلال بالرداء البنفسجي المذهب",
+    value: "img-boy-crescent-purple",
+    cost: 850000,
+    badge: "أسطوري VIP",
+    tier: "legendary",
+    description: "شخصية ملكية فاخرة برداء مخملي بنفسجي وشارة هلال رمضان المبارك."
+  },
+  {
+    id: "av-img-boy-bisht-white",
+    type: "avatar",
+    label: "القارئ الملكي بالبشت الأسود الفاخر",
+    value: "img-boy-bisht-white",
+    cost: 900000,
+    badge: "فخر الحفاظ",
+    tier: "legendary",
+    description: "أعلى درجات الفخامة: بشت أسود أندلسي فاخر مطرز بخيوط القصب المذهبة."
+  },
+  {
+    id: "av-img-girl-emerald-queen",
+    type: "avatar",
+    label: "ملكة القرآن بالتاج الملكي والقفطان الزمردي",
+    value: "img-girl-emerald-queen",
+    cost: 950000,
+    badge: "تاج الوقار 👑",
+    tier: "legendary",
+    description: "ملكة متوجة بتاج الوقار المرصع، ترتدي قفطاناً زمردياً نسجته أيادي المجد."
+  },
+  {
+    id: "av-img-boy-quran-carrier",
+    type: "avatar",
+    label: "الحافظ المبارك حامل المصحف الشريف",
+    value: "img-boy-quran-carrier",
+    cost: 1000000,
+    badge: "خاتم القرآن 🌟",
+    tier: "legendary",
+    description: "أسمى ألقاب التطبيق: الحافظ الصالح الذي يحمل كتاب الله في صدره وبين يديه في رحاب المحراب المبارك."
+  },
 ];
 export const SHOP_COLORS: ShopItem[] = [
   { id: "col-sunset", type: "color", label: "شفق الغروب", value: "from-pink-500 to-orange-400", cost: 150 },
@@ -101,6 +270,18 @@ export const SHOP_COLORS: ShopItem[] = [
   { id: "col-emerald-gold", type: "color", label: "الزمرد المذهب", value: "from-emerald-500 via-teal-600 to-amber-500", cost: 1500 },
 ];
 export const SHOP_ITEMS: ShopItem[] = [...SHOP_AVATARS, ...SHOP_COLORS];
+
+/** تنقية وتصحيح قيمة النقاط لضمان عدم تلفها أو تحولها لأرقام غير منتهية */
+export const sanitizeCoins = (val: unknown): number => {
+  const n = typeof val === "number" ? val : Number(val);
+  if (!Number.isFinite(n) || isNaN(n) || n < 0) return 0;
+  return Math.min(100_000_000, Math.floor(n));
+};
+
+/** تنسيق عدد النجوم بطريقة جمالية واضحة */
+export const formatCoins = (c: number | string): string => {
+  return sanitizeCoins(c).toLocaleString("en-US");
+};
 
 /** كل مفاتيح الوجوه الصالحة (للتحقّق وترقية القيم القديمة/الإيموجي). */
 export const ALL_AVATAR_KEYS = [...KID_AVATARS, ...SHOP_AVATARS.map(a => a.value)];
@@ -120,10 +301,10 @@ const normalize = (p: Partial<KidsProfile>, i = 0): KidsProfile => ({
   ...DEFAULT_PROFILE,
   ...p,
   id: p.id || newId(),
-  // ترقية الوجوه القديمة (إيموجي) إلى مفاتيح أيقونات صالحة
+  // ترقية الوجوه القديمة إلى مفاتيح شخصيات صالحة
   avatar: (p.avatar && ALL_AVATAR_KEYS.includes(p.avatar)) ? p.avatar : KID_AVATARS[i % KID_AVATARS.length],
   color: p.color || KID_COLORS[i % KID_COLORS.length],
-  coins: typeof p.coins === "number" ? p.coins : 0,
+  coins: sanitizeCoins(p.coins),
   inventory: Array.isArray(p.inventory) ? p.inventory : [],
   currentSurah: typeof p.currentSurah === "number" ? p.currentSurah : 0,
 });
@@ -180,12 +361,46 @@ export const setKidsHidden = (on: boolean) => {
   window.dispatchEvent(new Event("mushaf:appmode"));   // يحدّث القارئ وصفحة السماع فوراً
 };
 
-/** هل ركن الأطفال مُفعَّل؟ (ليس "وليّ الأمر فقط" ولم يُخفِه المالك) */
-export const kidsEnabled = (): boolean => !kidsHidden() && getAppMode() !== "parent";
+/** علامة الوضع العادي الصارم - يمنع أي وصول للأطفال تماماً (حتى في وضع المطور) */
+const PURE_MODE_KEY = "mushaf:pureMode";
+export const isPureMode = (): boolean => {
+  if (typeof window === "undefined") return false;
+  try { return localStorage.getItem(PURE_MODE_KEY) === "1"; } catch { return false; }
+};
+export const setPureMode = (on: boolean) => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PURE_MODE_KEY, on ? "1" : "0");
+    // عند تفعيل الوضع العادي، نفعّل أيضاً إخفاء الأطفال
+    if (on) setKidsHidden(true);
+  } catch { /* ignore */ }
+  window.dispatchEvent(new Event("mushaf:appmode"));
+};
 
-/** يُمنع الوصول لصفحات الأطفال (ألعاب/متجر/لوحة/اختيار) للمستخدمين عند إخفائها،
- *  لكن يُسمح للمالك بدخولها للتجربة والاختبار. */
-export const kidsRouteBlocked = (): boolean => kidsHidden() && !isMushafDevEnabled();
+/** هل ركن الأطفال مُفعَّل؟ يختلف حسب وضع التطبيق:
+ * - الوضع العادي الصارم (pure): مغلق دائماً بغض النظر عن الوضع
+ * - وضع الأطفال (kids): مفتوح دائماً
+ * - وضع ولي الأمر (parent): مفتوح في وضع التنقل المرن، مغلق في الوضع العادي الصارم
+ * - وضع التنقل المرن (flexible) أو غير المحدد: مفتوح إذا لم يخفيه المالك
+ */
+export const kidsEnabled = (): boolean => {
+  if (isPureMode()) return false; // الوضع العادي الصارم: لا أطفال أبداً
+  if (!kidsHidden()) return true; // الأطفال غير مخفيين: مفتوح (في جميع الأوضاع بما فيها parent والتنقل المرن والأطفال)
+  return false; // الأطفال مخفيين: مغلق
+};
+
+/** يُمنع الوصول لصفحات الأطفال (ألعاب/متجر/لوحة/اختيار) للمستخدمين عند إخفائها.
+ *  في الوضع العادي (pure): يمنع الوصول تماماً حتى في وضع المطور.
+ *  في وضع التنقل المرن: يُسمح للمالك بدخولها للتجربة والاختبار. */
+export const kidsRouteBlocked = (): boolean => {
+  // في الوضع العادي: منع كامل حتى في وضع المطور
+  if (isPureMode()) return true;
+  // في وضع التنقل المرن أو وضع الأطفال: يُسمح للمالك بالدخول للتجربة
+  const mode = getAppMode();
+  if (mode === "parent" || mode === "kids") return false;
+  // وإلا نستخدم المنطق الأصلي: إذا كان الأطفال مخفيين وليس في وضع المطور
+  return kidsHidden() && !isMushafDevEnabled();
+};
 
 /* ---------------- إدارة الملفّات ---------------- */
 const persistProfiles = (arr: KidsProfile[]) => {
@@ -336,19 +551,45 @@ export const grantMorePlay = () => {
   saveProgress({ ...cur, played: 0, playExpired: false });
 };
 
+/** يفتح ولي الأمر الألعاب اليوم فوراً (تجاوز هدف القراءة) ويصفّر عدّاد اللعب. */
+export const unlockToday = () => {
+  const cur = getProgress();
+  saveProgress({ ...cur, unlocked: true, played: 0, playExpired: false });
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:games_unlocked"));
+};
+
+/** يعيد ضبط تقدم اليوم للطفل المفعّل (يقرأ واللعب) — بالإضافة إلى مسح الساعة. */
+export const resetProgress = () => {
+  if (typeof window !== "undefined") {
+    const id = getActiveId();
+    if (id) localStorage.removeItem(progKey(id));
+    window.dispatchEvent(new Event("mushaf:reading_progress"));
+  }
+};
+
 /* ---------------- النقاط (النجوم) والمتجر ---------------- */
-export const getCoins = (): number => getProfile().coins || 0;
+export const getCoins = (): number => sanitizeCoins(getProfile().coins);
 
 /** يضيف نقاطاً للملف النشِط (تُكتسب من الألعاب). */
 export const addCoins = (n: number) => {
   const id = getActiveId(); if (!id || !n) return;
-  updateProfile(id, { coins: Math.max(0, (getProfile().coins || 0) + n) });
+  const current = sanitizeCoins(getProfile().coins);
+  const next = sanitizeCoins(current + n);
+  updateProfile(id, { coins: next });
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:coins"));
+};
+
+/** يحدد رصيد النقاط للملف النشِط مباشرة (لولي الأمر). */
+export const setCoins = (n: number) => {
+  const id = getActiveId(); if (!id) return;
+  const next = sanitizeCoins(n);
+  updateProfile(id, { coins: next });
   if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:coins"));
 };
 
 /** يخصم نقاطاً إن توفّرت؛ يُرجع نجاح العملية. */
 export const spendCoins = (n: number): boolean => {
-  const id = getActiveId(); const cur = getProfile().coins || 0;
+  const id = getActiveId(); const cur = sanitizeCoins(getProfile().coins);
   if (!id || cur < n) return false;
   updateProfile(id, { coins: cur - n });
   if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:coins"));

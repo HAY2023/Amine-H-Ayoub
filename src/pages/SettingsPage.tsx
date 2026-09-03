@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Moon, Sun, Baby, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete, Headphones, Power } from "lucide-react";
 import { isMushafDevEnabled, setMushafDev, closeTauriApp } from "../utils/tauriUtils";
-import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHidden, type AppMode } from "../data/kidsProfile";
+import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHidden, setPureMode, isPureMode, type AppMode } from "../data/kidsProfile";
 
 
 import PinModal from "../components/PinModal";
@@ -13,6 +13,7 @@ import { toast } from "../hooks/use-toast";
 
 import { hasKidsPin, setKidsPin, removeKidsPin, setKidsLocked, isKidsMode } from "../data/kidsLock";
 import AppFooter from "../components/AppFooter";
+import AppNav from "../components/AppNav";
 import { isBackgroundAudioEnabled, setBackgroundAudioEnabled } from "../utils/backgroundAudio";
 import { applyTheme, getTheme } from "../utils/theme";
 const THEME_KEY = "mushaf:theme";
@@ -54,6 +55,7 @@ export default function SettingsPage() {
   const toggleHideKids = () => { 
     const next = !kidsHidden(); 
     setKidsHidden(next); 
+    setPureMode(next); // تفعيل الوضع العادي الصارم عند إخفاء الأطفال
     setHideKids(next); 
     if (next) {
       toast({ title: "أُخفي ركن الأطفال والألعاب بالكامل" });
@@ -70,10 +72,18 @@ export default function SettingsPage() {
   const changePin = () => setPinFlow(hasKidsPin() ? "verifyOld" : "setNew");
   const removePin = () => { removeKidsPin(); setHasPin(false); toast({ title: "أُزيلت كلمة المرور" }); };
 
-  const changeMode = (m: AppMode) => {
+  const changeMode = (m: AppMode, style?: "pure" | "flexible") => {
     if (m === "kids" && kidsHidden()) {
       setKidsHidden(false);
+      setPureMode(false); // تعطيل الوضع العادي عند التبديل للأطفال
       setHideKids(false);
+    }
+    // تحديد النمط لوليّ الأمر: مرن (ألعاب متاحة) أو صارم (بلا ألعاب)
+    if (m === "parent") {
+      const parentStyle = style ?? (kidsHidden() ? "pure" : "flexible");
+      setPureMode(parentStyle === "pure");
+      setKidsHidden(parentStyle === "pure");
+      setHideKids(parentStyle === "pure");
     }
     setShowSplash(m);
     setTimeout(() => {
@@ -86,7 +96,8 @@ export default function SettingsPage() {
          if (m === "kids") setKidsLocked(true);
          if (m === "parent") setKidsLocked(false);
          if (m === "kids" && getProfiles().length === 0) addProfile({ name: "طفلي" });
-         toast({ title: m === "parent" ? "وضع وليّ الأمر — بلا ركن أطفال" : "وضع الأطفال" });
+         const parentLabel = kidsHidden() ? "وضع صارم — تلاوات فقط" : "وضع مرن — تلاوات مع الألعاب";
+         toast({ title: m === "parent" ? parentLabel : "وضع الأطفال" });
          if (m === "kids") navigate("/games");     // الانتقال لركن الأطفال بعد تجهيز الوضع
          if (m === "parent") navigate("/audio");   // الانتقال لواجهة وليّ الأمر (التلاوات)
       }
@@ -142,8 +153,9 @@ export default function SettingsPage() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-accent/10 to-transparent" aria-hidden="true" />
 
       <div className="relative mx-auto max-w-md px-4 py-5 space-y-5">
+        <AppNav />
         <header className="flex items-center justify-between">
-          <button onClick={() => navigate("/audio")} className="flex h-10 items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold border border-border hover:brightness-95 active:scale-95 transition-all shadow-soft">
+          <button onClick={() => navigate(-1)} className="flex h-10 items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold border border-border hover:brightness-95 active:scale-95 transition-all shadow-soft">
             <ArrowRight className="h-4 w-4" /> رجوع
           </button>
           <span className="w-16" />
@@ -157,6 +169,61 @@ export default function SettingsPage() {
           <p className="mt-1 text-xs text-muted-foreground">خصّص المظهر وأدوات الأهل</p>
         </div>
 
+        {/* ===== وضع الاستخدام — الأهم أولاً، ظاهر دائماً ليمكن التبديل في أي وقت ===== */}
+        <Section label="وضع الاستخدام">
+          <div className="p-3 space-y-2">
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { m: "flex" as const, Icon: ArrowRight, label: "مرن", desc: "لي أنا + ألعاب متاحة" },
+                { m: "parent" as AppMode, Icon: User, label: "صارم", desc: "لي أنا فقط — بلا ألعاب" },
+                { m: "kids" as AppMode, Icon: Baby, label: "أطفال", desc: "ركن آمن للأطفال" },
+              ]).map(o => {
+                const active = o.m === "flex" ? (!isPureMode() && appMode === "parent" && !hideKids) : appMode === o.m;
+                return (
+                  <button key={o.m} onClick={() => o.m === "flex" ? changeMode("parent", "flexible") : changeMode(o.m)}
+                    className={`flex flex-col items-center gap-1 rounded-xl py-3 text-xs font-bold border transition-all ${active ? "border-accent bg-accent/15 text-accent shadow-soft" : "border-border bg-muted text-muted-foreground hover:border-accent/40"}`}>
+                    <o.Icon className="w-5 h-5" /> {o.label}
+                    <span className="text-[9px] font-normal text-center leading-tight px-1">{o.desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              «مرن»: تلاوات مع بقاء زر الألعاب متاحاً. «صارم»: واجهة تلاوات خالصة تماماً. «أطفال»: ركن أطفال مقفل برمز.
+            </p>
+          </div>
+        </Section>
+
+        <Section label="حماية وركن الأطفال">
+          <Item
+            icon={<Baby className="w-5 h-5 text-accent" />}
+            title={hideKids ? "إظهار ركن الأطفال والألعاب" : "إخفاء ركن الأطفال والألعاب"}
+            desc={hideKids ? "ركن الأطفال مخفيّ حالياً عن الواجهة — اضغط لإظهاره" : "تفعيل/إخفاء ركن الأطفال والألعاب من جميع الواجهات"}
+            onClick={toggleHideKids}
+            right={<span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${hideKids ? "bg-destructive/15 text-destructive" : "bg-success/15 text-success"}`}>{hideKids ? "مخفيّ" : "ظاهر"}</span>}
+          />
+          <Item
+            icon={<Lock className="w-5 h-5 text-accent" />}
+            title={hasPin ? "تغيير رمز وليّ الأمر" : "تعيين رمز وليّ الأمر"}
+            desc={hasPin ? "غير رمز الوصول إلى إعدادات ولي الأمر." : "عيّن رمزاً لحماية الإعدادات والانتقال إلى وضع الأطفال."}
+            onClick={changePin}
+          />
+          {hasPin && (
+            <Item
+              icon={<Delete className="w-5 h-5 text-destructive" />}
+              title="إزالة رمز وليّ الأمر"
+              desc="لن يُطلب الرمز بعد ذلك للوصول إلى الإعدادات." 
+              onClick={removePin}
+            />
+          )}
+          <Item
+            icon={<User className="w-5 h-5 text-accent" />}
+            title="لوحة ولي الأمر"
+            desc="اطّلع على تقدّم الأطفال وإعداداتهم." 
+            onClick={() => navigate("/parent")}
+          />
+        </Section>
+
         {/* ===== المظهر ===== */}
         <Section label="المظهر">
           <div className="flex items-center gap-3 p-3">
@@ -168,56 +235,6 @@ export default function SettingsPage() {
             </div>
           </div>
         </Section>
-
-        {/* ===== أوضاع التطبيق وحماية الأطفال — ظاهرة دائماً ليمكن التبديل في أي وقت ===== */}
-        <>
-          <Section label="أوضاع التطبيق">
-            <div className="p-3 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                {([
-                  { m: "parent" as AppMode, Icon: User, label: "لي" },
-                  { m: "kids" as AppMode, Icon: Baby, label: "لأطفالي" },
-                ]).map(o => (
-                  <button key={o.m} onClick={() => changeMode(o.m)}
-                    className={`flex flex-col items-center gap-1 rounded-xl py-3 text-xs font-bold border transition-all ${appMode === o.m ? "border-accent bg-accent/15 text-accent shadow-soft" : "border-border bg-muted text-muted-foreground hover:border-accent/40"}`}>
-                    <o.Icon className="w-5 h-5" /> {o.label}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">الوضع الحالي: {appMode === "parent" ? "لي (وليّ الأمر)" : "لأطفالي (ركن الأطفال)"}. «لي»: بلا ركن أطفال. «لأطفالي»: ركن أطفال آمن.</p>
-            </div>
-          </Section>
-
-          <Section label="حماية وركن الأطفال">
-              <Item
-                icon={<Baby className="w-5 h-5 text-accent" />}
-                title={hideKids ? "إظهار ركن الأطفال والألعاب" : "إخفاء ركن الأطفال والألعاب"}
-                desc={hideKids ? "ركن الأطفال مخفيّ حالياً عن الواجهة — اضغط لإظهاره" : "تفعيل/إخفاء ركن الأطفال والألعاب من جميع الواجهات"}
-                onClick={toggleHideKids}
-                right={<span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${hideKids ? "bg-destructive/15 text-destructive" : "bg-success/15 text-success"}`}>{hideKids ? "مخفيّ" : "ظاهر"}</span>}
-              />
-              <Item
-                icon={<Lock className="w-5 h-5 text-accent" />}
-                title={hasPin ? "تغيير رمز وليّ الأمر" : "تعيين رمز وليّ الأمر"}
-                desc={hasPin ? "غير رمز الوصول إلى إعدادات ولي الأمر." : "عيّن رمزاً لحماية الإعدادات والانتقال إلى وضع الأطفال."}
-                onClick={changePin}
-              />
-              {hasPin && (
-                <Item
-                  icon={<Delete className="w-5 h-5 text-destructive" />}
-                  title="إزالة رمز وليّ الأمر"
-                  desc="لن يُطلب الرمز بعد ذلك للوصول إلى الإعدادات." 
-                  onClick={removePin}
-                />
-              )}
-              <Item
-                icon={<User className="w-5 h-5 text-accent" />}
-                title="لوحة ولي الأمر"
-                desc="اطّلع على تقدّم الأطفال وإعداداتهم." 
-                onClick={() => navigate("/parent")}
-              />
-          </Section>
-        </>
 
         {/* ===== الصوت والتلاوة ===== */}
         <Section label="الصوت والتلاوة">
@@ -257,7 +274,6 @@ export default function SettingsPage() {
         {owner && (
           <Section label="أدوات المالك (قيد التطوير)">
             <Item icon={<Wrench className="w-5 h-5" />} title="أدمن الألعاب" desc="إدارة ألعاب السيرفر: الرابط، الإخفاء، والتحميل للأجهزة" onClick={() => setShowAdmin(true)} />
-            <Item icon={<BookOpen className="w-5 h-5" />} title="المصحف التفاعلي" desc="القارئ — غير مُطلق للمستخدمين بعد" onClick={() => navigate("/")} />
             <Item icon={<Lock className="w-5 h-5" />} title="إيقاف وضع المالك" desc="إظهار رسالة التطوير للمستخدمين" onClick={disableOwner} />
           </Section>
         )}

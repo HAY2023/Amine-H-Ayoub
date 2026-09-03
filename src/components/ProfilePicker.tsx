@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Plus, Settings, Sparkles } from "lucide-react";
-import { getProfiles, getAppMode, setAppMode, setActiveProfile, kidsRouteBlocked, getProgress, getActiveId, setKidsHidden, type KidsProfile } from "../data/kidsProfile";
+import { getProfiles, getAppMode, setAppMode, setActiveProfile, kidsRouteBlocked, getProgress, getActiveId, setKidsHidden, setPureMode, isPureMode, type KidsProfile } from "../data/kidsProfile";
 import { hasKidsPin, setKidsLocked } from "../data/kidsLock";
 import PinModal from "./PinModal";
 import Avatar from "./Avatar";
@@ -30,6 +30,7 @@ export default function ProfilePicker({ onPicked }: { onPicked?: () => void }) {
     setActiveProfile(id);
     setAppMode("kids");
     setKidsHidden(false);
+    setPureMode(false); // تعطيل الوضع العادي عند اختيار طفل
     setKidsLocked(true);
     close();
 
@@ -43,9 +44,11 @@ export default function ProfilePicker({ onPicked }: { onPicked?: () => void }) {
       navigate("/games");
     }
   };
-  const asParent = () => {
+    const asParent = () => {
     setAppMode("parent");
-    setKidsHidden(true);
+    // في وضع التنقل المرن: نعيد تعيين إخفاء الأطفال لكي يظهر ركن الأطفال والألعاب للمالك
+    // لا نغير وضع pureMode - نترك كما هو (flexible أو pure حسب اختيار المستخدم السابق)
+    if (!isPureMode()) setKidsHidden(false);
     setKidsLocked(false);
     close();
     navigate("/audio");

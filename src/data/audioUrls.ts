@@ -9,7 +9,17 @@ export const getSurahAudioUrl = (number: number): string => `${BASE}/${number}.m
 export const CLOUD_AVAILABLE_SURAHS = new Set<number>();
 
 export const hasCloudAudio = (number: number): boolean => 
-  CLOUD_AVAILABLE_SURAHS.has(number) || (number >= 1 && number <= 114);
+  CLOUD_AVAILABLE_SURAHS.has(number);
+
+// التحقق من توفر الصوت (سحابي أو محلي)
+export const isAudioAvailable = (number: number): boolean => {
+  // إذا كانت القائمة السحابية محملة، تحقق منها
+  if (CLOUD_AVAILABLE_SURAHS.size > 0) {
+    return CLOUD_AVAILABLE_SURAHS.has(number);
+  }
+  // وإلا تحقق من الملف المحلي
+  return number >= 1 && number <= 114;
+};
 
 /**
  * جلب قائمة السور المتوفرة من السيرفر السحابي (Hugging Face)

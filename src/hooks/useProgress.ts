@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { getCoins, setCoins, addCoins } from "@/data/kidsProfile";
 
 interface ProgressData {
   points: number;
@@ -15,27 +16,39 @@ const STORAGE_KEY = "quran-progress";
 function loadProgress(): ProgressData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { points: 0, listenedAyahs: {} };
+    if (!raw) return { points: getCoins(), listenedAyahs: {} };
     const parsed: SerializedData = JSON.parse(raw);
     const listenedAyahs: Record<string, Set<number>> = {};
-    for (const [key, arr] of Object.entries(parsed.listenedAyahs)) {
+    for (const [key, arr] of Object.entries(parsed.listenedAyahs || {})) {
       listenedAyahs[key] = new Set(arr);
     }
-    return { points: parsed.points, listenedAyahs };
+
+    // مزامنة فورية: ما يوجد في الواجهة من نجوم (points) ينتقل مباشرة إلى حساب الطفل في ركن الأطفال
+    if (typeof parsed.points === "number") {
+      const alreadySynced = localStorage.getItem("mushaf:interface_stars_synced_v3");
+      if (!alreadySynced) {
+        try { localStorage.setItem("mushaf:interface_stars_synced_v3", "1"); } catch { /* ignore */ }
+        setCoins(parsed.points);
+      }
+    }
+
+    return { points: getCoins(), listenedAyahs };
   } catch {
-    return { points: 0, listenedAyahs: {} };
+    return { points: getCoins(), listenedAyahs: {} };
   }
 }
 
 function saveProgress(data: ProgressData) {
   const serialized: SerializedData = {
-    points: data.points,
+    points: getCoins(),
     listenedAyahs: {},
   };
   for (const [key, set] of Object.entries(data.listenedAyahs)) {
     serialized.listenedAyahs[key] = Array.from(set);
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized));
+  } catch { /* ignore */ }
 }
 
 export type Level = "القارئ الناشئ" | "القارئ الماهر" | "القارئ المتقن";
@@ -47,7 +60,27 @@ export function getLevel(points: number): Level {
 }
 
 export function useProgress() {
+  const [coins, setCoinsState] = useState<number>(getCoins);
   const [data, setData] = useState<ProgressData>(loadProgress);
+
+  useEffect(() => {
+    const sync = () => {
+      const current = getCoins();
+      setCoinsState(current);
+      setData((prev) => ({ ...prev, points: current }));
+    };
+    sync();
+    window.addEventListener("mushaf:coins", sync);
+    window.addEventListener("mushaf:activeprofile", sync);
+    window.addEventListener("focus", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("mushaf:coins", sync);
+      window.removeEventListener("mushaf:activeprofile", sync);
+      window.removeEventListener("focus", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
 
   useEffect(() => {
     saveProgress(data);
@@ -62,10 +95,12 @@ export function useProgress() {
       const updated = new Set(existing);
       updated.add(ayahNumber);
       return {
-        points: prev.points + 10,
+        points: getCoins() + 10,
         listenedAyahs: { ...prev.listenedAyahs, [key]: updated },
       };
     });
+    // إضافة 10 نجوم إلى حساب الطفل الموحّد فورياً
+    addCoins(10);
     return { newPoints: true, newAyah };
   }, []);
 
@@ -78,8 +113,8 @@ export function useProgress() {
   }, [getListenedCount]);
 
   return {
-    points: data.points,
-    level: getLevel(data.points),
+    points: coins,
+    level: getLevel(coins),
     recordAyah,
     getListenedCount,
     isSurahComplete,

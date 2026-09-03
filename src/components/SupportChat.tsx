@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { X, MessageSquare, Send, Loader2, Paperclip, UploadCloud, CheckCheck, RefreshCw, Image as ImageIcon } from "lucide-react";
+import { X, MessageSquare, Send, Loader2, Paperclip, UploadCloud, CheckCheck, RefreshCw, Image as ImageIcon, Mail } from "lucide-react";
 import { hasValidSupabaseKey, supabase } from "@/lib/supabase";
 import { getDeviceId } from "@/utils/deviceInfo";
 import { toast } from "@/hooks/use-toast";
+import { sendSupportReportEmail } from "@/services/resendService";
+import { getProfile } from "@/data/kidsProfile";
 
 export type SupportMessage = {
   id: string;
@@ -289,17 +291,26 @@ export default function SupportChat({
 
     try {
       if (convId && convId !== "user_device") {
-        const { error: messageError } = await supabase.from("support_messages").insert({
-          conversation_id: convId,
-          sender: "user",
-          body: text,
-        });
+        const { error: messageError } = await supabase
+          .from("support_messages")
+          .insert({ conversation_id: convId, sender: "user", body: text });
         if (messageError) throw messageError;
         const { error: conversationError } = await supabase
           .from("support_conversations")
           .update({ last_message: text, last_message_at: new Date().toISOString() })
           .eq("id", convId);
         if (conversationError) throw conversationError;
+
+        // إرسال إشعار فوري إلى البريد hammoualiyoucef20@gmail.com
+        void sendSupportReportEmail({
+          type: "inquiry",
+          typeLabel: "رسالة دردشة دعم فني",
+          description: text,
+          profileName: getProfile()?.name || "مستخدم التطبيق",
+          appVersion: "1.0.0",
+          platform: typeof navigator !== "undefined" ? navigator.userAgent : "Web",
+          timestamp: new Date().toLocaleString("ar-SA"),
+        });
       } else {
         throw new Error("لم يتم إنشاء محادثة الدعم الفني");
       }
@@ -357,6 +368,16 @@ export default function SupportChat({
           </div>
         </div>
         <div className="flex items-center gap-1.5">
+          <a
+            href="mailto:hammoualiyoucef20@gmail.com?subject=%D8%AF%D8%B9%D9%85%20%D8%AA%D8%B7%D8%A8%D9%8A%D9%82%20%D8%A7%D9%84%D9%82%D8%B1%D8%A2%D9%86"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-[11px] bg-accent/15 text-accent font-bold px-2.5 py-1.5 rounded-xl hover:bg-accent/25 transition-all"
+            title="إرسال رسالة مباشرة عبر البريد الإلكتروني (Gmail)"
+          >
+            <Mail className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">إيميل مباشر</span>
+          </a>
           {onClose && (
             <button
               onClick={onClose}

@@ -534,6 +534,8 @@
 .ayah-rect.animate-pulse { animation: ayah-active-glow-teacher 1.4s ease-in-out infinite !important; }
 .ayah-rect.animate-pulse.glow-kids { animation: ayah-active-glow-kids 1.4s ease-in-out infinite !important; }
 
-/* إخفاء شريط التمرير للكاروسيل */
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+/* إخفاء شريط التمرير للكاروسيل ولأشرطة التنقل */
+.scrollbar-hide::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar { display: none !important; }
+.scrollbar-hide,
+.no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }

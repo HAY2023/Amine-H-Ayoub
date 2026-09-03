@@ -7,7 +7,7 @@ import AppFooter from "@/components/AppFooter";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
 import { getCustomPages, getAllPageImages, getPageOrder } from "@/data/customPages";
 import { getPageSurahRegions } from "@/data/surahRegions";
-import { addReadingMinutes, addCoins, kidsEnabled as getKidsEnabled, getProgress } from "@/data/kidsProfile";
+import { addReadingMinutes, addCoins, kidsEnabled as getKidsEnabled, getProgress, isPureMode } from "@/data/kidsProfile";
 
 import { getBookmarks, addBookmark, removeBookmark, Bookmark } from "@/data/bookmarks";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
@@ -1288,13 +1288,13 @@ function _UnusedQuranReader() {
       {!controlsOpen && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2" dir="rtl">
           {([
-            !kidsMode && { key: "back", icon: <ArrowRight className="w-5 h-5 text-foreground" />, label: "رجوع", onClick: () => navigate("/audio"), active: false },
+            { key: "back", icon: <ArrowRight className="w-5 h-5 text-foreground" />, label: "رجوع", onClick: () => navigate("/audio"), active: false },
             { key: "hide", icon: hideShading ? <Eye className="w-5 h-5 text-foreground" /> : <EyeOff className="w-5 h-5 text-foreground" />, label: hideShading ? "إظهار التظليل" : "إخفاء التظليل", onClick: () => setHideShading(v => !v), active: hideShading },
             { key: "surahs", icon: <List className="w-5 h-5 text-foreground" />, label: "قائمة السور", onClick: () => setSurahListOpen(true), active: surahListOpen },
-            kidsMode && !playExpired && { key: "games", icon: <Baby className="w-5 h-5 text-foreground" />, label: "الألعاب", onClick: () => navigate("/games"), active: false },
+            kidsMode && !isPureMode() && { key: "games", icon: <Baby className="w-5 h-5 text-foreground" />, label: "الألعاب", onClick: () => navigate("/games"), active: false },
             kidsMode
               ? { key: "lock", icon: <Lock className="w-5 h-5 text-foreground" />, label: "خروج من ركن الأطفال", onClick: requestExitKids, active: true }
-              : (kidsCorner && { key: "kids", icon: <Baby className="w-5 h-5 text-foreground" />, label: "ركن الأطفال", onClick: enterKids, active: false }),
+              : (kidsCorner && !isPureMode() && { key: "kids", icon: <Baby className="w-5 h-5 text-foreground" />, label: "ركن الأطفال", onClick: enterKids, active: false }),
             !kidsMode && { key: "notifications", icon: <Bell className="w-5 h-5 text-foreground" />, label: "الإشعارات", onClick: () => setShowNotifications(true), active: false },
             !kidsMode && { key: "settings", icon: <Settings className="w-5 h-5 text-foreground" />, label: "الإعدادات", onClick: openSettings, active: false },
           ].filter(Boolean) as { key: string; icon: JSX.Element; label: string; onClick: () => void; active: boolean }[]).map(b => (

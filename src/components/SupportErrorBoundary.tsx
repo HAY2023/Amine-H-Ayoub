@@ -1,8 +1,8 @@
 import { ErrorBoundary } from "react-error-boundary";
-import { AlertTriangle, Send, RefreshCw, Trash2, Loader2 } from "lucide-react";
+import { AlertTriangle, Send, RefreshCw, Trash2, Loader2, Mail } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState } from "react";
-import { sendSupportReportEmail } from "@/services/resendService";
+import { sendSupportReportEmail, createMailtoSupportLink } from "@/services/resendService";
 import { getProfile } from "@/data/kidsProfile";
 import { CURRENT_VERSION } from "@/utils/updateChecker";
 import { toast } from "@/hooks/use-toast";
@@ -10,9 +10,11 @@ import { toast } from "@/hooks/use-toast";
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
   const handleDirectSend = async () => {
     setSending(true);
+    setStatusMsg("جاري تجهيز تقرير الخطأ...");
     let copied = false;
     try {
       if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -37,21 +39,21 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
 
       setSent(true);
       if (res.success) {
+        setStatusMsg("✓ تم إرسال التقرير بنجاح للدعم الفني وسيتم فحصه فوراً. شكراً لمساعدتك!");
         toast({
-          title: copied ? "تم إرسال الخطأ ونسخه للحافظة 🌸" : "تم إرسال التقرير بنجاح 🌸",
+          title: "تم إرسال التقرير بنجاح 🌸",
           description: "شكراً لك، سنقوم بحل المشكلة في أقرب وقت.",
         });
       } else {
+        setStatusMsg(copied ? "✓ تم نسخ تفاصيل الخطأ للحافظة بنجاح. يمكنك لصقها وإرسالها لنا." : "تم تسجيل تفاصيل الخطأ.");
         toast({
           title: "تم نسخ تفاصيل الخطأ",
-          description: "يمكنك إرسالها إلينا مباشرة عبر الواتساب أو البريد.",
+          description: "يمكنك إرسالها إلينا مباشرة.",
         });
       }
     } catch {
-      toast({
-        title: "تم نسخ الخطأ للحافظة",
-        description: "يمكنك لصقه وإرساله للدعم الفني.",
-      });
+      setSent(true);
+      setStatusMsg(copied ? "✓ تم نسخ تفاصيل الخطأ للحافظة بنجاح." : "تم رصد الخطأ.");
     } finally {
       setSending(false);
     }
@@ -108,8 +110,21 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
             className="w-full h-12 text-sm border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl font-bold flex items-center justify-center gap-2"
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 rotate-180" />}
-            {sent ? "تم إرسال تقرير الخطأ ✓" : "إرسال تقرير بالخطأ للدعم الفني"}
+            {sent ? "تم إرسال التقرير لحسابك عبر الخادم ✓" : "إرسال تقرير بالخطأ للدعم الفني تلقائياً"}
           </Button>
+
+          <a
+            href={createMailtoSupportLink({
+              typeLabel: "بلاغ خطأ تلقائي",
+              description: `Crash Report:\n${error.message}\nStack: ${error.stack || "N/A"}`,
+              appVersion: CURRENT_VERSION,
+              platform: typeof navigator !== "undefined" ? navigator.userAgent : "Web",
+            })}
+            className="w-full h-11 text-xs border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
+          >
+            <Mail className="w-4 h-4 text-amber-700" />
+            فتح الإيميل والإرسال مباشرة إلى (hammoualiyoucef20@gmail.com)
+          </a>
 
           <Button
             onClick={handleHardReset}

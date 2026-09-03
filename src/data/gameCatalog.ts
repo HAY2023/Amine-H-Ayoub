@@ -3,7 +3,7 @@
  */
 import { supabase, hasValidSupabaseKey } from "../lib/supabase";
 
-export type GameEngine = "order" | "memory" | "memory_meaning" | "which" | "quiz" | "count" | "nextayah" | "prevayah" | "whichsurah" | "missingword" | "surahaudio" | "ayahsurah" | "ayahorder" | "ayahlonger" | "surahorder" | "surahnum";
+export type GameEngine = "order" | "memory" | "memory_meaning" | "which" | "quiz" | "count" | "nextayah" | "prevayah" | "whichsurah" | "missingword" | "surahaudio" | "ayahsurah" | "ayahorder" | "ayahlonger" | "surahorder" | "surahnum" | "remote";
 
 export interface GameDef {
   id: string;
@@ -16,6 +16,9 @@ export interface GameDef {
   icon: string;
   params?: { pairs?: number; minSurah?: number; maxSurah?: number; minAyah?: number; maxAyah?: number };
   custom?: boolean;
+  desc?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  remote?: any;
 }
 
 const CATALOG_KEY = "mushaf:gameCatalog:v1";
@@ -52,14 +55,39 @@ export const showRemoteGame = (id: string) => {
   if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:gamecatalog"));
 };
 export const getHiddenRemoteIds = hiddenIds;
-export const setRemoteGamesList = (_list: any[]) => { /* No-op since remote games are removed */ };
+
+let remoteServerGames: GameDef[] = [];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const setRemoteGamesList = (list: any[]) => {
+  if (!Array.isArray(list)) return;
+  const hidden = hiddenIds();
+  remoteServerGames = list
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((g: any) => g && typeof g.id === "string" && !hidden.includes(g.id))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((g: any, i: number) => ({
+      id: g.id,
+      title: g.title || "لعبة قرآنية",
+      engine: "remote" as GameEngine,
+      ageMin: g.ageMin || 5,
+      ageMax: 16,
+      cost: typeof g.cost === "number" ? g.cost : 25,
+      tint: t(i + 2),
+      icon: g.icon || "Gamepad2",
+      desc: g.desc,
+      remote: g,
+      params: {},
+    }));
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:gamecatalog"));
+};
 
 let serverGames: GameDef[] = [];
 
 const isValid = (g: unknown): g is GameDef => {
   const d = g as GameDef;
   if (!d || typeof d.id !== "string" || typeof d.title !== "string" || typeof d.cost !== "number") return false;
-  const engines: string[] = ["order", "memory", "memory_meaning", "which", "quiz", "count", "nextayah", "prevayah", "whichsurah", "missingword", "surahaudio", "ayahsurah", "ayahorder", "ayahlonger", "surahorder", "surahnum"];
+  const engines: string[] = ["order", "memory", "memory_meaning", "which", "quiz", "count", "nextayah", "prevayah", "whichsurah", "missingword", "surahaudio", "ayahsurah", "ayahorder", "ayahlonger", "surahorder", "surahnum", "remote"];
   if (!engines.includes(d.engine)) return false;
   return true;
 };
@@ -73,6 +101,7 @@ export const getGameCatalog = (): GameDef[] => {
   const server = serverGames.length ? serverGames : readServerLocal();
   const map = new Map<string, GameDef>();
   for (const g of BUILTIN_GAMES) map.set(g.id, g);
+  for (const g of remoteServerGames) map.set(g.id, g);
   for (const g of server) map.set(g.id, { tint: "bg-slate-500/20 text-slate-200", icon: "Gamepad2", ageMin: 5, ...g, custom: true });
   
   // Apply price overrides for built-in games

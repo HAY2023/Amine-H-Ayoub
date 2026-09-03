@@ -175,7 +175,46 @@ function Face({ acc }: { acc: Acc }) {
   );
 }
 
-/** يعرض وجه الطفل كرسم SVG يملأ الصندوق المُمرَّر عبر className (w-N h-N). */
+/** مسارات صور الشخصيات ثلاثية الأبعاد الفاخرة المتاحة في public/avatars */
+export const AVATAR_IMAGE_PATHS: Record<string, string> = {
+  // الشخصية الأساسية والمستوى البرونزي
+  "img-boy-scholar": "/avatars/img-boy-bisht-white.jpg",
+  "img-boy-reciter": "/avatars/img-boy-reciter.jpg",
+  "img-girl-scholar": "/avatars/img-girl-gold.jpg",
+  "img-boy-taqiyah-gold": "/avatars/img-boy-taqiyah-gold.jpg",
+  "img-girl-gold": "/avatars/img-girl-gold.jpg",
+
+  // المستوى الذهبي
+  "img-boy-reciter-green": "/avatars/ChatGPT Image 2 سبتمبر 2026، 10_04_13 م.png",
+  "img-boy-royal-blue": "/avatars/ChatGPT Image 2 سبتمبر 2026، 10_04_36 م.png",
+  "img-boy-turquoise-vest": "/avatars/ChatGPT Image 2 سبتمبر 2026، 10_05_38 م.png",
+  "img-boy-indigo-scarf": "/avatars/ChatGPT Image 2 سبتمبر 2026، 10_05_46 م.png",
+
+  // المستوى الماسي
+  "img-boy-knight-ruby": "/avatars/img-boy-knight-ruby.jpg",
+  "img-boy-turban": "/avatars/img-boy-turban.jpg",
+  "img-boy-turban-master": "/avatars/img-boy-turban-master.jpg",
+  "img-girl-hijab-emerald": "/avatars/img-girl-hijab-emerald.jpg",
+
+  // المستوى الأسطوري
+  "img-boy-sultan-navy": "/avatars/ChatGPT Image 2 سبتمبر 2026، 10_05_41 م.png",
+  "img-boy-crimson-master": "/avatars/ChatGPT Image 2 سبتمبر 2026، 10_05_35 م.png",
+  "img-boy-crescent-purple": "/avatars/ChatGPT Image Sep 2, 2026, 06_46_28 PM.png",
+  "img-boy-bisht-white": "/avatars/img-boy-bisht-white.jpg",
+  "img-girl-emerald-queen": "/avatars/img-girl-emerald-queen.jpg",
+  "img-boy-quran-carrier": "/avatars/ChatGPT Image 2 سبتمبر 2026، 10_05_44 م.png",
+};
+
+/** دالة مساعدة للحصول على مسار الصورة المباشر */
+export function getAvatarSrc(name: string): string {
+  const clean = name.startsWith("av-") ? name.replace(/^av-/, "") : name;
+  const direct = AVATAR_IMAGE_PATHS[clean] || AVATAR_IMAGE_PATHS[name];
+  if (direct) return direct;
+  if (clean.startsWith("img-")) return `/avatars/${clean}.jpg`;
+  return "/avatars/img-boy-bisht-white.jpg";
+}
+
+/** يعرض وجه الطفل بصورة ثلاثية الأبعاد فاخرة مع دعم SVG كبديل احتياطي */
 export default function Avatar({ name, className }: { name: string; className?: string }) {
   const [imgFailed, setImgFailed] = useState(false);
 
@@ -189,83 +228,38 @@ export default function Avatar({ name, className }: { name: string; className?: 
   }
 
   const cleanName = name.startsWith("av-") ? name.replace(/^av-/, "") : name;
-  const cfg = AVATAR_CONFIG[cleanName];
+  const imageSrc = AVATAR_IMAGE_PATHS[cleanName] || (cleanName.startsWith("img-") ? `/avatars/${cleanName}.jpg` : undefined);
 
-  const customAvatar = cfg && CUSTOM_ART_KEYS.has(name) || cfg && name.startsWith("img-");
-
-  if (cleanName === "chatgpt-main") {
+  if (!imgFailed && imageSrc) {
     return (
       <img
-        src="/avatars/chatgpt-main.png"
-        alt="chatgpt-main"
-        className={cn("object-cover rounded-full w-full h-full bg-accent/10", className)}
+        src={encodeURI(imageSrc)}
+        alt={cleanName}
+        className={cn("object-cover rounded-full shadow-sm w-full h-full bg-accent/10 p-0.5 transition-transform", className)}
         loading="lazy"
+        onError={() => setImgFailed(true)}
       />
     );
   }
 
-  if (imgFailed || customAvatar) {
-    if (cfg) {
-      return (
-        <svg viewBox="0 0 100 100" className={cn("select-none bg-secondary/30 rounded-full", className)} role="img" aria-label={name}>
-          <BackHair hair={cfg.hair} hc={cfg.hc} />
-          <Body acc={cfg.acc} />
-          <circle cx="50" cy="52" r="26" fill={cfg.skin} />
-          <FrontHair hair={cfg.hair} hc={cfg.hc} />
-          <Face acc={cfg.acc} />
-          <Accessory acc={cfg.acc} />
-        </svg>
-      );
-    }
+  const cfg = AVATAR_CONFIG[cleanName];
+  if (cfg) {
     return (
-      <svg viewBox="0 0 100 100" className={cn("select-none bg-secondary/50 rounded-full", className)} role="img" aria-label="default">
-        <circle cx="50" cy="40" r="20" fill="#a0a0a0" opacity="0.5" />
-        <path d="M20 90 Q50 60 80 90" stroke="#a0a0a0" strokeWidth="15" strokeLinecap="round" fill="none" opacity="0.5" />
+      <svg viewBox="0 0 100 100" className={cn("select-none bg-secondary/30 rounded-full", className)} role="img" aria-label={name}>
+        <BackHair hair={cfg.hair} hc={cfg.hc} />
+        <Body acc={cfg.acc} />
+        <circle cx="50" cy="52" r="26" fill={cfg.skin} />
+        <FrontHair hair={cfg.hair} hc={cfg.hc} />
+        <Face acc={cfg.acc} />
+        <Accessory acc={cfg.acc} />
       </svg>
     );
   }
 
-  const legacyMap: Record<string, string> = {
-    boy: "img-boy-scholar",
-    girl: "img-girl-scholar",
-    child: "img-boy-reciter",
-    baby: "img-girl-gold",
-    hero: "img-boy-knight",
-    ninja: "img-boy-turban",
-    king: "img-boy-bisht",
-    queen: "img-girl-emerald",
-    "img-boy-1": "img-boy-scholar",
-    "img-boy-2": "img-boy-scholar",
-    "img-boy-3": "img-boy-knight",
-    "img-boy-4": "img-boy-turban",
-    "img-boy-5": "img-boy-bisht",
-    "img-boy-6": "img-boy-reciter",
-    "img-boy-7": "img-boy-scholar",
-    "img-boy-8": "img-boy-knight",
-    "img-boy-9": "img-boy-turban",
-    "img-girl-1": "img-girl-scholar",
-    "img-girl-2": "img-girl-gold",
-    "img-girl-3": "img-girl-emerald",
-    "img-girl-4": "img-girl-scholar",
-    "img-girl-5": "img-girl-gold",
-    "img-girl-6": "img-girl-purple",
-    "img-girl-7": "img-girl-emerald",
-  };
-
-  const mapped = legacyMap[cleanName] || cleanName;
-  const imageFile = mapped.startsWith("img-") ? mapped : "img-boy-scholar";
-
-  // إذا كان الاسم المختار يساوي الملف الذي تم تحميله مباشرة من مجلد Downloads،
-  // استخدم مساره الظاهر في public/avatars مباشرة بدون أي تحويلات.
-  const directPath = cleanName === "chatgpt-main" ? "/avatars/chatgpt-main.png" : undefined;
-
   return (
-    <img
-      src={directPath || `/avatars/${imageFile}.jpg`}
-      alt={imageFile}
-      className={cn("object-cover rounded-full shadow-sm w-full h-full bg-accent/10 p-0.5", className)}
-      loading="lazy"
-      onError={() => setImgFailed(true)}
-    />
+    <svg viewBox="0 0 100 100" className={cn("select-none bg-secondary/50 rounded-full", className)} role="img" aria-label="default">
+      <circle cx="50" cy="40" r="20" fill="#a0a0a0" opacity="0.5" />
+      <path d="M20 90 Q50 60 80 90" stroke="#a0a0a0" strokeWidth="15" strokeLinecap="round" fill="none" opacity="0.5" />
+    </svg>
   );
 }

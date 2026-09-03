@@ -49,7 +49,7 @@ function KidsModeGuard() {
 
   useEffect(() => {
     const checkMode = () => {
-      const allowedPaths = ["/games", "/", "/audio", "/shop", "/profiles", "/settings"];
+      const allowedPaths = ["/games", "/", "/audio", "/mushaf", "/shop", "/profiles", "/settings", "/parent"];
       if (isKidsMode() && !allowedPaths.includes(location.pathname)) {
         navigate("/audio", { replace: true });
       }
@@ -74,7 +74,7 @@ function KidsModeGuard() {
 
     const handlePopState = () => {
       if (isKidsMode()) {
-        const allowedPaths = ["/games", "/", "/audio", "/shop", "/profiles", "/settings"];
+        const allowedPaths = ["/games", "/", "/audio", "/mushaf", "/shop", "/profiles", "/settings", "/parent"];
         if (!allowedPaths.includes(window.location.pathname)) {
           window.history.pushState(null, "", "/audio");
           navigate("/audio", { replace: true });

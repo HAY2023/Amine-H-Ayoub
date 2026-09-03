@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getSurahAudioUrl } from "@/data/audioUrls";
+import { getSurahAudioUrl, isAudioAvailable } from "@/data/audioUrls";
 import { surahs as allSurahNames } from "@/data/surahs";
 
 interface HuggingFaceFile {
@@ -16,6 +16,32 @@ export interface SurahItem {
   englishName?: string;
   englishNameTranslation?: string;
   numberOfAyahs?: number;
+  audioAvailable?: boolean; // هل الصوت متوفر لهذه السورة
+}
+
+// روابط السور المخصصة من السيرفر المحلي
+export const LOCAL_SERVER_SURAHS: Record<number, string> = {
+  // تم تعطيل السيرفر المحلي - استخدام Hugging Face مباشرة
+  // 57: "http://localhost:12345/57.mp3",
+  // يمكنك إضافة المزيد من السور هنا
+  // 55: "http://localhost:12345/55.mp3",
+  // 56: "http://localhost:12345/56.mp3",
+};
+
+// دالة التحقق من توفر السيرفر المحلي
+async function isLocalServerAvailable(): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const response = await fetch("http://localhost:12345/health", { 
+      signal: controller.signal,
+      method: "HEAD"
+    });
+    clearTimeout(timeout);
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 // دالة تحديد الرابط الصوتي للسورة
@@ -33,18 +59,36 @@ function getAudioForSurah(n: number): string {
   return getSurahAudioUrl(n);
 }
 
-// ربع يس فقط (الفاتحة 1، ومن يس 36 إلى الناس 114 مع إضافة سورة الحديد 57 من السيرفر المحلي)
-const LOCAL_SURAHS: SurahItem[] = allSurahNames
+// دالة الحصول على رابط السورة (مع fallback)
+async function getSurahAudioSrc(n: number): Promise<string> {
+  // تحقق إذا كانت السورة مخصصة للسيرفر المحلي
+  if (LOCAL_SERVER_SURAHS[n]) {
+    const localAvailable = await isLocalServerAvailable();
+    if (localAvailable) {
+      return LOCAL_SERVER_SURAHS[n];
+    }
+    console.warn(`السيرفر المحلي غير متاح، استخدام Hugging Face للسورة ${n}`);
+  }
+  return getAudioForSurah(n);
+}
+
+// ربع يس فقط (الفاتحة 1، ومن يس 36 إلى الناس 114)
+const BASE_SURAHS: SurahItem[] = allSurahNames
   .filter((s) => (s.number === 1 || (s.number >= 36 && s.number <= 114)))
+  .filter((s) => isAudioAvailable(s.number)) // استبعاد السور التي لا يتوفر لها صوت
   .map((s) => ({
     number: s.number,
     name: s.name,
     ayahCount: s.ayahCount,
     type: s.type,
-    audioSrc: s.number === 57 ? "http://localhost:12345/12345.mp3" : getAudioForSurah(s.number),
+    audioSrc: getAudioForSurah(s.number),
+    audioAvailable: true,
   }));
 
-const HF_CACHE_KEY = "mushaf:hf-surahs-cache-v4";
+// قائمة السور المحلية (يتم تحديثها عند التحقق من السيرفر المحلي)
+let LOCAL_SURAHS: SurahItem[] = BASE_SURAHS;
+
+const HF_CACHE_KEY = "mushaf:hf-surahs-cache-v5";
 const HF_CACHE_TTL = 1000 * 60 * 60; // ساعة واحدة
 
 export function useSurahData() {
@@ -56,6 +100,24 @@ export function useSurahData() {
     setLoading(true);
     setError(null);
     try {
+      // التحقق من توفر السيرفر المحلي وتحديث الروابط
+      if (Object.keys(LOCAL_SERVER_SURAHS).length > 0) {
+        const localAvailable = await isLocalServerAvailable();
+        if (localAvailable) {
+          // تحديث روابط السور المحلية
+          LOCAL_SURAHS = BASE_SURAHS.map(s => {
+            if (LOCAL_SERVER_SURAHS[s.number]) {
+              return { ...s, audioSrc: LOCAL_SERVER_SURAHS[s.number] };
+            }
+            return s;
+          });
+          console.log("[Local Server] السيرفر المحلي متاح، تم تحديث روابط السور");
+        } else {
+          console.warn("[Local Server] السيرفر المحلي غير متاح، استخدام Hugging Face");
+          LOCAL_SURAHS = BASE_SURAHS;
+        }
+      }
+
       // محاولة قراءة النتيجة المخزّنة أولاً
       let serverSurahNumbers: number[] = [];
       let usedCache = false;
@@ -115,7 +177,7 @@ export function useSurahData() {
       // دمج السور المحلية المضمنة مع المكتشفة من السيرفر والمضافة يدوياً
       const uniqueNumbers = Array.from(
         new Set([...LOCAL_SURAHS.map((s) => s.number), ...serverSurahNumbers, ...manualSurahs])
-      ).filter(n => (n === 1 || (n >= 36 && n <= 114)))
+      ).filter(n => (n === 1 || (n >= 36 && n <= 114)) )
        .sort((a, b) => {
          if (a === 1) return -1;
          if (b === 1) return 1;
@@ -138,7 +200,8 @@ export function useSurahData() {
           name,
           ayahCount,
           type,
-          audioSrc: num === 57 ? "http://localhost:12345/12345.mp3" : getAudioForSurah(num)
+          audioSrc: LOCAL_SERVER_SURAHS[num] || getAudioForSurah(num),
+          audioAvailable: isAudioAvailable(num),
         };
       });
 
@@ -160,7 +223,7 @@ export function useSurahData() {
 
       const uniqueNumbers = Array.from(
         new Set([...LOCAL_SURAHS.map((s) => s.number), ...manualSurahs])
-      ).filter(n => (n === 1 || (n >= 36 && n <= 114)))
+      ).filter(n => (n === 1 || (n >= 36 && n <= 114)) )
        .sort((a, b) => {
          if (a === 1) return -1;
          if (b === 1) return 1;
@@ -176,7 +239,8 @@ export function useSurahData() {
           name: globalMatch ? globalMatch.name : `سورة ${num}`,
           ayahCount: globalMatch ? globalMatch.ayahCount : undefined,
           type: globalMatch ? globalMatch.type : undefined,
-          audioSrc: num === 57 ? "http://localhost:12345/12345.mp3" : getAudioForSurah(num)
+          audioSrc: LOCAL_SERVER_SURAHS[num] || getAudioForSurah(num),
+          audioAvailable: isAudioAvailable(num),
         };
       });
 
@@ -192,3 +256,6 @@ export function useSurahData() {
 
   return { surahs, loading, error, retry: fetchSurahs };
 }
+
+
+

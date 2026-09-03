@@ -13,7 +13,7 @@ import {
   Mail,
   MessageSquare,
 } from "lucide-react";
-import { sendSupportReportEmail, SupportReportData } from "@/services/resendService";
+import { sendSupportReportEmail, SupportReportData, createMailtoSupportLink } from "@/services/resendService";
 import { getProfile } from "@/data/kidsProfile";
 import { CURRENT_VERSION } from "@/utils/updateChecker";
 import { toast } from "@/hooks/use-toast";
@@ -245,6 +245,23 @@ export default function SupportModal({ onClose }: Props) {
                 </>
               )}
             </button>
+
+            <div className="pt-2 text-center border-t border-border/50">
+              <span className="text-[11px] text-muted-foreground block mb-1.5">أو للتواصل المباشر مع الدعم الفني:</span>
+              <a
+                href={createMailtoSupportLink({
+                  typeLabel: REPORT_TYPES.find((t) => t.id === type)?.label || "رسالة",
+                  description: description.trim(),
+                  profileName: senderName.trim() || activeProfile?.name || "مستخدم التطبيق",
+                  senderEmail: senderEmail.trim(),
+                  appVersion: CURRENT_VERSION,
+                })}
+                className="w-full py-2.5 px-3 rounded-xl border border-border bg-secondary hover:bg-secondary/80 text-secondary-foreground font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Mail className="w-3.5 h-3.5 text-accent" />
+                إرسال مباشرة عبر تطبيق البريد (hammoualiyoucef20@gmail.com)
+              </a>
+            </div>
           </form>
         )}
       </div>

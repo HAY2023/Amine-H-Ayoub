@@ -1,9 +1,9 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Bell, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Hash, Grid3x3, Flame, Sparkles, Gamepad2, Puzzle, X, Crown, Brain, Camera, Award, Download, Clock } from "lucide-react";
 import { getAllSurahs } from "../data/quranData";
 import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
-import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked, setCurrentSurah, addPlayMinutes, setAppMode, ownItem, unlockItem, getActiveId } from "../data/kidsProfile";
+import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked, setCurrentSurah, addPlayMinutes, setAppMode, ownItem, unlockItem, getActiveId, getAppMode, isPureMode, formatCoins } from "../data/kidsProfile";
 import { getGameCatalog, type GameDef, type GameEngine } from "../data/gameCatalog";
 import { fetchRemoteGames, precacheRemoteGames } from "../data/remoteGames";
 
@@ -14,9 +14,12 @@ import ParentalGateModal from "../components/ParentalGateModal";
 import MemoryGame from "../games/MemoryGame";
 import MissingWordGame from "../games/MissingWordGame";
 import AyahOrderGame from "../games/AyahOrderGame";
-import Avatar from "../components/Avatar";
+import RemoteGameFrame from "../components/RemoteGameFrame";
+import Avatar, { getAvatarSrc } from "../components/Avatar";
+import { drawQRCodeOnCanvas } from "../utils/qrCode";
 import NotificationsModal from "../components/NotificationsModal";
 import BadgesModal from "../components/BadgesModal";
+import QuranLockGateModal from "../components/QuranLockGateModal";
 import { toast } from "../hooks/use-toast";
 import { isTimeAllowed } from "../data/kidsSchedule";
 import { calculateStreak } from "../data/kidsBadges";
@@ -49,6 +52,17 @@ function drawCanvasStar(ctx: CanvasRenderingContext2D, x: number, y: number, rad
   ctx.restore();
 }
 
+function loadCanvasImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = encodeURI(src);
+    setTimeout(() => resolve(null), 2500);
+  });
+}
+
 const poolFor = (def: GameDef, minSurahOverride: number = 78) => {
   const { minAyah, maxAyah } = def.params || {};
   // يبدأ النطاق من السورة المختارة ويتجه إلى السور التالية في ترتيب المصحف.
@@ -77,10 +91,13 @@ const neighborPool = (def: GameDef, minSurahOverride: number, n: number) => {
 function useGame() {
   const [score, setScore] = useState(0);
   const [answers, setAnswers] = useState(0);
+  const [mistakes, setMistakes] = useState(0);
   const [earned, setEarned] = useState(0);
   const [streak, setStreak] = useState(0);
   const [flash, setFlash] = useState(0);
   const [gain, setGain] = useState(0);
+  const [wrongFlash, setWrongFlash] = useState(0);
+
   const correct = () => {
     const ns = streak + 1;
     // نقاط الألعاب قليلة عمداً — القراءة هي المصدر الأساسي للنجوم (المال)
@@ -89,15 +106,30 @@ function useGame() {
     setScore(s => s + 1); setAnswers(a => a + 1); setStreak(ns); setFlash(f => f + 1);
     window.setTimeout(() => setGain(0), 900);
   };
-  const miss = () => { setStreak(0); setGain(0); setAnswers(a => a + 1); };
-  const reset = () => { setScore(0); setAnswers(0); setEarned(0); setStreak(0); setGain(0); };
-  return { score, answers, earned, streak, flash, gain, correct, miss, reset };
+  const miss = () => {
+    setStreak(0);
+    setGain(0);
+    setMistakes(m => m + 1);
+    setWrongFlash(w => w + 1);
+    setAnswers(a => a + 1);
+  };
+  const reset = () => {
+    setScore(0);
+    setAnswers(0);
+    setMistakes(0);
+    setEarned(0);
+    setStreak(0);
+    setGain(0);
+    setWrongFlash(0);
+  };
+  return { score, answers, mistakes, earned, streak, flash, gain, wrongFlash, correct, miss, reset };
 }
 type Game = ReturnType<typeof useGame>;
 
 const PRAISE_NORMAL = ["أحسنت يا بطل!", "رائع!", "أنت ذكي!"];
 const PRAISE_GOOD = ["ممتاز جداً!", "أداء مذهل!", "عمل رائع!"];
 const PRAISE_SUPER = ["ما شاء الله!", "أنت عبقري!", "أسطورة!"];
+const ENCOURAGE_MISTAKE = ["حاول ثانية يا بطل! 🌟", "لا بأس، التكرار يعلّم!", "ركّز جيداً، أنت تستطيع! 💪", "قريب جداً! استمر! ✨"];
 
 const GameHud = ({ g }: { g: Game }) => {
   const getPraise = () => {
@@ -106,15 +138,40 @@ const GameHud = ({ g }: { g: Game }) => {
     return PRAISE_NORMAL[g.flash % PRAISE_NORMAL.length];
   };
 
+  const getEncourage = () => {
+    return ENCOURAGE_MISTAKE[g.wrongFlash % ENCOURAGE_MISTAKE.length];
+  };
+
   return (
-    <div className="flex items-center justify-center gap-3 min-h-[28px]">
-      <span className="inline-flex items-center gap-1 text-accent font-extrabold"><Star className="w-4 h-4 fill-current" /> {g.score}</span>
-      {g.streak >= 2 && <span className="inline-flex items-center gap-1 text-orange-400 font-bold"><Flame className="w-4 h-4" /> {g.streak}× سلسلة</span>}
-      {g.gain > 0 && <span key={g.flash} className="inline-flex items-center gap-0.5 text-success font-extrabold animate-bounce">+{g.gain}<Star className="w-3.5 h-3.5 fill-current" /></span>}
+    <div className="flex items-center justify-center gap-2.5 sm:gap-3 min-h-[28px] flex-wrap">
+      <span className="inline-flex items-center gap-1 text-accent font-extrabold text-xs sm:text-sm">
+        <Star className="w-4 h-4 fill-current text-amber-500" /> {g.score} صحيحة
+      </span>
+      {g.mistakes > 0 && (
+        <span className="inline-flex items-center gap-1 text-rose-500 font-bold text-xs bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/20 animate-in fade-in">
+          ❌ {g.mistakes} أخطاء
+        </span>
+      )}
+      {g.streak >= 2 && (
+        <span className="inline-flex items-center gap-1 text-orange-400 font-bold text-xs sm:text-sm">
+          <Flame className="w-4 h-4" /> {g.streak}× متتالية
+        </span>
+      )}
+      {g.gain > 0 && (
+        <span key={g.flash} className="inline-flex items-center gap-0.5 text-success font-extrabold animate-bounce text-xs sm:text-sm">
+          +{g.gain}<Star className="w-3.5 h-3.5 fill-current" />
+        </span>
+      )}
       {g.flash > 0 && (
-        <span key={`p-${g.flash}`} className="pointer-events-none fixed left-1/2 top-1/3 z-[60] -translate-x-1/2 font-extrabold text-accent drop-shadow animate-celebrate"
+        <span key={`p-${g.flash}`} className="pointer-events-none fixed left-1/2 top-1/3 z-[60] -translate-x-1/2 font-extrabold text-accent drop-shadow-lg animate-celebrate"
           style={{ fontSize: g.streak >= 5 ? "2.2rem" : g.streak >= 3 ? "1.8rem" : "1.4rem" }}>
           {getPraise()}
+        </span>
+      )}
+      {g.wrongFlash > 0 && (
+        <span key={`w-${g.wrongFlash}`} className="pointer-events-none fixed left-1/2 top-1/3 z-[60] -translate-x-1/2 font-extrabold text-amber-500 drop-shadow-lg animate-bounce"
+          style={{ fontSize: "1.2rem" }}>
+          {getEncourage()}
         </span>
       )}
     </div>
@@ -154,14 +211,17 @@ const SessionBar = ({ q }: { q: number }) => (
 );
 const ResultCard = ({ g, onReplay }: { g: Game; onReplay: () => void }) => {
   const pct = g.answers ? Math.round((g.score / g.answers) * 100) : 0;
-  const msg = pct >= 80 ? "ما شاء الله! ممتاز" : pct >= 50 ? "أحسنت! جيّد جداً" : "لا بأس — التكرار يعلّم";
+  const msg = pct >= 80 ? "ما شاء الله! إتقان ممتاز يا بطل" : pct >= 50 ? "أحسنت! أداء مبارك ورائع" : "لا بأس يا بطل — التكرار يعلّم الشطار!";
   return (
     <div className="space-y-4 text-center py-4 animate-fade-up">
-      <Trophy className="w-14 h-14 mx-auto text-accent" />
+      <Trophy className="w-14 h-14 mx-auto text-accent animate-pulse" />
       <p className="text-xl font-extrabold text-foreground">{msg}</p>
-      <p className="text-sm text-muted-foreground">أجبت صحيحاً على {g.score} من {g.answers}</p>
+      <div className="flex items-center justify-center gap-3 text-xs sm:text-sm font-bold">
+        <span className="text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-xl">✓ {g.score} إجابات صحيحة</span>
+        <span className="text-rose-500 bg-rose-500/10 border border-rose-500/20 px-3 py-1 rounded-xl">❌ {g.mistakes} أخطاء</span>
+      </div>
       <p className="inline-flex items-center gap-1 text-accent font-extrabold text-lg"><Star className="w-5 h-5 fill-current" /> ربحت {g.earned} نجمة</p>
-      <button onClick={onReplay} className="btn-gold mx-auto px-6 py-2.5 rounded-xl font-bold flex items-center gap-1.5"><RefreshCw className="w-4 h-4" /> العب من جديد</button>
+      <button onClick={onReplay} className="btn-gold mx-auto px-6 py-2.5 rounded-xl font-bold flex items-center gap-1.5 active:scale-95 shadow-md"><RefreshCw className="w-4 h-4" /> العب من جديد</button>
     </div>
   );
 };
@@ -372,7 +432,7 @@ function CountEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const make = () => {
     if (!orderRef.current.length) orderRef.current = shuffle(pool);
     const s = orderRef.current.pop() || pool[0];
-    const wrong = shuffle(pool.filter(x => x.ayahCount !== s.ayahCount)).slice(0, 2);
+    const wrong = shuffle(pool.filter(x => x.ayahCount !== s.ayahCount)).slice(0, 3);
     return { s, opts: shuffle([s, ...wrong]) };
   };
   const [q, setQ] = useState(make);
@@ -391,21 +451,21 @@ function CountEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
     setReveal(true);
     window.setTimeout(() => next(qNum + 1), 1100);
   };
-  const replay = () => { g.reset(); setQNum(1); setQ(make()); setRound(r => r + 1); };
+  const replay = () => { orderRef.current = shuffle(pool); g.reset(); setQNum(1); setQ(make()); setRound(r => r + 1); };
   if (finished) return <ResultCard g={g} onReplay={replay} />;
   return (
-    <div className="space-y-4 text-center">
+    <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
-      <p className="text-foreground text-lg font-bold">أيّ سورة عدد آياتها <span className="text-accent">{q.s.ayahCount}</span>؟</p>
+      <p className="text-foreground text-base sm:text-lg font-bold">أيّ سورة عدد آياتها <span className="text-accent">{q.s.ayahCount}</span>؟</p>
       <TimerBar left={left} seconds={9} />
-      <div className="grid gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {q.opts.map(s => {
           const cls = reveal && s.number === q.s.number ? "bg-success/20 border-success/60 text-success"
             : reveal && s.number === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
             : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
           return (
-            <button key={s.number} onClick={() => choose(s.number)} className={`p-4 rounded-xl border font-bold text-lg active:scale-95 transition-colors ${cls}`}>
-              {s.name}{reveal && <span className="mr-2 text-xs font-extrabold text-muted-foreground">({s.ayahCount} آيات)</span>}
+            <button key={s.number} onClick={() => choose(s.number)} className={`p-3 sm:p-5 rounded-xl border font-bold text-base sm:text-lg active:scale-95 transition-colors min-h-[55px] sm:min-h-[70px] ${cls}`}>
+              {s.name}{reveal && <span className="mr-1 text-xs font-extrabold text-muted-foreground">({s.ayahCount} آيات)</span>}
             </button>
           );
         })}
@@ -424,28 +484,54 @@ function NextAyahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: Gam
   const pool = poolFor(def, minSurah).map(s => s.number);
   const eligible = corpus.filter(c => c.ayahs.length >= 3 && pool.includes(c.app));
   const orderRef = useRef(shuffle(eligible));
-  const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(eligible); return orderRef.current.pop() || eligible[0]; };
+  const usedAyahsRef = useRef<Set<string>>(new Set());
+
+  const getNext = () => { 
+    if (!orderRef.current.length) orderRef.current = shuffle(eligible); 
+    return orderRef.current.pop() || eligible[0]; 
+  };
+
   const make = (prevApp?: number) => {
     let s = getNext();
     if (s.app === prevApp && eligible.length > 1) s = getNext();
-    const i = Math.floor(Math.random() * (s.ayahs.length - 1));
-    const answer = s.ayahs[i + 1];
-    const distract = shuffle(s.ayahs.filter(a => a.n !== answer.n && a.n !== s.ayahs[i].n)).slice(0, 2);
+    let promptAyah = s.ayahs[0];
+    let answerAyah = s.ayahs[1];
+
+    for (let t = 0; t < 20; t++) {
+      const i = Math.floor(Math.random() * (s.ayahs.length - 1));
+      promptAyah = s.ayahs[i];
+      answerAyah = s.ayahs[i + 1];
+      if (!usedAyahsRef.current.has(promptAyah.text)) {
+        usedAyahsRef.current.add(promptAyah.text);
+        break;
+      }
+      s = getNext();
+    }
+
+    const distract = shuffle(s.ayahs.filter(a => a.n !== answerAyah.n && a.n !== promptAyah.n)).slice(0, 2);
     const others = shuffle(eligible.filter(c => c.app !== s.app));
     for (const o of others) {
       if (distract.length >= 2) break;
       const a = o.ayahs[Math.floor(Math.random() * o.ayahs.length)];
-      if (a.text !== answer.text && !distract.some(d => d.text === a.text)) distract.push(a);
+      if (a.text !== answerAyah.text && !distract.some(d => d.text === a.text)) distract.push(a);
     }
-    return { s, prompt: s.ayahs[i], opts: shuffle([answer, ...distract]), answer };
+    return { s, prompt: promptAyah, opts: shuffle([answerAyah, ...distract]), answer: answerAyah };
   };
+
   const [q, setQ] = useState(() => make());
   const [qNum, setQNum] = useState(1);
   const [reveal, setReveal] = useState(false);
   const [chosen, setChosen] = useState<string | null>(null);
   const g = useGame();
   const finished = qNum > ROUNDS;
-  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) setQ(make(q.s.app)); };
+
+  const next = (nn: number) => { 
+    setReveal(false); 
+    setChosen(null); 
+    setQNum(nn); 
+    if (nn <= ROUNDS) setQ(make(q.s.app)); 
+  };
+
   const answerTap = (text: string) => {
     if (reveal || finished) return;
     setChosen(text);
@@ -453,8 +539,16 @@ function NextAyahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: Gam
     setReveal(true);
     window.setTimeout(() => next(qNum + 1), text === q.answer.text ? 700 : 1600);
   };
-  const replay = () => { g.reset(); setQNum(1); setQ(make()); };
+
+  const replay = () => { 
+    usedAyahsRef.current.clear(); 
+    g.reset(); 
+    setQNum(1); 
+    setQ(make()); 
+  };
+
   if (finished) return <ResultCard g={g} onReplay={replay} />;
+
   return (
     <div className="space-y-4 text-center">
       <SessionBar q={qNum} />
@@ -478,32 +572,59 @@ function PrevAyahEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   if (!corpus) return <CorpusGate failed={failed} retry={retry} />;
   return <PrevAyahPlay corpus={corpus} def={def} minSurah={minSurah} />;
 }
+
 function PrevAyahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: GameDef, minSurah: number }) {
   const pool = poolFor(def, minSurah).map(s => s.number);
   const eligible = corpus.filter(c => c.ayahs.length >= 3 && pool.includes(c.app));
   const orderRef = useRef(shuffle(eligible));
-  const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(eligible); return orderRef.current.pop() || eligible[0]; };
+  const usedAyahsRef = useRef<Set<string>>(new Set());
+
+  const getNext = () => { 
+    if (!orderRef.current.length) orderRef.current = shuffle(eligible); 
+    return orderRef.current.pop() || eligible[0]; 
+  };
+
   const make = (prevApp?: number) => {
     let s = getNext();
     if (s.app === prevApp && eligible.length > 1) s = getNext();
-    const i = Math.floor(Math.random() * (s.ayahs.length - 1)) + 1;
-    const answer = s.ayahs[i - 1];
-    const distract = shuffle(s.ayahs.filter(a => a.n !== answer.n && a.n !== s.ayahs[i].n)).slice(0, 2);
+    let promptAyah = s.ayahs[1];
+    let answerAyah = s.ayahs[0];
+
+    for (let t = 0; t < 20; t++) {
+      const i = Math.floor(Math.random() * (s.ayahs.length - 1)) + 1;
+      promptAyah = s.ayahs[i];
+      answerAyah = s.ayahs[i - 1];
+      if (!usedAyahsRef.current.has(promptAyah.text)) {
+        usedAyahsRef.current.add(promptAyah.text);
+        break;
+      }
+      s = getNext();
+    }
+
+    const distract = shuffle(s.ayahs.filter(a => a.n !== answerAyah.n && a.n !== promptAyah.n)).slice(0, 2);
     const others = shuffle(eligible.filter(c => c.app !== s.app));
     for (const o of others) {
       if (distract.length >= 2) break;
       const a = o.ayahs[Math.floor(Math.random() * o.ayahs.length)];
-      if (a.text !== answer.text && !distract.some(d => d.text === a.text)) distract.push(a);
+      if (a.text !== answerAyah.text && !distract.some(d => d.text === a.text)) distract.push(a);
     }
-    return { s, prompt: s.ayahs[i], opts: shuffle([answer, ...distract]), answer };
+    return { s, prompt: promptAyah, opts: shuffle([answerAyah, ...distract]), answer: answerAyah };
   };
+
   const [q, setQ] = useState(() => make());
   const [qNum, setQNum] = useState(1);
   const [reveal, setReveal] = useState(false);
   const [chosen, setChosen] = useState<string | null>(null);
   const g = useGame();
   const finished = qNum > ROUNDS;
-  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) setQ(make(q.s.app)); };
+
+  const next = (nn: number) => { 
+    setReveal(false); 
+    setChosen(null); 
+    setQNum(nn); 
+    if (nn <= ROUNDS) setQ(make(q.s.app)); 
+  };
+
   const answerTap = (text: string) => {
     if (reveal || finished) return;
     setChosen(text);
@@ -511,8 +632,16 @@ function PrevAyahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: Gam
     setReveal(true);
     window.setTimeout(() => next(qNum + 1), text === q.answer.text ? 700 : 1600);
   };
-  const replay = () => { g.reset(); setQNum(1); setQ(make()); };
+
+  const replay = () => { 
+    usedAyahsRef.current.clear(); 
+    g.reset(); 
+    setQNum(1); 
+    setQ(make()); 
+  };
+
   if (finished) return <ResultCard g={g} onReplay={replay} />;
+
   return (
     <div className="space-y-4 text-center">
       <SessionBar q={qNum} />
@@ -537,26 +666,42 @@ function WhichSurahEngine({ def, minSurah }: { def: GameDef; minSurah: number })
   return <WhichSurahPlay corpus={corpus} def={def} minSurah={minSurah} />;
 }
 function WhichSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: GameDef, minSurah: number }) {
-  // السؤال من السورة المختارة حصراً، والمشتّات سور مجاورة متشابهة
   const pool = poolFor(def, minSurah).map(s => s.number);
   const eligible = corpus.filter(c => pool.includes(c.app));
   const orderRef = useRef(shuffle(eligible));
-  const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(eligible); return orderRef.current.pop() || eligible[0]; };
+  const usedAyahsRef = useRef<Set<string>>(new Set());
+
+  const getNext = () => { 
+    if (!orderRef.current.length) orderRef.current = shuffle(eligible); 
+    return orderRef.current.pop() || eligible[0]; 
+  };
+
   const make = (prevApp?: number) => {
     let s = getNext();
     if (s.app === prevApp && eligible.length > 1) s = getNext();
     const ayahs = s.ayahs.filter(a => !(s.std === 1 && a.n === 1));
-    const a = ayahs[Math.floor(Math.random() * ayahs.length)] || s.ayahs[0];
-    const others = shuffle(eligible.filter(c => c.app !== s.app)).slice(0, 2);
+    const cleanAyahs = ayahs.filter(a => !usedAyahsRef.current.has(a.text));
+    const a = (cleanAyahs.length ? cleanAyahs[Math.floor(Math.random() * cleanAyahs.length)] : ayahs[0]) || s.ayahs[0];
+    usedAyahsRef.current.add(a.text);
+
+    const others = shuffle(eligible.filter(c => c.app !== s.app)).slice(0, 3);
     return { text: a.text, answer: s, opts: shuffle([s, ...others]) };
   };
+
   const [q, setQ] = useState(() => make());
   const [qNum, setQNum] = useState(1);
   const [reveal, setReveal] = useState(false);
   const [chosen, setChosen] = useState<number | null>(null);
   const g = useGame();
   const finished = qNum > ROUNDS;
-  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) setQ(make(q.answer.app)); };
+
+  const next = (nn: number) => { 
+    setReveal(false); 
+    setChosen(null); 
+    setQNum(nn); 
+    if (nn <= ROUNDS) setQ(make(q.answer.app)); 
+  };
+
   const choose = (app: number) => {
     if (reveal || finished) return;
     setChosen(app);
@@ -564,19 +709,27 @@ function WhichSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: G
     setReveal(true);
     window.setTimeout(() => next(qNum + 1), 1100);
   };
-  const replay = () => { g.reset(); setQNum(1); setQ(make()); };
+
+  const replay = () => { 
+    usedAyahsRef.current.clear(); 
+    g.reset(); 
+    setQNum(1); 
+    setQ(make()); 
+  };
+
   if (finished) return <ResultCard g={g} onReplay={replay} />;
+
   return (
-    <div className="space-y-4 text-center">
+    <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
-      <p className="text-muted-foreground text-sm">من أيّ سورة هذه الآية؟</p>
-      <div className="p-4 rounded-2xl bg-accent/10 border border-accent/40 font-amiri text-xl leading-loose text-foreground">{q.text}</div>
-      <div className="grid gap-2">
+      <p className="text-muted-foreground text-sm sm:text-base font-bold">من أيّ سورة هذه الآية الكريمة؟</p>
+      <div className="p-4 rounded-2xl bg-accent/10 border border-accent/40 font-amiri text-lg sm:text-2xl leading-loose text-foreground">{q.text}</div>
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {q.opts.map(s => {
           const cls = reveal && s.app === q.answer.app ? "bg-success/20 border-success/60 text-success"
             : reveal && s.app === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
             : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
-          return <button key={s.app} onClick={() => choose(s.app)} className={`p-4 rounded-xl border font-bold text-lg active:scale-95 transition-colors ${cls}`}>{s.name}</button>;
+          return <button key={s.app} onClick={() => choose(s.app)} className={`p-3 sm:p-5 rounded-xl border font-bold text-base sm:text-lg active:scale-95 transition-colors min-h-[55px] sm:min-h-[70px] ${cls}`}>{s.name}</button>;
         })}
       </div>
       <GameHud g={g} />
@@ -591,15 +744,21 @@ function SurahAudioEngine({ def, minSurah }: { def: GameDef; minSurah: number })
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
   const [round, setRound] = useState(1);
   const g = useGame();
+  const deckRef = useRef<typeof SURAHS>([]);
+
   const makeQuestion = () => {
     const available = poolFor(def, minSurah).filter(s => hasCloudAudio(s.number) || s.number === 1);
-    const correct0 = available[Math.floor(Math.random() * available.length)] || poolFor(def, minSurah)[0];
+    if (deckRef.current.length === 0) {
+      deckRef.current = shuffle([...available]);
+    }
+    const correct0 = deckRef.current.pop() || available[0];
     const optionPool = neighborPool(def, correct0.number, 4).filter(s => hasCloudAudio(s.number) || s.number === 1);
     const others = shuffle(optionPool.filter(s => s.number !== correct0.number)).slice(0, 3);
     return { surah: correct0, options: shuffle([correct0, ...others].map((s) => ({ number: s.number, name: s.name }))) };
   };
 
   useEffect(() => {
+    deckRef.current = [];
     setQuestion(makeQuestion());
     setSelected(null);
     setFeedback(null);
@@ -641,27 +800,35 @@ function SurahAudioEngine({ def, minSurah }: { def: GameDef; minSurah: number })
   if (!question) return <div className="text-center py-8 text-sm text-muted-foreground">جارٍ تحضير اللعبة...</div>;
   const finished = round > ROUNDS;
   if (finished) return <ResultCard g={g} onReplay={() => {
-    g.reset(); setQuestion(makeQuestion()); setSelected(null); setFeedback(null); setRound(1);
+    deckRef.current = [];
+    g.reset(); 
+    setQuestion(makeQuestion()); 
+    setSelected(null); 
+    setFeedback(null); 
+    setRound(1);
   }} />;
 
   return (
     <div className="space-y-4 text-center">
       <SessionBar q={round} />
-      <p className="text-foreground text-lg font-bold">اسمع السورة واختر اسمها</p>
-      <button onClick={playAudio} className="btn-emerald mx-auto px-5 py-3 rounded-2xl font-bold flex items-center gap-2 active:scale-95">
-        <Play className="w-4 h-4" /> استمع الآن
-      </button>
-      <div className="grid gap-2">
-        {question.options.map((opt) => {
-          const isCorrect = feedback && opt.number === question.surah.number;
-          const isWrong = feedback && opt.number === selected && selected !== question.surah.number;
-          const cls = isCorrect ? "bg-success/20 border-success/60 text-success"
-            : isWrong ? "bg-destructive/20 border-destructive/60 text-destructive"
+      <p className="text-foreground text-lg font-bold">اسمع السورة الكريمة واختر اسمها</p>
+      <div className="py-2">
+        <button
+          onClick={playAudio}
+          className="mx-auto w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-accent to-amber-500 text-accent-foreground flex items-center justify-center shadow-xl active:scale-95 transition-transform hover:brightness-110"
+        >
+          <Headphones className="w-10 h-10 sm:w-12 sm:h-12 animate-pulse" />
+        </button>
+        <span className="block mt-2 text-xs font-bold text-muted-foreground">اضغط للاستماع 🎧</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        {question.options.map(o => {
+          const cls = feedback && o.number === question.surah.number ? "bg-success/20 border-success/60 text-success"
+            : feedback && o.number === selected ? "bg-destructive/20 border-destructive/60 text-destructive"
             : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
           return (
-            <button key={opt.number} onClick={() => choose(opt.number)} disabled={!!feedback}
-              className={`p-4 rounded-xl border font-bold text-lg active:scale-95 transition-colors ${cls}`}>
-              {opt.name}
+            <button key={o.number} onClick={() => choose(o.number)} className={`p-3 sm:p-5 rounded-xl border font-bold text-base sm:text-lg active:scale-95 transition-colors min-h-[55px] sm:min-h-[70px] ${cls}`}>
+              {o.name}
             </button>
           );
         })}
@@ -680,44 +847,78 @@ function MissingWordPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: 
   const pool = poolFor(def, minSurah).map(s => s.number);
   const eligible = corpus.filter(c => pool.includes(c.app) && c.ayahs.some(a => a.text.split(" ").length >= 4));
   const orderRef = useRef(shuffle(eligible));
-  const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(eligible); return orderRef.current.pop() || eligible[0]; };
+  const usedAyahsRef = useRef<Set<string>>(new Set());
+
+  const getNext = () => { 
+    if (!orderRef.current.length) orderRef.current = shuffle(eligible); 
+    return orderRef.current.pop() || eligible[0]; 
+  };
+
   const make = () => {
-    const s = getNext();
-    const ayahs = s.ayahs.filter(a => a.text.split(" ").length >= 4);
-    const a = ayahs[Math.floor(Math.random() * ayahs.length)];
-    const words = a.text.split(" ");
-    
+    let s = getNext();
+    let a = s.ayahs[0];
+    let words = a.text.split(" ");
     let hiddenIdx = 0;
     let answer = "";
-    for (let i = 0; i < 5; i++) {
-      hiddenIdx = Math.floor(Math.random() * words.length);
-      answer = words[hiddenIdx];
-      if (answer.length > 3) break;
+
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const ayahs = s.ayahs.filter(x => x.text.split(" ").length >= 4);
+      if (ayahs.length) {
+        a = ayahs[Math.floor(Math.random() * ayahs.length)];
+        const key = `${s.app}-${a.n}`;
+        if (!usedAyahsRef.current.has(key)) {
+          usedAyahsRef.current.add(key);
+          words = a.text.split(" ");
+          for (let i = 0; i < 5; i++) {
+            hiddenIdx = Math.floor(Math.random() * (words.length - 1)) + 1;
+            answer = words[hiddenIdx];
+            if (answer.length >= 3) break;
+          }
+          break;
+        }
+      }
+      s = getNext();
+    }
+
+    if (!answer) {
+      hiddenIdx = Math.min(1, words.length - 1);
+      answer = words[hiddenIdx] || "العظيم";
     }
 
     const normalizeWord = (word: string) => word.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "").replace(/[^\u0621-\u064A]/g, "");
     const answerShape = normalizeWord(answer);
-    const similarWords = (words: string[]) => shuffle(Array.from(new Set(words.filter(word => {
+    const similarWords = (wordList: string[]) => shuffle(Array.from(new Set(wordList.filter(word => {
       const normalized = normalizeWord(word);
-      return normalized !== answerShape && normalized.length >= 3 &&
-        Math.abs(normalized.length - answerShape.length) <= 2 &&
-        (normalized[0] === answerShape[0] || normalized.slice(0, 2) === answerShape.slice(0, 2));
+      return normalized !== answerShape && normalized.length >= 2;
     }))));
+
     const allWords = s.ayahs.flatMap(ay => ay.text.split(" "));
-    const distractors = similarWords(allWords).slice(0, 2);
-    if (distractors.length < 2) {
+    const distractors = similarWords(allWords).slice(0, 3);
+    if (distractors.length < 3) {
       const extra = corpus.filter(c => pool.includes(c.app)).flatMap(c => c.ayahs.flatMap(ay => ay.text.split(" ")));
-      distractors.push(...similarWords(extra).slice(0, 2 - distractors.length));
+      distractors.push(...similarWords(extra).slice(0, 3 - distractors.length));
     }
-    return { s, words, hiddenIdx, answer, opts: shuffle([answer, ...distractors]) };
+    while (distractors.length < 3) {
+      distractors.push(["الهدى", "التقوى", "الحق", "الصبر"][distractors.length]);
+    }
+
+    return { s, words, hiddenIdx, answer, opts: shuffle([answer, ...distractors.slice(0, 3)]) };
   };
+
   const [q, setQ] = useState(() => make());
   const [qNum, setQNum] = useState(1);
   const [reveal, setReveal] = useState(false);
   const [chosen, setChosen] = useState<string | null>(null);
   const g = useGame();
   const finished = qNum > ROUNDS;
-  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) setQ(make()); };
+
+  const next = (nn: number) => { 
+    setReveal(false); 
+    setChosen(null); 
+    setQNum(nn); 
+    if (nn <= ROUNDS) setQ(make()); 
+  };
+
   const choose = (word: string) => {
     if (reveal || finished) return;
     setChosen(word);
@@ -725,10 +926,18 @@ function MissingWordPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: 
     setReveal(true);
     window.setTimeout(() => next(qNum + 1), 1600);
   };
-  const replay = () => { g.reset(); setQNum(1); setQ(make()); };
+
+  const replay = () => { 
+    usedAyahsRef.current.clear(); 
+    g.reset(); 
+    setQNum(1); 
+    setQ(make()); 
+  };
+
   if (finished) return <ResultCard g={g} onReplay={replay} />;
+
   return (
-    <div className="space-y-4 text-center">
+    <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
       <p className="text-muted-foreground text-base sm:text-lg font-medium">أكمل الكلمة الناقصة في سورة <b className="text-accent">{q.s.name}</b></p>
       <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-accent/10 border border-accent/40 font-amiri text-xl sm:text-2xl leading-loose text-foreground flex flex-wrap justify-center gap-x-2 sm:gap-x-3 gap-y-2 sm:gap-y-3 game-content" dir="rtl">
@@ -738,12 +947,12 @@ function MissingWordPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: 
           </span>
         ))}
       </div>
-      <div className="grid gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {q.opts.map((opt, i) => {
           const cls = reveal && opt === q.answer ? "bg-success/20 border-success/60 text-success"
             : reveal && opt === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
             : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
-          return <button key={i} onClick={() => choose(opt)} className={`p-3 sm:p-4 rounded-xl border text-center font-amiri font-bold text-lg sm:text-xl active:scale-[0.98] transition-colors game-option ${cls}`}>{opt}</button>;
+          return <button key={i} onClick={() => choose(opt)} className={`p-3 sm:p-5 rounded-xl border text-center font-amiri font-bold text-lg sm:text-xl active:scale-95 transition-colors game-option min-h-[55px] sm:min-h-[70px] ${cls}`}>{opt}</button>;
         })}
       </div>
       <GameHud g={g} />
@@ -762,13 +971,31 @@ function AyahSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
   const pool = poolFor(def, minSurah).map(s => s.number);
   const eligible = corpus.filter(c => c.ayahs.length >= 2 && pool.includes(c.app));
   const orderRef = useRef(shuffle(eligible));
-  const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(eligible); return orderRef.current.pop() || eligible[0]; };
+  const usedAyahsRef = useRef<Set<string>>(new Set());
+
+  const getNext = () => { 
+    if (!orderRef.current.length) orderRef.current = shuffle(eligible); 
+    return orderRef.current.pop() || eligible[0]; 
+  };
+
   const make = () => {
-    const s = getNext();
-    const ayah = s.ayahs[Math.floor(Math.random() * s.ayahs.length)];
+    let s = getNext();
+    let ayah = s.ayahs[0];
+
+    for (let t = 0; t < 20; t++) {
+      const cleanAyahs = s.ayahs.filter(a => !usedAyahsRef.current.has(a.text));
+      if (cleanAyahs.length) {
+        ayah = cleanAyahs[Math.floor(Math.random() * cleanAyahs.length)];
+        usedAyahsRef.current.add(ayah.text);
+        break;
+      }
+      s = getNext();
+    }
+
     const wrong = shuffle(eligible.filter(c => c.app !== s.app)).slice(0, 3);
     return { s, ayah, opts: shuffle([s, ...wrong]) };
   };
+
   const [q, setQ] = useState(make);
   const [round, setRound] = useState(0);
   const [qNum, setQNum] = useState(1);
@@ -776,8 +1003,23 @@ function AyahSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
   const [chosen, setChosen] = useState<number | null>(null);
   const g = useGame();
   const finished = qNum > ROUNDS;
-  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) { setQ(make()); setRound(r => r + 1); } };
-  const left = useRoundTimer(round, 12, () => { g.miss(); setReveal(true); window.setTimeout(() => next(qNum + 1), 1300); }, !reveal && !finished);
+
+  const next = (nn: number) => { 
+    setReveal(false); 
+    setChosen(null); 
+    setQNum(nn); 
+    if (nn <= ROUNDS) { 
+      setQ(make()); 
+      setRound(r => r + 1); 
+    } 
+  };
+
+  const left = useRoundTimer(round, 12, () => { 
+    g.miss(); 
+    setReveal(true); 
+    window.setTimeout(() => next(qNum + 1), 1300); 
+  }, !reveal && !finished);
+
   const choose = (n: number) => {
     if (reveal || finished) return;
     setChosen(n);
@@ -785,20 +1027,29 @@ function AyahSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
     setReveal(true);
     window.setTimeout(() => next(qNum + 1), 1200);
   };
-  const replay = () => { g.reset(); setQNum(1); setQ(make()); setRound(r => r + 1); };
+
+  const replay = () => { 
+    usedAyahsRef.current.clear(); 
+    g.reset(); 
+    setQNum(1); 
+    setQ(make()); 
+    setRound(r => r + 1); 
+  };
+
   if (finished) return <ResultCard g={g} onReplay={replay} />;
+
   return (
-    <div className="space-y-2 sm:space-y-4 text-center">
+    <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
-      <p className="text-muted-foreground text-xs sm:text-sm">من أي سورة هذه الآية الكريمة؟</p>
+      <p className="text-muted-foreground text-sm sm:text-base font-bold">من أي سورة هذه الآية الكريمة؟</p>
       <TimerBar left={left} seconds={12} />
-      <div className="p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-accent/10 border border-accent/40 font-amiri text-base sm:text-xl leading-loose text-foreground game-content">{q.ayah.text}</div>
-      <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+      <div className="p-3 sm:p-5 rounded-2xl bg-accent/10 border border-accent/40 font-amiri text-lg sm:text-2xl leading-loose text-foreground game-content">{q.ayah.text}</div>
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {q.opts.map(o => {
           const cls = reveal && o.app === q.s.app ? "bg-success/20 border-success/60 text-success"
             : reveal && o.app === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
             : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
-          return <button key={o.app} onClick={() => choose(o.app)} className={`p-2 sm:p-4 rounded-lg sm:rounded-xl border font-bold active:scale-95 transition-colors text-sm sm:text-base game-option ${cls}`}>{o.name}</button>;
+          return <button key={o.app} onClick={() => choose(o.app)} className={`p-3 sm:p-5 rounded-xl border font-bold text-base sm:text-lg active:scale-95 transition-colors min-h-[55px] sm:min-h-[70px] ${cls}`}>{o.name}</button>;
         })}
       </div>
       <GameHud g={g} />
@@ -813,15 +1064,34 @@ function AyahOrderEngine({ def, minSurah }: { def: GameDef; minSurah: number }) 
 }
 function AyahOrderPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: GameDef; minSurah: number }) {
   const pool = poolFor(def, minSurah).map(s => s.number);
-  const eligible = corpus.filter(c => c.ayahs.length >= 5 && pool.includes(c.app));
+  const eligible = corpus.filter(c => c.ayahs.length >= 4 && pool.includes(c.app));
   const orderRef = useRef(shuffle(eligible));
-  const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(eligible); return orderRef.current.pop() || eligible[0]; };
+  const usedKeysRef = useRef<Set<string>>(new Set());
+
+  const getNext = () => { 
+    if (!orderRef.current.length) orderRef.current = shuffle(eligible); 
+    return orderRef.current.pop() || eligible[0]; 
+  };
+
   const make = () => {
-    const s = getNext();
-    const i = Math.floor(Math.random() * (s.ayahs.length - 3));
-    const seq = s.ayahs.slice(i, i + 3);
+    let s = getNext();
+    let seq: typeof s.ayahs = [];
+
+    for (let t = 0; t < 20; t++) {
+      const maxStart = Math.max(0, s.ayahs.length - 3);
+      const i = Math.floor(Math.random() * (maxStart + 1));
+      seq = s.ayahs.slice(i, i + 3);
+      const key = `${s.app}-${seq.map(a => a.n).join("-")}`;
+      if (!usedKeysRef.current.has(key)) {
+        usedKeysRef.current.add(key);
+        break;
+      }
+      s = getNext();
+    }
+
     return { s, opts: shuffle(seq.map((a, k) => ({ ...a, k }))) };
   };
+
   const [q, setQ] = useState(make);
   const [round, setRound] = useState(0);
   const [qNum, setQNum] = useState(1);
@@ -829,16 +1099,49 @@ function AyahOrderPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
   const [reveal, setReveal] = useState(false);
   const g = useGame();
   const finished = qNum > ROUNDS;
-  const next = (nn: number) => { setPicked([]); setReveal(false); setQNum(nn); if (nn <= ROUNDS) { setQ(make()); setRound(r => r + 1); } };
-  const left = useRoundTimer(round, 15, () => { g.miss(); setReveal(true); window.setTimeout(() => next(qNum + 1), 1400); }, !reveal && !finished);
+
+  const next = (nn: number) => { 
+    setPicked([]); 
+    setReveal(false); 
+    setQNum(nn); 
+    if (nn <= ROUNDS) { 
+      setQ(make()); 
+      setRound(r => r + 1); 
+    } 
+  };
+
+  const left = useRoundTimer(round, 15, () => { 
+    g.miss(); 
+    setReveal(true); 
+    window.setTimeout(() => next(qNum + 1), 1400); 
+  }, !reveal && !finished);
+
   const tap = (k: number) => {
     if (reveal || finished || picked.includes(k)) return;
     if (k === picked.length) {
-      const np = [...picked, k]; setPicked(np);
-      if (np.length === 3) { g.correct(); setReveal(true); window.setTimeout(() => next(qNum + 1), 900); }
-    } else { g.miss(); setReveal(true); window.setTimeout(() => { setReveal(false); setPicked([]); }, 1000); }
+      const np = [...picked, k]; 
+      setPicked(np);
+      if (np.length === 3) { 
+        g.correct(); 
+        setReveal(true); 
+        window.setTimeout(() => next(qNum + 1), 900); 
+      }
+    } else { 
+      g.miss(); 
+      setReveal(true); 
+      window.setTimeout(() => { setReveal(false); setPicked([]); }, 1000); 
+    }
   };
-  const replay = () => { g.reset(); setQNum(1); setPicked([]); setQ(make()); setRound(r => r + 1); };
+
+  const replay = () => { 
+    usedKeysRef.current.clear(); 
+    g.reset(); 
+    setQNum(1); 
+    setPicked([]); 
+    setQ(make()); 
+    setRound(r => r + 1); 
+  };
+
   if (finished) return <ResultCard g={g} onReplay={replay} />;
   return (
     <div className="space-y-4 text-center">
@@ -873,31 +1176,50 @@ function AyahLongerPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: G
   const pool = poolFor(def, minSurah).map(s => s.number);
   const eligible = corpus.filter(c => c.ayahs.length >= 2 && pool.includes(c.app));
   const orderRef = useRef(shuffle(eligible));
-  const getNext = () => { if (!orderRef.current.length) orderRef.current = shuffle(eligible); return orderRef.current.pop() || eligible[0]; };
+  const usedPairsRef = useRef<Set<string>>(new Set());
+
+  const getNext = () => { 
+    if (!orderRef.current.length) orderRef.current = shuffle(eligible); 
+    return orderRef.current.pop() || eligible[0]; 
+  };
+
   const wc = (t: string) => t.split(" ").length;
+
   const make = () => {
-    const a = getNext();
+    let a = getNext();
     let b = getNext();
-    if (a.app === b.app && eligible.length > 1) b = getNext();
-    let ao = a.ayahs[Math.floor(Math.random() * a.ayahs.length)];
-    let bo = b.ayahs[Math.floor(Math.random() * b.ayahs.length)];
-    // سؤال صعب: نفضّل آيتين بعدد كلمات متقارب (فرق 1-2) فلا تُخمَّن بالنظرة
-    const closeBo = b.ayahs
-      .filter(x => x.text !== ao.text && Math.abs(wc(x.text) - wc(ao.text)) <= 2)
-      .sort((x, y) => Math.abs(wc(x.text) - wc(ao.text)) - Math.abs(wc(y.text) - wc(ao.text)));
-    if (closeBo.length) {
-      bo = closeBo[Math.floor(Math.random() * Math.min(3, closeBo.length))];
-    } else {
-      let tries = 0;
-      while (wc(ao.text) === wc(bo.text) && tries++ < 10) bo = b.ayahs[Math.floor(Math.random() * b.ayahs.length)];
+    let ao = a.ayahs[0];
+    let bo = b.ayahs[0];
+
+    for (let t = 0; t < 25; t++) {
+      a = getNext();
+      b = getNext();
+      if (a.app === b.app && eligible.length > 1) b = getNext();
+      ao = a.ayahs[Math.floor(Math.random() * a.ayahs.length)];
+      bo = b.ayahs[Math.floor(Math.random() * b.ayahs.length)];
+
+      const closeBo = b.ayahs
+        .filter(x => x.text !== ao.text && Math.abs(wc(x.text) - wc(ao.text)) <= 2)
+        .sort((x, y) => Math.abs(wc(x.text) - wc(ao.text)) - Math.abs(wc(y.text) - wc(ao.text)));
+      if (closeBo.length) {
+        bo = closeBo[Math.floor(Math.random() * Math.min(3, closeBo.length))];
+      }
+
+      if (wc(ao.text) === wc(bo.text)) {
+        const alt = a.ayahs.filter(x => x.text !== ao.text && Math.abs(wc(x.text) - wc(bo.text)) === 1);
+        if (alt.length) ao = alt[Math.floor(Math.random() * alt.length)];
+      }
+
+      const key = [ao.text, bo.text].sort().join("###");
+      if (!usedPairsRef.current.has(key)) {
+        usedPairsRef.current.add(key);
+        break;
+      }
     }
-    // إن كانت متساوية تماماً بعد المحاولة، اختر من a نفسها بديلاً قريباً
-    if (wc(ao.text) === wc(bo.text)) {
-      const alt = a.ayahs.filter(x => x.text !== ao.text && Math.abs(wc(x.text) - wc(bo.text)) === 1);
-      if (alt.length) ao = alt[Math.floor(Math.random() * alt.length)];
-    }
+
     return { ao, bo, an: a.name, bn: b.name, firstLonger: wc(ao.text) > wc(bo.text) };
   };
+
   const [q, setQ] = useState(make);
   const [round, setRound] = useState(0);
   const [qNum, setQNum] = useState(1);
@@ -905,8 +1227,23 @@ function AyahLongerPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: G
   const [chosen, setChosen] = useState<"a" | "b" | null>(null);
   const g = useGame();
   const finished = qNum > ROUNDS;
-  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) { setQ(make()); setRound(r => r + 1); } };
-  const left = useRoundTimer(round, 12, () => { g.miss(); setReveal(true); window.setTimeout(() => next(qNum + 1), 1300); }, !reveal && !finished);
+
+  const next = (nn: number) => { 
+    setReveal(false); 
+    setChosen(null); 
+    setQNum(nn); 
+    if (nn <= ROUNDS) { 
+      setQ(make()); 
+      setRound(r => r + 1); 
+    } 
+  };
+
+  const left = useRoundTimer(round, 12, () => { 
+    g.miss(); 
+    setReveal(true); 
+    window.setTimeout(() => next(qNum + 1), 1300); 
+  }, !reveal && !finished);
+
   const choose = (w: "a" | "b") => {
     if (reveal || finished) return;
     setChosen(w);
@@ -914,7 +1251,15 @@ function AyahLongerPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: G
     setReveal(true);
     window.setTimeout(() => next(qNum + 1), 1300);
   };
-  const replay = () => { g.reset(); setQNum(1); setQ(make()); setRound(r => r + 1); };
+
+  const replay = () => { 
+    usedPairsRef.current.clear(); 
+    g.reset(); 
+    setQNum(1); 
+    setQ(make()); 
+    setRound(r => r + 1); 
+  };
+
   if (finished) return <ResultCard g={g} onReplay={replay} />;
   const card = (w: "a" | "b", text: string, name: string, count: number) => {
     const isRight = (w === "a") === q.firstLonger;
@@ -944,8 +1289,37 @@ function AyahLongerPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: G
 }
 
 function SurahOrderEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
-  // السورة المختارة + جيرانها المتتالين (متشابهات)
-  const make = () => { const four = shuffle(neighborPool(def, minSurah, 4)); return { four, sol: [...four].sort((x, y) => x.number - y.number) }; };
+  const pool = poolFor(def, minSurah);
+  const surahList = pool.length >= 8 ? pool : SURAHS;
+  const usedCombosRef = useRef<Set<string>>(new Set());
+
+  // توليد 4 سور جديدة تماماً لكل سؤال لمنع أي تكرار عبر الـ 20 سؤال
+  const make = () => {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      let four: typeof SURAHS = [];
+      // التنويع: تارة 4 سور متجاورة وتارة 4 سور متفرقة لزيادة التحدي
+      if (attempt % 2 === 0 && surahList.length >= 6) {
+        const maxStart = Math.max(0, surahList.length - 4);
+        const start = Math.floor(Math.random() * (maxStart + 1));
+        four = surahList.slice(start, start + 4);
+      } else {
+        four = shuffle([...surahList]).slice(0, 4);
+      }
+
+      if (four.length === 4) {
+        const key = four.map(s => s.number).sort((a, b) => a - b).join("-");
+        if (!usedCombosRef.current.has(key)) {
+          usedCombosRef.current.add(key);
+          const shuffledFour = shuffle(four);
+          return { four: shuffledFour, sol: [...four].sort((x, y) => x.number - y.number) };
+        }
+      }
+    }
+    // احتياط
+    const four = shuffle([...surahList]).slice(0, 4);
+    return { four, sol: [...four].sort((x, y) => x.number - y.number) };
+  };
+
   const [q, setQ] = useState(make);
   const [round, setRound] = useState(0);
   const [qNum, setQNum] = useState(1);
@@ -953,18 +1327,52 @@ function SurahOrderEngine({ def, minSurah }: { def: GameDef; minSurah: number })
   const [reveal, setReveal] = useState(false);
   const g = useGame();
   const finished = qNum > ROUNDS;
-  const next = (nn: number) => { setPicked([]); setReveal(false); setQNum(nn); if (nn <= ROUNDS) { setQ(make()); setRound(r => r + 1); } };
-  const left = useRoundTimer(round, 15, () => { g.miss(); setReveal(true); window.setTimeout(() => next(qNum + 1), 1400); }, !reveal && !finished);
+
+  const next = (nn: number) => { 
+    setPicked([]); 
+    setReveal(false); 
+    setQNum(nn); 
+    if (nn <= ROUNDS) { 
+      setQ(make()); 
+      setRound(r => r + 1); 
+    } 
+  };
+
+  const left = useRoundTimer(round, 15, () => { 
+    g.miss(); 
+    setReveal(true); 
+    window.setTimeout(() => next(qNum + 1), 1400); 
+  }, !reveal && !finished);
+
   const tap = (n: number) => {
     if (reveal || finished || picked.includes(n)) return;
     const expected = q.sol[picked.length].number;
     if (n === expected) {
-      const np = [...picked, n]; setPicked(np);
-      if (np.length === 4) { g.correct(); setReveal(true); window.setTimeout(() => next(qNum + 1), 900); }
-    } else { g.miss(); setReveal(true); window.setTimeout(() => { setReveal(false); setPicked([]); }, 1000); }
+      const np = [...picked, n]; 
+      setPicked(np);
+      if (np.length === 4) { 
+        g.correct(); 
+        setReveal(true); 
+        window.setTimeout(() => next(qNum + 1), 900); 
+      }
+    } else { 
+      g.miss(); 
+      setReveal(true); 
+      window.setTimeout(() => { setReveal(false); setPicked([]); }, 1000); 
+    }
   };
-  const replay = () => { g.reset(); setQNum(1); setPicked([]); setQ(make()); setRound(r => r + 1); };
+
+  const replay = () => { 
+    usedCombosRef.current.clear(); 
+    g.reset(); 
+    setQNum(1); 
+    setPicked([]); 
+    setQ(make()); 
+    setRound(r => r + 1); 
+  };
+
   if (finished) return <ResultCard g={g} onReplay={replay} />;
+
   return (
     <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
@@ -990,18 +1398,23 @@ function SurahOrderEngine({ def, minSurah }: { def: GameDef; minSurah: number })
 }
 
 function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
+  const pool = poolFor(def, minSurah);
+  const deckRef = useRef<typeof pool>([]);
+
   const make = () => {
-    const pool = poolFor(def, minSurah);
-    const s = pool[Math.floor(Math.random() * pool.length)] || pool[0];
+    if (deckRef.current.length === 0) {
+      deckRef.current = shuffle([...pool]);
+    }
+    const s = deckRef.current.pop() || pool[0];
     const opts = new Set<number>([s.number]);
-    // خيارات أقرب للإجابة الصحيحة (فروق أصغر = سؤال أصعب)
-    for (const d of shuffle([-3, -2, -1, 1, 2, 3])) {
+    for (const d of shuffle([-3, -2, -1, 1, 2, 3, -4, 4])) {
       const v = s.number + d;
       if (v >= 1 && v <= 114) opts.add(v);
       if (opts.size === 4) break;
     }
     return { s, opts: shuffle([...opts]) };
   };
+
   const [q, setQ] = useState(make);
   const [round, setRound] = useState(0);
   const [qNum, setQNum] = useState(1);
@@ -1009,8 +1422,23 @@ function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const [chosen, setChosen] = useState<number | null>(null);
   const g = useGame();
   const finished = qNum > ROUNDS;
-  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) { setQ(make()); setRound(r => r + 1); } };
-  const left = useRoundTimer(round, 10, () => { g.miss(); setReveal(true); window.setTimeout(() => next(qNum + 1), 1300); }, !reveal && !finished);
+
+  const next = (nn: number) => { 
+    setReveal(false); 
+    setChosen(null); 
+    setQNum(nn); 
+    if (nn <= ROUNDS) { 
+      setQ(make()); 
+      setRound(r => r + 1); 
+    } 
+  };
+
+  const left = useRoundTimer(round, 10, () => { 
+    g.miss(); 
+    setReveal(true); 
+    window.setTimeout(() => next(qNum + 1), 1300); 
+  }, !reveal && !finished);
+
   const choose = (n: number) => {
     if (reveal || finished) return;
     setChosen(n);
@@ -1018,8 +1446,17 @@ function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
     setReveal(true);
     window.setTimeout(() => next(qNum + 1), 1200);
   };
-  const replay = () => { g.reset(); setQNum(1); setQ(make()); setRound(r => r + 1); };
+
+  const replay = () => { 
+    deckRef.current = shuffle([...pool]); 
+    g.reset(); 
+    setQNum(1); 
+    setQ(make()); 
+    setRound(r => r + 1); 
+  };
+
   if (finished) return <ResultCard g={g} onReplay={replay} />;
+
   return (
     <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
@@ -1039,9 +1476,23 @@ function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
 }
 
 const ENGINES: Record<GameEngine, (p: { def: GameDef; minSurah: number }) => JSX.Element> = {
-  order: ({ def, minSurah }) => <AyahOrderGame def={def} minSurah={minSurah} onBack={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />, memory: MemoryEngine, memory_meaning: ({ def, minSurah }) => <MemoryGame def={def} minSurah={minSurah} onBack={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />, which: WhichEngine, quiz: QuizEngine, count: CountEngine,
-  nextayah: NextAyahEngine, prevayah: PrevAyahEngine, whichsurah: WhichSurahEngine, missingword: ({ def, minSurah }) => <MissingWordGame def={def} minSurah={minSurah} onBack={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />, surahaudio: SurahAudioEngine,
-  ayahsurah: AyahSurahEngine, ayahorder: AyahOrderEngine, ayahlonger: AyahLongerEngine, surahorder: SurahOrderEngine, surahnum: SurahNumEngine,
+  order: AyahOrderEngine, 
+  memory: MemoryEngine, 
+  memory_meaning: MemoryEngine, 
+  which: WhichEngine, 
+  quiz: QuizEngine, 
+  count: CountEngine,
+  nextayah: NextAyahEngine, 
+  prevayah: PrevAyahEngine, 
+  whichsurah: WhichSurahEngine, 
+  missingword: MissingWordEngine, 
+  surahaudio: SurahAudioEngine,
+  ayahsurah: AyahSurahEngine, 
+  ayahorder: AyahOrderEngine, 
+  ayahlonger: AyahLongerEngine, 
+  surahorder: SurahOrderEngine, 
+  surahnum: SurahNumEngine,
+  remote: ({ def }) => <RemoteGameFrame def={def} onExit={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />,
 };
 const ICONS: Record<string, typeof Headphones> = { Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Hash, Grid3x3, Gamepad2, BookOpen, Sparkles, Puzzle, Brain };
 const iconFor = (key: string) => ICONS[key] || Gamepad2;
@@ -1097,6 +1548,20 @@ export default function KidsGames() {
   // مخفيّ للمستخدمين (لكن يدخله المالك للتجربة)
   useEffect(() => { if (kidsRouteBlocked()) navigate("/audio", { replace: true }); }, [navigate]);
 
+  // لا يدخل للألعاب وهو في فترة دراسة القرآن طالما لم يكمل الدقائق المطلوبة
+  useEffect(() => {
+    const goal = typeof profile.goalMinutes === "number" && profile.goalMinutes > 0 ? profile.goalMinutes : 5;
+    const read = progress.minutes || 0;
+    if (read < goal && !progress.unlocked) {
+      toast({ 
+        title: "⏳ وقت مدارسة القرآن الكريم أولاً!", 
+        description: `بقي ${Math.max(0, Math.round((goal - read) * 10) / 10)} دقيقة استماع لفتح الألعاب.`,
+        variant: "destructive"
+      });
+      navigate("/audio", { replace: true });
+    }
+  }, [profile.goalMinutes, progress.minutes, progress.unlocked, navigate]);
+
   useEffect(() => {
     enterKioskMode();
     
@@ -1126,14 +1591,13 @@ export default function KidsGames() {
     };
     window.addEventListener("keydown", handleKeyDown);
 
-    // Enforce Schedule and Play Duration
+          // Enforce Schedule and Play Duration
     let lastPlayTick = Date.now();
     const checkSchedule = (flushExact = false) => {
       const timeCheck = isTimeAllowed();
       if (!timeCheck.allowed) {
-        toast({ title: "انتهى وقت اللعب ⏰", description: timeCheck.reason, variant: "destructive" });
-        if (hasKidsPin()) setKidsLocked(false);
-        navigate("/audio");
+        // حلقة دائمة: تنبيه فقط دون إخراج — الخروج اليدوي برمز ولي الأمر
+        toast({ title: "تنبيه الجدول ⏰", description: timeCheck.reason, variant: "destructive" });
         return;
       }
       
@@ -1144,21 +1608,20 @@ export default function KidsGames() {
            const { justExpired, progress } = addPlayMinutes(mins);
            lastPlayTick = now;
            if (justExpired || progress.playExpired) {
-             toast({ title: "انتهى وقت اللعب ⏰", description: "تم العودة إلى صفحة القرآن.", variant: "destructive" });
-             // خروج مباشر إلى صفحة القرآن بدون طلب كلمة المرور
-             navigate("/audio");
+             // حلقة دائمة: تنبيه فقط دون خروج — يغادر الطفل يدوياً برمز ولي الأمر
+             toast({ title: "انتهى وقت اللعب المحدّد ⏰", description: "يمكن لولي الأمر منحه وقتاً إضافياً من لوحة التحكم.", variant: "destructive" });
              return;
            }
         }
       }
     };
+    // في وضع التنقل المرن أو وضع المالك غير الصارم: لا نفرض قيود الوقت على المالك للتجربة
+    const isParentTrial = !isKidsMode() && !isPureMode() && getAppMode() === "parent";
     // initial check on mount, without adding minutes yet
     const initialCheck = isTimeAllowed();
-    if (!initialCheck.allowed || getProgress().playExpired) {
-        toast({ title: "انتهى وقت اللعب ⏰", description: initialCheck.reason || "تم العودة إلى صفحة القرآن.", variant: "destructive" });
-        // خروج مباشر إلى صفحة القرآن بدون طلب كلمة المرور
-        navigate("/audio");
-        return;
+    if (isParentTrial ? false : (!initialCheck.allowed || getProgress().playExpired)) {
+        // حلقة دائمة: تنبيه عند الدخول فقط دون إخراج — الخروج يدوي برمز ولي الأمر
+        toast({ title: "تنبيه الوقت ⏰", description: initialCheck.reason || "انتهى وقت اللعب المحدّد لليوم.", variant: "destructive" });
     }
     const scheduleInterval = setInterval(() => checkSchedule(false), 30000); // Check every 30s instead of 60s
     
@@ -1186,7 +1649,8 @@ export default function KidsGames() {
   }, []);
 
   const [showBadges, setShowBadges] = useState(false);
-
+  const [showTimeModal, setShowTimeModal] = useState(false);
+  const [showLockGateModal, setShowLockGateModal] = useState(false);
 
   // نظام فتح الألعاب بالنجوم (المال): لعبة واحدة مجانية والبقية تُفتح بالنجوم المكتسبة
   const [unlockDef, setUnlockDef] = useState<GameDef | null>(null);
@@ -1300,28 +1764,21 @@ export default function KidsGames() {
   };
 
   const exitKidsCorner = () => {
-    if (hasKidsPin()) {
-      setPinAction("exit");
-    } else {
-      setKidsLocked(false);
-      toast({ title: "تم الخروج إلى التلاوات" });
-      navigate("/audio");
-    }
+    // الدخول للقرآن والتلاوات متاح دائماً بدون كلمة مرور
+    navigate("/audio");
   };
 
   const lockAndRead = () => {
-    if (hasKidsPin()) {
-      setAppMode("kids");
-      setKidsLocked(true);
-      navigate("/audio");
-    } else {
-      setPinAction("setread");
-    }
+    // الذهاب للاستماع والتلاوات متاح مباشرة
+    navigate("/audio");
   };
 
   const openParent = () => {
-    if (hasKidsPin()) setPinAction("parent");
-    else setPinAction("setparent");
+    if (isKidsMode() && hasKidsPin()) {
+      setPinAction("parent");
+    } else {
+      navigate("/parent");
+    }
   };
 
   const headerBack = () => {
@@ -1333,7 +1790,10 @@ export default function KidsGames() {
   };
 
   const tapGame = (id: string) => {
-    if (!canPlay) { toast({ title: "أكمِل قراءتك أولاً لتُفتح الألعاب", variant: "destructive" }); return; }
+    if (!canPlay) {
+      setShowLockGateModal(true);
+      return;
+    }
     const gg = catalog.find(x => x.id === id);
     if (!gg) return;
     if (!isGameOwned(gg)) { setUnlockDef(gg); return; }   // مقفلة بالنجوم — تظهر نافذة الفتح
@@ -1378,264 +1838,653 @@ export default function KidsGames() {
   };
   markArrived();
 
-  // إنشاء شهادة التقدم كصورة
-  const generateCertificate = () => {
+  // إنشاء شهادة التقدم الفاخرة كصورة إسلامية ملكية فائقة الجودة
+  const generateCertificate = async () => {
     const canvas = document.createElement("canvas");
-    canvas.width = 720;
-    canvas.height = 980;
+    canvas.width = 1080;
+    canvas.height = 1440;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // خلفية خضراء فاتحة أنيقة
-    const bg = ctx.createLinearGradient(0, 0, 720, 980);
-    bg.addColorStop(0, "#8fe650");
-    bg.addColorStop(0.5, "#7bdc3b");
-    bg.addColorStop(1, "#67c51f");
+    // 1. تدرج الخلفية العاجية الفاخرة
+    const bg = ctx.createLinearGradient(0, 0, 1080, 1440);
+    bg.addColorStop(0, "#FAF6EE");
+    bg.addColorStop(0.5, "#F8F2E2");
+    bg.addColorStop(1, "#F3E9D2");
     ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, 720, 980);
+    ctx.fillRect(0, 0, 1080, 1440);
 
-    // شبكة ناعمة في الأعلى
-    ctx.fillStyle = "rgba(255,255,255,0.12)";
-    for (let y = 0; y < 980; y += 38) {
-      ctx.fillRect(0, y, 720, 1);
+    // شبكة زخرفية إسلامية رقيقة في الخلفية
+    ctx.strokeStyle = "rgba(197, 160, 89, 0.08)";
+    ctx.lineWidth = 1.5;
+    for (let x = 40; x < 1080; x += 60) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, 1440);
+      ctx.stroke();
+    }
+    for (let y = 40; y < 1440; y += 60) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(1080, y);
+      ctx.stroke();
     }
 
-    // بطاقة مركزية كبيرة
-    ctx.fillStyle = "#f8f4ed";
+    // 2. إطار ذهبي مزدوج مع زوايا أندلسية
+    ctx.strokeStyle = "#D4AF37";
+    ctx.lineWidth = 8;
+    ctx.strokeRect(36, 36, 1008, 1368);
+
+    ctx.strokeStyle = "#AA771C";
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(48, 48, 984, 1344);
+
+    const drawCorner = (cx: number, cy: number, flipX: number, flipY: number) => {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(flipX, flipY);
+      ctx.strokeStyle = "#D4AF37";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(8, 48);
+      ctx.quadraticCurveTo(8, 8, 48, 8);
+      ctx.stroke();
+      drawCanvasStar(ctx, 28, 28, 9, "#E5C058");
+      ctx.restore();
+    };
+    drawCorner(48, 48, 1, 1);
+    drawCorner(1032, 48, -1, 1);
+    drawCorner(48, 1392, 1, -1);
+    drawCorner(1032, 1392, -1, -1);
+
+    // 3. البسملة الشريفة في القمة
+    ctx.fillStyle = "#8C6514";
+    ctx.font = "bold 26px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+    ctx.textAlign = "center";
+    ctx.fillText("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", 540, 96);
+
+    // 4. شريط العنوان الأخضر والذهبي الملكي
+    const ribbon = ctx.createLinearGradient(200, 118, 880, 188);
+    ribbon.addColorStop(0, "#124325");
+    ribbon.addColorStop(0.5, "#1B6338");
+    ribbon.addColorStop(1, "#124325");
+    ctx.fillStyle = ribbon;
     ctx.beginPath();
-    ctx.roundRect(52, 98, 616, 760, 42);
+    ctx.roundRect(190, 118, 700, 72, 24);
     ctx.fill();
 
-    // إطار ذهبي رقيق
-    ctx.strokeStyle = "#d9ab2f";
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.roundRect(52, 98, 616, 760, 42);
+    ctx.strokeStyle = "#E5C058";
+    ctx.lineWidth = 3;
     ctx.stroke();
 
-    // شريط علوي أخضر لامع
-    ctx.fillStyle = "#4ea932";
+    ctx.fillStyle = "#FFF7D6";
+    ctx.font = "bold 34px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+    ctx.fillText("شَهَادَةُ تَمَيُّزٍ وَإِنْجَازٍ قُرْآنِيّ", 540, 166);
+
+    ctx.fillStyle = "#555555";
+    ctx.font = "bold 21px 'Tahoma', 'Arial'";
+    ctx.fillText("تُمنح هذه الشهادة المباركة تقديراً واعتزازاً بجهود:", 540, 230);
+
+    // 5. صورة شخصية الطفل (Avatar) داخل ميدالية ذهبية شرفية
+    const avatarCenterY = 340;
+    const avatarRadius = 78;
+
+    // هالة ذهبية خارجية
+    const aura = ctx.createRadialGradient(540, avatarCenterY, avatarRadius - 10, 540, avatarCenterY, avatarRadius + 28);
+    aura.addColorStop(0, "rgba(245, 197, 66, 0.45)");
+    aura.addColorStop(1, "rgba(245, 197, 66, 0)");
+    ctx.fillStyle = aura;
     ctx.beginPath();
-    ctx.roundRect(52, 98, 616, 96, 38);
+    ctx.arc(540, avatarCenterY, avatarRadius + 28, 0, Math.PI * 2);
     ctx.fill();
 
-    // نجمة ذهبية مركزية
     ctx.save();
-    ctx.translate(360, 168);
-    ctx.fillStyle = "#f4c542";
     ctx.beginPath();
-    for (let i = 0; i < 10; i++) {
-      const a = -Math.PI / 2 + (i * Math.PI) / 5;
-      const r = i % 2 === 0 ? 42 : 18;
-      const x = Math.cos(a) * r;
-      const y = Math.sin(a) * r;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    ctx.arc(540, avatarCenterY, avatarRadius, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fill();
+
+    try {
+      const avatarSrc = getAvatarSrc(profile.avatar);
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      await new Promise((res) => {
+        img.onload = () => res(true);
+        img.onerror = () => res(false);
+        img.src = encodeURI(avatarSrc);
+        setTimeout(() => res(false), 2000);
+      });
+      if (img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, 540 - avatarRadius, avatarCenterY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
+      } else {
+        drawCanvasStar(ctx, 540, avatarCenterY, 44, "#F4C542");
+      }
+    } catch {
+      drawCanvasStar(ctx, 540, avatarCenterY, 44, "#F4C542");
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = "#D4AF37";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(540, avatarCenterY, avatarRadius + 3, 0, Math.PI * 2);
+    ctx.stroke();
+
+    drawCanvasStar(ctx, 425, avatarCenterY, 13, "#E5C058");
+    drawCanvasStar(ctx, 655, avatarCenterY, 13, "#E5C058");
+
+    // 6. اسم الطالب بخط ذهبي عريض ومظلل
+    const studentName = profile.name ? `القارئ الحافظ: ${profile.name}` : "بطل القرآن الكريم";
+    ctx.fillStyle = "#0E4D2B";
+    ctx.font = "bold 44px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+    ctx.fillText(studentName, 540, 470);
+
+    ctx.fillStyle = "#555555";
+    ctx.font = "19px 'Tahoma', 'Arial'";
+    ctx.fillText("لمواظبته على تلاوة وحفظ كتاب الله الكريم برواية ورش عن نافع", 540, 508);
+
+    // 7. شبكة بطاقات الإحصائيات (2 × 2) بدون أي تداخل
+    const curSurahName = SURAHS.find(s => s.number === profile.currentSurah)?.name || "النبأ";
+    const statCards = [
+      { title: "دقائق التلاوة والمدارسة", value: `${progress.minutes || 0} دقيقة`, color: "#16A34A", icon: "⏱️" },
+      { title: "رصيد النجوم المكتسبة", value: `${formatCoins(getCoins())} نجمة`, color: "#D97706", icon: "⭐" },
+      { title: "أيام المداومة والاستمرار", value: `${streakDays || 1} أيام متتالية`, color: "#EA580C", icon: "🔥" },
+      { title: "السورة الحالية المتقنة", value: `سورة ${curSurahName}`, color: "#2563EB", icon: "📖" },
+    ];
+
+    const cardPositions = [
+      { x: 100, y: 545, w: 425, h: 90 },
+      { x: 555, y: 545, w: 425, h: 90 },
+      { x: 100, y: 650, w: 425, h: 90 },
+      { x: 555, y: 650, w: 425, h: 90 },
+    ];
+
+    statCards.forEach((st, idx) => {
+      const pos = cardPositions[idx];
+      ctx.fillStyle = "#FFFFFF";
+      ctx.beginPath();
+      ctx.roundRect(pos.x, pos.y, pos.w, pos.h, 18);
+      ctx.fill();
+
+      ctx.strokeStyle = "#E8DCBF";
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      ctx.fillStyle = st.color;
+      ctx.beginPath();
+      ctx.arc(pos.x + 45, pos.y + 45, 25, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "22px 'Tahoma', 'Segoe UI Emoji', sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(st.icon, pos.x + 45, pos.y + 53);
+
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#777777";
+      ctx.font = "bold 14px 'Tahoma', 'Arial'";
+      ctx.fillText(st.title, pos.x + pos.w - 18, pos.y + 34);
+
+      ctx.fillStyle = "#222222";
+      ctx.font = "bold 23px 'Tahoma', 'Arial'";
+      ctx.fillText(st.value, pos.x + pos.w - 18, pos.y + 68);
+    });
+
+    // 8. لوحة الحديث الشريف المحفز
+    const hadithY = 765;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+    ctx.beginPath();
+    ctx.roundRect(160, hadithY, 760, 74, 20);
+    ctx.fill();
+    ctx.strokeStyle = "#D4AF37";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    drawCanvasStar(ctx, 190, hadithY + 37, 10, "#E5C058");
+    drawCanvasStar(ctx, 890, hadithY + 37, 10, "#E5C058");
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#8C6514";
+    ctx.font = "bold 25px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+    ctx.fillText("« خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ »", 540, hadithY + 38);
+
+    ctx.fillStyle = "#777777";
+    ctx.font = "14px 'Tahoma', 'Arial'";
+    ctx.fillText("— قال رسول الله ﷺ —", 540, hadithY + 62);
+
+    // 9. البطاقة الرسمية المعتمدة: اسم التطبيق مع صورته + الختم الذهبي + التاريخ (بدون كلمة إصدار)
+    const footCardY = 865;
+    const footCardH = 500;
+    const footGrad = ctx.createLinearGradient(70, footCardY, 1010, footCardY + footCardH);
+    footGrad.addColorStop(0, "#FFFFFF");
+    footGrad.addColorStop(0.5, "#FDFBF7");
+    footGrad.addColorStop(1, "#FAF6EE");
+    ctx.fillStyle = footGrad;
+    ctx.beginPath();
+    ctx.roundRect(70, footCardY, 940, footCardH, 28);
+    ctx.fill();
+
+    ctx.strokeStyle = "#D4AF37";
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    // إطار زخرفي داخلي رقيق
+    ctx.strokeStyle = "rgba(212, 175, 55, 0.35)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(82, footCardY + 12, 916, footCardH - 24, 20);
+    ctx.stroke();
+
+    // رسم صورة / شعار التطبيق (مع القارئ حاج أيوب أمين) داخل ميدالية ذهبية دائرية
+    const appImgCenterY = footCardY + 115;
+    const appImgCenterX = 185;
+    const appImgRadius = 60;
+
+    // هالة ذهبية ناعمة حول صورة التطبيق
+    const appAura = ctx.createRadialGradient(appImgCenterX, appImgCenterY, appImgRadius - 5, appImgCenterX, appImgCenterY, appImgRadius + 18);
+    appAura.addColorStop(0, "rgba(212, 175, 55, 0.4)");
+    appAura.addColorStop(1, "rgba(212, 175, 55, 0)");
+    ctx.fillStyle = appAura;
+    ctx.beginPath();
+    ctx.arc(appImgCenterX, appImgCenterY, appImgRadius + 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // قص دائري ورسم صورة التطبيق
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(appImgCenterX, appImgCenterY, appImgRadius, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fill();
+
+    const appPhoto = (await loadCanvasImage("/my-photo.png")) || (await loadCanvasImage("/pwa-512x512.png"));
+    if (appPhoto && appPhoto.naturalWidth > 0) {
+      ctx.drawImage(appPhoto, appImgCenterX - appImgRadius, appImgCenterY - appImgRadius, appImgRadius * 2, appImgRadius * 2);
+    } else {
+      drawCanvasStar(ctx, appImgCenterX, appImgCenterY, 36, "#D4AF37");
+    }
+    ctx.restore();
+
+    // إطار ذهبي مزدوج لميدالية صورة التطبيق
+    ctx.strokeStyle = "#D4AF37";
+    ctx.lineWidth = 4.5;
+    ctx.beginPath();
+    ctx.arc(appImgCenterX, appImgCenterY, appImgRadius + 2, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // اسم التطبيق والمعلومات المعتمدة بجانب الصورة
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#0E4D2B";
+    ctx.font = "bold 32px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+    ctx.fillText("تَطْبِيقُ الْمُصْحَفِ الْمُرَتَّلِ بِرِوَايَةِ وَرْش", 955, footCardY + 80);
+
+    ctx.fillStyle = "#8C6514";
+    ctx.font = "bold 24px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+    ctx.fillText("الْقَارِئُ الشَّيْخُ: حَاج أَيُّوب أَمِين", 955, footCardY + 122);
+
+    ctx.fillStyle = "#555555";
+    ctx.font = "17px 'Tahoma', 'Arial'";
+    ctx.fillText("ركن أبطال القرآن الكريم وتحدي الحفظ والمدارسة المتقنة للأطفال", 955, footCardY + 160);
+
+    // خط فاصل ذهبي رفيع مزخرف
+    ctx.strokeStyle = "rgba(212, 175, 55, 0.4)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(110, footCardY + 205);
+    ctx.lineTo(970, footCardY + 205);
+    ctx.stroke();
+
+    // ختم التميز والاعتماد الرسمي الملكي في الوسط / اليسار
+    const sealX = 270;
+    const sealY = footCardY + 315;
+    ctx.save();
+    ctx.translate(sealX, sealY);
+
+    // خلفية الختم الذهبي المسنن
+    ctx.fillStyle = "#F59E0B";
+    ctx.beginPath();
+    for (let i = 0; i < 24; i++) {
+      const angle = (i * Math.PI) / 12;
+      const r = i % 2 === 0 ? 58 : 50;
+      const px = Math.cos(angle) * r;
+      const py = Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
     }
     ctx.closePath();
     ctx.fill();
+
+    ctx.fillStyle = "#92400E";
+    ctx.beginPath();
+    ctx.arc(0, 0, 47, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#FDE68A";
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 13px 'Tahoma', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("وسام التميّز", 0, -10);
+    ctx.fillText("حفظ القرآن", 0, 8);
+    ctx.fillText("مُعْتَمَد ✓", 0, 24);
+    drawCanvasStar(ctx, 0, 36, 6, "#FDE68A");
     ctx.restore();
 
-    // نجوم جانبية صغيرة
-    const smallStars = [[150, 120], [560, 120], [150, 720], [560, 720]];
-    for (const [x, y] of smallStars) {
-      drawCanvasStar(ctx, x, y, 12, "#f4c542");
-    }
+    // توقيع المشرف في الجهة اليمنى
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#333333";
+    ctx.font = "bold 19px 'Tahoma', 'Arial'";
+    ctx.fillText("توقيع وإشراف المقرئ:", 955, footCardY + 270);
 
-    // عنوان الشهادة
-    ctx.fillStyle = "#3a3a3a";
-    ctx.font = "bold 46px 'Tahoma', 'Arial'";
-    ctx.textAlign = "center";
-    ctx.fillText("شهادة الإنجاز", 360, 290);
+    ctx.fillStyle = "#0E4D2B";
+    ctx.font = "bold 26px 'Traditional Arabic', 'Amiri', 'Cairo', serif";
+    ctx.fillText("القارئ: أمين حاج أيوب", 955, footCardY + 312);
 
     ctx.fillStyle = "#666666";
-    ctx.font = "22px 'Tahoma', 'Arial'";
-    ctx.fillText("تم منح هذه الشهادة تقديراً لـ", 360, 335);
+    ctx.font = "italic 16px 'Tahoma', sans-serif";
+    ctx.fillText("« غفر الله له ولوالديه ولمن قرأ واستمع »", 955, footCardY + 345);
 
-    const studentName = profile.name || "بطل القرآن";
-    ctx.fillStyle = "rgba(0,0,0,0.12)";
-    ctx.font = "bold 56px 'Tahoma', 'Arial'";
-    ctx.fillText(studentName, 365, 430);
-    ctx.fillStyle = "#5d9f2a";
-    ctx.fillText(studentName, 360, 425);
-
-    ctx.fillStyle = "#666666";
-    ctx.font = "22px 'Tahoma', 'Arial'";
-    ctx.fillText("لمواظبته على تعلم القرآن الكريم", 360, 480);
-
-    const stats = [
-      { label: "الدراسة", value: `${progress.minutes} دقيقة`, color: "#5ccf57" },
-      { label: "النجوم", value: `${getCoins()} نجمة`, color: "#f4c542" },
-      { label: "السلسلة", value: `${streakDays || 1} أيام`, color: "#ff9f43" },
-    ];
-
-    // بطاقات الإحصائيات
-    let cardY = 520;
-    for (const stat of stats) {
-      ctx.fillStyle = "#efefef";
-      ctx.beginPath();
-      ctx.roundRect(110, cardY, 500, 72, 18);
-      ctx.fill();
-
-      ctx.fillStyle = stat.color;
-      ctx.beginPath();
-      ctx.arc(155, cardY + 36, 18, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.textAlign = "right";
-      ctx.fillStyle = "#333333";
-      ctx.font = "bold 24px 'Tahoma', 'Arial'";
-      ctx.fillText(stat.value, 540, cardY + 42);
-
-      ctx.textAlign = "left";
-      ctx.fillStyle = "#858585";
-      ctx.font = "16px 'Tahoma', 'Arial'";
-      ctx.fillText(stat.label, 180, cardY + 26);
-      cardY += 90;
-    }
-
-    // السورة الحالية
-    ctx.textAlign = "center";
-    const curSurahName = `سورة ${SURAHS.find(s => s.number === profile.currentSurah)?.name || "النبأ"}`;
-    ctx.fillStyle = "#3e3e3e";
-    ctx.font = "bold 26px 'Tahoma', 'Arial'";
-    ctx.fillText(curSurahName, 360, 775);
-
-    // توقيع التطبيق
-    ctx.fillStyle = "#3c3c3c";
-    ctx.font = "bold 28px 'Tahoma', 'Arial'";
-    ctx.fillText("Quran-Amine H Ayoub", 360, 825);
-    ctx.fillStyle = "#7a7a7a";
-    ctx.font = "17px 'Tahoma', 'Arial'";
-    ctx.fillText("تطبيق القرآن الكريم للأطفال", 360, 855);
-
+    // خانة التاريخ بدون كلمة "إصدار" إطلاقاً
     const today = new Date();
-    ctx.fillStyle = "#aaa";
-    ctx.font = "17px 'Tahoma', 'Arial'";
-    ctx.fillText(`${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`, 360, 885);
+    const dateBoxW = 440;
+    const dateBoxH = 56;
+    const dateBoxX = 515;
+    const dateBoxY = footCardY + 400;
 
-    // تحميل الصورة الخام
+    ctx.fillStyle = "rgba(245, 197, 66, 0.15)";
+    ctx.beginPath();
+    ctx.roundRect(dateBoxX, dateBoxY, dateBoxW, dateBoxH, 16);
+    ctx.fill();
+
+    ctx.strokeStyle = "#D4AF37";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#8C6514";
+    ctx.font = "bold 20px 'Tahoma', 'Arial'";
+    ctx.fillText(`التاريخ: ${today.getDate()} / ${today.getMonth() + 1} / ${today.getFullYear()} م`, dateBoxX + dateBoxW / 2, dateBoxY + 36);
+
+    // عبارة تشجيعية في أقصى يسار خانة التاريخ
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#888888";
+    ctx.font = "15px 'Tahoma', sans-serif";
+    ctx.fillText("مُبارك هذا الإنجاز القرآني المبارك ووفقك الله لكل خير 🌸", 300, dateBoxY + 36);
+
+    // تحميل الشهادة
     const link = document.createElement("a");
-    link.download = `شهادة-${profile.name || "بطل"}-${today.toISOString().split("T")[0]}.png`;
+    link.download = `شهادة-${profile.name || "بطل-القرآن"}-${today.toISOString().split("T")[0]}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
 
     setCertificateReady(true);
-    toast({ title: "تم إنشاء الشهادة!", description: "تم حفظها في جهازك" });
+    toast({ title: "🎉 تم حفظ الشهادة الفاخرة!", description: "تم حفظ الصورة بجودة فائقة في جهازك" });
   };
 
-  // مشاركة صورة الميلستون (مشاركة + تحميل)
+  // مشاركة صورة الميلستون الفاخرة (مشاركة + تحميل مع رمز QR)
   const shareMilestone = async () => {
     const canvas = document.createElement("canvas");
-    canvas.width = 640;
-    canvas.height = 820;
+    canvas.width = 1080;
+    canvas.height = 1350;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // خلفية بنية متدرجة عصرية
-    const gradient = ctx.createLinearGradient(0, 0, 640, 820);
-    gradient.addColorStop(0, "#4f2213");
-    gradient.addColorStop(0.35, "#7d3e16");
-    gradient.addColorStop(0.7, "#a14b1d");
-    gradient.addColorStop(1, "#8a3a14");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 640, 820);
+    // خلفية كحلية زمردية ملكية مع تدرج ونجوم
+    const bg = ctx.createLinearGradient(0, 0, 1080, 1350);
+    bg.addColorStop(0, "#081E15");
+    bg.addColorStop(0.4, "#0C3122");
+    bg.addColorStop(0.8, "#0F3D2A");
+    bg.addColorStop(1, "#071B13");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 1080, 1350);
 
-    // إطار ذهبي
-    ctx.strokeStyle = "#f5c256";
+    for (let i = 0; i < 45; i++) {
+      const sx = Math.sin(i * 99) * 500 + 540;
+      const sy = Math.cos(i * 77) * 600 + 675;
+      const sr = (i % 3) + 1.5;
+      ctx.fillStyle = i % 2 === 0 ? "rgba(254, 240, 138, 0.6)" : "rgba(255, 255, 255, 0.4)";
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = "#F59E0B";
     ctx.lineWidth = 8;
-    ctx.strokeRect(22, 22, 596, 776);
-    ctx.strokeStyle = "#fce7a3";
-    ctx.lineWidth = 4;
-    ctx.strokeRect(34, 34, 572, 752);
+    ctx.strokeRect(36, 36, 1008, 1278);
 
-    // نجوم باللون الذهبي في الأعلى
-    drawCanvasStar(ctx, 170, 78, 18, "#f6d17a");
-    drawCanvasStar(ctx, 320, 76, 26, "#f5c256");
-    drawCanvasStar(ctx, 470, 78, 18, "#f6d17a");
+    ctx.strokeStyle = "#FDE68A";
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(48, 48, 984, 1254);
 
-    // نجمة كبيرة في الوسط
-    drawCanvasStar(ctx, 320, 176, 62, "#f5c256");
-    ctx.fillStyle = "#8d3c17";
+    drawCanvasStar(ctx, 280, 95, 18, "#FDE68A");
+    drawCanvasStar(ctx, 540, 85, 28, "#F59E0B");
+    drawCanvasStar(ctx, 800, 95, 18, "#FDE68A");
+
+    ctx.fillStyle = "#FEF08A";
+    ctx.font = "bold 44px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+    ctx.textAlign = "center";
+    ctx.fillText("إِنْجَازٌ قُرْآنِيٌّ مُتَأَلِّقٌ 🌟", 540, 165);
+
+    ctx.fillStyle = "#A7F3D0";
+    ctx.font = "24px 'Tahoma', 'Arial'";
+    ctx.fillText(milestoneData.message || "مبارك المداومة والاستمرار في تلاوة كتاب الله!", 540, 215);
+
+    // صورة الأفاتار
+    const avatarCenterY = 340;
+    const avatarRadius = 82;
+
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(320, 176, 28, 0, Math.PI * 2);
+    ctx.arc(540, avatarCenterY, avatarRadius, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle = "#FFFFFF";
     ctx.fill();
 
-    // العنوان العربي الرئيسي
-    ctx.fillStyle = "#f9e7b8";
-    ctx.font = "bold 42px 'Tahoma', 'Arial'";
-    ctx.textAlign = "center";
-    ctx.fillText("إبداعية رائعة", 320, 260);
+    try {
+      const avatarSrc = getAvatarSrc(profile.avatar);
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      await new Promise((res) => {
+        img.onload = () => res(true);
+        img.onerror = () => res(false);
+        img.src = encodeURI(avatarSrc);
+        setTimeout(() => res(false), 2000);
+      });
+      if (img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, 540 - avatarRadius, avatarCenterY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
+      } else {
+        drawCanvasStar(ctx, 540, avatarCenterY, 46, "#F59E0B");
+      }
+    } catch {
+      drawCanvasStar(ctx, 540, avatarCenterY, 46, "#F59E0B");
+    }
+    ctx.restore();
 
-    // خط فاصل
-    ctx.strokeStyle = "#f5c256";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#F59E0B";
+    ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(95, 290);
-    ctx.lineTo(545, 290);
+    ctx.arc(540, avatarCenterY, avatarRadius + 3, 0, Math.PI * 2);
     ctx.stroke();
 
-    // نص الرسالة
-    ctx.fillStyle = "#f5e4c5";
-    ctx.font = "24px 'Tahoma', 'Arial'";
-    ctx.fillText("بدأت رحلة تعلم القرآن", 320, 340);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 36px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+    ctx.fillText(profile.name || "بطل القرآن الكريم", 540, 470);
 
-    // صندوق الإحصائيات
-    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    // صندوق السلسلة اليومية
+    const boxY = 505;
+    ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
     ctx.beginPath();
-    ctx.roundRect(110, 380, 420, 170, 26);
+    ctx.roundRect(140, boxY, 800, 290, 30);
     ctx.fill();
+    ctx.strokeStyle = "rgba(245, 158, 11, 0.6)";
+    ctx.lineWidth = 3;
+    ctx.stroke();
 
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#fbe7a1";
-    ctx.font = "bold 48px 'Tahoma', 'Arial'";
-    ctx.fillText("1", 320, 455);
+    ctx.fillStyle = "#FDE047";
+    ctx.font = "bold 92px 'Tahoma', 'Arial'";
+    ctx.fillText(String(milestoneData.days || 1), 540, boxY + 105);
 
-    ctx.fillStyle = "#fdf3d6";
-    ctx.font = "bold 26px 'Tahoma', 'Arial'";
-    ctx.fillText("يوم متتالية", 320, 505);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 32px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+    ctx.fillText("يَوْمَاً مُتَتَالِيَةً فِي صُحْبَةِ القُرْآن", 540, boxY + 170);
 
     const curSurah = SURAHS.find(s => s.number === profile.currentSurah);
-    ctx.fillStyle = "#fff8e6";
-    ctx.font = "24px 'Tahoma', 'Arial'";
-    ctx.fillText(`سورة ${curSurah?.name || "النبأ"}`, 320, 548);
+    ctx.fillStyle = "#6EE7B7";
+    ctx.font = "bold 25px 'Tahoma', 'Arial'";
+    ctx.fillText(`سورة ${curSurah?.name || "النبأ"}`, 540, boxY + 220);
 
-    ctx.fillStyle = "#ffe299";
-    ctx.font = "bold 20px 'Tahoma', 'Arial'";
-    ctx.fillText(`${getCoins()} نجمة مكتسبة`, 320, 595);
+    ctx.fillStyle = "#FCD34D";
+    ctx.font = "bold 23px 'Tahoma', 'Arial'";
+    ctx.fillText(`${formatCoins(getCoins())} نجمة وهمّة مكتسبة ⭐`, 540, boxY + 262);
 
-    // التاريخ
-    const today = new Date();
-    ctx.fillStyle = "#f4cb5d";
-    ctx.font = "bold 28px 'Tahoma', 'Arial'";
-    ctx.fillText(`${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`, 320, 660);
+    // 7. شريط التطبيق المعتمد واسمه وصورته والتاريخ (بدون مكان تحميل وبدون كلمة إصدار)
+    const footY = 820;
+    const footH = 470;
 
-    ctx.fillStyle = "#fce7a3";
-    ctx.font = "bold 28px 'Tahoma', 'Arial'";
-    ctx.fillText("Quran-Amine H Ayoub", 320, 710);
-    ctx.fillStyle = "#d9d1c4";
+    // بطاقة خلفية زجاجية كحلية زمردية ملكية
+    const footGrad = ctx.createLinearGradient(80, footY, 1000, footY + footH);
+    footGrad.addColorStop(0, "rgba(10, 38, 26, 0.94)");
+    footGrad.addColorStop(0.5, "rgba(12, 49, 34, 0.95)");
+    footGrad.addColorStop(1, "rgba(8, 30, 20, 0.96)");
+    ctx.fillStyle = footGrad;
+    ctx.beginPath();
+    ctx.roundRect(80, footY, 920, footH, 32);
+    ctx.fill();
+
+    ctx.strokeStyle = "#F59E0B";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // إطار داخلي ذهبي رفيع
+    ctx.strokeStyle = "rgba(253, 230, 138, 0.35)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(94, footY + 14, 892, footH - 28, 22);
+    ctx.stroke();
+
+    // آية قرآنية كريمة في أعلى البطاقة
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#FEF08A";
+    ctx.font = "bold 28px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+    ctx.fillText("« وَفِي ذَٰلِكَ فَلْيَتَنَافَسِ الْمُتَنَافِسُونَ »", 540, footY + 65);
+
+    ctx.fillStyle = "#A7F3D0";
     ctx.font = "18px 'Tahoma', 'Arial'";
-    ctx.fillText("تطبيق القرآن الكريم للأطفال", 320, 742);
+    ctx.fillText("هنيئاً لك الاستمرار والمواظبة في تلاوة وحفظ كتاب الله العزيز", 540, footY + 102);
 
-    // زينة سفلية
-    drawCanvasStar(ctx, 180, 786, 16, "#f6d17a");
-    drawCanvasStar(ctx, 320, 786, 24, "#f5c256");
-    drawCanvasStar(ctx, 460, 786, 16, "#f6d17a");
+    // خط فاصل ذهبي
+    ctx.strokeStyle = "rgba(245, 158, 11, 0.4)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(130, footY + 130);
+    ctx.lineTo(950, footY + 130);
+    ctx.stroke();
+
+    // صورة التطبيق / القارئ داخل ميدالية دائرية ذهبية
+    const appImgX = 220;
+    const appImgY = footY + 235;
+    const appImgR = 64;
+
+    // هالة ذهبية حول الشعار
+    const appAura = ctx.createRadialGradient(appImgX, appImgY, appImgR - 5, appImgX, appImgY, appImgR + 20);
+    appAura.addColorStop(0, "rgba(245, 158, 11, 0.45)");
+    appAura.addColorStop(1, "rgba(245, 158, 11, 0)");
+    ctx.fillStyle = appAura;
+    ctx.beginPath();
+    ctx.arc(appImgX, appImgY, appImgR + 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(appImgX, appImgY, appImgR, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fill();
+
+    const appPhoto = (await loadCanvasImage("/pwa-512x512.png")) || (await loadCanvasImage("/my-photo.png"));
+    if (appPhoto && appPhoto.naturalWidth > 0) {
+      ctx.drawImage(appPhoto, appImgX - appImgR, appImgY - appImgR, appImgR * 2, appImgR * 2);
+    } else {
+      drawCanvasStar(ctx, appImgX, appImgY, 38, "#F59E0B");
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = "#F59E0B";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(appImgX, appImgY, appImgR + 2, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // اسم التطبيق والشيخ بجانب الصورة
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#FDE047";
+    ctx.font = "bold 32px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+    ctx.fillText("تَطْبِيقُ الْمُصْحَفِ الْمُرَتَّلِ بِرِوَايَةِ وَرْش", 930, footY + 205);
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 24px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+    ctx.fillText("الْقَارِئُ الشَّيْخُ: حَاج أَيُّوب أَمِين", 930, footY + 250);
+
+    ctx.fillStyle = "#A7F3D0";
+    ctx.font = "18px 'Tahoma', 'Arial'";
+    ctx.fillText("ركن أبطال القرآن الكريم • حفظ • تجويد • مدارسة", 930, footY + 290);
+
+    // خط فاصل سفلي
+    ctx.strokeStyle = "rgba(245, 158, 11, 0.4)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(130, footY + 340);
+    ctx.lineTo(950, footY + 340);
+    ctx.stroke();
+
+    // خانة التاريخ بدون كلمة إصدار
+    const today = new Date();
+    const dateBoxW = 420;
+    const dateBoxH = 54;
+    const dateBoxX = 520;
+    const dateBoxY = footY + 375;
+
+    ctx.fillStyle = "rgba(245, 158, 11, 0.18)";
+    ctx.beginPath();
+    ctx.roundRect(dateBoxX, dateBoxY, dateBoxW, dateBoxH, 16);
+    ctx.fill();
+
+    ctx.strokeStyle = "#F59E0B";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#FDE047";
+    ctx.font = "bold 20px 'Tahoma', 'Arial'";
+    ctx.fillText(`التاريخ: ${today.getDate()} / ${today.getMonth() + 1} / ${today.getFullYear()} م`, dateBoxX + dateBoxW / 2, dateBoxY + 35);
+
+    // رسالة فخر في اليسار
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#CBD5E1";
+    ctx.font = "bold 16px 'Tahoma', 'Arial'";
+    ctx.fillText("🌟 فخورون بهمتك العالية وبإنجازك المستمر", 300, dateBoxY + 35);
 
     canvas.toBlob(async (blob) => {
       if (!blob) return;
-      const file = new File([blob], `ميلستون-${milestoneData.days}يوم.png`, { type: "image/png" });
+      const file = new File([blob], `ميلستون-${milestoneData.days}يوم-${profile.name || "بطل"}.png`, { type: "image/png" });
 
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         try {
           await navigator.share({
             title: milestoneData.title,
-            text: `${milestoneData.message} — ${milestoneData.days} يوم متتالية في تعلم القرآن!`,
+            text: `${milestoneData.message} — ${milestoneData.days} يوماً متتالية في حفظ وتلاوة كتاب الله الكريم مع تطبيق المصحف المرتل برواية ورش (القارئ الشيخ حاج أيوب أمين) 🌟`,
             files: [file],
           });
-          toast({ title: "تمت المشاركة!", description: "شكراً لمشاركة إنجازك" });
+          toast({ title: "تمت المشاركة بنجاح!", description: "بارك الله في همتك القرآنية" });
           return;
         } catch {
-          // إذا ألغى المستخدم المشاركة، نحمّل الصورة
+          // Fallback to download
         }
       }
 
@@ -1644,7 +2493,7 @@ export default function KidsGames() {
       link.href = URL.createObjectURL(blob);
       link.click();
       URL.revokeObjectURL(link.href);
-      toast({ title: "تم حفظ الصورة!", description: "ابحث في مجلد التنزيلات" });
+      toast({ title: "تم حفظ الصورة الفاخرة!", description: "ابحث في مجلد التنزيلات بجهازك" });
     }, "image/png");
   };
 
@@ -1712,7 +2561,7 @@ export default function KidsGames() {
           <h1 className="font-extrabold text-base sm:text-lg text-gradient-gold order-first w-full text-center sm:w-auto sm:order-none sm:w-auto">ركن الأطفال</h1>
           {!active ? (
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-accent font-extrabold text-xs sm:text-sm px-2 sm:px-2.5 h-9 sm:h-10 max-w-[110px] overflow-hidden"><Star className="w-4 h-4 shrink-0 fill-current" /> <span className="truncate">{coins > 9999 ? `${Math.floor(coins / 1000)}ألف+` : coins}</span></span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-accent font-extrabold text-xs sm:text-sm px-2.5 sm:px-3 h-9 sm:h-10 shrink-0 shadow-sm"><Star className="w-4 h-4 shrink-0 fill-current" /> <span>{formatCoins(coins)} نجمة</span></span>
 
 
               <button onClick={() => setShowBadges(true)} aria-label="الأوسمة والإنجازات" title="الأوسمة والإنجازات" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full bg-amber-500/15 text-amber-500 hover:brightness-95 flex items-center justify-center active:scale-95 border border-amber-500/30 shadow-sm"><Trophy className="w-5 h-5" /></button>
@@ -1723,7 +2572,58 @@ export default function KidsGames() {
           ) : <span className="w-10" />}
         </header>
 
-        {def && Engine ? (
+        {/* ── شريط الوقت المتبقي وزر العرض التفاعلي ── */}
+        {!active && (
+          <div className="card-nour p-2.5 sm:p-3 rounded-2xl bg-gradient-to-l from-card via-card/90 to-card border border-border/80 shadow-md flex items-center justify-between gap-2 animate-fade-in">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0 border border-amber-500/30">
+                <Clock className="w-4 h-4 animate-pulse" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-black text-foreground truncate">
+                    {profile.playMinutes > 0
+                      ? `الوقت المتبقي: ${Math.max(0, profile.playMinutes - (progress.played || 0))} دقيقة`
+                      : "وقت اللعب: مفتوح بلا حدود ♾️"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <div className="w-28 sm:w-36 h-1.5 bg-secondary rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 ${
+                        profile.playMinutes > 0 && (progress.played || 0) >= profile.playMinutes
+                          ? "bg-destructive"
+                          : "bg-amber-500"
+                      }`}
+                      style={{
+                        width: `${
+                          profile.playMinutes > 0
+                            ? Math.min(100, Math.round(((progress.played || 0) / profile.playMinutes) * 100))
+                            : 100
+                        }%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-bold text-muted-foreground">
+                    {profile.playMinutes > 0 ? `${progress.played}/${profile.playMinutes}د` : "غير مقيّد"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowTimeModal(true)}
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-extrabold text-xs shadow-sm hover:brightness-105 active:scale-95 transition-all shrink-0 flex items-center gap-1"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>كم بقي؟</span>
+            </button>
+          </div>
+        )}
+
+        {def && (def.remote || def.engine === "remote") ? (
+          <RemoteGameFrame def={def} onExit={() => setActive(null)} />
+        ) : def && Engine ? (
           <div className="card-nour p-2 sm:p-4 animate-fade-up game-container">
             {/* شريط مؤقّت اللعب الأحمر (نفس مكان شريط القراءة الأخضر) */}
             <div className="mb-2">
@@ -1770,25 +2670,43 @@ export default function KidsGames() {
                 </div>
               </div>
               {!unlocked ? (
-                <>
-                  <p className="text-sm text-destructive flex items-center justify-center gap-1 font-bold">
-                    <Lock className="w-4 h-4" /> الألعاب مقفلة — استمع {profile.goalMinutes >= 3 && profile.goalMinutes <= 10 ? `${profile.goalMinutes} دقائق` : `${profile.goalMinutes} دقيقة`} لفتحها
-                  </p>
-                  <div className="h-2.5 rounded-full bg-secondary overflow-hidden"><div className="h-full bg-success transition-all" style={{ width: `${pct}%` }} /></div>
-                  <p className="text-xs text-muted-foreground font-bold">{progress.minutes} / {profile.goalMinutes} {profile.goalMinutes >= 3 && profile.goalMinutes <= 10 ? "دقائق" : "دقيقة"}</p>
-                  <button
-                    onClick={() => {
-                      setAppMode("kids");
-                      setKidsLocked(true);
-                      navigate("/audio");
-                    }}
-                    className="btn-emerald w-full p-3 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 shadow-md"
-                  >
-                    <Headphones className="w-5 h-5" /> استمع الآن لفتح الألعاب
-                  </button>
-                </>
+                <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 space-y-3 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                      <Lock className="w-4 h-4 animate-pulse text-amber-500" /> ركن الألعاب مقفل بالقرآن
+                    </span>
+                    <span className="text-xs font-black text-accent bg-accent/15 px-2.5 py-0.5 rounded-full">
+                      بقي {Math.max(0, Math.round((profile.goalMinutes - (progress.minutes || 0)) * 10) / 10)} دقيقة
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="h-3 rounded-full bg-secondary overflow-hidden p-0.5 border border-border/60">
+                      <div className="h-full rounded-full bg-gradient-to-l from-emerald-500 to-teal-400 transition-all duration-500" style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className="flex justify-between text-[11px] font-bold text-muted-foreground">
+                      <span>استمعت: <b className="text-emerald-500">{progress.minutes}</b> د</span>
+                      <span>الهدف: <b className="text-foreground">{profile.goalMinutes}</b> د</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      onClick={() => navigate("/audio")}
+                      className="btn-emerald p-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-md"
+                    >
+                      <Headphones className="w-4 h-4" /> استمع للقرآن الآن 📖
+                    </button>
+                    <button
+                      onClick={() => setShowLockGateModal(true)}
+                      className="p-2.5 rounded-xl bg-card border border-border hover:border-accent/40 font-bold text-xs text-foreground flex items-center justify-center gap-1 active:scale-95 transition-all"
+                    >
+                      <Clock className="w-4 h-4 text-accent" /> تفاصيل العداد ⏰
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <p className="text-sm text-success flex items-center justify-center gap-1"><Gift className="w-4 h-4" /> {profile.reward}</p>
+                <p className="text-sm text-success flex items-center justify-center gap-1 font-bold"><Gift className="w-4 h-4" /> {profile.reward}</p>
               )}
             </div>
 
@@ -1796,7 +2714,7 @@ export default function KidsGames() {
             <button onClick={() => navigate("/shop")} className="relative z-10 w-full p-3 rounded-2xl bg-gradient-to-l from-accent/15 to-card border border-accent/40 shadow-soft flex items-center gap-3 active:scale-[0.99]">
               <span className="w-11 h-11 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shrink-0"><Sparkles className="w-6 h-6" /></span>
               <span className="flex-1 text-right"><span className="block font-extrabold text-foreground">خصّص شخصيتك</span><span className="block text-[11px] text-muted-foreground">افتح وجوهاً وألواناً جديدة بنجومك</span></span>
-              <span className="inline-flex items-center gap-1 text-accent font-extrabold"><Star className="w-4 h-4 fill-current" /> {coins}</span>
+              <span className="inline-flex items-center gap-1 text-accent font-extrabold text-xs sm:text-sm bg-accent/15 px-2.5 py-1 rounded-full"><Star className="w-4 h-4 fill-current" /> {formatCoins(coins)} نجمة</span>
             </button>
 
             <div className="flex items-center justify-between mt-8 mb-3 px-1">
@@ -1930,8 +2848,8 @@ export default function KidsGames() {
             </div>
 
             <div className="text-center space-y-4">
-              <div className="mx-auto w-24 h-24 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg">
-                <Award className="w-12 h-12 text-white" />
+              <div className="mx-auto w-24 h-24 rounded-full ring-4 ring-amber-400/60 shadow-xl overflow-hidden p-1 bg-gradient-to-tr from-amber-500 to-yellow-300">
+                <Avatar name={profile.avatar} className="w-full h-full rounded-full shadow-inner" />
               </div>
 
               <div className="space-y-1">
@@ -1951,7 +2869,7 @@ export default function KidsGames() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">النجوم المكتسبة</span>
-                  <span className="font-bold text-accent">{getCoins()} ⭐</span>
+                  <span className="font-bold text-accent">{formatCoins(getCoins())} ⭐</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">الأيام المتتالية</span>
@@ -1971,6 +2889,81 @@ export default function KidsGames() {
               {certificateReady && (
                 <p className="text-xs text-success text-center">✓ تم حفظ الشهادة في جهازك — ابحث في مجلد التنزيلات</p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة تفاصيل الوقت المتبقي للأطفال */}
+      {showTimeModal && (
+        <div className="fixed inset-0 z-[230] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setShowTimeModal(false)}>
+          <div className="w-full max-w-sm bg-card rounded-3xl shadow-2xl border border-border p-6 text-center space-y-4 animate-fade-up" onClick={e => e.stopPropagation()}>
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500">
+              <Clock className="w-7 h-7 animate-bounce" />
+            </div>
+
+            <div>
+              <h3 className="text-xl font-extrabold text-foreground">عداد الوقت والهمّة ⏰</h3>
+              <p className="text-xs text-muted-foreground font-bold mt-1">تتبع وقت اللعب ودراسة القرآن لليوم</p>
+            </div>
+
+            <div className="bg-secondary/40 rounded-2xl p-4 space-y-3 text-right">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <Gamepad2 className="w-4 h-4 text-accent" /> الوقت المتبقي للعب:
+                </span>
+                <span className="text-accent font-black text-sm">
+                  {profile.playMinutes > 0
+                    ? `${Math.max(0, profile.playMinutes - (progress.played || 0))} دقيقة`
+                    : "مفتوح بلا حدود ♾️"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-muted-foreground" /> تم اللعب اليوم:
+                </span>
+                <span className="text-foreground font-black">
+                  {progress.played || 0} دقيقة {profile.playMinutes > 0 ? `(من أصل ${profile.playMinutes}د)` : ""}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <Headphones className="w-4 h-4 text-emerald-500" /> وقت مدارسة القرآن:
+                </span>
+                <span className="text-emerald-500 font-black">
+                  {progress.minutes || 0} دقيقة {profile.goalMinutes > 0 ? `(الهدف: ${profile.goalMinutes}د)` : ""}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" /> رصيدك من النجوم:
+                </span>
+                <span className="text-amber-500 font-black">
+                  {formatCoins(getCoins())} نجمة ⭐
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={() => {
+                  setShowTimeModal(false);
+                  navigate("/audio");
+                }}
+                className="w-full p-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md"
+              >
+                <Headphones className="w-4 h-4" />
+                <span>الذهاب للتلاوات وحفظ القرآن 📖</span>
+              </button>
+              <button
+                onClick={() => setShowTimeModal(false)}
+                className="w-full p-2.5 rounded-xl bg-secondary text-secondary-foreground font-bold text-xs active:scale-95 transition-all"
+              >
+                إغلاق
+              </button>
             </div>
           </div>
         </div>
@@ -2022,6 +3015,13 @@ export default function KidsGames() {
           </div>
         </div>
       )}
+
+      {/* نافذة عداد وقفل القرآن المتبقي للألعاب */}
+      <QuranLockGateModal
+        isOpen={showLockGateModal}
+        onClose={() => setShowLockGateModal(false)}
+        targetName="الألعاب"
+      />
     </div>
   );
 }

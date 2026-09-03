@@ -19,7 +19,7 @@ export default function TeacherTools() {
 
       <div className="relative mx-auto max-w-md px-4 py-5 space-y-5">
         <header className="flex items-center justify-between">
-          <button onClick={() => navigate("/")} className="flex h-10 items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold border border-border hover:brightness-95 active:scale-95 transition-all shadow-soft"><ArrowRight className="h-4 w-4" /> المصحف</button>
+          <button onClick={() => navigate("/")} className="flex h-10 items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold border border-border hover:brightness-95 active:scale-95 transition-all shadow-soft"><ArrowRight className="h-4 w-4" /> التلاوات</button>
           <span className="w-16" />
         </header>
 

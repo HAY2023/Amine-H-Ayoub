@@ -449,7 +449,7 @@ export default function QuranStudent() {
     <div className="min-h-screen page-nour text-foreground" dir="rtl">
       <div className="mx-auto max-w-md px-4 py-4 space-y-4">
         <header className="flex items-center justify-between">
-          <button onClick={() => navigate("/")} className="flex h-10 items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold hover:brightness-95 active:scale-95"><ArrowRight className="h-4 w-4" /> المصحف</button>
+          <button onClick={() => navigate("/")} className="flex h-10 items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-4 text-sm font-bold hover:brightness-95 active:scale-95"><ArrowRight className="h-4 w-4" /> التلاوات</button>
           <h1 className="font-extrabold text-lg text-gradient-gold">ركن طالب القرآن</h1>
           <span className="w-16" />
         </header>

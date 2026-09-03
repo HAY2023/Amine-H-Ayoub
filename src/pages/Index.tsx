@@ -8,6 +8,7 @@ import SearchBar from "@/components/SearchBar";
 import CustomPlayer, { CustomPlayerHandle } from "@/components/CustomPlayer";
 import ParentalGateModal from "@/components/ParentalGateModal";
 import NotificationsModal from "../components/NotificationsModal";
+import AppNav from "@/components/AppNav";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSurahData, SurahItem } from "@/hooks/useSurahData";
 import { useProgress } from "@/hooks/useProgress";
@@ -17,7 +18,7 @@ import { useTVNavigation } from "@/hooks/useTVNavigation";
 import { Shuffle, ListOrdered, Settings, Bell, Gamepad2, Lock } from "lucide-react";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
 import { isTimeAllowed } from "@/data/kidsSchedule";
-import { kidsEnabled as getKidsEnabled, addReadingMinutes, addCoins, setAppMode, getProgress } from "@/data/kidsProfile";
+import { kidsEnabled as getKidsEnabled, addReadingMinutes, addCoins, setAppMode, getProgress, isPureMode, setKidsHidden, kidsHidden } from "@/data/kidsProfile";
 
 import { checkAndUnlockBadges } from "@/data/kidsBadges";
 import { toast } from "@/hooks/use-toast";
@@ -60,6 +61,29 @@ const Index = () => {
   useEffect(() => { const h = () => setKidsMode(isKidsMode()); window.addEventListener("mushaf:kidsmode", h); return () => window.removeEventListener("mushaf:kidsmode", h); }, []);
 
   const [playExpired, setPlayExpired] = useState(() => getProgress().playExpired);
+  // حالة ظهور ركن الأطفال (تتفاعل فوراً مع زر الاسترجاع)
+  const [kidsOn, setKidsOn] = useState(() => getKidsEnabled());
+  useEffect(() => {
+    const h = () => setKidsOn(getKidsEnabled());
+    h();
+    window.addEventListener("mushaf:appmode", h);
+    window.addEventListener("mushaf:coins", h);
+    window.addEventListener("mushaf:activeprofile", h);
+    window.addEventListener("focus", h);
+    return () => {
+      window.removeEventListener("mushaf:appmode", h);
+      window.removeEventListener("mushaf:coins", h);
+      window.removeEventListener("mushaf:activeprofile", h);
+      window.removeEventListener("focus", h);
+    };
+  }, []);
+  // زر استرجاع ركن الأطفال بضغطة واحدة (بدون الحاجة للإعدادات)
+  const restoreKids = () => {
+    setKidsHidden(false);
+    setKidsOn(getKidsEnabled());
+    window.dispatchEvent(new Event("mushaf:appmode"));
+    toast({ title: "🎉 عاد ركن الأطفال والألعاب!" });
+  };
   useEffect(() => {
     const h = () => setPlayExpired(getProgress().playExpired);
     h();
@@ -307,48 +331,13 @@ const Index = () => {
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
 
       <div className="relative z-10 min-h-screen pb-8">
-        {/* شريط التنقل العلوي */}
-        {kidsMode ? (
-          <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
-            {!playExpired && (
-              <button
-                onClick={() => navigate("/games")}
-                className="h-10 px-3.5 rounded-full bg-accent/90 backdrop-blur border border-accent shadow-soft flex items-center gap-1.5 text-xs font-bold text-accent-foreground hover:brightness-110 active:scale-95 transition-all"
-                title="الذهاب إلى الألعاب"
-              >
-                <Gamepad2 className="w-4 h-4" />
-                <span>الألعاب</span>
-              </button>
-            )}
-            <button
-              onClick={() => {
-                if (hasKidsPin()) {
-                  setPinAction("exit_kids");
-                } else {
-                  setKidsLocked(false);
-                  toast({ title: "تم فك قفل الأطفال" });
-                }
-              }}
-              className="h-10 px-3.5 rounded-full bg-card/90 backdrop-blur border border-border shadow-soft flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:border-accent/50 active:scale-95 transition-all"
-              title="فك قفل الأطفال"
-            >
-              <Lock className="w-3.5 h-3.5 text-accent" />
-              <span>فك القفل</span>
-            </button>
-          </div>
-        ) : (
-          <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
-            <button
-              onClick={openSettings}
-              className="h-10 px-3.5 rounded-full bg-card/85 backdrop-blur border border-accent/40 shadow-soft flex items-center gap-1.5 text-sm font-bold text-foreground/85 hover:text-foreground hover:border-accent/70 active:scale-95 transition-all"
-            >
-              <Settings className="w-4 h-4 text-accent" /> الإعدادات
-            </button>
-          </div>
-        )}
+        {/* شريط التنقل الذكي المتجاوب لكافة الأوضاع */}
+        <div className="pt-2 px-2">
+          <AppNav />
+        </div>
         <AppHeader />
 
-        {getKidsEnabled() && (
+        {kidsOn && !isPureMode() && (
           <div className="flex justify-center mb-4">
             <PointsDisplay points={points} />
           </div>

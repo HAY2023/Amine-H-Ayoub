@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Apple, Smartphone, Monitor, Tv, Download } from "lucide-react";
 
 export default function LegendaryDownloadHub() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
 
   const HF_BASE = "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main";
 
