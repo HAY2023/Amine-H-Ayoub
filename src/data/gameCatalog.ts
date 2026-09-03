@@ -3,7 +3,7 @@
  */
 import { supabase, hasValidSupabaseKey } from "../lib/supabase";
 
-export type GameEngine = "order" | "memory" | "memory_meaning" | "which" | "quiz" | "count" | "nextayah" | "prevayah" | "whichsurah" | "missingword" | "surahaudio" | "ayahsurah" | "ayahorder" | "ayahlonger" | "surahorder" | "surahnum" | "remote";
+export type GameEngine = "order" | "memory" | "memory_meaning" | "which" | "quiz" | "count" | "nextayah" | "prevayah" | "whichsurah" | "missingword" | "surahaudio" | "ayahsurah" | "ayahorder" | "ayahlonger" | "surahorder" | "surahnum" | "remote" | "detective" | "wordbuilder" | "catchstar" | "ayahmath";
 
 export interface GameDef {
   id: string;
@@ -40,6 +40,35 @@ const SHORT = { minSurah: 38 };
 const MID = { minSurah: 114, maxSurah: 20 };
 const FULL = { minSurah: 114 };
 
+// قائمة الألعاب غير القرآنية والمكررة المحظورة نهائياً
+const BANNED_NON_QURAN_IDS = new Set([
+  "odd-square", "catch-star", "falling-stars", "count-stars",
+  "odd_square", "catch_star", "falling_stars", "count_stars",
+  "order-surahs", "complete-ayah", "which-surah", "longer-surah", "memory-quran"
+]);
+
+// تنظيف التخزين المؤقت فورياً من أي لعبة غير قرآنية
+if (typeof window !== "undefined") {
+  try {
+    const rawRemote = localStorage.getItem("mushaf:remoteGames:v1");
+    if (rawRemote && (rawRemote.includes("odd-square") || rawRemote.includes("catch-star") || rawRemote.includes("falling-stars") || rawRemote.includes("count-stars") || rawRemote.includes("order-surahs"))) {
+      const parsed = JSON.parse(rawRemote);
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.filter((g: any) => g && !BANNED_NON_QURAN_IDS.has(g.id));
+        localStorage.setItem("mushaf:remoteGames:v1", JSON.stringify(cleaned));
+      }
+    }
+    const rawCatalog = localStorage.getItem(CATALOG_KEY);
+    if (rawCatalog && (rawCatalog.includes("odd-square") || rawCatalog.includes("catch-star") || rawCatalog.includes("falling-stars") || rawCatalog.includes("count-stars") || rawCatalog.includes("order-surahs"))) {
+      const parsed = JSON.parse(rawCatalog);
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.filter((g: any) => g && !BANNED_NON_QURAN_IDS.has(g.id));
+        localStorage.setItem(CATALOG_KEY, JSON.stringify(cleaned));
+      }
+    }
+  } catch { /* ignore */ }
+}
+
 const HIDDEN_REMOTE_KEY = "mushaf:remoteGamesHidden";
 
 const hiddenIds = (): string[] => {
@@ -64,7 +93,7 @@ export const setRemoteGamesList = (list: any[]) => {
   const hidden = hiddenIds();
   remoteServerGames = list
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .filter((g: any) => g && typeof g.id === "string" && !hidden.includes(g.id))
+    .filter((g: any) => g && typeof g.id === "string" && !hidden.includes(g.id) && !BANNED_NON_QURAN_IDS.has(g.id))
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .map((g: any, i: number) => ({
       id: g.id,
@@ -87,7 +116,8 @@ let serverGames: GameDef[] = [];
 const isValid = (g: unknown): g is GameDef => {
   const d = g as GameDef;
   if (!d || typeof d.id !== "string" || typeof d.title !== "string" || typeof d.cost !== "number") return false;
-  const engines: string[] = ["order", "memory", "memory_meaning", "which", "quiz", "count", "nextayah", "prevayah", "whichsurah", "missingword", "surahaudio", "ayahsurah", "ayahorder", "ayahlonger", "surahorder", "surahnum", "remote"];
+  if (BANNED_NON_QURAN_IDS.has(d.id)) return false;
+  const engines: string[] = ["order", "memory", "memory_meaning", "which", "quiz", "count", "nextayah", "prevayah", "whichsurah", "missingword", "surahaudio", "ayahsurah", "ayahorder", "ayahlonger", "surahorder", "surahnum", "remote", "detective", "wordbuilder", "catchstar", "ayahmath"];
   if (!engines.includes(d.engine)) return false;
   return true;
 };
@@ -100,9 +130,15 @@ const readServerLocal = (): GameDef[] => {
 export const getGameCatalog = (): GameDef[] => {
   const server = serverGames.length ? serverGames : readServerLocal();
   const map = new Map<string, GameDef>();
-  for (const g of BUILTIN_GAMES) map.set(g.id, g);
-  for (const g of remoteServerGames) map.set(g.id, g);
-  for (const g of server) map.set(g.id, { tint: "bg-slate-500/20 text-slate-200", icon: "Gamepad2", ageMin: 5, ...g, custom: true });
+  for (const g of BUILTIN_GAMES) {
+    if (!BANNED_NON_QURAN_IDS.has(g.id)) map.set(g.id, g);
+  }
+  for (const g of remoteServerGames) {
+    if (!BANNED_NON_QURAN_IDS.has(g.id)) map.set(g.id, g);
+  }
+  for (const g of server) {
+    if (!BANNED_NON_QURAN_IDS.has(g.id)) map.set(g.id, { tint: "bg-slate-500/20 text-slate-200", icon: "Gamepad2", ageMin: 5, ...g, custom: true });
+  }
   
   // Apply price overrides for built-in games
   const overrides = getPriceOverrides();
@@ -112,7 +148,7 @@ export const getGameCatalog = (): GameDef[] => {
     }
   }
   
-  return Array.from(map.values());
+  return Array.from(map.values()).filter(g => !BANNED_NON_QURAN_IDS.has(g.id));
 };
 
 const getPriceOverrides = (): Record<string, number> => {
@@ -209,4 +245,10 @@ export const BUILTIN_GAMES: GameDef[] = [
   // ── ألعاب التعرف ──
   G("ayahsurah", "من أي سورة؟", "ayahsurah", 4, 16, 100, "BookOpen", FULL, 6),
   G("surahnum", "رقم السورة", "surahnum", 4, 16, 105, "Hash", FULL, 7),
+
+  // ── الألعاب القرآنية الأسطورية الذكية ──
+  G("detective", "المحقق القرآني", "detective", 4, 16, 30, "Sparkles", FULL, 0),
+  G("wordbuilder", "رتّب كلمات القرآن", "wordbuilder", 4, 16, 25, "Puzzle", FULL, 1),
+  G("catchstar", "صائد النجوم والكلمات", "catchstar", 4, 16, 20, "Star", FULL, 2),
+  G("ayahmath", "أرقام وحساب الآيات", "ayahmath", 4, 16, 35, "Hash", FULL, 3),
 ];

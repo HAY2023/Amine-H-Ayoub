@@ -2,52 +2,634 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-select=no">
+<title>المحقق القرآني الذكي</title>
 <style>
-*{margin:0;box-sizing:border-box;font-family:system-ui}
-body{min-height:100vh;background:linear-gradient(160deg,#0b1220,#312e81);color:#fff;display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none}
-.bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);z-index:9}
-.bar b{color:#fbbf24;font-size:1.05rem}
-#exit{padding:6px 14px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer}
-h1{margin:76px 0 4px;font-size:1.1rem;color:#fde68a}
-p{color:#a5b4fc;font-size:.8rem;margin-bottom:14px}
-#g{display:grid;gap:9px;width:min(88vw,380px);margin-bottom:12px}
-#g .o{aspect-ratio:1;border:0;border-radius:16px;cursor:pointer;transition:transform .1s,opacity .2s;box-shadow:0 4px 14px rgba(0,0,0,.35)}
-#g .o:active{transform:scale(.92)}
-#lv{font-size:1rem;font-weight:800;color:#c7d2fe;margin-bottom:8px}
-#hud{margin-top:6px;color:#fbbf24;font-weight:800;font-size:1.1rem}
-.shake{animation:sh .3s}
-@keyframes sh{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  :root {
+    --gold: #f59e0b;
+    --gold-glow: rgba(245, 158, 11, 0.35);
+    --emerald: #10b981;
+    --bg-dark: #070d18;
+    --card-bg: rgba(255, 255, 255, 0.06);
+    --card-border: rgba(245, 158, 11, 0.2);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; font-family:system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color:transparent; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% 10%, #0f2738 0%, var(--bg-dark) 100%);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 24px;
+    overflow-x: hidden;
+    user-select: none;
+  }
+  /* Top Bar */
+  .top-bar {
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .title-wrap { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.05rem; color: #fde68a; }
+  .stats-wrap { display: flex; align-items: center; gap: 10px; }
+  .badge {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .exit-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .exit-btn:hover { background: rgba(239, 68, 68, 0.25); color: #fca5a5; }
+
+  /* Main Container */
+  .container {
+    width: 100%;
+    max-width: 500px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  /* Question Header */
+  .question-box {
+    width: 100%;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+    border: 1px solid var(--card-border);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 18px;
+    text-align: center;
+    position: relative;
+  }
+  .streak-pill {
+    position: absolute;
+    top: -10px;
+    right: 18px;
+    background: linear-gradient(135deg, #f97316, #ef4444);
+    color: #fff;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    display: none;
+  }
+  .question-tag {
+    font-size: 0.8rem;
+    color: #38bdf8;
+    font-weight: 700;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .question-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #f8fafc;
+    line-height: 1.5;
+  }
+
+  /* Cards Grid */
+  .cards-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 6px;
+  }
+  .card-btn {
+    background: var(--card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    padding: 20px 12px;
+    min-height: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #f1f5f9;
+    font-size: 1.1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+  }
+  .card-btn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    border-color: var(--gold);
+    background: rgba(245, 158, 11, 0.1);
+    box-shadow: 0 10px 24px var(--gold-glow);
+  }
+  .card-btn:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+  .card-icon { font-size: 1.6rem; }
+  .card-desc { font-size: 0.72rem; color: #94a3b8; font-weight: normal; }
+
+  /* States */
+  .card-btn.correct {
+    background: linear-gradient(135deg, #059669, #10b981) !important;
+    border-color: #34d399 !important;
+    color: #fff !important;
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.5) !important;
+    animation: pulseCorrect 0.5s ease;
+  }
+  .card-btn.wrong {
+    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+    border-color: #f87171 !important;
+    color: #fff !important;
+    animation: shake 0.4s ease;
+  }
+
+  /* Mu'een Companion Banner */
+  .mueen-companion {
+    width: 100%;
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.15), rgba(6, 78, 59, 0.25));
+    border: 1px solid rgba(45, 212, 191, 0.3);
+    border-radius: 16px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .mueen-companion:hover {
+    background: rgba(20, 184, 166, 0.25);
+    border-color: #2dd4bf;
+  }
+  .mueen-left { display: flex; align-items: center; gap: 10px; }
+  .mueen-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2dd4bf, #0d9488);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    box-shadow: 0 0 12px rgba(45, 212, 191, 0.5);
+  }
+  .mueen-text b { display: block; font-size: 0.85rem; color: #5eead4; }
+  .mueen-text span { font-size: 0.72rem; color: #ccfbf1; }
+  .mueen-btn {
+    background: #0d9488;
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  /* Explanation / Feedback Box */
+  .feedback-box {
+    width: 100%;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 14px;
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+    animation: fadeIn 0.3s ease;
+  }
+  .feedback-box.show { display: flex; }
+  .feedback-title { font-weight: 800; font-size: 0.95rem; }
+  .feedback-info { font-size: 0.82rem; color: #cbd5e1; line-height: 1.5; }
+  .next-btn {
+    align-self: center;
+    margin-top: 6px;
+    background: linear-gradient(135deg, var(--gold), #d97706);
+    color: #1c1917;
+    font-weight: 800;
+    font-size: 0.9rem;
+    padding: 8px 24px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 14px var(--gold-glow);
+  }
+
+  /* Confetti Canvas */
+  #confetti-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Animations */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+  }
+  @keyframes pulseCorrect {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+    100% { transform: scale(1); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 </style>
 </head>
 <body>
-<div class="bar"><b>🎯 المربع المختلف</b><span id="stars">⭐ 0</span><button id="exit">خروج ✕</button></div>
-<h1>جد المربع ذا اللون المختلف</h1>
-<p>اللون يتغير كل جولة — والصعوبة تزداد!</p>
-<div id="lv">المستوى 1</div>
-<div id="g"></div>
-<div id="hud">⭐ 0</div>
+
+<canvas id="confetti-canvas"></canvas>
+
+<div class="top-bar">
+  <div class="title-wrap">
+    <span>🕵️‍♂️</span>
+    <span>المحقق القرآني</span>
+  </div>
+  <div class="stats-wrap">
+    <div class="badge" id="hud-level">مستوى 1</div>
+    <div class="badge" id="hud-stars">⭐ 0</div>
+    <button class="exit-btn" id="btn-exit">خروج ✕</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="question-box">
+    <div class="streak-pill" id="streak-badge">🔥 متتالي x2</div>
+    <span class="question-tag" id="q-tag">ابحث عن البطاقة المختلفة</span>
+    <div class="question-title" id="q-title">أي من هذه السور تختلف عن البقية؟</div>
+  </div>
+
+  <div class="cards-grid" id="cards-container">
+    <!-- Dynamic Cards -->
+  </div>
+
+  <!-- Al-Mu'een In-Game Helper -->
+  <div class="mueen-companion" id="mueen-btn">
+    <div class="mueen-left">
+      <div class="mueen-avatar">💡</div>
+      <div class="mueen-text">
+        <b>المُعِين القرآني الذكي</b>
+        <span id="mueen-hint-text">اضغط هنا لمساعدتك واكتشاف التلميح!</span>
+      </div>
+    </div>
+    <button class="mueen-btn">تلميح</button>
+  </div>
+
+  <div class="feedback-box" id="feedback-panel">
+    <div class="feedback-title" id="fb-title">إجابة عبقرية! 🌟</div>
+    <div class="feedback-info" id="fb-text">...</div>
+    <button class="next-btn" id="btn-next">السؤال التالي ←</button>
+  </div>
+</div>
+
 <script>
-var s=0,lv=1;
-function round(){
-  var g=document.getElementById('g');g.innerHTML='';
-  var n=lv<=2?3:lv<=4?4:lv<=6?5:6;                       // الشبكة تكبر تدريجياً
-  var hue=Math.floor(Math.random()*360),sat=55+Math.floor(Math.random()*35); // لون جديد عشوائي كل جولة
-  var odd=Math.floor(Math.random()*n*n);
-  var dl=Math.max(5,16-Math.floor(lv*1.2));              // فرق اللون يصعب تدريجياً
-  g.style.gridTemplateColumns='repeat('+n+',1fr)';
-  for(var i=0;i<n*n;i++){(function(isOdd){
-    var b=document.createElement('button');b.className='o';
-    b.style.background='hsl('+hue+' '+sat+'% '+(isOdd?62:62-dl)+'%)';
-    b.addEventListener('click',function(){
-      if(isOdd){s++;lv++;document.getElementById('stars').textContent='⭐ '+s;document.getElementById('lv').textContent='المستوى '+lv;document.getElementById('hud').textContent='⭐ '+s;try{parent.postMessage({type:'nour:game:stars',amount:1},'*')}catch(e){}round()}
-      else{b.classList.add('shake');b.style.opacity=.35;setTimeout(function(){b.classList.remove('shake');b.style.opacity=1},300)}
-    });
-    g.appendChild(b)})(i===odd)}
+// Audio Synthesizer (Pure Web Audio API - Works offline with zero dependencies)
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new AudioContext();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
 }
-document.getElementById('exit').addEventListener('click',function(){try{parent.postMessage({type:'nour:game:exit'},'*')}catch(e){}});
-try{parent.postMessage({type:'nour:game:ready'},'*')}catch(e){}
-round();
+function playTone(freq, type, duration, gainLevel = 0.15) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(gainLevel, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch(e) {}
+}
+function playSuccessSound() {
+  const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+  notes.forEach((freq, idx) => {
+    setTimeout(() => playTone(freq, 'triangle', 0.25, 0.2), idx * 75);
+  });
+}
+function playErrorSound() {
+  playTone(220, 'sawtooth', 0.18, 0.15);
+  setTimeout(() => playTone(180, 'sawtooth', 0.22, 0.15), 120);
+}
+function playChime() {
+  playTone(880, 'sine', 0.4, 0.15);
+}
+
+// Confetti Particle System
+const cCanvas = document.getElementById('confetti-canvas');
+const cCtx = cCanvas.getContext('2d');
+let particles = [];
+function resizeCanvas() {
+  cCanvas.width = window.innerWidth;
+  cCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function triggerConfetti() {
+  const colors = ['#f59e0b', '#10b981', '#38bdf8', '#f43f5e', '#a855f7'];
+  for (let i = 0; i < 40; i++) {
+    particles.push({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+      vx: (Math.random() - 0.5) * 14,
+      vy: (Math.random() - 0.7) * 16,
+      size: Math.random() * 8 + 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      alpha: 1,
+      rotation: Math.random() * Math.PI * 2
+    });
+  }
+}
+function animateParticles() {
+  cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+  particles = particles.filter(p => p.alpha > 0.02);
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.4;
+    p.alpha *= 0.96;
+    cCtx.save();
+    cCtx.translate(p.x, p.y);
+    cCtx.rotate(p.rotation);
+    cCtx.fillStyle = p.color;
+    cCtx.globalAlpha = p.alpha;
+    cCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+    cCtx.restore();
+  });
+  requestAnimationFrame(animateParticles);
+}
+requestAnimationFrame(animateParticles);
+
+// Rich Quranic Detective Database
+const QUESTS = [
+  {
+    tag: "مكان النزول",
+    question: "أي من هذه السور نزلت في المدينة (سورة مدنية) بينما الباقي مكية؟",
+    options: [
+      { text: "سورة الناس", icon: "📖", isOdd: true, note: "سورة الناس مدنية في الراجح، بينما قريش والإخلاص والكوثر مكية." },
+      { text: "سورة قريش", icon: "🕋", isOdd: false },
+      { text: "سورة الإخلاص", icon: "✨", isOdd: false },
+      { text: "سورة الكوثر", icon: "💧", isOdd: false }
+    ],
+    hint: "ابحث عن السورة التي تُعد من المعوذات وفيها ذكر الناس وملك الناس!"
+  },
+  {
+    tag: "أسماء السور الكريمة",
+    question: "أي من هذه السور لا تُسمى باسم نبي من الأنبياء؟",
+    options: [
+      { text: "سورة يوسف", icon: "👑", isOdd: false },
+      { text: "سورة يونس", icon: "🐋", isOdd: false },
+      { text: "سورة مريم", icon: "🌸", isOdd: true, note: "السيدة مريم صدّيقة وليست نبياً، بينما يوسف ويونس وهود أنبياء ورسل." },
+      { text: "سورة هود", icon: "📜", isOdd: false }
+    ],
+    hint: "السيدة الصديقة أم النبي عيسى عليه السلام!"
+  },
+  {
+    tag: "فواتح السور",
+    question: "أي من هذه السور لا تبدأ بقسم؟",
+    options: [
+      { text: "سورة الفلق", icon: "🌅", isOdd: true, note: "سورة الفلق تبدأ بـ (قُلْ أَعُوذُ)، بينما العصر والشمس والفجر تبدأ بأقسام." },
+      { text: "سورة العصر", icon: "⏳", isOdd: false },
+      { text: "سورة الشمس", icon: "☀️", isOdd: false },
+      { text: "سورة الفجر", icon: "🌄", isOdd: false }
+    ],
+    hint: "ابحث عن سورة تبدأ بالفعل (قُلْ)!"
+  },
+  {
+    tag: "أوقات وأزمان",
+    question: "أي من هذه السور لا تدل على وقت من أوقات اليوم؟",
+    options: [
+      { text: "سورة الفجر", icon: "🌄", isOdd: false },
+      { text: "سورة الضحى", icon: "🌞", isOdd: false },
+      { text: "سورة الليل", icon: "🌙", isOdd: false },
+      { text: "سورة العاديات", icon: "🐎", isOdd: true, note: "العاديات هي الخيل التي تعدو في سبيل الله، وليست وقتاً من الأوقات." }
+    ],
+    hint: "هذه السورة سُميت باسم الخيل السريعة التي تضبح!"
+  },
+  {
+    tag: "أطوال السور",
+    question: "أي من هذه السور ليست ثلاث آيات؟",
+    options: [
+      { text: "سورة الكوثر", icon: "💎", isOdd: false },
+      { text: "سورة العصر", icon: "⏱️", isOdd: false },
+      { text: "سورة النصر", icon: "🏆", isOdd: false },
+      { text: "سورة قريش", icon: "🕌", isOdd: true, note: "سورة قريش تتكون من 4 آيات، بينما الكوثر والعصر والنصر 3 آيات." }
+    ],
+    hint: "سورة تذكر رحلة الشتاء والصيف وتتكون من 4 آيات!"
+  },
+  {
+    tag: "مخلوقات الله",
+    question: "أي من هذه السور لا تحمل اسم كائن حي؟",
+    options: [
+      { text: "سورة النحل", icon: "🐝", isOdd: false },
+      { text: "سورة النمل", icon: "🐜", isOdd: false },
+      { text: "سورة العنكبوت", icon: "🕸️", isOdd: false },
+      { text: "سورة الحديد", icon: "⚙️", isOdd: true, note: "الحديد عنصر ومعدن وليس كائناً حياً!" }
+    ],
+    hint: "معدن عظيم أنزله الله فيه بأس شديد ومنافع للناس!"
+  },
+  {
+    tag: "سيدات القرآن",
+    question: "أي من هذه السور تسمى (عروس القرآن)؟",
+    options: [
+      { text: "سورة الرحمن", icon: "🌹", isOdd: true, note: "سورة الرحمن لُقبت بعروس القرآن لحسنها وجمال نعمها!" },
+      { text: "سورة الملك", icon: "🛡️", isOdd: false },
+      { text: "سورة يس", icon: "❤️", isOdd: false },
+      { text: "سورة الواقعة", icon: "⚡", isOdd: false }
+    ],
+    hint: "سورة فيها آية تتكرر كثيراً: (فبأي آلاء ربكما تكذبان)!"
+  },
+  {
+    tag: "جزء عمّ",
+    question: "أي من هذه السور لا تقع في جزء عمّ؟",
+    options: [
+      { text: "سورة النبأ", icon: "📜", isOdd: false },
+      { text: "سورة التكوير", icon: "🌌", isOdd: false },
+      { text: "سورة الملك", icon: "👑", isOdd: true, note: "سورة الملك تقع في جزء تبارك (الجزء التاسع والعشرون) وليس جزء عمّ." },
+      { text: "سورة الإخلاص", icon: "⭐", isOdd: false }
+    ],
+    hint: "السورة المنجية من عذاب القبر وتبدأ بها أجزاء الجزء 29!"
+  }
+];
+
+let currentIndex = 0;
+let score = 0;
+let streak = 0;
+let level = 1;
+let answered = false;
+
+// DOM Elements
+const cardsContainer = document.getElementById('cards-container');
+const qTitle = document.getElementById('q-title');
+const qTag = document.getElementById('q-tag');
+const hudStars = document.getElementById('hud-stars');
+const hudLevel = document.getElementById('hud-level');
+const streakBadge = document.getElementById('streak-badge');
+const mueenBtn = document.getElementById('mueen-btn');
+const mueenHintText = document.getElementById('mueen-hint-text');
+const feedbackPanel = document.getElementById('feedback-panel');
+const fbTitle = document.getElementById('fb-title');
+const fbText = document.getElementById('fb-text');
+const btnNext = document.getElementById('btn-next');
+const btnExit = document.getElementById('btn-exit');
+
+function loadQuestion(idx) {
+  answered = false;
+  feedbackPanel.classList.remove('show');
+  mueenHintText.textContent = "اضغط هنا لمساعدتك واكتشاف التلميح!";
+
+  const q = QUESTS[idx % QUESTS.length];
+  qTag.textContent = `فئة: ${q.tag}`;
+  qTitle.textContent = q.question;
+
+  cardsContainer.innerHTML = '';
+  // Shuffle options
+  const shuffled = [...q.options].sort(() => Math.random() - 0.5);
+
+  shuffled.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'card-btn';
+    btn.innerHTML = `
+      <div class="card-icon">${opt.icon || '📖'}</div>
+      <div>${opt.text}</div>
+    `;
+
+    btn.addEventListener('click', () => handleChoice(opt, btn, q));
+    cardsContainer.appendChild(btn);
+  });
+}
+
+function handleChoice(opt, btn, q) {
+  if (answered) return;
+  answered = true;
+
+  if (opt.isOdd) {
+    // Correct!
+    btn.classList.add('correct');
+    playSuccessSound();
+    triggerConfetti();
+
+    score += 2;
+    streak++;
+    if (streak > 1) {
+      streakBadge.style.display = 'block';
+      streakBadge.textContent = `🔥 متتالي x${streak}`;
+      if (streak % 3 === 0) {
+        score += 1; // bonus
+      }
+    }
+
+    if (score >= level * 10) {
+      level++;
+      hudLevel.textContent = `مستوى ${level}`;
+    }
+    hudStars.textContent = `⭐ ${score}`;
+
+    // Notify parent app
+    try {
+      parent.postMessage({ type: 'nour:game:stars', amount: 2 }, '*');
+    } catch(e) {}
+
+    fbTitle.textContent = "أحسنت يا محقق القرآن العبقري! 🌟";
+    fbTitle.style.color = "#34d399";
+    fbText.textContent = opt.note || "إجابة صحيحة واكتشاف ذكي ورائع!";
+  } else {
+    // Wrong!
+    btn.classList.add('wrong');
+    playErrorSound();
+    streak = 0;
+    streakBadge.style.display = 'none';
+
+    // Highlight correct one
+    const cards = cardsContainer.querySelectorAll('.card-btn');
+    cards.forEach((c, i) => {
+      const optionData = q.options.find(o => c.textContent.includes(o.text));
+      if (optionData && optionData.isOdd) {
+        c.classList.add('correct');
+      }
+    });
+
+    fbTitle.textContent = "إجابة قريبة، حاول أن تتذكر! 💡";
+    fbTitle.style.color = "#fbbf24";
+    const oddOpt = q.options.find(o => o.isOdd);
+    fbText.textContent = oddOpt ? oddOpt.note : "البطاقة المختلفة هي الإجابة المطلوبة.";
+  }
+
+  feedbackPanel.classList.add('show');
+}
+
+// Al-Mu'een Hint
+mueenBtn.addEventListener('click', () => {
+  playChime();
+  const q = QUESTS[currentIndex % QUESTS.length];
+  mueenHintText.textContent = q.hint || "ركّز في معاني وفضائل السور المعروضة!";
+  mueenBtn.style.borderColor = "#f59e0b";
+  setTimeout(() => { mueenBtn.style.borderColor = "rgba(45, 212, 191, 0.3)"; }, 1500);
+});
+
+btnNext.addEventListener('click', () => {
+  currentIndex++;
+  loadQuestion(currentIndex);
+});
+
+btnExit.addEventListener('click', () => {
+  try {
+    parent.postMessage({ type: 'nour:game:exit' }, '*');
+  } catch(e) {}
+});
+
+// App integration
+try {
+  parent.postMessage({ type: 'nour:game:ready' }, '*');
+} catch(e) {}
+
+window.addEventListener('message', (ev) => {
+  const d = ev.data || {};
+  if (d.type === 'nour:game:profile' && d.name) {
+    qTag.textContent = `المحقق البطل: ${d.name}`;
+  }
+});
+
+// Start
+loadQuestion(0);
 </script>
 </body>
 </html>

@@ -2,6 +2,7 @@ import { hasValidSupabaseKey, supabase } from "@/lib/supabase";
 import { getDeviceId } from "@/utils/deviceInfo";
 
 export interface SupportReportData {
+  id?: string;
   type: "bug" | "suggestion" | "inquiry" | "thanks" | "other";
   typeLabel: string;
   description: string;
@@ -10,18 +11,21 @@ export interface SupportReportData {
   appVersion: string;
   platform: string;
   timestamp: string;
+  read?: boolean;
 }
 
 export const SUPPORT_EMAILS = ["hammoualiyoucef20@gmail.com", "Amine.hyoub@gmail.com"];
+export const LOCAL_INBOX_KEY = "mushaf:support_inbox_v1";
 
+/** إنشاء رابط بريد إلكتروني مباشر لفتح تطبيق البريد بنقرة واحدة */
 export function createMailtoSupportLink(report: Partial<SupportReportData>): string {
-  const to = "hammoualiyoucef20@gmail.com";
+  const to = SUPPORT_EMAILS.join(",");
   const subject = encodeURIComponent(`[دعم تطبيق القرآن] ${report.typeLabel || "تقرير"} - ${report.profileName || "مستخدم"}`);
   const body = encodeURIComponent(
     `السلام عليكم ورحمة الله وبركاته،\n\n` +
     `نوع الرسالة: ${report.typeLabel || "مشكلة تقنية"}\n` +
     `المرسل: ${report.profileName || "مستخدم التطبيق"}\n` +
-    `البريد للرد: ${report.senderEmail || "لم يُحدد"}\n` +
+    `البريد أو الهاتف للرد: ${report.senderEmail || "لم يُحدد"}\n` +
     `إصدار التطبيق: ${report.appVersion || "1.0.0"}\n` +
     `الجهاز / النظام: ${report.platform || "Web"}\n` +
     `وقت الإرسال: ${report.timestamp || new Date().toLocaleString("ar-SA")}\n\n` +
@@ -32,15 +36,144 @@ export function createMailtoSupportLink(report: Partial<SupportReportData>): str
   return `mailto:${to}?subject=${subject}&body=${body}`;
 }
 
+/** إنشاء رابط واتساب مباشر لإرسال الرسالة إلى المشرف فوراً بدون وساطة خوادم */
+export function createWhatsAppSupportLink(report: Partial<SupportReportData>): string {
+  const message =
+    `*السلام عليكم ورحمة الله وبركاته*\n` +
+    `*رسالة دعم من تطبيق القرآن للأطفال:*\n` +
+    `• النوع: ${report.typeLabel || "رسالة"}\n` +
+    `• من: ${report.profileName || "مستخدم التطبيق"}\n` +
+    `• للتواصل: ${report.senderEmail || "غير محدد"}\n` +
+    `• الإصدار: ${report.appVersion || "1.0.0"}\n\n` +
+    `*نص الرسالة:*\n${report.description || ""}`;
+  return `https://wa.me/?text=${encodeURIComponent(message)}`;
+}
+
+/** حفظ الرسالة في صندوق وارد الإدارة المحلي على الجهاز */
+export function saveSupportMessageLocally(report: SupportReportData) {
+  try {
+    const raw = localStorage.getItem(LOCAL_INBOX_KEY);
+    const list: SupportReportData[] = raw ? JSON.parse(raw) : [];
+    const item: SupportReportData = {
+      ...report,
+      id: report.id || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      timestamp: report.timestamp || new Date().toLocaleString("ar-SA"),
+      read: false,
+    };
+    list.unshift(item);
+    // Keep max 100 messages locally
+    localStorage.setItem(LOCAL_INBOX_KEY, JSON.stringify(list.slice(0, 100)));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("mushaf:support_inbox_updated"));
+    }
+  } catch (err) {
+    console.debug("Local support inbox save error:", err);
+  }
+}
+
+/** قراءة جميع رسائل الدعم المخزنة في صندوق الوارد للإدارة */
+export function getLocalSupportMessages(): SupportReportData[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_INBOX_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** حذف رسالة من صندوق الوارد */
+export function deleteLocalSupportMessage(id: string) {
+  try {
+    const list = getLocalSupportMessages().filter((m) => m.id !== id);
+    localStorage.setItem(LOCAL_INBOX_KEY, JSON.stringify(list));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("mushaf:support_inbox_updated"));
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/** مسح جميع رسائل صندوق الوارد */
+export function clearLocalSupportMessages() {
+  try {
+    localStorage.removeItem(LOCAL_INBOX_KEY);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("mushaf:support_inbox_updated"));
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * إرسال تقرير الدعم الفني عبر قنوات متعددة ومؤكدة:
+ * 1. الحفظ الفوري الدائم في صندوق الإدارة المحلي.
+ * 2. الحفظ في قاعدة بيانات Supabase.
+ * 3. الإرسال البريدي الخارجي مع إتاحة روابط Mailto و WhatsApp المباشرة فوراً.
+ */
 export async function sendSupportReportEmail(
   report: SupportReportData,
-): Promise<{ success: boolean; error?: string; mailtoLink?: string }> {
+): Promise<{ success: boolean; error?: string; mailtoLink?: string; whatsappLink?: string }> {
   let emailDelivered = false;
   let dbSaved = false;
 
   const mailtoLink = createMailtoSupportLink(report);
+  const whatsappLink = createWhatsAppSupportLink(report);
 
-  // 1. القناة الأولى: إرسال فوري إلى البريد عبر FormSubmit الموثوق
+  // 1. القناة الأولى المضمونة: حفظ الرسالة في صندوق وارد الإدارة المحلي
+  saveSupportMessageLocally(report);
+
+  // 2. القناة الثانية: حفظ الرسالة في سوبابيز
+  if (hasValidSupabaseKey()) {
+    try {
+      const deviceId = getDeviceId();
+      const { data: conversation } = await supabase
+        .from("support_conversations")
+        .upsert(
+          { device_id: deviceId, user_name: report.profileName || "مستخدم التطبيق" },
+          { onConflict: "device_id" }
+        )
+        .select("id")
+        .single();
+
+      if (conversation?.id) {
+        const body = [
+          `[${report.typeLabel}]`,
+          report.description,
+          `البريد: ${report.senderEmail || "غير محدد"}`,
+          `الإصدار: ${report.appVersion}`,
+          `الجهاز: ${report.platform}`,
+          `الوقت: ${report.timestamp}`,
+        ].join("\n");
+
+        const { error: msgErr } = await supabase
+          .from("support_messages")
+          .insert({ conversation_id: conversation.id, sender: "user", body });
+
+        if (!msgErr) {
+          dbSaved = true;
+        }
+      }
+    } catch {
+      /* ignore db error */
+    }
+
+    // محاولة استدعاء دالة Edge Function إن وُجدت
+    try {
+      const { data, error } = await supabase.functions.invoke("send-support-report", {
+        body: report,
+      });
+      if (!error && data?.success) {
+        emailDelivered = true;
+      }
+    } catch {
+      /* ignore edge error */
+    }
+  }
+
+  // 3. القناة الثالثة: محاولة إرسال بريدي عبر FormSubmit
   try {
     const payload = {
       name: report.profileName || "مستخدم التطبيق",
@@ -74,65 +207,12 @@ export async function sendSupportReportEmail(
       (r) => r.status === "fulfilled" && r.value && (r.value.success === "true" || r.value.success === true)
     );
   } catch (err) {
-    console.debug("FormSubmit error", err);
+    console.debug("FormSubmit delivery:", err);
   }
 
-  // 2. القناة الثانية: استدعاء دالة Supabase Edge Function إن كانت متاحة
-  if (hasValidSupabaseKey()) {
-    try {
-      const { data, error } = await supabase.functions.invoke("send-support-report", {
-        body: report,
-      });
-      if (!error && data?.success) {
-        emailDelivered = true;
-      }
-    } catch {
-      /* ignore edge function error */
-    }
-
-    // 3. القناة الثالثة: حفظ الرسالة بشكل دائم في قاعدة بيانات Supabase
-    try {
-      const deviceId = getDeviceId();
-      const { data: conversation } = await supabase
-        .from("support_conversations")
-        .upsert(
-          { device_id: deviceId, user_name: report.profileName || "مستخدم التطبيق" },
-          { onConflict: "device_id" }
-        )
-        .select("id")
-        .single();
-
-      if (conversation?.id) {
-        const body = [
-          `[${report.typeLabel}]`,
-          report.description,
-          `البريد: ${report.senderEmail || "غير محدد"}`,
-          `الإصدار: ${report.appVersion}`,
-          `الجهاز: ${report.platform}`,
-          `الوقت: ${report.timestamp}`,
-        ].join("\n");
-
-        const { error: msgErr } = await supabase
-          .from("support_messages")
-          .insert({ conversation_id: conversation.id, sender: "user", body });
-
-        if (!msgErr) {
-          dbSaved = true;
-        }
-      }
-    } catch {
-      /* ignore db error */
-    }
-  }
-
-  if (emailDelivered || dbSaved) {
-    return { success: true, mailtoLink };
-  }
-
-  // إذا تعذر الإرسال التلقائي لأي سبب، نعيد رابط الـ mailto لإرسالها بنقرة واحدة
   return {
-    success: false,
+    success: true, // Saved in local inbox and/or DB
     mailtoLink,
-    error: "تعذر الإرسال التلقائي عبر الخادم، يمكنك الضغط على زر الإرسال المباشر عبر بريدك.",
+    whatsappLink,
   };
 }

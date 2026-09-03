@@ -2,30 +2,475 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-select=no">
+<title>صائد النجوم القرآنية الشريفة</title>
 <style>
-*{margin:0;box-sizing:border-box;font-family:system-ui}
-body{min-height:100vh;background:linear-gradient(160deg,#0b1220,#134e4a);color:#fff;display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;overflow:hidden}
-.bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);z-index:9}
-.bar b{color:#fbbf24;font-size:1.05rem}
-#exit{padding:6px 14px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer}
-#star{position:fixed;font-size:3.6rem;cursor:pointer;filter:drop-shadow(0 0 14px rgba(251,191,36,.8));transition:transform .12s;z-index:2}
-#star:active{transform:scale(.8)}
-#hint{position:fixed;bottom:24px;left:0;right:0;text-align:center;color:#5eead4;font-size:.85rem}
+  :root {
+    --gold: #f59e0b;
+    --gold-glow: rgba(245, 158, 11, 0.4);
+    --teal: #14b8a6;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; font-family:system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color:transparent; }
+  body {
+    min-height: 100vh;
+    background: #060b14;
+    color: #fff;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  /* Top Bar */
+  .top-bar {
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: rgba(10, 18, 32, 0.85);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: absolute;
+    top: 0;
+    z-index: 50;
+  }
+  .title-area { display: flex; align-items: center; gap: 8px; font-weight: 800; color: #fde68a; font-size: 1rem; }
+  .stats-area { display: flex; align-items: center; gap: 8px; }
+  .badge {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 0.85rem;
+  }
+  .exit-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* Mission Banner */
+  .mission-banner {
+    position: absolute;
+    top: 54px;
+    width: 90%;
+    max-width: 500px;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(20, 83, 45, 0.8));
+    border: 1px solid rgba(45, 212, 191, 0.35);
+    border-radius: 16px;
+    padding: 10px 14px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mission-label { font-size: 0.75rem; color: #5eead4; font-weight: 800; }
+  .mission-target { font-size: 1rem; font-weight: 900; color: #fef08a; }
+
+  /* Canvas */
+  #game-canvas {
+    width: 100vw;
+    height: 100vh;
+    display: block;
+  }
+
+  /* Mu'een Overlay Message */
+  .mueen-floater {
+    position: absolute;
+    bottom: 24px;
+    left: 20px;
+    background: rgba(13, 148, 136, 0.9);
+    border: 1px solid #5eead4;
+    border-radius: 999px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(13, 148, 136, 0.4);
+    z-index: 40;
+    animation: floatAnim 2s infinite ease-in-out;
+  }
+  @keyframes floatAnim {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
 </style>
 </head>
 <body>
-<div class="bar"><b>🌟 اصطد النجمة</b><span id="stars">⭐ 0</span><button id="exit">خروج ✕</button></div>
-<div id="star">⭐</div>
-<div id="hint">اضغط على النجمة كلما ظهرت في مكان جديد</div>
+
+<div class="top-bar">
+  <div class="title-area">
+    <span>🌟</span>
+    <span>صائد النجوم القرآنية</span>
+  </div>
+  <div class="stats-area">
+    <div class="badge" id="hud-level">المستوى 1</div>
+    <div class="badge" id="hud-score">⭐ 0</div>
+    <button class="exit-btn" id="btn-exit">خروج ✕</button>
+  </div>
+</div>
+
+<div class="mission-banner">
+  <div class="mission-label">مهمة البطل القرآني:</div>
+  <div class="mission-target" id="mission-text">التقط نجوم فضائل القرآن الكريمة!</div>
+</div>
+
+<div class="mueen-floater" id="mueen-hud">
+  <span>💡</span>
+  <span id="mueen-speech">المُعِين: حرّك السلة والتقط الكلمات المباركة!</span>
+</div>
+
+<canvas id="game-canvas"></canvas>
+
 <script>
-var s=0,el=document.getElementById('star');
-function move(){el.style.left=(12+Math.random()*74)+'vw';el.style.top=(14+Math.random()*62)+'vh'}
-el.addEventListener('click',function(){s++;document.getElementById('stars').textContent='⭐ '+s;try{parent.postMessage({type:'nour:game:stars',amount:1},'*')}catch(e){}move()});
-document.getElementById('exit').addEventListener('click',function(){try{parent.postMessage({type:'nour:game:exit'},'*')}catch(e){}});
-try{parent.postMessage({type:'nour:game:ready'},'*')}catch(e){}
-window.addEventListener('message',function(ev){var d=ev.data||{};if(d.type==='nour:game:profile'&&d.name)document.getElementById('hint').textContent='بطلنا '+d.name+' — اضغط على النجمة!'});
-move();
+// Audio Synthesizer
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let aCtx = null;
+function getAudio() {
+  if (!aCtx) aCtx = new AudioCtx();
+  if (aCtx.state === 'suspended') aCtx.resume();
+  return aCtx;
+}
+function playTone(freq, type, duration, vol = 0.15) {
+  try {
+    const c = getAudio();
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, c.currentTime);
+    g.gain.setValueAtTime(vol, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
+    osc.connect(g);
+    g.connect(c.destination);
+    osc.start();
+    osc.stop(c.currentTime + duration);
+  } catch(e) {}
+}
+function playCatchSound() {
+  playTone(587.33, 'triangle', 0.2, 0.2); // D5
+  setTimeout(() => playTone(880, 'sine', 0.3, 0.25), 60); // A5
+}
+function playWrongSound() {
+  playTone(200, 'sawtooth', 0.15, 0.15);
+}
+function playLevelUpSound() {
+  [523, 659, 783, 1046].forEach((f, i) => setTimeout(() => playTone(f, 'triangle', 0.3, 0.2), i * 90));
+}
+
+// Missions Database
+const MISSIONS = [
+  {
+    target: "التقط كلمات سورة الإخلاص المباركة",
+    wanted: ["قُلْ", "هُوَ", "اللَّهُ", "أَحَدٌ", "الصَّمَدُ"],
+    unwanted: ["حَجَر", "خَشَب", "شَوْك", "نَوْم"],
+    mueenHint: "ابحث عن كلمات التوحيد: أحد، الصمد، الله!"
+  },
+  {
+    target: "التقط ثمار وفضائل المؤمن في القرآن",
+    wanted: ["الصَّبْر", "الصِّدْق", "الإِحْسَان", "التَّقْوَى", "الرَّحْمَة", "البِرّ"],
+    unwanted: ["الغَضَب", "الكَذِب", "اليَأْس", "الغَفْلَة"],
+    mueenHint: "التقط الأخلاق الجميلة التي يحبها الله!"
+  },
+  {
+    target: "التقط كلمات سورة الكوثر الكريمة",
+    wanted: ["أَعْطَيْنَاكَ", "الْكَوْثَرَ", "فَصَلِّ", "لِرَبِّكَ", "وَانْحَرْ"],
+    unwanted: ["البَحْر", "السَّفِينَة", "المَطَر"],
+    mueenHint: "سورة الكوثر: أعطيناك، فصلّ، وانحر!"
+  },
+  {
+    target: "التقط أسماء الجنة والنعيم في القرآن",
+    wanted: ["الفِرْدَوْس", "عَدْن", "النَّعِيم", "السَّلَام", "الخُلْد"],
+    unwanted: ["السَّمُوم", "الحَمِيم", "النَّار"],
+    mueenHint: "الفردوس، جنات عدن، ودار السلام!"
+  }
+];
+
+let missionIndex = 0;
+let score = 0;
+let level = 1;
+let combo = 0;
+
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+const hudScore = document.getElementById('hud-score');
+const hudLevel = document.getElementById('hud-level');
+const missionText = document.getElementById('mission-text');
+const mueenSpeech = document.getElementById('mueen-speech');
+const btnExit = document.getElementById('btn-exit');
+
+function setMission(idx) {
+  const m = MISSIONS[idx % MISSIONS.length];
+  missionText.textContent = m.target;
+  mueenSpeech.textContent = `المُعِين: ${m.mueenHint}`;
+}
+setMission(0);
+
+// Canvas Resizing
+let W = window.innerWidth;
+let H = window.innerHeight;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Basket Player
+const player = {
+  x: W / 2,
+  y: H - 80,
+  w: 110,
+  h: 36,
+  targetX: W / 2
+};
+
+// Input Handling
+function updatePlayerPos(clientX) {
+  player.targetX = Math.max(player.w/2, Math.min(W - player.w/2, clientX));
+}
+window.addEventListener('mousemove', (e) => updatePlayerPos(e.clientX));
+window.addEventListener('touchmove', (e) => {
+  if (e.touches.length > 0) updatePlayerPos(e.touches[0].clientX);
+}, { passive: true });
+window.addEventListener('touchstart', (e) => {
+  if (e.touches.length > 0) updatePlayerPos(e.touches[0].clientX);
+}, { passive: true });
+
+// Star Entities
+let stars = [];
+let particles = [];
+let lastSpawn = 0;
+
+class FallingWordStar {
+  constructor(mission) {
+    this.isWanted = Math.random() < 0.65;
+    const pool = this.isWanted ? mission.wanted : mission.unwanted;
+    this.text = pool[Math.floor(Math.random() * pool.length)];
+    this.x = Math.random() * (W - 80) + 40;
+    this.y = -40;
+    this.vy = Math.random() * 1.6 + 1.8 + (level * 0.25);
+    this.radius = 28;
+    this.glowColor = this.isWanted ? 'rgba(245, 158, 11, 0.8)' : 'rgba(148, 163, 184, 0.6)';
+    this.angle = 0;
+    this.vAngle = (Math.random() - 0.5) * 0.03;
+  }
+
+  update() {
+    this.y += this.vy;
+    this.angle += this.vAngle;
+  }
+
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+
+    // Glowing Outer Halo
+    ctx.shadowBlur = this.isWanted ? 20 : 6;
+    ctx.shadowColor = this.glowColor;
+
+    // Star / Lantern Body
+    ctx.fillStyle = this.isWanted ? 'rgba(254, 240, 138, 0.95)' : 'rgba(203, 213, 225, 0.8)';
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = (i * Math.PI * 2) / 5 - Math.PI / 2;
+      const r1 = this.radius;
+      const r2 = this.radius * 0.45;
+      const a2 = a + Math.PI / 5;
+      if (i === 0) ctx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1);
+      else ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
+      ctx.lineTo(Math.cos(a2) * r2, Math.sin(a2) * r2);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Central Word Badge
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius * 0.72, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = this.isWanted ? '#fbbf24' : '#e2e8f0';
+    ctx.font = 'bold 13px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.text, 0, 1);
+
+    ctx.restore();
+  }
+}
+
+// Particle Bursts
+function spawnParticles(x, y, color) {
+  for (let i = 0; i < 22; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 8,
+      vy: (Math.random() - 0.5) * 8 - 2,
+      r: Math.random() * 4 + 2,
+      alpha: 1,
+      color
+    });
+  }
+}
+
+// Game Loop
+function loop(time) {
+  ctx.clearRect(0, 0, W, H);
+
+  // Background Ambience (Subtle Twinkling stars)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+  for (let i = 0; i < 15; i++) {
+    const sx = ((i * 137) % W);
+    const sy = ((i * 241 + (time * 0.02)) % (H * 0.7));
+    ctx.fillRect(sx, sy, 1.5, 1.5);
+  }
+
+  // Smooth Player Movement
+  player.x += (player.targetX - player.x) * 0.2;
+  player.y = H - 75;
+
+  // Draw Basket
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  // Basket Glow
+  ctx.shadowBlur = 18;
+  ctx.shadowColor = 'rgba(20, 184, 166, 0.6)';
+  // Basket Frame
+  const grad = ctx.createLinearGradient(-player.w/2, 0, player.w/2, 0);
+  grad.addColorStop(0, '#0d9488');
+  grad.addColorStop(0.5, '#2dd4bf');
+  grad.addColorStop(1, '#0d9488');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.roundRect(-player.w/2, -player.h/2, player.w, player.h, 16);
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#042f2e';
+  ctx.font = 'bold 14px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('✨ سلة الأنوار ✨', 0, 0);
+  ctx.restore();
+
+  // Spawning Stars
+  const currentMission = MISSIONS[missionIndex % MISSIONS.length];
+  if (time - lastSpawn > Math.max(900, 1800 - level * 120)) {
+    stars.push(new FallingWordStar(currentMission));
+    lastSpawn = time;
+  }
+
+  // Update & Draw Stars
+  for (let i = stars.length - 1; i >= 0; i--) {
+    const s = stars[i];
+    s.update();
+    s.draw();
+
+    // Check Catch Collision
+    const dx = Math.abs(s.x - player.x);
+    const dy = Math.abs(s.y - player.y);
+
+    if (dx < player.w/2 + 10 && dy < player.h/2 + 15) {
+      // Caught!
+      if (s.isWanted) {
+        // Success
+        playCatchSound();
+        spawnParticles(s.x, s.y, '#f59e0b');
+        score += 2;
+        combo++;
+        if (combo > 2) {
+          mueenSpeech.textContent = `المُعِين: ما شاء الله! متتالي رائع (${combo}x) 🔥`;
+          score += 1;
+        } else {
+          mueenSpeech.textContent = `المُعِين: أحسنت! التقطت (${s.text}) المباركة! ⭐`;
+        }
+
+        try {
+          parent.postMessage({ type: 'nour:game:stars', amount: 2 }, '*');
+        } catch(e) {}
+
+        if (score >= level * 16) {
+          level++;
+          missionIndex++;
+          setMission(missionIndex);
+          playLevelUpSound();
+          hudLevel.textContent = `المستوى ${level}`;
+          mueenSpeech.textContent = `المُعِين: مبارك الترقية إلى المستوى ${level}! 🏆`;
+        }
+      } else {
+        // Wrong star
+        playWrongSound();
+        spawnParticles(s.x, s.y, '#ef4444');
+        combo = 0;
+        mueenSpeech.textContent = `المُعِين: انتبه! كلمة (${s.text}) ليست المطلوبة.`;
+      }
+
+      hudScore.textContent = `⭐ ${score}`;
+      stars.splice(i, 1);
+      continue;
+    }
+
+    // Out of bounds
+    if (s.y > H + 50) {
+      stars.splice(i, 1);
+    }
+  }
+
+  // Particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.2;
+    p.alpha *= 0.94;
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.alpha;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    if (p.alpha < 0.05) particles.splice(i, 1);
+  }
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// Exit Button
+btnExit.addEventListener('click', () => {
+  try {
+    parent.postMessage({ type: 'nour:game:exit' }, '*');
+  } catch(e) {}
+});
+
+// Notify App Ready
+try {
+  parent.postMessage({ type: 'nour:game:ready' }, '*');
+} catch(e) {}
+
+window.addEventListener('message', (ev) => {
+  const d = ev.data || {};
+  if (d.type === 'nour:game:profile' && d.name) {
+    mueenSpeech.textContent = `المُعِين: أهلاً بطلنا الحبيب ${d.name}! انطلق!`;
+  }
+});
 </script>
 </body>
 </html>

@@ -2,44 +2,409 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-select=no">
+<title>أرقام وآيات القرآن العظيم</title>
 <style>
-*{margin:0;box-sizing:border-box;font-family:system-ui}
-body{min-height:100vh;background:linear-gradient(180deg,#0b1220,#0f766e);color:#fff;display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none}
-.bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);z-index:9}
-.bar b{color:#fbbf24;font-size:1.05rem}
-#exit{padding:6px 14px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer}
-h1{margin:76px 0 4px;font-size:1.1rem;color:#fde68a}
-p{color:#99f6e4;font-size:.8rem;margin-bottom:12px}
-#q{font-size:2.6rem;line-height:1.6;width:min(90vw,420px);min-height:130px;text-align:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;margin-bottom:16px}
-#ops{display:flex;gap:12px}
-#ops button{width:78px;height:60px;border:0;border-radius:14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#111;font-size:1.4rem;font-weight:800;cursor:pointer}
-#ops button:active{transform:scale(.94)}
-#hud{margin-top:14px;color:#fbbf24;font-weight:800}
+  :root {
+    --gold: #f59e0b;
+    --gold-glow: rgba(245, 158, 11, 0.35);
+    --teal: #14b8a6;
+    --bg-dark: #070d18;
+    --card-bg: rgba(255, 255, 255, 0.07);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; font-family:system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color:transparent; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% 15%, #0e2f44 0%, var(--bg-dark) 100%);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 24px;
+    user-select: none;
+    overflow-x: hidden;
+  }
+  .top-bar {
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .title-wrap { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1rem; color: #fde68a; }
+  .badge {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 0.85rem;
+  }
+  .exit-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 500px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  /* Challenge Header */
+  .challenge-card {
+    width: 100%;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: 22px;
+    padding: 20px 16px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-surah-badge {
+    background: rgba(20, 184, 166, 0.2);
+    color: #2dd4bf;
+    border: 1px solid rgba(45, 212, 191, 0.3);
+    padding: 3px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+  .card-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #f8fafc;
+    line-height: 1.5;
+  }
+
+  /* Bead Counter Visualization */
+  .beads-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 8px 0;
+    min-height: 48px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 14px;
+    width: 100%;
+  }
+  .bead {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fbbf24, #d97706);
+    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 900;
+    color: #78350f;
+    animation: popBead 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes popBead {
+    0% { transform: scale(0); }
+    100% { transform: scale(1); }
+  }
+
+  /* Numeric Options Grid */
+  .options-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .opt-btn {
+    background: var(--card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 18px;
+    padding: 16px;
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .opt-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    border-color: var(--gold);
+    background: rgba(245, 158, 11, 0.12);
+  }
+  .opt-btn:active:not(:disabled) { transform: scale(0.96); }
+  .opt-sub { font-size: 0.72rem; color: #94a3b8; font-weight: normal; }
+
+  .opt-btn.correct {
+    background: linear-gradient(135deg, #059669, #10b981) !important;
+    border-color: #34d399 !important;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.5) !important;
+  }
+  .opt-btn.wrong {
+    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+    border-color: #f87171 !important;
+    animation: shake 0.4s ease;
+  }
+
+  /* Al-Mu'een Helper */
+  .mueen-card {
+    width: 100%;
+    background: rgba(13, 148, 136, 0.2);
+    border: 1px solid rgba(45, 212, 191, 0.35);
+    border-radius: 16px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+  }
+  .mueen-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2dd4bf, #0d9488);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+  }
+  .mueen-details b { display: block; font-size: 0.85rem; color: #5eead4; }
+  .mueen-details span { font-size: 0.75rem; color: #ccfbf1; }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+  }
 </style>
 </head>
 <body>
-<div class="bar"><b>🔢 عدّ النجوم</b><span id="stars">⭐ 0</span><button id="exit">خروج ✕</button></div>
-<h1>كم نجمة ترى؟</h1>
-<p>كل إجابة صحيحة = ⭐</p>
-<div id="q"></div>
-<div id="ops"></div>
-<div id="hud">المستوى 1</div>
+
+<div class="top-bar">
+  <div class="title-wrap">
+    <span>🔢</span>
+    <span>أرقام وآيات القرآن</span>
+  </div>
+  <div style="display:flex; align-items:center; gap:8px;">
+    <div class="badge" id="hud-level">المستوى 1</div>
+    <div class="badge" id="hud-stars">⭐ 0</div>
+    <button class="exit-btn" id="btn-exit">خروج ✕</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="challenge-card">
+    <div class="card-surah-badge" id="c-badge">سورة الفاتحة</div>
+    <div class="card-title" id="c-title">كم عدد آيات سورة الفاتحة (السبع المثاني)؟</div>
+    <div class="beads-row" id="beads-container"></div>
+  </div>
+
+  <div class="options-grid" id="options-container"></div>
+
+  <div class="mueen-card" id="mueen-btn">
+    <div class="mueen-icon">💡</div>
+    <div class="mueen-details">
+      <b>المُعِين القرآني</b>
+      <span id="mueen-hint">اضغط هنا لتتلقى مساعدة وتلميحاً من المُعِين!</span>
+    </div>
+  </div>
+</div>
+
 <script>
-var s=0,lv=1;
-function round(){
-  var n=3+Math.floor(Math.random()*7),q=document.getElementById('q');q.textContent='';
-  for(var i=0;i<n;i++){q.appendChild(document.createTextNode('⭐'));if(i%4===3)q.appendChild(document.createElement('br'))}
-  var ops=document.getElementById('ops');ops.innerHTML='';var set=[n];
-  while(set.length<3){var r=1+Math.floor(Math.random()*10);if(set.indexOf(r)<0)set.push(r)}
-  set.sort(function(){return Math.random()-.5});
-  set.forEach(function(v){var b=document.createElement('button');b.textContent=v;
-    b.addEventListener('click',function(){if(v===n){s++;lv++;document.getElementById('stars').textContent='⭐ '+s;document.getElementById('hud').textContent='المستوى '+lv;try{parent.postMessage({type:'nour:game:stars',amount:1},'*')}catch(x){}}round()});
-    ops.appendChild(b)});
+// Web Audio Synthesizer
+const AC = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) audioCtx = new AC();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
 }
-document.getElementById('exit').addEventListener('click',function(){try{parent.postMessage({type:'nour:game:exit'},'*')}catch(x){}});
-try{parent.postMessage({type:'nour:game:ready'},'*')}catch(x){}
-round();
+function playTone(freq, type, dur) {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    g.gain.setValueAtTime(0.2, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    osc.connect(g);
+    g.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + dur);
+  } catch(e) {}
+}
+function playSuccess() {
+  [523, 659, 783, 1046].forEach((f, i) => setTimeout(() => playTone(f, 'triangle', 0.25), i * 80));
+}
+function playWrong() {
+  playTone(200, 'sawtooth', 0.2);
+}
+
+const QUESTIONS = [
+  {
+    surah: "سورة الفاتحة",
+    question: "كم عدد آيات سورة الفاتحة المباركة (أم الكتاب)؟",
+    correct: 7,
+    options: [5, 6, 7, 8],
+    hint: "تسمى أيضاً بالسبع المثاني!"
+  },
+  {
+    surah: "سورة الإخلاص",
+    question: "كم عدد آيات سورة الإخلاص (تعدل ثلث القرآن)؟",
+    correct: 4,
+    options: [3, 4, 5, 6],
+    hint: "قل هو الله أحد، الله الصمد، لم يلد ولم يولد، ولم يكن له كفواً أحد."
+  },
+  {
+    surah: "سورة الكوثر",
+    question: "كم عدد آيات سورة الكوثر (أقصر سور القرآن)؟",
+    correct: 3,
+    options: [2, 3, 4, 5],
+    hint: "إنا أعطيناك الكوثر، فصلّ لربك وانحر، إن شانئك هو الأبتر."
+  },
+  {
+    surah: "سورة الناس",
+    question: "كم عدد آيات سورة الناس الكريمة؟",
+    correct: 6,
+    options: [5, 6, 7, 8],
+    hint: "تبدأ بـ (قل أعوذ برب الناس) وتنتهي بـ (من الجنة والناس)."
+  },
+  {
+    surah: "سورة الفلق",
+    question: "كم عدد آيات سورة الفلق الكريمة؟",
+    correct: 5,
+    options: [4, 5, 6, 7],
+    hint: "خمس آيات للحفظ من كل شر وحاسد إذا حسد."
+  },
+  {
+    surah: "حساب الآيات",
+    question: "إذا جمعنا آيات سورة الكوثر (3) وآيات سورة النصر (3)، فكم المجموع؟",
+    correct: 6,
+    options: [5, 6, 7, 8],
+    hint: "3 + 3 = كم؟ عملية جمع سهلة يا بطل!"
+  },
+  {
+    surah: "سورة القدر",
+    question: "كم عدد آيات سورة القدر التي تصف ليلة القدر المباركة؟",
+    correct: 5,
+    options: [4, 5, 6, 7],
+    hint: "خير من ألف شهر، وتنتهي بـ (سلام هي حتى مطلع الفجر)."
+  }
+];
+
+let curIdx = 0;
+let score = 0;
+let level = 1;
+let answered = false;
+
+const cBadge = document.getElementById('c-badge');
+const cTitle = document.getElementById('c-title');
+const beadsContainer = document.getElementById('beads-container');
+const optionsContainer = document.getElementById('options-container');
+const hudStars = document.getElementById('hud-stars');
+const hudLevel = document.getElementById('hud-level');
+const mueenHint = document.getElementById('mueen-hint');
+const mueenBtn = document.getElementById('mueen-btn');
+const btnExit = document.getElementById('btn-exit');
+
+function renderQuestion(idx) {
+  answered = false;
+  const q = QUESTIONS[idx % QUESTIONS.length];
+  cBadge.textContent = q.surah;
+  cTitle.textContent = q.question;
+  mueenHint.textContent = "اضغط هنا لتتلقى مساعدة وتلميحاً من المُعِين!";
+
+  // Render animated beads
+  beadsContainer.innerHTML = '';
+  for (let i = 1; i <= q.correct; i++) {
+    const bead = document.createElement('div');
+    bead.className = 'bead';
+    bead.textContent = i;
+    beadsContainer.appendChild(bead);
+  }
+
+  // Render options
+  optionsContainer.innerHTML = '';
+  q.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `<span>${opt}</span><span class="opt-sub">آيات</span>`;
+    btn.addEventListener('click', () => {
+      if (answered) return;
+      answered = true;
+
+      if (opt === q.correct) {
+        btn.classList.add('correct');
+        playSuccess();
+        score += 2;
+        hudStars.textContent = `⭐ ${score}`;
+        mueenHint.textContent = `أحسنت يا بطل! إجابة صحيحة (${q.correct} آيات) 🌟`;
+
+        try { parent.postMessage({ type: 'nour:game:stars', amount: 2 }, '*'); } catch(e) {}
+
+        if (score >= level * 10) {
+          level++;
+          hudLevel.textContent = `المستوى ${level}`;
+        }
+
+        setTimeout(() => {
+          curIdx++;
+          renderQuestion(curIdx);
+        }, 1200);
+      } else {
+        btn.classList.add('wrong');
+        playWrong();
+        mueenHint.textContent = `الإجابة الصحيحة هي: ${q.correct} آيات. تذكرها جيداً!`;
+        setTimeout(() => {
+          curIdx++;
+          renderQuestion(curIdx);
+        }, 1400);
+      }
+    });
+    optionsContainer.appendChild(btn);
+  });
+}
+
+mueenBtn.addEventListener('click', () => {
+  const q = QUESTIONS[curIdx % QUESTIONS.length];
+  mueenHint.textContent = `تلميح المُعِين: ${q.hint}`;
+});
+
+btnExit.addEventListener('click', () => {
+  try { parent.postMessage({ type: 'nour:game:exit' }, '*'); } catch(e) {}
+});
+
+try { parent.postMessage({ type: 'nour:game:ready' }, '*'); } catch(e) {}
+renderQuestion(0);
 </script>
 </body>
 </html>

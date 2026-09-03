@@ -2,49 +2,388 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-select=no">
+<title>رتّب كلمات القرآن</title>
 <style>
-*{margin:0;box-sizing:border-box;font-family:system-ui}
-body{min-height:100vh;background:linear-gradient(160deg,#0b1220,#134e4a);color:#fff;display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none}
-.bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);z-index:9}
-.bar b{color:#fbbf24;font-size:1.05rem}
-#exit{padding:6px 14px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer}
-h1{margin:76px 0 6px;font-size:1.1rem;color:#fde68a}
-p{color:#5eead4;font-size:.8rem;margin-bottom:10px}
-#hint{font-size:2rem;font-weight:800;color:#fde68a;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;width:min(92vw,440px);text-align:center;margin-bottom:14px;letter-spacing:4px;min-height:56px}
-#pool{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:min(92vw,440px);min-height:52px;margin-bottom:12px}
-#pool .t{border:0;border-radius:12px;padding:12px 16px;background:linear-gradient(135deg,#14b8a6,#0d9488);color:#042f2e;font-weight:800;font-size:1.2rem;cursor:pointer}
-#pool .t:active{transform:scale(.94)}
-#hud{margin-top:10px;color:#fbbf24;font-weight:800}
-.shake{animation:sh .3s}
-@keyframes sh{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  :root {
+    --gold: #f59e0b;
+    --gold-glow: rgba(245, 158, 11, 0.4);
+    --teal: #14b8a6;
+    --bg-dark: #070d18;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; font-family:system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color:transparent; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% 10%, #134e4a 0%, var(--bg-dark) 100%);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 24px;
+    user-select: none;
+    overflow-x: hidden;
+  }
+  .bar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: rgba(19, 78, 74, 0.85);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 50;
+  }
+  .bar b { color: #fde68a; font-size: 1.05rem; display: flex; align-items: center; gap: 6px; }
+  .badge {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 0.85rem;
+  }
+  #exit {
+    padding: 4px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 500px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .word-target-box {
+    width: 100%;
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.15), rgba(15, 23, 42, 0.8));
+    border: 1px solid rgba(45, 212, 191, 0.3);
+    border-radius: 20px;
+    padding: 18px 14px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  .target-label { font-size: 0.8rem; color: #5eead4; font-weight: 800; margin-bottom: 6px; }
+  .slots-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 12px 0 6px;
+    min-height: 56px;
+  }
+  .slot {
+    width: 52px;
+    height: 56px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 2px dashed rgba(245, 158, 11, 0.35);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: #fde68a;
+    transition: all 0.25s ease;
+  }
+  .slot.filled {
+    background: linear-gradient(135deg, #0d9488, #14b8a6);
+    border-style: solid;
+    border-color: #2dd4bf;
+    color: #fff;
+    box-shadow: 0 0 15px rgba(20, 184, 166, 0.5);
+    animation: popSlot 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  /* Scrambled Letters Pool */
+  .letters-pool {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    width: 100%;
+    min-height: 60px;
+    padding: 14px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 18px;
+  }
+  .letter-btn {
+    border: none;
+    border-radius: 14px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, var(--gold), #d97706);
+    color: #1c1917;
+    font-weight: 900;
+    font-size: 1.6rem;
+    cursor: pointer;
+    box-shadow: 0 6px 14px rgba(245, 158, 11, 0.3);
+    transition: all 0.2s;
+  }
+  .letter-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.5);
+  }
+  .letter-btn:active { transform: scale(0.92); }
+  .letter-btn.shake { animation: shake 0.35s ease; }
+
+  /* Al-Mu'een Companion */
+  .mueen-card {
+    width: 100%;
+    background: rgba(20, 184, 166, 0.15);
+    border: 1px solid rgba(45, 212, 191, 0.35);
+    border-radius: 16px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+  }
+  .mueen-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2dd4bf, #0d9488);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+  }
+  .mueen-body b { display: block; font-size: 0.85rem; color: #5eead4; }
+  .mueen-body span { font-size: 0.75rem; color: #ccfbf1; }
+
+  /* Canvas Confetti */
+  #c-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  @keyframes popSlot {
+    0% { transform: scale(0.5); }
+    100% { transform: scale(1); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+  }
 </style>
 </head>
 <body>
-<div class="bar"><b>🔤 رتّب الحروف</b><span id="stars">⭐ 0</span><button id="exit">خروج ✕</button></div>
-<h1>اضغط الحروف لتركيب الكلمة</h1>
-<p>كلمة صحيحة كاملة = ⭐⭐</p>
-<div id="hint">؟</div>
-<div id="pool"></div>
-<div id="hud">المستوى 1</div>
+
+<canvas id="c-canvas"></canvas>
+
+<div class="bar">
+  <b><span>🔤</span><span>رتّب كلمات القرآن</span></b>
+  <div style="display:flex; align-items:center; gap:8px;">
+    <div class="badge" id="hud-level">المستوى 1</div>
+    <div class="badge" id="stars">⭐ 0</div>
+    <button id="exit">خروج ✕</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="word-target-box">
+    <div class="target-label" id="target-label">اضغط الحروف بالترتيب لتركيب الكلمة الكريمة:</div>
+    <div class="slots-row" id="slots-container"></div>
+  </div>
+
+  <div class="letters-pool" id="pool"></div>
+
+  <div class="mueen-card" id="mueen-card">
+    <div class="mueen-avatar">💡</div>
+    <div class="mueen-body">
+      <b>المُعِين القرآني الذكي</b>
+      <span id="mueen-hint">اضغط هنا لوضع الحرف التالي إذا احتجت مساعدة!</span>
+    </div>
+  </div>
+</div>
+
 <script>
-var W=["مكة","الحمد","النور","الصبر","الجنة","الصلاة","الصدق","الرزق"];
-var s=0,lv=1,next=0;
-function round(){
-  next=0;var w=W[Math.floor(Math.random()*W.length)].split('');
-  document.getElementById('hint').textContent='؟'.repeat(w.length);
-  var pool=document.getElementById('pool');pool.innerHTML='';
-  w.map(function(c,i){return [c,i]}).sort(function(){return Math.random()-.5}).forEach(function(p){
-    var b=document.createElement('button');b.className='t';b.textContent=p[0];
-    b.addEventListener('click',function(){
-      if(p[1]===next){next++;b.remove();var h=document.getElementById('hint');h.textContent=h.textContent.replace('؟',p[0]);
-        if(next===w.length){s+=2;lv++;document.getElementById('stars').textContent='⭐ '+s;document.getElementById('hud').textContent='المستوى '+lv;try{parent.postMessage({type:'nour:game:stars',amount:2},'*')}catch(e){}setTimeout(round,600)}}
-      else{b.classList.add('shake');setTimeout(function(){b.classList.remove('shake')},320)}
-    });
-    pool.appendChild(b)});
+// Web Audio Synthesizer
+const AC = window.AudioContext || window.webkitAudioContext;
+let aCtx = null;
+function getAudio() {
+  if (!aCtx) aCtx = new AC();
+  if (aCtx.state === 'suspended') aCtx.resume();
+  return aCtx;
 }
-document.getElementById('exit').addEventListener('click',function(){try{parent.postMessage({type:'nour:game:exit'},'*')}catch(e){}});
-try{parent.postMessage({type:'nour:game:ready'},'*')}catch(e){}
+function playTone(freq, type, dur) {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    g.gain.setValueAtTime(0.2, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    osc.connect(g);
+    g.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + dur);
+  } catch(e) {}
+}
+function playTap() { playTone(600, 'sine', 0.1); }
+function playSuccess() {
+  [523, 659, 783, 1046].forEach((f, i) => setTimeout(() => playTone(f, 'triangle', 0.25), i * 70));
+}
+function playWrong() { playTone(220, 'sawtooth', 0.2); }
+
+// Confetti
+const canvas = document.getElementById('c-canvas');
+const ctx = canvas.getContext('2d');
+let parts = [];
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener('resize', resize);
+resize();
+function popConfetti() {
+  for (let i = 0; i < 35; i++) {
+    parts.push({
+      x: window.innerWidth/2, y: window.innerHeight/2,
+      vx: (Math.random()-0.5)*12, vy: (Math.random()-0.7)*14,
+      size: Math.random()*7 + 3,
+      color: ['#f59e0b','#10b981','#38bdf8','#f43f5e'][Math.floor(Math.random()*4)],
+      alpha: 1
+    });
+  }
+}
+function animConfetti() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  parts = parts.filter(p => p.alpha > 0.02);
+  parts.forEach(p => {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.35; p.alpha *= 0.95;
+    ctx.fillStyle = p.color; ctx.globalAlpha = p.alpha;
+    ctx.fillRect(p.x, p.y, p.size, p.size);
+  });
+  requestAnimationFrame(animConfetti);
+}
+requestAnimationFrame(animConfetti);
+
+// 25+ Rich Quranic Words
+const WORDS = [
+  { word: "مَكَّة", hint: "البلد الحرام وفيها الكعبة المشرفة" },
+  { word: "الْحَمْد", hint: "أول كلمة بعد البسملة في سورة الفاتحة" },
+  { word: "النُّور", hint: "الله نور السماوات والأرض" },
+  { word: "الصَّبْر", hint: "واستعينوا بالصبر والصلاة" },
+  { word: "الْجَنَّة", hint: "دار النعيم التي أعدها الله للمتقين" },
+  { word: "الصَّلَاة", hint: "عمود الدين والركن الثاني من أركان الإسلام" },
+  { word: "الْكَوْثَر", hint: "إنا أعطيناك الكوثر" },
+  { word: "الْفَلَق", hint: "قل أعوذ برب الفلق" },
+  { word: "الْإِخْلَاص", hint: "سورة التوحيد الخالص لله وحده" },
+  { word: "الرَّحْمَة", hint: "ورحمتي وسعت كل شيء" },
+  { word: "التَّقْوَى", hint: "وتزودوا فإن خير الزاد التقوى" }
+];
+
+let s = 0, lv = 1, currentWordObj = null, letters = [], nextIndex = 0;
+const slotsContainer = document.getElementById('slots-container');
+const pool = document.getElementById('pool');
+const starsEl = document.getElementById('stars');
+const hudLevel = document.getElementById('hud-level');
+const mueenHint = document.getElementById('mueen-hint');
+const mueenCard = document.getElementById('mueen-card');
+const targetLabel = document.getElementById('target-label');
+
+function round() {
+  nextIndex = 0;
+  currentWordObj = WORDS[Math.floor(Math.random() * WORDS.length)];
+  targetLabel.textContent = `رتّب الكلمة الكريمة: (${currentWordObj.hint})`;
+  mueenHint.textContent = `تلميح المُعِين: ${currentWordObj.hint}`;
+
+  letters = currentWordObj.word.split('');
+  slotsContainer.innerHTML = '';
+  letters.forEach(() => {
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.textContent = '؟';
+    slotsContainer.appendChild(slot);
+  });
+
+  // Scramble letters
+  const indexed = letters.map((c, i) => ({ c, i }));
+  indexed.sort(() => Math.random() - 0.5);
+
+  pool.innerHTML = '';
+  indexed.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'letter-btn';
+    btn.textContent = item.c;
+
+    btn.addEventListener('click', () => {
+      if (item.i === nextIndex) {
+        // Correct next letter
+        playTap();
+        const slots = slotsContainer.querySelectorAll('.slot');
+        slots[nextIndex].textContent = item.c;
+        slots[nextIndex].classList.add('filled');
+        btn.remove();
+        nextIndex++;
+
+        if (nextIndex === letters.length) {
+          // Word Complete!
+          playSuccess();
+          popConfetti();
+          s += 2;
+          if (s >= lv * 8) {
+            lv++;
+            hudLevel.textContent = `المستوى ${lv}`;
+          }
+          starsEl.textContent = `⭐ ${s}`;
+          mueenHint.textContent = `ممتاز يا بطل! رتّبت (${currentWordObj.word}) بنجاح تام 🌟`;
+
+          try { parent.postMessage({ type: 'nour:game:stars', amount: 2 }, '*'); } catch(e) {}
+          setTimeout(round, 1200);
+        }
+      } else {
+        // Wrong letter
+        playWrong();
+        btn.classList.add('shake');
+        setTimeout(() => btn.classList.remove('shake'), 350);
+        mueenHint.textContent = `انتبه يا بطل، ابحث عن الحرف رقم ${nextIndex + 1} وهو: (${letters[nextIndex]})`;
+      }
+    });
+
+    pool.appendChild(btn);
+  });
+}
+
+// Mu'een Helper Click: Place the next letter automatically!
+mueenCard.addEventListener('click', () => {
+  const targetChar = letters[nextIndex];
+  const buttons = pool.querySelectorAll('.letter-btn');
+  for (let b of buttons) {
+    if (b.textContent === targetChar) {
+      b.click();
+      break;
+    }
+  }
+});
+
+document.getElementById('exit').addEventListener('click', () => {
+  try { parent.postMessage({ type: 'nour:game:exit' }, '*'); } catch(e) {}
+});
+
+try { parent.postMessage({ type: 'nour:game:ready' }, '*'); } catch(e) {}
+window.addEventListener('message', (ev) => {
+  const d = ev.data || {};
+  if (d.type === 'nour:game:profile' && d.name) {
+    targetLabel.textContent = `بطل القرآن: ${d.name} — رتّب الكلمة الكريمة!`;
+  }
+});
+
 round();
 </script>
 </body>

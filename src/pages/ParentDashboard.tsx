@@ -81,9 +81,15 @@ import Avatar from "../components/Avatar";
 import BadgesModal from "../components/BadgesModal";
 import ParentalGateModal from "../components/ParentalGateModal";
 import SupportModal from "../components/SupportModal";
-import { toast } from "../hooks/use-toast";
+import {
+  getLocalSupportMessages,
+  deleteLocalSupportMessage,
+  clearLocalSupportMessages,
+  SupportReportData,
+  createWhatsAppSupportLink,
+} from "../services/resendService";
 
-type DashboardTab = "overview" | "goals" | "schedule" | "games" | "security";
+type DashboardTab = "overview" | "goals" | "schedule" | "games" | "security" | "inbox";
 
 export default function ParentDashboard() {
   const navigate = useNavigate();
@@ -109,6 +115,13 @@ export default function ParentDashboard() {
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [customRewardAmount, setCustomRewardAmount] = useState("");
   const [showGateCheck, setShowGateCheck] = useState(() => isKidsMode() && hasKidsPin());
+  const [inboxMessages, setInboxMessages] = useState<SupportReportData[]>(getLocalSupportMessages);
+
+  useEffect(() => {
+    const handleInboxUpdate = () => setInboxMessages(getLocalSupportMessages());
+    window.addEventListener("mushaf:support_inbox_updated", handleInboxUpdate);
+    return () => window.removeEventListener("mushaf:support_inbox_updated", handleInboxUpdate);
+  }, []);
 
   // بيانات طفل جديد
   const [newKid, setNewKid] = useState({
@@ -495,6 +508,17 @@ export default function ParentDashboard() {
           >
             <Shield className="w-4 h-4" />
             <span>الأمان والأوضاع</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("inbox")}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all shrink-0 ${activeTab === "inbox"
+                ? "bg-card text-accent shadow-sm scale-[1.02]"
+                : "text-muted-foreground hover:text-foreground"
+              }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>صندوق رسائل الدعم {inboxMessages.length > 0 ? `(${inboxMessages.length})` : ""}</span>
           </button>
         </div>
 
@@ -1414,6 +1438,152 @@ export default function ParentDashboard() {
                 </a>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── التبويب 6: صندوق رسائل وبلاغات الدعم الفني ── */}
+        {activeTab === "inbox" && (
+          <div className="space-y-4 animate-fade-up">
+            <div className="card-nour p-4 space-y-3 shadow-soft border border-border/60">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-extrabold text-base text-accent flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5" /> صندوق رسائل وبلاغات الدعم الفني
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    جميع الرسائل والاستفسارات والبلاغات التي يرسلها المستخدمون تُحفظ وتظهر هنا في حسابك فوراً.
+                  </p>
+                </div>
+                {inboxMessages.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (!window.confirm("هل أنت متأكد من حذف جميع رسائل الدعم؟")) return;
+                      clearLocalSupportMessages();
+                      setInboxMessages([]);
+                    }}
+                    className="p-2 px-3 rounded-xl bg-destructive/15 text-destructive hover:bg-destructive/25 text-xs font-bold transition-all active:scale-95 flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>مسح الصندوق</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Quick actions for the admin */}
+              <div className="flex flex-wrap gap-2 pt-1 border-t border-border/40">
+                <button
+                  onClick={() => setShowSupportModal(true)}
+                  className="p-2.5 px-3.5 rounded-xl btn-gold text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>كتابة رسالة أو بلاغ جديد</span>
+                </button>
+
+                <a
+                  href={createWhatsAppSupportLink({ typeLabel: "دعم لوحة التحكم", profileName: "مشرف التطبيق" })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2.5 px-3.5 rounded-xl bg-emerald-600/15 border border-emerald-500/30 text-emerald-500 font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-600/25 active:scale-95 transition-all"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>فتح واتساب المشرف مباشرة</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Messages List */}
+            {inboxMessages.length === 0 ? (
+              <div className="card-nour p-8 text-center space-y-2 border border-dashed border-border/70">
+                <div className="w-12 h-12 rounded-2xl bg-secondary mx-auto flex items-center justify-center text-muted-foreground">
+                  <MessageSquare className="w-6 h-6" />
+                </div>
+                <h4 className="font-extrabold text-foreground text-sm">لا توجد رسائل دعم واردة حالياً</h4>
+                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                  كل الرسائل والاستفسارات المرسلة عبر نافذة الدعم أو المُعِين الذكي ستصل وتظهر في هذا الصندوق بحسابك تلقائياً وبشكل دائم.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {inboxMessages.map((msg, idx) => (
+                  <div
+                    key={msg.id || idx}
+                    className="card-nour p-4 space-y-2.5 shadow-sm border border-border/80 hover:border-accent/40 transition-colors"
+                  >
+                    {/* Message Header */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-sm text-foreground">
+                            {msg.profileName || "مستخدم التطبيق"}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-accent/15 text-accent border border-accent/25">
+                            {msg.typeLabel || "رسالة"}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground block" dir="ltr">
+                          {msg.timestamp}
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (msg.id) deleteLocalSupportMessage(msg.id);
+                          setInboxMessages((prev) => prev.filter((m) => m.id !== msg.id));
+                        }}
+                        className="text-muted-foreground hover:text-destructive p-1 rounded-lg transition-colors"
+                        title="حذف الرسالة"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Message Body */}
+                    <div className="p-3 rounded-xl bg-secondary/40 border border-border/40 text-xs text-foreground font-medium leading-relaxed whitespace-pre-line text-right">
+                      {msg.description}
+                    </div>
+
+                    {/* Message Details & Reply buttons */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-muted-foreground">
+                      <div>
+                        {msg.senderEmail && (
+                          <span className="font-bold text-foreground">
+                            للتواصل: <span className="text-accent">{msg.senderEmail}</span>
+                          </span>
+                        )}
+                        {msg.appVersion && (
+                          <span className="mr-2 text-muted-foreground">
+                            (الإصدار: {msg.appVersion})
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {msg.senderEmail && (
+                          <a
+                            href={`mailto:${msg.senderEmail}?subject=${encodeURIComponent(
+                              `[رد الدعم الفني] بخصوص: ${msg.typeLabel}`
+                            )}`}
+                            className="p-1.5 px-2.5 rounded-lg bg-secondary text-secondary-foreground hover:bg-accent/15 hover:text-accent font-bold text-xs flex items-center gap-1 transition-colors"
+                          >
+                            <Mail className="w-3 h-3" />
+                            <span>رد بالبريد</span>
+                          </a>
+                        )}
+                        <a
+                          href={createWhatsAppSupportLink(msg)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 px-2.5 rounded-lg bg-emerald-600/15 text-emerald-500 hover:bg-emerald-600/25 font-bold text-xs flex items-center gap-1 transition-colors"
+                        >
+                          <MessageSquare className="w-3 h-3" />
+                          <span>رد عبر واتساب</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

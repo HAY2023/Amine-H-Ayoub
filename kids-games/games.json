@@ -1,14 +1,64 @@
 {
   "games": [
-    { "id": "catch-star", "title": "اصطد النجمة", "desc": "نجم يضيء في أماكن مختلفة — اصطده بسرعة!", "icon": "Star", "ageMin": 5, "cost": 15, "kind": "url", "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/catch-star.html" },
-    { "id": "falling-stars", "title": "النجوم الهابطة", "desc": "اصطد النجوم أثناء سقوطها — 💎 الألماس = 3 نجوم", "icon": "Sparkles", "ageMin": 5, "cost": 20, "kind": "url", "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/falling-stars.html" },
-    { "id": "memory-quran", "title": "الذاكرة القرآنية", "desc": "طابق أزواج رموز القرآن — جولات لا تنتهي", "icon": "LayoutGrid", "ageMin": 5, "cost": 25, "kind": "url", "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/memory-quran.html" },
-    { "id": "odd-square", "title": "المربع المختلف", "desc": "لون جديد عشوائي كل جولة والصعوبة تزداد!", "icon": "Grid3x3", "ageMin": 6, "cost": 30, "kind": "url", "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/odd-square.html" },
-    { "id": "count-stars", "title": "عدّ النجوم", "desc": "كم نجمة ترى؟ اختر الرقم الصحيح", "icon": "Hash", "ageMin": 5, "cost": 30, "kind": "url", "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/count-stars.html" },
-    { "id": "order-surahs", "title": "ترتيب السور", "desc": "قرآنية — اضغط السور حسب ترتيبها في المصحف", "icon": "ListOrdered", "ageMin": 7, "cost": 40, "kind": "url", "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/order-surahs.html" },
-    { "id": "complete-ayah", "title": "أكمل الآية", "desc": "قرآنية — اختر تكملة الآية الكريمة من آيات مشهورة", "icon": "BookOpen", "ageMin": 8, "cost": 45, "kind": "url", "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/complete-ayah.html" },
-    { "id": "which-surah", "title": "من أي سورة؟", "desc": "قرآنية — آية مشهورة، من أي سورة هي؟", "icon": "BookOpen", "ageMin": 8, "cost": 45, "kind": "url", "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/which-surah.html" },
-    { "id": "longer-surah", "title": "أي سورة أطول؟", "desc": "قرآنية — قارن عدد آيات السورتين", "icon": "Scale", "ageMin": 8, "cost": 50, "kind": "url", "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/longer-surah.html" },
-    { "id": "word-letters", "title": "رتّب الحروف", "desc": "قرآنية — ركّب كلمات إسلامية من حروفها المتناثرة", "icon": "Puzzle", "ageMin": 7, "cost": 50, "kind": "url", "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/word-letters.html" }
+    {
+      "id": "complete-ayah",
+      "title": "أكمل الآية الكريمة",
+      "desc": "قرآنية أسطورية — اختر التكملة الشريفة للآيات المباركة بمساعدة المُعِين الذكي",
+      "icon": "BookOpen",
+      "ageMin": 5,
+      "cost": 10,
+      "kind": "url",
+      "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/complete-ayah.html"
+    },
+    {
+      "id": "word-letters",
+      "title": "رتّب كلمات القرآن",
+      "desc": "قرآنية — ركّب كلمات مباركة من القرآن العظيم من حروفها المتناثرة",
+      "icon": "Puzzle",
+      "ageMin": 6,
+      "cost": 20,
+      "kind": "url",
+      "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/word-letters.html"
+    },
+    {
+      "id": "odd-square",
+      "title": "المحقق القرآني الذكي",
+      "desc": "ذكاء قرآني — اكتشف السورة أو الكلمة المختلفة واعرف السر والفضيلة مع المُعِين",
+      "icon": "Sparkles",
+      "ageMin": 7,
+      "cost": 25,
+      "kind": "url",
+      "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/odd-square.html"
+    },
+    {
+      "id": "catch-star",
+      "title": "صائد النجوم والكلمات",
+      "desc": "تفاعلية حماسية — التقط النجوم التي تحمل كلمات وفضائل القرآن في سلة الأنوار",
+      "icon": "Star",
+      "ageMin": 5,
+      "cost": 15,
+      "kind": "url",
+      "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/catch-star.html"
+    },
+    {
+      "id": "count-stars",
+      "title": "أرقام وآيات القرآن",
+      "desc": "تحدي عدّ وحساب آيات السور الكريمة مع خرزات الأنوار التفاعلية",
+      "icon": "Hash",
+      "ageMin": 6,
+      "cost": 20,
+      "kind": "url",
+      "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/count-stars.html"
+    },
+    {
+      "id": "falling-stars",
+      "title": "شهب المعرفة القرآنية",
+      "desc": "سرعة بديهة — اختر الشهاب القرآني الصائب قبل أن يغادر الشاشة!",
+      "icon": "Zap",
+      "ageMin": 7,
+      "cost": 30,
+      "kind": "url",
+      "url": "https://raw.githubusercontent.com/HAY2023/Amine-H-Ayoub/main/kids-games/games/falling-stars.html"
+    }
   ]
 }

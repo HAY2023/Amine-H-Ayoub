@@ -2,30 +2,326 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-select=no">
+<title>شهب المعرفة القرآنية</title>
 <style>
-*{margin:0;box-sizing:border-box;font-family:system-ui}
-body{min-height:100vh;background:linear-gradient(180deg,#0b1220,#1e3a8a);color:#fff;overflow:hidden;user-select:none;-webkit-user-select:none}
-.bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);z-index:9}
-.bar b{color:#fbbf24;font-size:1.05rem}
-#exit{padding:6px 14px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer}
-.s{position:fixed;font-size:2.5rem;cursor:pointer;z-index:2;filter:drop-shadow(0 0 8px rgba(251,191,36,.8))}
+  :root {
+    --gold: #f59e0b;
+    --gold-glow: rgba(245, 158, 11, 0.4);
+    --teal: #14b8a6;
+    --bg: #070d19;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; font-family:system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color:transparent; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% 10%, #1e1b4b 0%, var(--bg) 100%);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    user-select: none;
+  }
+  .top-bar {
+    width: 100%;
+    max-width: 540px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 50;
+  }
+  .title-wrap { display: flex; align-items: center; gap: 8px; font-weight: 800; color: #fde68a; }
+  .badge {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 0.85rem;
+  }
+  .exit-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .game-area {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    height: calc(100vh - 54px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 20px;
+  }
+
+  /* Question Header */
+  .q-banner {
+    position: absolute;
+    top: 16px;
+    width: 90%;
+    background: linear-gradient(135deg, rgba(30, 27, 75, 0.9), rgba(15, 23, 42, 0.9));
+    border: 1px solid rgba(167, 139, 250, 0.35);
+    border-radius: 18px;
+    padding: 14px 16px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    z-index: 30;
+  }
+  .q-prompt { font-size: 0.8rem; color: #a78bfa; font-weight: 700; margin-bottom: 4px; }
+  .q-ayah { font-size: 1.25rem; font-weight: 900; color: #fef08a; line-height: 1.6; }
+
+  /* Meteor falling cards */
+  .meteor-card {
+    position: absolute;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+    border: 1.5px solid rgba(245, 158, 11, 0.4);
+    box-shadow: 0 0 18px rgba(245, 158, 11, 0.25);
+    backdrop-filter: blur(8px);
+    border-radius: 16px;
+    padding: 12px 18px;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.2s;
+    user-select: none;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .meteor-card:active { transform: scale(0.95); }
+  .meteor-card.correct {
+    background: linear-gradient(135deg, #059669, #10b981) !important;
+    border-color: #34d399 !important;
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.6) !important;
+  }
+  .meteor-card.wrong {
+    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+    border-color: #f87171 !important;
+  }
+
+  /* Mu'een Floater */
+  .mueen-box {
+    position: absolute;
+    bottom: 16px;
+    width: 90%;
+    background: rgba(13, 148, 136, 0.85);
+    border: 1px solid #5eead4;
+    border-radius: 16px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 30;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
 </style>
 </head>
 <body>
-<div class="bar"><b>✨ النجوم الهابطة</b><span id="stars">⭐ 0</span><button id="exit">خروج ✕</button></div>
+
+<div class="top-bar">
+  <div class="title-wrap">
+    <span>☄️</span>
+    <span>شهب المعرفة القرآنية</span>
+  </div>
+  <div style="display:flex; align-items:center; gap:8px;">
+    <div class="badge" id="hud-level">المستوى 1</div>
+    <div class="badge" id="hud-score">⭐ 0</div>
+    <button class="exit-btn" id="btn-exit">خروج ✕</button>
+  </div>
+</div>
+
+<div class="game-area" id="game-area">
+  <div class="q-banner">
+    <div class="q-prompt">اختر الشهاب الصحيح لتكملة الآية الكريمة:</div>
+    <div class="q-ayah" id="ayah-display">﴿ إِنَّ مَعَ الْعُسْرِ ... ﴾</div>
+  </div>
+
+  <div class="mueen-box" id="mueen-box">
+    <span>💡</span>
+    <span id="mueen-text">المُعِين: اضغط على الشهاب الصحيح قبل أن يغادر الشاشة!</span>
+  </div>
+</div>
+
 <script>
-var s=0;
-function drop(){
-  var e=document.createElement('div');e.className='s';
-  e.textContent=Math.random()<.15?'💎':'⭐';var v=Math.random()<.15?3:1;
-  e.style.left=(8+Math.random()*80)+'vw';e.style.top='-50px';document.body.appendChild(e);
-  var y=-50,iv=setInterval(function(){y+=3+Math.random()*2;e.style.top=y+'px';if(y>innerHeight+40){clearInterval(iv);e.remove()}},28);
-  e.addEventListener('click',function(){clearInterval(iv);e.remove();s+=v;document.getElementById('stars').textContent='⭐ '+s;try{parent.postMessage({type:'nour:game:stars',amount:v},'*')}catch(x){}});
+// Web Audio Synthesizer
+const AC = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) audioCtx = new AC();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
 }
-var loop=setInterval(drop,1100);
-document.getElementById('exit').addEventListener('click',function(){clearInterval(loop);try{parent.postMessage({type:'nour:game:exit'},'*')}catch(x){}});
-try{parent.postMessage({type:'nour:game:ready'},'*')}catch(x){}
+function playTone(freq, type, dur) {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    g.gain.setValueAtTime(0.2, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    osc.connect(g);
+    g.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + dur);
+  } catch(e) {}
+}
+function playSuccess() {
+  [523, 659, 783, 1046].forEach((f, i) => setTimeout(() => playTone(f, 'triangle', 0.25), i * 70));
+}
+function playWrong() { playTone(200, 'sawtooth', 0.2); }
+
+const AYAH_DATA = [
+  {
+    prefix: "إِنَّ مَعَ الْعُسْرِ",
+    correct: "يُسْرًا",
+    options: ["يُسْرًا", "صَبْرًا", "خَيْرًا"],
+    hint: "سورة الشرح: فإن مع العسر يسرا، إن مع العسر يسرا!"
+  },
+  {
+    prefix: "وَتَوَاصَوْا بِالصَّبْرِ وَتَوَاصَوْا",
+    correct: "بِالْمَرْحَمَةِ",
+    options: ["بِالْمَرْحَمَةِ", "بِالشُّكْرِ", "بِالْحَقِّ"],
+    hint: "سورة البلد: وتواصوا بالصبر وتواصوا بالمرحمة."
+  },
+  {
+    prefix: "أَلَيْسَ اللَّهُ بِأَحْكَمِ",
+    correct: "الْحَاكِمِينَ",
+    options: ["الْحَاكِمِينَ", "الْخَالِقِينَ", "الْعَالَمِينَ"],
+    hint: "سورة التين: أليس الله بأحكم الحاكمين؟ بلى ونحن على ذلك من الشاهدين!"
+  },
+  {
+    prefix: "وَإِنَّ جُندَنَا لَهُمُ",
+    correct: "الْغَالِبُونَ",
+    options: ["الْغَالِبُونَ", "الصَّابِرُونَ", "الْمُفْلِحُونَ"],
+    hint: "سورة الصافات: وإن جندنا لهم الغالبون."
+  },
+  {
+    prefix: "وَقُل رَّبِّ زِدْنِي",
+    correct: "عِلْمًا",
+    options: ["عِلْمًا", "مَالًا", "نُورًا"],
+    hint: "سورة طه: الدعاء القرآني العظيم لطلب العلم النافع!"
+  }
+];
+
+let curIdx = 0;
+let score = 0;
+let level = 1;
+let activeMeteors = [];
+let animId = null;
+
+const gameArea = document.getElementById('game-area');
+const ayahDisplay = document.getElementById('ayah-display');
+const hudScore = document.getElementById('hud-score');
+const hudLevel = document.getElementById('hud-level');
+const mueenText = document.getElementById('mueen-text');
+const btnExit = document.getElementById('btn-exit');
+
+function startRound(idx) {
+  // Clear existing meteors
+  activeMeteors.forEach(m => m.el.remove());
+  activeMeteors = [];
+
+  const q = AYAH_DATA[idx % AYAH_DATA.length];
+  ayahDisplay.textContent = `﴿ ${q.prefix} ... ﴾`;
+  mueenText.textContent = `تلميح المُعِين: ${q.hint}`;
+
+  const areaW = gameArea.clientWidth;
+  const colWidth = areaW / q.options.length;
+
+  // Spawn meteor cards
+  q.options.forEach((opt, i) => {
+    const el = document.createElement('div');
+    el.className = 'meteor-card';
+    el.innerHTML = `<span>✨</span><span>${opt}</span>`;
+    gameArea.appendChild(el);
+
+    const x = colWidth * i + (colWidth - 120) / 2;
+    let y = 110 + (Math.random() * 40);
+
+    const meteor = {
+      el,
+      opt,
+      isCorrect: opt === q.correct,
+      x: Math.max(10, Math.min(areaW - 130, x)),
+      y,
+      vy: 1.2 + (level * 0.2)
+    };
+
+    el.style.left = `${meteor.x}px`;
+    el.style.top = `${meteor.y}px`;
+
+    el.addEventListener('click', () => onMeteorClick(meteor, q));
+    activeMeteors.push(meteor);
+  });
+}
+
+function onMeteorClick(meteor, q) {
+  if (meteor.isCorrect) {
+    meteor.el.classList.add('correct');
+    playSuccess();
+    score += 2;
+    hudScore.textContent = `⭐ ${score}`;
+    mueenText.textContent = `ما شاء الله! إجابة مباركة وسريعة ⭐`;
+
+    try { parent.postMessage({ type: 'nour:game:stars', amount: 2 }, '*'); } catch(e) {}
+
+    if (score >= level * 10) {
+      level++;
+      hudLevel.textContent = `المستوى ${level}`;
+    }
+
+    setTimeout(() => {
+      curIdx++;
+      startRound(curIdx);
+    }, 800);
+  } else {
+    meteor.el.classList.add('wrong');
+    playWrong();
+    mueenText.textContent = `الشهاب الصحيح كان: (${q.correct})`;
+    setTimeout(() => {
+      curIdx++;
+      startRound(curIdx);
+    }, 1200);
+  }
+}
+
+function animateMeteors() {
+  const maxH = gameArea.clientHeight - 80;
+  activeMeteors.forEach(m => {
+    m.y += m.vy;
+    if (m.y > maxH) {
+      m.y = 100; // loop back
+    }
+    m.el.style.top = `${m.y}px`;
+  });
+  animId = requestAnimationFrame(animateMeteors);
+}
+animId = requestAnimationFrame(animateMeteors);
+
+btnExit.addEventListener('click', () => {
+  try { parent.postMessage({ type: 'nour:game:exit' }, '*'); } catch(e) {}
+});
+
+try { parent.postMessage({ type: 'nour:game:ready' }, '*'); } catch(e) {}
+startRound(0);
 </script>
 </body>
 </html>

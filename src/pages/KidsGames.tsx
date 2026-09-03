@@ -14,6 +14,10 @@ import ParentalGateModal from "../components/ParentalGateModal";
 import MemoryGame from "../games/MemoryGame";
 import MissingWordGame from "../games/MissingWordGame";
 import AyahOrderGame from "../games/AyahOrderGame";
+import DetectiveGame from "../games/DetectiveGame";
+import WordBuilderGame from "../games/WordBuilderGame";
+import CatchStarGame from "../games/CatchStarGame";
+import AyahMathGame from "../games/AyahMathGame";
 import RemoteGameFrame from "../components/RemoteGameFrame";
 import Avatar, { getAvatarSrc } from "../components/Avatar";
 import { drawQRCodeOnCanvas } from "../utils/qrCode";
@@ -1493,6 +1497,10 @@ const ENGINES: Record<GameEngine, (p: { def: GameDef; minSurah: number }) => JSX
   surahorder: SurahOrderEngine, 
   surahnum: SurahNumEngine,
   remote: ({ def }) => <RemoteGameFrame def={def} onExit={() => window.dispatchEvent(new Event("mushaf:remotegame:exit"))} />,
+  detective: ({ def, minSurah }) => <DetectiveGame def={def} minSurah={minSurah} />,
+  wordbuilder: ({ def, minSurah }) => <WordBuilderGame def={def} minSurah={minSurah} />,
+  catchstar: ({ def, minSurah }) => <CatchStarGame def={def} minSurah={minSurah} />,
+  ayahmath: ({ def, minSurah }) => <AyahMathGame def={def} minSurah={minSurah} />,
 };
 const ICONS: Record<string, typeof Headphones> = { Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Hash, Grid3x3, Gamepad2, BookOpen, Sparkles, Puzzle, Brain };
 const iconFor = (key: string) => ICONS[key] || Gamepad2;
