@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Play, RefreshCw, BookOpen, Lock, Settings, Bell, Headphones, ListOrdered, LayoutGrid, Scale, Trophy, Gift, Star, Hash, Grid3x3, Flame, Sparkles, Gamepad2, Puzzle, X, Crown, Brain, Camera, Award, Download, Clock } from "lucide-react";
 import { getAllSurahs } from "../data/quranData";
-import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
+import { getSurahAudioUrl, hasCloudAudio, getFallbackAudioUrl } from "../data/audioUrls";
 import { getProfile, getProgress, getProfiles, getCoins, addCoins, kidsRouteBlocked, setCurrentSurah, addPlayMinutes, setAppMode, ownItem, unlockItem, getActiveId, getAppMode, isPureMode, formatCoins } from "../data/kidsProfile";
 import { getGameCatalog, type GameDef, type GameEngine } from "../data/gameCatalog";
 import { fetchRemoteGames, precacheRemoteGames } from "../data/remoteGames";
@@ -36,7 +36,7 @@ async function exitKioskMode() {
   // تم إيقاف تكبير الشاشة التلقائي بناءً على طلب المستخدم
 }
 
-const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
+const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : getFallbackAudioUrl(n));
 const shuffle = <T,>(a: T[]): T[] => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
 const SURAHS = getAllSurahs();
 
@@ -743,6 +743,7 @@ function WhichSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[], def: G
 
 function SurahAudioEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   const [source, setSource] = useState<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [question, setQuestion] = useState<{ surah: { number: number; name: string }; options: { number: number; name: string }[] } | null>(null);
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
@@ -751,13 +752,20 @@ function SurahAudioEngine({ def, minSurah }: { def: GameDef; minSurah: number })
   const deckRef = useRef<typeof SURAHS>([]);
 
   const makeQuestion = () => {
-    const available = poolFor(def, minSurah).filter(s => hasCloudAudio(s.number) || s.number === 1);
+    let available = poolFor(def, minSurah);
+    if (!available || available.length === 0) {
+      available = SURAHS.filter(s => s.number === 1 || (s.number >= 78 && s.number <= 114));
+    }
     if (deckRef.current.length === 0) {
       deckRef.current = shuffle([...available]);
     }
-    const correct0 = deckRef.current.pop() || available[0];
-    const optionPool = neighborPool(def, correct0.number, 4).filter(s => hasCloudAudio(s.number) || s.number === 1);
+    const correct0 = deckRef.current.pop() || available[0] || SURAHS[0];
+    const optionPool = neighborPool(def, correct0.number, 4);
     const others = shuffle(optionPool.filter(s => s.number !== correct0.number)).slice(0, 3);
+    while (others.length < 3) {
+      const extra = SURAHS.find(s => s.number !== correct0.number && !others.some(o => o.number === s.number));
+      if (extra) others.push(extra); else break;
+    }
     return { surah: correct0, options: shuffle([correct0, ...others].map((s) => ({ number: s.number, name: s.name }))) };
   };
 
@@ -771,10 +779,26 @@ function SurahAudioEngine({ def, minSurah }: { def: GameDef; minSurah: number })
 
   useEffect(() => {
     if (!question) return;
-    const audio = new Audio(audioPath(question.surah.number));
+    const primaryUrl = getSurahAudioUrl(question.surah.number);
+    const fallbackUrl = getFallbackAudioUrl(question.surah.number);
+    let triedFallback = false;
+
+    const audio = new Audio(primaryUrl);
     audio.preload = "auto";
-    audio.onended = () => audio.pause();
+    audio.onplay = () => setIsPlaying(true);
+    audio.onpause = () => setIsPlaying(false);
+    audio.onended = () => setIsPlaying(false);
+    audio.onerror = () => {
+      if (!triedFallback) {
+        triedFallback = true;
+        audio.src = fallbackUrl;
+        audio.load();
+      }
+    };
+
     setSource(audio);
+    setIsPlaying(false);
+
     return () => {
       audio.pause();
       audio.src = "";
@@ -782,13 +806,28 @@ function SurahAudioEngine({ def, minSurah }: { def: GameDef; minSurah: number })
   }, [question]);
 
   const playAudio = () => {
-    source?.play().catch(() => {
-      toast({ title: "تعذّر تشغيل الصوت", description: "تأكد من اتصال الإنترنت أو جرب سورة أخرى.", variant: "destructive" });
-    });
+    if (!source || !question) return;
+    if (isPlaying) {
+      source.pause();
+      setIsPlaying(false);
+    } else {
+      source.play().catch(() => {
+        // تجربة الرابط البديل مباشرة من CDN الإسلامي العالمي
+        source.src = getFallbackAudioUrl(question.surah.number);
+        source.load();
+        source.play().catch(() => {
+          toast({ title: "تعذّر تشغيل الصوت", description: "تحقق من اتصالك بالإنترنت وسيعمل الصوت تلقائياً.", variant: "destructive" });
+        });
+      });
+    }
   };
 
   const choose = (number: number) => {
     if (!question || feedback) return;
+    if (source) {
+      source.pause();
+      setIsPlaying(false);
+    }
     setSelected(number);
     const correct = number === question.surah.number;
     if (correct) g.correct(); else g.miss();
@@ -819,11 +858,14 @@ function SurahAudioEngine({ def, minSurah }: { def: GameDef; minSurah: number })
       <div className="py-2">
         <button
           onClick={playAudio}
-          className="mx-auto w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-accent to-amber-500 text-accent-foreground flex items-center justify-center shadow-xl active:scale-95 transition-transform hover:brightness-110"
+          className={`mx-auto w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-accent to-amber-500 text-accent-foreground flex items-center justify-center shadow-xl active:scale-95 transition-all hover:brightness-110 ${isPlaying ? "ring-4 ring-amber-400 scale-105" : ""}`}
+          title={isPlaying ? "إيقاف مؤقت" : "تشغيل الصوت"}
         >
-          <Headphones className="w-10 h-10 sm:w-12 sm:h-12 animate-pulse" />
+          <Headphones className={`w-10 h-10 sm:w-12 sm:h-12 ${isPlaying ? "animate-bounce" : "animate-pulse"}`} />
         </button>
-        <span className="block mt-2 text-xs font-bold text-muted-foreground">اضغط للاستماع 🎧</span>
+        <span className="block mt-2 text-xs font-bold text-muted-foreground">
+          {isPlaying ? "جاري الاستماع... (اضغط للإيقاف) ⏸️" : "اضغط للاستماع 🎧"}
+        </span>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {question.options.map(o => {

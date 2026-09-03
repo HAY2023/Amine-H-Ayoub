@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Headphones, BookOpen, Gamepad2, Settings, User, Lock, Sparkles, ShoppingBag } from "lucide-react";
+import { Headphones, BookOpen, Gamepad2, Settings, User, Lock, ShoppingBag } from "lucide-react";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
 import { isPureMode, setPureMode, setKidsHidden, getAppMode, setAppMode, getCoins, getProfile, getProgress } from "../data/kidsProfile";
 import ParentalGateModal from "./ParentalGateModal";
@@ -282,7 +282,7 @@ export default function AppNav({ className = "" }: AppNavProps) {
 
           {/* 2. شارة الوضع وقفل الأمان في الطرف الأيسر */}
           <div className="flex items-center gap-1 shrink-0 pl-0.5">
-            {kidsMode ? (
+            {kidsMode && (
               <button
                 onClick={handleUnlockClick}
                 className="h-8 px-2 sm:px-2.5 rounded-xl bg-destructive/15 border border-destructive/30 text-destructive hover:bg-destructive/25 text-[10px] sm:text-[11px] font-extrabold flex items-center gap-1 active:scale-95 transition-transform shrink-0"
@@ -291,16 +291,6 @@ export default function AppNav({ className = "" }: AppNavProps) {
                 <Lock className="w-3.5 h-3.5 shrink-0" />
                 <span className="hidden min-[400px]:inline">فك القفل</span>
               </button>
-            ) : pureMode ? (
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-secondary text-muted-foreground text-[10px] sm:text-[11px] font-bold border border-border/40 shrink-0">
-                <Headphones className="w-3 h-3 text-muted-foreground shrink-0" />
-                <span className="hidden min-[400px]:inline">تلاوات فقط</span>
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-accent/15 text-accent text-[10px] sm:text-[11px] font-bold border border-accent/25 shrink-0" title="وضع التنقل المرن">
-                <Sparkles className="w-3 h-3 shrink-0" />
-                <span className="hidden min-[400px]:inline">تنقل مرن</span>
-              </span>
             )}
           </div>
         </div>

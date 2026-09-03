@@ -8,7 +8,6 @@ import { Toaster } from "./components/ui/toaster";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 const SiteLinksOverlay = lazy(() => import("./components/SiteLinksOverlay"));
-import AlMueenAssistant from "./components/AlMueenAssistant";
 import { syncCoordinatesFromServer } from "./data/ayahCoordinates";
 import { syncTimingsFromServer } from "./data/ayahTimings";
 import { syncBookmarksFromServer } from "./data/bookmarks";
@@ -246,7 +245,6 @@ const App = () => {
             </Suspense>
             <SiteLinksOverlay open={showSiteLinks} onClose={() => setShowSiteLinks(false)} />
             <DeveloperPanel open={showDevPanel} onClose={() => setShowDevPanel(false)} />
-            <AlMueenAssistant />
             {showWelcome && <WelcomeOverlay onDone={() => { markPicked(); setShowWelcome(false); setShowPicker(false); }} />}
             {!showWelcome && showPicker && <ProfilePicker onPicked={() => setShowPicker(false)} />}
             {showExitGate && (

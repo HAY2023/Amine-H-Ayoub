@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, Baby, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete, Headphones, Power } from "lucide-react";
+import { ArrowRight, Moon, Sun, Baby, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete, Headphones, Power, Check } from "lucide-react";
 import { isMushafDevEnabled, setMushafDev, closeTauriApp } from "../utils/tauriUtils";
 import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHidden, setPureMode, isPureMode, type AppMode } from "../data/kidsProfile";
 
@@ -169,28 +169,93 @@ export default function SettingsPage() {
           <p className="mt-1 text-xs text-muted-foreground">خصّص المظهر وأدوات الأهل</p>
         </div>
 
-        {/* ===== وضع الاستخدام — الأهم أولاً، ظاهر دائماً ليمكن التبديل في أي وقت ===== */}
-        <Section label="وضع الاستخدام">
-          <div className="p-3 space-y-2">
-            <div className="grid grid-cols-3 gap-2">
-              {([
-                { m: "flex" as const, Icon: ArrowRight, label: "مرن", desc: "لي أنا + ألعاب متاحة" },
-                { m: "parent" as AppMode, Icon: User, label: "صارم", desc: "لي أنا فقط — بلا ألعاب" },
-                { m: "kids" as AppMode, Icon: Baby, label: "أطفال", desc: "ركن آمن للأطفال" },
-              ]).map(o => {
-                const active = o.m === "flex" ? (!isPureMode() && appMode === "parent" && !hideKids) : appMode === o.m;
-                return (
-                  <button key={o.m} onClick={() => o.m === "flex" ? changeMode("parent", "flexible") : changeMode(o.m)}
-                    className={`flex flex-col items-center gap-1 rounded-xl py-3 text-xs font-bold border transition-all ${active ? "border-accent bg-accent/15 text-accent shadow-soft" : "border-border bg-muted text-muted-foreground hover:border-accent/40"}`}>
-                    <o.Icon className="w-5 h-5" /> {o.label}
-                    <span className="text-[9px] font-normal text-center leading-tight px-1">{o.desc}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              «مرن»: تلاوات مع بقاء زر الألعاب متاحاً. «صارم»: واجهة تلاوات خالصة تماماً. «أطفال»: ركن أطفال مقفل برمز.
-            </p>
+        {/* ===== وضع الاستخدام — تصميم راقي ومنظم وبطاقات واضحة ===== */}
+        <Section label="وضع استخدام التطبيق">
+          <div className="p-3 sm:p-4 space-y-2.5">
+            {[
+              {
+                key: "flex",
+                title: "الوضع الشامل (تلاوات وألعاب)",
+                badge: "تلاوات + ألعاب",
+                description: "الواجهة المتكاملة المناسبة لجميع أفراد الأسرة؛ تلاوات القرآن الكريم مع بقاء ركن الألعاب متاحاً.",
+                Icon: BookOpen,
+                isActive: () => !isPureMode() && appMode === "parent" && !hideKids,
+                onClick: () => changeMode("parent", "flexible"),
+              },
+              {
+                key: "pure",
+                title: "الوضع الهادئ (تلاوات فقط)",
+                badge: "تلاوات فقط",
+                description: "واجهة استماع وقراءة خاشعة وهادئة للكبار، مع إخفاء ركن الأطفال والألعاب بالكامل.",
+                Icon: Headphones,
+                isActive: () => (isPureMode() || hideKids) && appMode === "parent",
+                onClick: () => changeMode("parent", "pure"),
+              },
+              {
+                key: "kids",
+                title: "ركن الأطفال الآمن والمحمي",
+                badge: "مقفل برمز PIN",
+                description: "بيئة تعليمية وترفيهية مخصصة للأطفال، مقفلة برمز حماية لمنع خروج الطفل إلى باقي أقسام التطبيق.",
+                Icon: Baby,
+                isActive: () => appMode === "kids",
+                onClick: () => changeMode("kids"),
+              },
+            ].map((o) => {
+              const active = o.isActive();
+              return (
+                <button
+                  key={o.key}
+                  type="button"
+                  onClick={o.onClick}
+                  className={`w-full p-3 sm:p-3.5 rounded-2xl border text-right transition-all flex items-center justify-between gap-3 group active:scale-[0.99] ${
+                    active
+                      ? "border-accent bg-accent/15 ring-2 ring-accent/30 shadow-sm"
+                      : "border-border/70 bg-card/60 hover:bg-card hover:border-accent/40"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
+                        active
+                          ? "bg-accent text-accent-foreground shadow-md shadow-accent/20"
+                          : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      <o.Icon className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-extrabold text-xs sm:text-sm text-foreground">{o.title}</span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            active
+                              ? "bg-accent/25 text-accent border border-accent/40"
+                              : "bg-secondary text-muted-foreground"
+                          }`}
+                        >
+                          {o.badge}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        {o.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 mr-1">
+                    <div
+                      className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center border transition-all ${
+                        active
+                          ? "border-accent bg-accent text-accent-foreground shadow-sm"
+                          : "border-border/80 bg-transparent text-transparent"
+                      }`}
+                    >
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </Section>
 
