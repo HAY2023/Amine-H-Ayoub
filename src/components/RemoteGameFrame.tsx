@@ -103,7 +103,7 @@ export default function RemoteGameFrame({ def, onExit }: { def: GameDef; onExit:
           srcDoc={srcDoc}
           sandbox="allow-scripts allow-pointer-lock allow-orientation-lock"
           allow="autoplay; fullscreen"
-          className="w-full h-[70vh] rounded-2xl border border-border bg-white shadow-soft"
+          className="w-full h-[72vh] rounded-3xl border-2 border-accent/30 bg-slate-950 shadow-2xl"
         />
       ) : (
         <div className="card-nour p-8 text-center text-sm text-muted-foreground">جارٍ تحميل اللعبة...</div>

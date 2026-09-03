@@ -8,6 +8,7 @@ import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
 import { getCustomPages, getAllPageImages, getPageOrder } from "@/data/customPages";
 import { getPageSurahRegions } from "@/data/surahRegions";
 import { addReadingMinutes, addCoins, kidsEnabled as getKidsEnabled, getProgress, isPureMode } from "@/data/kidsProfile";
+import { recordTodayActivity } from "@/data/kidsBadges";
 
 import { getBookmarks, addBookmark, removeBookmark, Bookmark } from "@/data/bookmarks";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
@@ -159,6 +160,7 @@ function _UnusedQuranReader() {
           // نقاط القراءة (المال): نجومتان لكل دقيقة — قليلة لكنها أكثر من نقاط الألعاب
           const stars = Math.max(1, Math.round(mins * 2));
           addCoins(stars);
+          recordTodayActivity();
           if (justUnlocked) {
             toast({ title: "🎉 أحسنت! اكتمل وقت الاستماع وفتحت الألعاب" });
             // يفتح الألعاب مباشرة عندما يتوفر الوقت — لا ننتظر

@@ -214,19 +214,17 @@ export const BUILTIN_GAMES: GameDef[] = [
   G("surahaudio", "اسمع السورة", "surahaudio", 4, 16, 0, "Headphones", null, 0),
 
   // ── ألعاب الذاكرة ──
-  G("memory", "بطاقات السور", "memory", 4, 16, 50, "LayoutGrid", { pairs: 4 }, 1),
-  G("memory_meaning", "لعبة الذاكرة", "memory_meaning", 4, 16, 55, "Brain", null, 2),
+  G("memory", "بطاقات السور الذكية", "memory", 4, 16, 50, "LayoutGrid", { pairs: 6 }, 1),
 
   // ── ألعاب الاكتشاف ──
-  G("whichsurah", "اكتشف السورة", "whichsurah", 4, 16, 60, "Sparkles", FULL, 3),
+  G("whichsurah", "اكتشف السورة", "whichsurah", 4, 16, 60, "Sparkles", FULL, 2),
 
   // ── ألعاب الترتيب ──
-  G("order", "ترتيب الآيات", "order", 4, 16, 65, "ListOrdered", FULL, 4),
-  G("ayahorder", "رتّب الآيات", "ayahorder", 4, 16, 70, "ListOrdered", FULL, 5),
-  G("surahorder", "ترتيب السور", "surahorder", 4, 16, 75, "ListOrdered", FULL, 6),
+  G("order", "ترتيب الآيات", "order", 4, 16, 65, "ListOrdered", FULL, 3),
+  G("surahorder", "ترتيب السور", "surahorder", 4, 16, 75, "ListOrdered", FULL, 4),
 
   // ── ألعاب العد ──
-  G("count", "عدّ الآيات", "count", 4, 16, 45, "Hash", FULL, 7),
+  G("count", "عدّ الآيات", "count", 4, 16, 45, "Hash", FULL, 5),
 
   // ── ألعاب الكلمات ──
   G("missingword", "الكلمة الضائعة", "missingword", 4, 16, 80, "Puzzle", FULL, 0),

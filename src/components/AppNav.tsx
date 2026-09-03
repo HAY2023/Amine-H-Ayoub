@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Headphones, BookOpen, Gamepad2, Settings, User, Lock, ShoppingBag } from "lucide-react";
+import { Headphones, BookOpen, Gamepad2, Settings, User, Lock, ShoppingBag, Sparkles } from "lucide-react";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
 import { isPureMode, setPureMode, setKidsHidden, getAppMode, setAppMode, getCoins, getProfile, getProgress } from "../data/kidsProfile";
 import ParentalGateModal from "./ParentalGateModal";
@@ -93,13 +93,8 @@ export default function AppNav({ className = "" }: AppNavProps) {
   };
 
   const handleUnlockClick = () => {
-    if (hasKidsPin()) {
-      setPinAction("unlock");
-    } else {
-      setKidsLocked(false);
-      refreshState();
-      toast({ title: "تم فك قفل الأطفال", description: "أنت الآن في وضع التنقل المفتوح" });
-    }
+    setLockGateTarget("الألعاب وركن الأطفال");
+    setShowLockGate(true);
   };
 
   const handleEnableKidsFromPure = () => {
@@ -285,11 +280,11 @@ export default function AppNav({ className = "" }: AppNavProps) {
             {kidsMode && (
               <button
                 onClick={handleUnlockClick}
-                className="h-8 px-2 sm:px-2.5 rounded-xl bg-destructive/15 border border-destructive/30 text-destructive hover:bg-destructive/25 text-[10px] sm:text-[11px] font-extrabold flex items-center gap-1 active:scale-95 transition-transform shrink-0"
-                title="وضع الأطفال مقفل — اضغط لفك القفل برمز ولي الأمر"
+                className="h-8 px-2 sm:px-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-500 hover:bg-amber-500/25 text-[10px] sm:text-[11px] font-extrabold flex items-center gap-1 active:scale-95 transition-transform shrink-0"
+                title="اضغط لعرض العداد التنازلي التفاعلي"
               >
                 <Lock className="w-3.5 h-3.5 shrink-0" />
-                <span className="hidden min-[400px]:inline">فك القفل</span>
+                <span className="hidden min-[400px]:inline">العداد التنازلي</span>
               </button>
             )}
           </div>

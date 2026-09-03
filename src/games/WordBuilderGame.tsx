@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Lightbulb, CheckCircle2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Lightbulb, CheckCircle2, Star, ArrowLeft } from "lucide-react";
 import { addCoins } from "../data/kidsProfile";
 import { GameDef } from "../data/gameCatalog";
 
@@ -9,40 +9,132 @@ interface WordBuilderGameProps {
 }
 
 interface QuranWord {
-  word: string;
+  displayWord: string; // الكلمة للعرض النهائي
+  cleanWord: string;   // الكلمة بدون أي تشكيل لتفكيك الحروف
   meaning: string;
   surah: string;
 }
 
-const QURAN_WORDS: QuranWord[] = [
-  { word: "مَكَّة", meaning: "البلد الأمين وفيه الكعبة الشريفة", surah: "سورة الفتح" },
-  { word: "الْحَمْد", meaning: "أول كلمة بعد البسملة في أم الكتاب", surah: "سورة الفاتحة" },
-  { word: "النُّور", meaning: "الله نور السماوات والأرض", surah: "سورة النور" },
-  { word: "الصَّبْر", meaning: "واستعينوا بالصبر والصلاة", surah: "سورة البقرة" },
-  { word: "الْجَنَّة", meaning: "دار النعيم التي أعدها الله للمتقين", surah: "سورة آل عمران" },
-  { word: "الصَّلَاة", meaning: "عمود الدين وقرة عين النبي ﷺ", surah: "سورة الإسراء" },
-  { word: "الْكَوْثَر", meaning: "نهر عظيم في الجنة لنبينا الكريم ﷺ", surah: "سورة الكوثر" },
-  { word: "الْفَلَق", meaning: "قل أعوذ برب الفلق", surah: "سورة الفلق" },
-  { word: "الرَّحْمَة", meaning: "ورحمتي وسعت كل شيء", surah: "سورة الأعراف" },
-  { word: "التَّقْوَى", meaning: "وتزودوا فإن خير الزاد التقوى", surah: "سورة البقرة" },
+// دالة تنظيف التشكيل والحركات والمدود من النص العربي
+function removeTashkeel(text: string): string {
+  return text
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, "") // إزالة حركات الإعراب والتنوين والشدة
+    .replace(/أ|إ|آ/g, "ا") // توحيد الألفات لتسهيل اللعب على الطفل
+    .trim();
+}
+
+const RAW_WORDS = [
+  { word: "الْكَوْثَر", meaning: "نهر عظيم في الجنة لنبينا الكريم ﷺ", surah: "سورة الكوثر (108)" },
+  { word: "الْفَلَق", meaning: "الصبح ونوره الذي يشق الظلام", surah: "سورة الفلق (113)" },
+  { word: "النَّاس", meaning: "البشر وخلق الله جميعاً", surah: "سورة الناس (114)" },
+  { word: "الصَّمَد", meaning: "السيد الذي تقصده الخلائق في كل حوائجها", surah: "سورة الإخلاص (112)" },
+  { word: "النَّصْر", meaning: "العون والفتح والتأييد من الله", surah: "سورة النصر (110)" },
+  { word: "قُرَيْش", meaning: "القبيلة المكرمة بمكة وأهل البيت الحرام", surah: "سورة قريش (106)" },
+  { word: "الْمَاعُون", meaning: "المساعدة وبذل الخير للناس واليتامى", surah: "سورة الماعون (107)" },
+  { word: "الْفِيل", meaning: "معجزة حماية الكعبة من أبرهة الأشرم", surah: "سورة الفيل (105)" },
+  { word: "الْعَصْر", meaning: "الزمان والوقت الذي أقسم الله به", surah: "سورة العصر (103)" },
+  { word: "الْقَارِعَة", meaning: "يوم القيامة التي تقرع القلوب بهولها", surah: "سورة القارعة (101)" },
+  { word: "الْعَادِيَات", meaning: "الخيل السريعة التي تجري في سبيل الله", surah: "سورة العاديات (100)" },
+  { word: "الزَّلْزَلَة", meaning: "اهتزاز الأرض ورجفتها يوم الحساب", surah: "سورة الزلزلة (99)" },
+  { word: "الْبَيِّنَة", meaning: "الحجة الواضحة والبرهان الساطع", surah: "سورة البينة (98)" },
+  { word: "الْقَدْر", meaning: "ليلة الشرف والعظمة خير من ألف شهر", surah: "سورة القدر (97)" },
+  { word: "الشَّرْح", meaning: "انشراح الصدر وتيسير الأمر للنبي ﷺ", surah: "سورة الشرح (94)" },
+  { word: "التِّين", meaning: "الثمرة المباركة التي أقسم الله بها", surah: "سورة التين (95)" },
+  { word: "الضُّحَى", meaning: "وقت ارتفاع الشمس ونور النهار الجميل", surah: "سورة الضحى (93)" },
+  { word: "اللَّيْل", meaning: "الآية الكونية العظيمة للسكون والراحة", surah: "سورة الليل (92)" },
+  { word: "الشَّمْس", meaning: "السراج الوهاج الذي يضيء الكون", surah: "سورة الشمس (91)" },
+  { word: "الْبَلَد", meaning: "مكة المكرمة أم القرى وحرم الله الآمن", surah: "سورة البلد (90)" },
+  { word: "الْفَجْر", meaning: "انفلاق ضياء الصباح وبداية اليوم المبارك", surah: "سورة الفجر (89)" },
+  { word: "الْأَعْلَى", meaning: "اسم الله العظيم، المنزه عن كل نقص", surah: "سورة الأعلى (87)" },
+  { word: "الطَّارِق", meaning: "النجم الثاقب المضيء في كبد السماء", surah: "سورة الطارق (86)" },
+  { word: "الْبُرُوج", meaning: "منازل النجوم والكواكب في السماء", surah: "سورة البروج (85)" },
+  { word: "الِانْفِطَار", meaning: "انشقاق السماء وخشوعها لأمر ربها", surah: "سورة الانفطار (82)" },
+  { word: "النَّبَأ", meaning: "الخبر العظيم عن البعث ويوم القيامة", surah: "سورة النبأ (78)" },
+  { word: "الْمُلْك", meaning: "تبارك الذي بيده ملك السماوات والأرض", surah: "سورة الملك (67)" },
+  { word: "الرَّحْمَٰن", meaning: "ذو الرحمة الشاملة لجميع الخلائق", surah: "سورة الرحمن (55)" },
+  { word: "الْوَاقِعَة", meaning: "القيامة التي ليس لوقعتها كاذبة", surah: "سورة الواقعة (56)" },
+  { word: "يَس", meaning: "قلب القرآن الكريم والسورة العظيمة", surah: "سورة يس (36)" },
 ];
 
+// معالجة الكلمات وتجريدها تماماً من التشكيل لمنع أي بطاقة حركة منفصلة
+const QURAN_WORDS: QuranWord[] = RAW_WORDS.map((item) => ({
+  displayWord: item.word,
+  cleanWord: removeTashkeel(item.word),
+  meaning: item.meaning,
+  surah: item.surah,
+}));
+
+function playSound(type: "correct" | "wrong" | "win") {
+  try {
+    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    if (type === "correct") {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.13);
+    } else if (type === "wrong") {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.19);
+    } else if (type === "win") {
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.08 + 0.25);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + idx * 0.08);
+        osc.stop(ctx.currentTime + idx * 0.08 + 0.26);
+      });
+    }
+  } catch {
+    /* AudioContext not available */
+  }
+}
+
 export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
+  // خلط قائمة الكلمات عشوائياً لمنع التكرار
+  const shuffledPool = useMemo(() => {
+    return [...QURAN_WORDS].sort(() => Math.random() - 0.5);
+  }, []);
+
   const [wordIdx, setWordIdx] = useState(0);
   const [score, setScore] = useState(0);
-  const [streak, setStreak] = useState(0);
   const [placedIndices, setPlacedIndices] = useState<number[]>([]);
   const [showHint, setShowHint] = useState(false);
   const [mistakeAnim, setMistakeAnim] = useState<number | null>(null);
 
-  const currentWord = QURAN_WORDS[wordIdx % QURAN_WORDS.length];
-  // Break into individual characters/letters
-  const letters = currentWord.word.split("");
+  const currentWord = shuffledPool[wordIdx % shuffledPool.length];
+  // حروف الكلمة نظيفة بدون تشكيل نهائياً
+  const letters = useMemo(() => currentWord.cleanWord.split(""), [currentWord.cleanWord]);
 
-  // Scrambled letters state
-  const [scrambled, setScrambled] = useState(() => {
-    return letters.map((c, originalIndex) => ({ c, originalIndex })).sort(() => 0.5 - Math.random());
-  });
+  // الحروف المبعثرة
+  const [scrambled, setScrambled] = useState<{ c: string; originalIndex: number }[]>([]);
+
+  useEffect(() => {
+    const arr = letters.map((c, originalIndex) => ({ c, originalIndex }));
+    arr.sort(() => Math.random() - 0.5);
+    setScrambled(arr);
+    setPlacedIndices([]);
+    setShowHint(false);
+  }, [letters]);
 
   const nextNeededIndex = placedIndices.length;
 
@@ -50,76 +142,77 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
     if (placedIndices.includes(item.originalIndex)) return;
 
     if (item.originalIndex === nextNeededIndex) {
-      // Correct next letter in sequence!
+      // الحرف صحيح بالترتيب!
+      playSound("correct");
       const newPlaced = [...placedIndices, item.originalIndex];
       setPlacedIndices(newPlaced);
 
       if (newPlaced.length === letters.length) {
-        // Entire word complete!
+        // اكتملت الكلمة القرآنية بنجاح!
+        playSound("win");
         const bonus = 2;
         setScore((s) => s + bonus);
-        setStreak((st) => st + 1);
         addCoins(bonus);
       }
     } else {
-      // Wrong letter selected
+      // خطأ في الترتيب
+      playSound("wrong");
       setMistakeAnim(scrambledIndex);
       setTimeout(() => setMistakeAnim(null), 500);
     }
   };
 
   const useMueenHint = () => {
-    // Find the next needed letter and place it automatically
-    const targetOriginal = nextNeededIndex;
-    if (targetOriginal < letters.length) {
-      setPlacedIndices((prev) => [...prev, targetOriginal]);
+    if (nextNeededIndex < letters.length) {
+      playSound("correct");
+      setPlacedIndices((prev) => [...prev, nextNeededIndex]);
       setShowHint(true);
     }
   };
 
   const nextWord = () => {
-    const nextI = (wordIdx + 1) % QURAN_WORDS.length;
-    setWordIdx(nextI);
-    setPlacedIndices([]);
-    setShowHint(false);
-    setScrambled(
-      QURAN_WORDS[nextI].word
-        .split("")
-        .map((c, originalIndex) => ({ c, originalIndex }))
-        .sort(() => 0.5 - Math.random())
-    );
+    setWordIdx((prev) => prev + 1);
   };
 
   const isWordDone = placedIndices.length === letters.length;
 
   return (
-    <div className="space-y-4 text-center animate-fade-up">
-      {/* Header */}
-      <div className="flex items-center justify-between text-xs font-bold text-muted-foreground px-1">
-        <span className="bg-teal-500/10 text-teal-400 border border-teal-500/20 px-2.5 py-1 rounded-full">
+    <div className="space-y-4 text-center animate-fade-up max-w-xl mx-auto" dir="rtl">
+      {/* شريط الإحصائيات العلوي الملكي */}
+      <div className="flex items-center justify-between text-xs font-bold text-muted-foreground px-3 py-1.5 bg-secondary/50 rounded-2xl border border-border/60">
+        <span className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 px-3 py-1 rounded-full font-black">
           {currentWord.surah}
         </span>
-        <span className="text-amber-500 font-extrabold text-sm">⭐ {score} نجمة</span>
-        <span>الكلمة {wordIdx + 1} من {QURAN_WORDS.length}</span>
+        <span className="text-amber-500 font-black text-sm flex items-center gap-1">
+          <Star className="w-4 h-4 fill-amber-500" /> {score} نجمة
+        </span>
+        <span className="text-muted-foreground font-extrabold">
+          الكلمة {(wordIdx % shuffledPool.length) + 1} من {shuffledPool.length}
+        </span>
       </div>
 
-      {/* Target Word Info */}
-      <div className="p-4 rounded-2xl bg-card border border-border shadow-md space-y-1">
-        <p className="text-xs text-muted-foreground font-bold">معنى الكلمة وموضعها:</p>
-        <p className="text-base sm:text-lg font-extrabold text-foreground">{currentWord.meaning}</p>
+      {/* بطاقة معنى الكلمة وموضعها القرآني الفاخرة */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-card via-card/95 to-secondary/30 border-2 border-accent/25 shadow-xl space-y-1.5 text-right">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-black text-accent uppercase tracking-wider">المعنى والموضع القرآني:</p>
+          <span className="text-[10px] font-bold text-muted-foreground">رتّب حروف الكلمة بالترتيب الصحيح</span>
+        </div>
+        <p className="text-base sm:text-lg font-black text-foreground leading-relaxed">
+          {currentWord.meaning}
+        </p>
       </div>
 
-      {/* Slots Row */}
-      <div className="flex justify-center items-center gap-2 py-2">
+      {/* خانات ترتيب الحروف (الكلمة المستهدفة) */}
+      <div className="flex flex-wrap justify-center items-center gap-1.5 sm:gap-2.5 py-3 px-2 bg-secondary/20 rounded-3xl border border-border/40">
         {letters.map((char, idx) => {
           const isFilled = placedIndices.includes(idx);
           return (
             <div
               key={idx}
-              className={`w-12 h-14 sm:w-14 sm:h-16 rounded-xl flex items-center justify-center font-extrabold text-2xl border-2 transition-all ${
+              className={`w-11 h-13 sm:w-14 sm:h-16 rounded-2xl flex items-center justify-center font-black text-2xl sm:text-3xl border-2 transition-all duration-300 ${
                 isFilled
-                  ? "bg-teal-500/20 border-teal-400 text-teal-300 shadow-teal-500/20 shadow-md scale-105"
-                  : "bg-secondary/40 border-dashed border-border text-muted-foreground"
+                  ? "bg-gradient-to-b from-emerald-600/30 to-emerald-800/40 border-emerald-400 text-emerald-300 shadow-lg shadow-emerald-500/20 scale-105"
+                  : "bg-card/70 border-dashed border-border/80 text-muted-foreground/50 shadow-inner"
               }`}
             >
               {isFilled ? char : "؟"}
@@ -128,66 +221,72 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
         })}
       </div>
 
-      {/* Scrambled Letters Pool */}
-      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 p-4 rounded-2xl bg-secondary/30 border border-border/50">
-        {scrambled.map((item, idx) => {
-          const isUsed = placedIndices.includes(item.originalIndex);
-          const isMistake = mistakeAnim === idx;
+      {/* مجموعة الحروف المبعثرة النظيفة (بدون تشكيل تماماً!) */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-card via-card to-secondary/40 border-2 border-border/70 shadow-lg space-y-2.5">
+        <p className="text-xs font-bold text-muted-foreground">اضغط على الحرف التالي بالترتيب:</p>
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+          {scrambled.map((item, idx) => {
+            const isUsed = placedIndices.includes(item.originalIndex);
+            const isMistake = mistakeAnim === idx;
 
-          return (
-            <button
-              key={idx}
-              onClick={() => handleLetterClick(item, idx)}
-              disabled={isUsed || isWordDone}
-              className={`w-12 h-14 sm:w-14 sm:h-16 rounded-xl font-black text-2xl sm:text-3xl border flex items-center justify-center shadow-md transition-all active:scale-95 ${
-                isUsed
-                  ? "opacity-20 border-transparent bg-muted cursor-not-allowed"
-                  : isMistake
-                  ? "bg-rose-500/30 border-rose-500 text-rose-300 animate-shake"
-                  : "bg-gradient-to-br from-amber-400 to-amber-600 border-amber-300 text-slate-950 hover:brightness-110 hover:scale-105"
-              }`}
-            >
-              {item.c}
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={idx}
+                onClick={() => handleLetterClick(item, idx)}
+                disabled={isUsed || isWordDone}
+                className={`w-12 h-14 sm:w-15 sm:h-17 rounded-2xl font-black text-2xl sm:text-3xl border-2 flex items-center justify-center transition-all duration-150 active:scale-90 ${
+                  isUsed
+                    ? "opacity-15 border-transparent bg-muted/40 cursor-not-allowed scale-90"
+                    : isMistake
+                    ? "bg-rose-500/30 border-rose-500 text-rose-300 animate-shake scale-105"
+                    : "bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 border-amber-300/80 text-slate-950 shadow-md hover:brightness-110 hover:scale-105 cursor-pointer ring-2 ring-amber-500/20"
+                }`}
+              >
+                {item.c}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Al-Mu'een Companion Helper Button */}
-      <div
+      {/* زر المُعِين القرآني الذكي للمساعدة */}
+      <button
         onClick={useMueenHint}
-        className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/15 cursor-pointer transition-all flex items-center justify-between text-right"
+        disabled={isWordDone}
+        className="w-full p-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/30 active:scale-98 transition-all flex items-center justify-between text-right cursor-pointer"
       >
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
-            <Lightbulb className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+            <Lightbulb className="w-4 h-4 animate-pulse" />
           </div>
           <div className="text-xs">
-            <b className="text-amber-400 block font-extrabold">المُعِين القرآني:</b>
-            <span className="text-muted-foreground">
+            <span className="text-amber-500 font-black block">المُعِين القرآني:</span>
+            <span className="text-muted-foreground font-semibold">
               {showHint
-                ? `وضع لك المُعِين الحرف التالي (${letters[placedIndices[placedIndices.length - 1]]})!`
-                : "هل تواجه صعوبة؟ اضغط هنا ليضع لك المُعِين الحرف التالي 💡"}
+                ? `كشف لك المُعِين الحرف المطلوب: (${letters[placedIndices[placedIndices.length - 1]]})!`
+                : "هل تريد مساعدة؟ اضغط هنا ليكشف لك المُعِين الحرف التالي 💡"}
             </span>
           </div>
         </div>
-        <span className="text-[11px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full shrink-0">
+        <span className="text-[11px] font-black text-amber-500 bg-amber-500/15 px-3 py-1 rounded-full border border-amber-500/25 shrink-0">
           مساعدة
         </span>
-      </div>
+      </button>
 
-      {/* Success Feedback */}
+      {/* بطاقة النجاح واكتمال الكلمة */}
       {isWordDone && (
-        <div className="p-4 rounded-xl bg-card border border-emerald-500/40 space-y-2 animate-in fade-in zoom-in-95">
-          <div className="flex items-center justify-center gap-2 font-black text-emerald-400 text-base">
-            <CheckCircle2 className="w-5 h-5" /> رتّبت الكلمة الكريمة ({currentWord.word}) بنجاح تام! 🌟
+        <div className="p-5 rounded-3xl bg-gradient-to-br from-emerald-950/80 via-emerald-900/60 to-card border-2 border-emerald-500/50 shadow-2xl space-y-3 animate-fade-up">
+          <div className="flex items-center justify-center gap-2 font-black text-emerald-400 text-lg sm:text-xl">
+            <CheckCircle2 className="w-6 h-6 text-emerald-400 animate-bounce" />
+            <span>أحسنت! رتّبت كلمة «{currentWord.displayWord}» بنجاح! 🌟</span>
           </div>
-          <p className="text-xs text-muted-foreground font-semibold">ربحت +2 نجمة مباركة</p>
+          <p className="text-xs text-emerald-200/80 font-bold">ربحت +2 نجمة قرآنية أضيفت إلى رصيدك ⭐</p>
           <button
             onClick={nextWord}
-            className="btn-gold mx-auto px-6 py-2 rounded-xl font-bold text-sm shadow-md mt-1"
+            className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black text-base shadow-lg hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-2"
           >
-            الكلمة التالية ←
+            <span>الكلمة التالية</span>
+            <ArrowLeft className="w-5 h-5" />
           </button>
         </div>
       )}

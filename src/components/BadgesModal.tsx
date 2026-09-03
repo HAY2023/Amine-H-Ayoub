@@ -14,9 +14,12 @@ import {
   Headphones,
   CheckCircle2,
   Lock,
+  Download,
 } from "lucide-react";
 import { getBadgesList, calculateStreak, checkAndUnlockBadges, Badge } from "@/data/kidsBadges";
-import { getProfile } from "@/data/kidsProfile";
+import { getProfile, getProgress, getCoins } from "@/data/kidsProfile";
+import { downloadQuranCertificate } from "@/utils/certificateGenerator";
+import { toast } from "@/hooks/use-toast";
 
 interface Props {
   onClose: () => void;
@@ -142,7 +145,7 @@ export default function BadgesModal({ onClose }: Props) {
             <div className="absolute top-[22px] left-[10%] right-[10%] h-1 bg-zinc-800/80 rounded-full shadow-inner"></div>
             
             <div className="flex items-center justify-between gap-1 relative">
-              {[6, 0, 1, 2, 3, 4, 5].map((idx) => {
+              {[0, 1, 2, 3, 4, 5, 6].map((idx) => {
                 const active = streakInfo.thisWeekDays[idx];
                 return (
                 <div key={idx} className="flex flex-col items-center gap-2 flex-1 relative group">

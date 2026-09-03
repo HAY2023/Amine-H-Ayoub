@@ -20,7 +20,7 @@ import { isKidsMode, setKidsLocked, hasKidsPin } from "@/data/kidsLock";
 import { isTimeAllowed } from "@/data/kidsSchedule";
 import { kidsEnabled as getKidsEnabled, addReadingMinutes, addCoins, setAppMode, getProgress, isPureMode, setKidsHidden, kidsHidden } from "@/data/kidsProfile";
 
-import { checkAndUnlockBadges } from "@/data/kidsBadges";
+import { checkAndUnlockBadges, recordTodayActivity } from "@/data/kidsBadges";
 import { toast } from "@/hooks/use-toast";
 
 const LAST_SURAH_KEY = "audio:lastSurah";
@@ -110,6 +110,7 @@ const Index = () => {
           // نقاط القراءة (المال): نجومتان لكل دقيقة — قليلة لكنها أكثر من نقاط الألعاب
           const stars = Math.max(1, Math.round(mins * 2));
           addCoins(stars);
+          recordTodayActivity();
           checkAndUnlockBadges();
           if (justUnlocked) {
             toast({ title: "🎉 أحسنت! اكتمل وقت الاستماع وفتحت الألعاب" });

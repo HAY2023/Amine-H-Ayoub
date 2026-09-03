@@ -114,37 +114,93 @@ export const ALL_BADGES_CONFIG = [
 /**
  * حساب سلسلة الأيام المتتالية الحالية والسابقة
  */
+export function toYMD(d: string | Date): string {
+  try {
+    const dt = typeof d === "string" ? new Date(d) : d;
+    if (isNaN(dt.getTime())) return "";
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, "0");
+    const day = String(dt.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  } catch {
+    return "";
+  }
+}
+
+/** يسجل اليوم كنشاط دراسة والتزام قرآني دائم */
+export function recordTodayActivity(): void {
+  try {
+    const todayStr = toYMD(new Date());
+    if (!todayStr) return;
+    const stored = localStorage.getItem("mushaf:active_days_v1");
+    const set = new Set<string>(stored ? JSON.parse(stored) : []);
+    set.add(todayStr);
+    localStorage.setItem("mushaf:active_days_v1", JSON.stringify(Array.from(set).slice(-90)));
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * حساب سلسلة الأيام المتتالية (Streak) مع تصحيح ومطابقة جميع التواريخ
+ */
 export function calculateStreak(): {
   currentStreak: number;
   longestStreak: number;
-  thisWeekDays: boolean[]; // 7 days (Saturday to Friday)
+  thisWeekDays: boolean[]; // 7 days ending with today
+  dayNamesArr: string[];
 } {
   const history: DayLog[] = getHistory();
   const todayProgress = getProgress();
 
-  const todayStr = new Date().toISOString().split("T")[0];
-  const hasTodayActivity = (todayProgress?.minutes || 0) > 0;
-
-  // تواريخ النشاط
   const activeDates = new Set<string>();
-  if (hasTodayActivity) activeDates.add(todayStr);
 
+  // 1. الأيام المحفوظة في سجل النشاط اليومي الدائم
+  try {
+    const stored = localStorage.getItem("mushaf:active_days_v1");
+    if (stored) {
+      const arr: string[] = JSON.parse(stored);
+      arr.forEach((d) => {
+        if (d) activeDates.add(d);
+      });
+    }
+  } catch {
+    /* ignore */
+  }
+
+  // 2. سجل الأيام في ملف الطفل (تحويل الصيغ من toDateString إلى YYYY-MM-DD)
   history.forEach((log) => {
-    if (log.minutes > 0) activeDates.add(log.date);
+    if ((log.minutes || 0) > 0 || (log.played || 0) > 0) {
+      const k = toYMD(log.date);
+      if (k) activeDates.add(k);
+    }
   });
 
-  // حساب السلسلة المتتالية ابتداءً من اليوم أو أمس
+  // 3. نشاط اليوم الحالي
+  const localToday = toYMD(new Date());
+  const hasTodayActivity =
+    (todayProgress?.minutes || 0) > 0 ||
+    (todayProgress?.played || 0) > 0 ||
+    todayProgress?.unlocked ||
+    activeDates.has(localToday);
+
+  if (hasTodayActivity && localToday) {
+    activeDates.add(localToday);
+    recordTodayActivity();
+  }
+
+  // حساب السلسلة المتتالية الحالية
   let currentStreak = 0;
   const checkDate = new Date();
 
-  // إذا لم يستمع اليوم بعد، نتحقق من أمس
-  if (!hasTodayActivity) {
+  // إذا لم يُسجل نشاط بعد لليوم، نبدأ الفحص من أمس
+  if (!activeDates.has(toYMD(checkDate))) {
     checkDate.setDate(checkDate.getDate() - 1);
   }
 
   while (true) {
-    const dStr = checkDate.toISOString().split("T")[0];
-    if (activeDates.has(dStr)) {
+    const dStr = toYMD(checkDate);
+    if (dStr && activeDates.has(dStr)) {
       currentStreak++;
       checkDate.setDate(checkDate.getDate() - 1);
     } else {
@@ -152,7 +208,7 @@ export function calculateStreak(): {
     }
   }
 
-  // حساب أطول سلسلة
+  // حساب أطول سلسلة تاريخية
   let longestStreak = currentStreak;
   const sortedDates = Array.from(activeDates).sort();
   let tempStreak = 0;
@@ -174,7 +230,7 @@ export function calculateStreak(): {
     if (tempStreak > longestStreak) longestStreak = tempStreak;
   });
 
-  // حساب أيام الأسبوع الحالي بحيث يكون اليوم هو آخر يوم على اليسار
+  // حساب أيام الأسبوع (الـ 7 أيام الأخيرة مرتبة زمنياً وتنتهي باليوم)
   const now = new Date();
   const thisWeekDays: boolean[] = [];
   const dayNamesArr: string[] = [];
@@ -183,16 +239,24 @@ export function calculateStreak(): {
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(now.getDate() - i);
-    const dStr = d.toISOString().split("T")[0];
-    thisWeekDays.push(activeDates.has(dStr));
+    const dStr = toYMD(d);
+    thisWeekDays.push(dStr ? activeDates.has(dStr) : false);
     dayNamesArr.push(arabicDays[d.getDay()]);
   }
+
+  // حساب أيام الحماس في الشهر الحالي
+  const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  let monthActiveCount = 0;
+  activeDates.forEach((dStr) => {
+    if (dStr.startsWith(currentMonthPrefix)) monthActiveCount++;
+  });
 
   return {
     currentStreak,
     longestStreak,
     thisWeekDays,
     dayNamesArr,
+    monthActiveCount,
   };
 }
 

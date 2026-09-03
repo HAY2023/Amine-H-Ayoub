@@ -26,7 +26,7 @@ import BadgesModal from "../components/BadgesModal";
 import QuranLockGateModal from "../components/QuranLockGateModal";
 import { toast } from "../hooks/use-toast";
 import { isTimeAllowed } from "../data/kidsSchedule";
-import { calculateStreak } from "../data/kidsBadges";
+import { calculateStreak, recordTodayActivity } from "../data/kidsBadges";
 
 async function enterKioskMode() {
   // تم إيقاف تكبير الشاشة التلقائي بناءً على طلب المستخدم
@@ -300,34 +300,220 @@ function OrderEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
 }
 
 function MemoryEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
-  const pairs = def.params?.pairs ?? 4;
-  const pool = poolFor(def, minSurah);
-  const build = () => { const picked = shuffle(pool).slice(0, pairs); return shuffle([...picked, ...picked].map((s, i) => ({ id: i, num: s.number, name: s.name }))); };
-  const [cards, setCards] = useState(build);
+  // ── السور من سورة يس (36) إلى سورة الناس (114) حصراً ("تحت يس") ──
+  const YASIN_AND_BELOW = SURAHS.filter(s => s.number >= 36 && s.number <= 114);
+
+  // خيارات عدد البطاقات (6 أزواج = 12 بطاقة، 8 أزواج = 16 بطاقة، 10 أزواج = 20 بطاقة)
+  const [pairsCount, setPairsCount] = useState<number>(() => def.params?.pairs ?? 6);
+  const [moves, setMoves] = useState(0);
+
+  const playTone = (freq: number, type: OscillatorType = "sine", duration = 0.12) => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    } catch {
+      /* ignore audio context errors */
+    }
+  };
+
+  const build = (numPairs: number) => {
+    const picked = shuffle(YASIN_AND_BELOW).slice(0, numPairs);
+    const doubleCards = picked.flatMap((s) => [
+      { id: `${s.number}-a`, num: s.number, name: s.name, ayahCount: s.ayahCount, type: s.type },
+      { id: `${s.number}-b`, num: s.number, name: s.name, ayahCount: s.ayahCount, type: s.type },
+    ]);
+    return shuffle(doubleCards);
+  };
+
+  const [cards, setCards] = useState(() => build(pairsCount));
   const [flipped, setFlipped] = useState<number[]>([]);
   const [matched, setMatched] = useState<number[]>([]);
   const g = useGame();
+
+  const handleDifficulty = (count: number) => {
+    setPairsCount(count);
+    setCards(build(count));
+    setFlipped([]);
+    setMatched([]);
+    setMoves(0);
+    g.reset();
+  };
+
   const flip = (i: number) => {
     if (flipped.length === 2 || flipped.includes(i) || matched.includes(cards[i].num)) return;
-    const nf = [...flipped, i];
-    setFlipped(nf);
-    if (nf.length === 2) {
-      if (cards[nf[0]].num === cards[nf[1]].num) { g.correct(); setMatched(m => [...m, cards[nf[0]].num]); setFlipped([]); }
-      else { g.miss(); setTimeout(() => setFlipped([]), 800); }
+    playTone(480, "triangle", 0.05);
+
+    const nextFlipped = [...flipped, i];
+    setFlipped(nextFlipped);
+
+    if (nextFlipped.length === 2) {
+      setMoves(m => m + 1);
+      const cardA = cards[nextFlipped[0]];
+      const cardB = cards[nextFlipped[1]];
+
+      if (cardA.num === cardB.num) {
+        playTone(587, "sine", 0.1);
+        setTimeout(() => playTone(880, "sine", 0.22), 80);
+        g.correct();
+        setMatched(m => [...m, cardA.num]);
+        setFlipped([]);
+        addCoins(2);
+      } else {
+        g.miss();
+        setTimeout(() => setFlipped([]), 850);
+      }
     }
   };
-  const won = matched.length === pairs;
+
+  const won = matched.length === pairsCount;
+
   return (
-    <div className="space-y-3 text-center">
-      <p className="text-muted-foreground text-sm">اقلب البطاقات وطابق السور المتشابهة</p>
-      <div className="grid grid-cols-4 gap-2">
+    <div className="space-y-4 text-center">
+      {/* رأس اللعبة واختيار عدد البطاقات */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-2.5 rounded-2xl bg-secondary/40 border border-border/60">
+        <div className="text-right">
+          <h4 className="font-extrabold text-sm text-foreground flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-accent" />
+            <span>بطاقات السور المباركة (من يس إلى الناس)</span>
+          </h4>
+          <span className="text-[11px] text-muted-foreground">
+            الحركات: {moves} • المطابقات: {matched.length}/{pairsCount}
+          </span>
+        </div>
+
+        {/* عدد البطاقات */}
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-card border border-border text-xs font-bold">
+          <span className="text-[10px] text-muted-foreground px-1 hidden min-[450px]:inline">العدد:</span>
+          {[
+            { label: "12 بطاقة", count: 6 },
+            { label: "16 بطاقة", count: 8 },
+            { label: "20 بطاقة", count: 10 },
+          ].map((d) => (
+            <button
+              key={d.count}
+              onClick={() => handleDifficulty(d.count)}
+              className={`px-2 py-1 rounded-lg transition-all text-[11px] ${
+                pairsCount === d.count
+                  ? "btn-gold font-black shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-muted-foreground text-xs sm:text-sm font-semibold">
+        اقلب البطاقات وطابق كل سورتين متماثلتين من سور ربع يس والأجزاء الأخيرة ✨
+      </p>
+
+      {/* شبكة البطاقات الفخمة */}
+      <div
+        className={`grid gap-2 sm:gap-3 ${
+          pairsCount === 6
+            ? "grid-cols-3 sm:grid-cols-4"
+            : pairsCount === 8
+            ? "grid-cols-4"
+            : "grid-cols-4 sm:grid-cols-5"
+        }`}
+      >
         {cards.map((c, i) => {
-          const show = flipped.includes(i) || matched.includes(c.num);
-          return <button key={c.id} onClick={() => flip(i)} className={`aspect-square rounded-lg text-[11px] font-bold flex items-center justify-center p-1 border active:scale-95 transition-colors ${show ? "bg-card text-card-foreground border-accent/40" : "bg-secondary border-border text-muted-foreground"}`}>{show ? c.name : <LayoutGrid className="w-5 h-5" />}</button>;
+          const isFlipped = flipped.includes(i);
+          const isMatched = matched.includes(c.num);
+          const isOpen = isFlipped || isMatched;
+
+          return (
+            <button
+              key={c.id}
+              onClick={() => flip(i)}
+              disabled={isOpen}
+              className={`relative aspect-[3/4] sm:aspect-square rounded-2xl p-2 flex flex-col items-center justify-between border-2 transition-all duration-200 transform active:scale-95 select-none ${
+                isMatched
+                  ? "border-emerald-500 bg-emerald-500/15 ring-2 ring-emerald-400/40 shadow-md shadow-emerald-500/20 scale-[0.98]"
+                  : isOpen
+                  ? "border-accent bg-gradient-to-br from-card via-card to-accent/15 shadow-xl shadow-accent/20 scale-105"
+                  : "border-amber-400/35 bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-950 hover:border-amber-400/80 hover:shadow-lg hover:shadow-amber-500/15"
+              }`}
+            >
+              {isOpen ? (
+                <>
+                  {/* الرأس: رقم ونوع السورة */}
+                  <div className="w-full flex items-center justify-between text-[9px] font-extrabold">
+                    <span className="px-1.5 py-0.5 rounded-full bg-accent/20 text-accent">
+                      {c.num}
+                    </span>
+                    <span className="text-muted-foreground">{c.type}</span>
+                  </div>
+
+                  {/* المنتصف: اسم السورة بفونت فخم */}
+                  <div className="my-auto py-1 text-center">
+                    <span className="font-amiri font-black text-sm sm:text-lg text-foreground block leading-tight">
+                      {c.name}
+                    </span>
+                    {isMatched && (
+                      <span className="text-[10px] font-black text-emerald-400 block mt-0.5 animate-in zoom-in-50">
+                        ✓ متطابقة
+                      </span>
+                    )}
+                  </div>
+
+                  {/* الأسفل: عدد الآيات */}
+                  <div className="w-full text-center text-[10px] font-bold text-muted-foreground border-t border-border/40 pt-1">
+                    {c.ayahCount} آيات
+                  </div>
+                </>
+              ) : (
+                /* وجه البطاقة المغلق: تصميم إسلامي ملكي فاخر */
+                <div className="w-full h-full flex flex-col items-center justify-center gap-1.5">
+                  <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-amber-400 shadow-inner group-hover:scale-110 transition-transform">
+                    <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-black text-amber-300/80 tracking-widest">
+                    مصحف
+                  </span>
+                </div>
+              )}
+            </button>
+          );
         })}
       </div>
+
       <GameHud g={g} />
-      {won && <button onClick={() => { setCards(build()); setMatched([]); setFlipped([]); }} className="btn-gold mx-auto px-5 py-2 rounded-xl font-bold flex items-center gap-1"><RefreshCw className="w-4 h-4" /> العب مجدداً</button>}
+
+      {/* بطاقة الفوز والاحتفال */}
+      {won && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-accent/15 to-emerald-500/15 border-2 border-emerald-500/40 space-y-3 animate-in fade-in zoom-in-95">
+          <div className="flex items-center justify-center gap-2 font-black text-lg sm:text-xl text-emerald-400">
+            <Trophy className="w-6 h-6 text-amber-400 animate-bounce" />
+            <span>ما شاء الله! طابقت جميع البطاقات بنجاح بطل! 🌟</span>
+          </div>
+          <p className="text-xs text-muted-foreground font-bold">
+            أنهيت اللعبة في {moves} حركة • كسبت نجوم إضافية لحسابك
+          </p>
+          <button
+            onClick={() => {
+              setCards(build(pairsCount));
+              setMatched([]);
+              setFlipped([]);
+              setMoves(0);
+              g.reset();
+            }}
+            className="btn-gold mx-auto px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition-all"
+          >
+            <RefreshCw className="w-4 h-4" /> العب جولة جديدة بسور أخرى
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1613,6 +1799,7 @@ export default function KidsGames() {
   }, [profile.goalMinutes, progress.minutes, progress.unlocked, navigate]);
 
   useEffect(() => {
+    recordTodayActivity();
     enterKioskMode();
     
     // Prevent back navigation
@@ -1973,7 +2160,7 @@ export default function KidsGames() {
 
     ctx.fillStyle = "#555555";
     ctx.font = "bold 21px 'Tahoma', 'Arial'";
-    ctx.fillText("تُمنح هذه الشهادة المباركة تقديراً واعتزازاً بجهود:", 540, 230);
+    ctx.fillText("تُمنح هذه الشهادة المباركة تقديراً واعتزازاً بالهمة العالية", 540, 230);
 
     // 5. صورة شخصية الطفل (Avatar) داخل ميدالية ذهبية شرفية
     const avatarCenterY = 340;
@@ -2025,30 +2212,33 @@ export default function KidsGames() {
     drawCanvasStar(ctx, 425, avatarCenterY, 13, "#E5C058");
     drawCanvasStar(ctx, 655, avatarCenterY, 13, "#E5C058");
 
-    // 6. اسم الطالب بخط ذهبي عريض ومظلل
-    const studentName = profile.name ? `القارئ الحافظ: ${profile.name}` : "بطل القرآن الكريم";
+    // 6. صفة واسم الطالب بتنسيق ملكي سليم يمنع انقلاب النص
+    ctx.fillStyle = "#8C6514";
+    ctx.font = "bold 26px 'Traditional Arabic', 'Amiri', 'Cairo', serif";
+    ctx.fillText("الْقَارِئُ الْحَافِظُ الْمُبَارَكُ", 540, 440);
+
     ctx.fillStyle = "#0E4D2B";
-    ctx.font = "bold 44px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
-    ctx.fillText(studentName, 540, 470);
+    ctx.font = "bold 46px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+    ctx.fillText(profile.name || "بطل القرآن الكريم", 540, 485);
 
     ctx.fillStyle = "#555555";
     ctx.font = "19px 'Tahoma', 'Arial'";
-    ctx.fillText("لمواظبته على تلاوة وحفظ كتاب الله الكريم برواية ورش عن نافع", 540, 508);
+    ctx.fillText("لمواظبته على تلاوة وحفظ كتاب الله الكريم برواية ورش عن نافع", 540, 520);
 
-    // 7. شبكة بطاقات الإحصائيات (2 × 2) بدون أي تداخل
+    // 7. شبكة بطاقات الإحصائيات (2 × 2)
     const curSurahName = SURAHS.find(s => s.number === profile.currentSurah)?.name || "النبأ";
     const statCards = [
       { title: "دقائق التلاوة والمدارسة", value: `${progress.minutes || 0} دقيقة`, color: "#16A34A", icon: "⏱️" },
       { title: "رصيد النجوم المكتسبة", value: `${formatCoins(getCoins())} نجمة`, color: "#D97706", icon: "⭐" },
-      { title: "أيام المداومة والاستمرار", value: `${streakDays || 1} أيام متتالية`, color: "#EA580C", icon: "🔥" },
+      { title: "أيام المداومة والاستمرار", value: `${streakDays || 1} يوم متتالي`, color: "#EA580C", icon: "🔥" },
       { title: "السورة الحالية المتقنة", value: `سورة ${curSurahName}`, color: "#2563EB", icon: "📖" },
     ];
 
     const cardPositions = [
-      { x: 100, y: 545, w: 425, h: 90 },
-      { x: 555, y: 545, w: 425, h: 90 },
-      { x: 100, y: 650, w: 425, h: 90 },
-      { x: 555, y: 650, w: 425, h: 90 },
+      { x: 100, y: 555, w: 425, h: 90 },
+      { x: 555, y: 555, w: 425, h: 90 },
+      { x: 100, y: 660, w: 425, h: 90 },
+      { x: 555, y: 660, w: 425, h: 90 },
     ];
 
     statCards.forEach((st, idx) => {
@@ -2083,7 +2273,7 @@ export default function KidsGames() {
     });
 
     // 8. لوحة الحديث الشريف المحفز
-    const hadithY = 765;
+    const hadithY = 775;
     ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
     ctx.beginPath();
     ctx.roundRect(160, hadithY, 760, 74, 20);
@@ -2104,9 +2294,9 @@ export default function KidsGames() {
     ctx.font = "14px 'Tahoma', 'Arial'";
     ctx.fillText("— قال رسول الله ﷺ —", 540, hadithY + 62);
 
-    // 9. البطاقة الرسمية المعتمدة: اسم التطبيق مع صورته + الختم الذهبي + التاريخ (بدون كلمة إصدار)
-    const footCardY = 865;
-    const footCardH = 500;
+    // 9. البطاقة الرسمية المعتمدة: اسم التطبيق مع صورته + الختم الذهبي + التاريخ
+    const footCardY = 875;
+    const footCardH = 490;
     const footGrad = ctx.createLinearGradient(70, footCardY, 1010, footCardY + footCardH);
     footGrad.addColorStop(0, "#FFFFFF");
     footGrad.addColorStop(0.5, "#FDFBF7");
@@ -2173,7 +2363,7 @@ export default function KidsGames() {
 
     ctx.fillStyle = "#8C6514";
     ctx.font = "bold 24px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
-    ctx.fillText("الْقَارِئُ الشَّيْخُ: حَاج أَيُّوب أَمِين", 955, footCardY + 122);
+    ctx.fillText("الْقَارِئُ الشَّيْخُ حَاج أَيُّوب أَمِين", 955, footCardY + 122);
 
     ctx.fillStyle = "#555555";
     ctx.font = "17px 'Tahoma', 'Arial'";
@@ -2228,22 +2418,22 @@ export default function KidsGames() {
     ctx.textAlign = "right";
     ctx.fillStyle = "#333333";
     ctx.font = "bold 19px 'Tahoma', 'Arial'";
-    ctx.fillText("توقيع وإشراف المقرئ:", 955, footCardY + 270);
+    ctx.fillText("تَوْقِيعُ وَإِشْرَافُ الْمُقْرِئِ", 955, footCardY + 270);
 
     ctx.fillStyle = "#0E4D2B";
     ctx.font = "bold 26px 'Traditional Arabic', 'Amiri', 'Cairo', serif";
-    ctx.fillText("القارئ: أمين حاج أيوب", 955, footCardY + 312);
+    ctx.fillText("الْقَارِئُ الشَّيْخُ أَمِين حَاج أَيُّوب", 955, footCardY + 312);
 
     ctx.fillStyle = "#666666";
     ctx.font = "italic 16px 'Tahoma', sans-serif";
     ctx.fillText("« غفر الله له ولوالديه ولمن قرأ واستمع »", 955, footCardY + 345);
 
-    // خانة التاريخ بدون كلمة "إصدار" إطلاقاً
+    // خانة التاريخ المنظمة تماماً بدون أي انعكاس
     const today = new Date();
     const dateBoxW = 440;
-    const dateBoxH = 56;
+    const dateBoxH = 64;
     const dateBoxX = 515;
-    const dateBoxY = footCardY + 400;
+    const dateBoxY = footCardY + 395;
 
     ctx.fillStyle = "rgba(245, 197, 66, 0.15)";
     ctx.beginPath();
@@ -2256,14 +2446,18 @@ export default function KidsGames() {
 
     ctx.textAlign = "center";
     ctx.fillStyle = "#8C6514";
+    ctx.font = "bold 14px 'Tahoma', 'Arial'";
+    ctx.fillText("تَارِيخُ التَّمَيُّزِ وَالإِنْجَازِ", dateBoxX + dateBoxW / 2, dateBoxY + 24);
+
+    ctx.fillStyle = "#854D0E";
     ctx.font = "bold 20px 'Tahoma', 'Arial'";
-    ctx.fillText(`التاريخ: ${today.getDate()} / ${today.getMonth() + 1} / ${today.getFullYear()} م`, dateBoxX + dateBoxW / 2, dateBoxY + 36);
+    ctx.fillText(`${today.getDate()} / ${today.getMonth() + 1} / ${today.getFullYear()} م`, dateBoxX + dateBoxW / 2, dateBoxY + 50);
 
     // عبارة تشجيعية في أقصى يسار خانة التاريخ
     ctx.textAlign = "center";
-    ctx.fillStyle = "#888888";
-    ctx.font = "15px 'Tahoma', sans-serif";
-    ctx.fillText("مُبارك هذا الإنجاز القرآني المبارك ووفقك الله لكل خير 🌸", 300, dateBoxY + 36);
+    ctx.fillStyle = "#166534";
+    ctx.font = "bold 15px 'Tahoma', 'Arial'";
+    ctx.fillText("🌸 مُبَارَكٌ هَذَا الإِنْجَازُ الْقُرْآنِيُّ 🌸", 280, dateBoxY + 36);
 
     // تحميل الشهادة
     const link = document.createElement("a");
@@ -2603,23 +2797,35 @@ export default function KidsGames() {
 
   return (
     <div className="min-h-screen-safe page-nour text-foreground" dir="rtl">
-      <div className="mx-auto w-full max-w-md px-3 py-3 sm:px-4 sm:py-4 space-y-3 sm:space-y-4 container-mobile">
+      <div className={`mx-auto w-full px-3 py-3 sm:px-4 sm:py-4 space-y-3 sm:space-y-4 container-mobile transition-all duration-300 ${active ? "max-w-3xl" : "max-w-md"}`}>
         <header className="flex flex-wrap items-center justify-between gap-2">
-          <button onClick={headerBack} className="flex h-9 sm:h-10 shrink-0 items-center gap-1.5 rounded-full bg-secondary text-secondary-foreground px-3 sm:px-4 text-xs sm:text-sm font-bold hover:brightness-95 active:scale-95 border border-border">
+          <button onClick={headerBack} className="flex h-9 sm:h-10 shrink-0 items-center gap-1.5 rounded-full bg-secondary text-secondary-foreground px-3 sm:px-4 text-xs sm:text-sm font-extrabold hover:brightness-95 active:scale-95 border border-border shadow-sm">
             <ArrowRight className="h-4 w-4" /> {active ? "الرجوع للألعاب" : "الخروج للتلاوات"}
           </button>
-          <h1 className="font-extrabold text-base sm:text-lg text-gradient-gold order-first w-full text-center sm:w-auto sm:order-none sm:w-auto">ركن الأطفال</h1>
-          {!active ? (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-accent font-extrabold text-xs sm:text-sm px-2.5 sm:px-3 h-9 sm:h-10 shrink-0 shadow-sm"><Star className="w-4 h-4 shrink-0 fill-current" /> <span>{formatCoins(coins)} نجمة</span></span>
-
-
-              <button onClick={() => setShowBadges(true)} aria-label="الأوسمة والإنجازات" title="الأوسمة والإنجازات" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full bg-amber-500/15 text-amber-500 hover:brightness-95 flex items-center justify-center active:scale-95 border border-amber-500/30 shadow-sm"><Trophy className="w-5 h-5" /></button>
-              <button onClick={() => setShowNotifications(true)} aria-label="الإشعارات" title="الإشعارات" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full bg-secondary text-secondary-foreground hover:brightness-95 flex items-center justify-center active:scale-95"><Bell className="w-5 h-5" /></button>
-              <button onClick={openParent} aria-label="إعدادات ولي الأمر" title="إعدادات ولي الأمر" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full bg-secondary text-secondary-foreground hover:brightness-95 flex items-center justify-center active:scale-95"><Settings className="w-5 h-5" /></button>
-              <button onClick={openCertificate} aria-label="شهادة التقدم" title="شهادة التقدم" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full bg-rose-500/15 text-rose-500 hover:brightness-95 flex items-center justify-center active:scale-95 border border-rose-500/30 shadow-sm"><Award className="w-5 h-5" /></button>
+          
+          {active && def ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border shadow-sm">
+              {(() => { const I = iconFor(def.icon); return <I className="w-4 h-4 text-accent" />; })()}
+              <span className="font-extrabold text-xs sm:text-sm text-foreground">{def.title}</span>
             </div>
-          ) : <span className="w-10" />}
+          ) : (
+            <h1 className="font-extrabold text-base sm:text-lg text-gradient-gold order-first w-full text-center sm:w-auto sm:order-none">ركن الأطفال</h1>
+          )}
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 text-accent font-extrabold text-xs sm:text-sm px-2.5 sm:px-3 h-9 sm:h-10 shrink-0 shadow-sm">
+              <Star className="w-4 h-4 shrink-0 fill-current" /> <span>{formatCoins(coins)} نجمة</span>
+            </span>
+
+            {!active && (
+              <>
+                <button onClick={() => setShowBadges(true)} aria-label="الأوسمة والإنجازات" title="الأوسمة والإنجازات" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full bg-amber-500/15 text-amber-500 hover:brightness-95 flex items-center justify-center active:scale-95 border border-amber-500/30 shadow-sm"><Trophy className="w-5 h-5" /></button>
+                <button onClick={() => setShowNotifications(true)} aria-label="الإشعارات" title="الإشعارات" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full bg-secondary text-secondary-foreground hover:brightness-95 flex items-center justify-center active:scale-95"><Bell className="w-5 h-5" /></button>
+                <button onClick={openParent} aria-label="إعدادات ولي الأمر" title="إعدادات ولي الأمر" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full bg-secondary text-secondary-foreground hover:brightness-95 flex items-center justify-center active:scale-95"><Settings className="w-5 h-5" /></button>
+                <button onClick={openCertificate} aria-label="شهادة التقدم" title="شهادة التقدم" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full bg-rose-500/15 text-rose-500 hover:brightness-95 flex items-center justify-center active:scale-95 border border-rose-500/30 shadow-sm"><Award className="w-5 h-5" /></button>
+              </>
+            )}
+          </div>
         </header>
 
         {/* ── شريط الوقت المتبقي وزر العرض التفاعلي ── */}
@@ -2674,18 +2880,18 @@ export default function KidsGames() {
         {def && (def.remote || def.engine === "remote") ? (
           <RemoteGameFrame def={def} onExit={() => setActive(null)} />
         ) : def && Engine ? (
-          <div className="card-nour p-2 sm:p-4 animate-fade-up game-container">
-            {/* شريط مؤقّت اللعب الأحمر (نفس مكان شريط القراءة الأخضر) */}
-            <div className="mb-2">
-              <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground mb-1">
-                <span className="inline-flex items-center gap-1 text-destructive"><Clock className="w-3.5 h-3.5" /> وقت اللعب</span>
-                <span>{progress.played} / {profile.playMinutes > 0 ? profile.playMinutes : "∞"} د</span>
+          <div className="card-nour p-3.5 sm:p-6 rounded-3xl border-2 border-accent/25 bg-card/95 shadow-2xl backdrop-blur-md animate-fade-up game-container space-y-3">
+            {profile.playMinutes > 0 && (
+              <div className="mb-2 p-2 sm:p-2.5 rounded-2xl bg-secondary/40 border border-border/60">
+                <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground mb-1">
+                  <span className="inline-flex items-center gap-1 text-amber-500"><Clock className="w-3.5 h-3.5" /> وقت اللعب المتبقي</span>
+                  <span>{Math.max(0, profile.playMinutes - (progress.played || 0))} دقيقة</span>
+                </div>
+                <div className="h-2 rounded-full bg-secondary overflow-hidden">
+                  <div className={`h-full transition-all duration-500 ${playPct >= 100 ? "bg-destructive" : "bg-amber-500"}`} style={{ width: `${Math.min(100, playPct)}%` }} />
+                </div>
               </div>
-              <div className="h-2.5 rounded-full bg-secondary overflow-hidden">
-                <div className={`h-full transition-all duration-500 ${playPct >= 100 ? "bg-destructive" : "bg-red-500"}`} style={{ width: `${Math.min(100, playPct)}%` }} />
-              </div>
-            </div>
-            <h2 className="text-center font-bold text-accent mb-2 sm:mb-4 flex items-center justify-center gap-2 text-sm sm:text-base">{(() => { const I = iconFor(def.icon); return <I className="w-4 h-4 sm:w-5 sm:h-5" />; })()} {def.title}</h2>
+            )}
             <Engine def={def} minSurah={profile.currentSurah || 38} />
           </div>
         ) : (

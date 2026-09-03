@@ -177,30 +177,14 @@ export default function QuranLockGateModal({ isOpen, onClose, targetName = "ال
             </button>
 
             <button
-              onClick={() => {
-                if (hasKidsPin()) {
-                  setShowPin(true);
-                } else {
-                  handleParentUnlock();
-                }
-              }}
+              onClick={onClose}
               className="w-full p-2.5 rounded-xl bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 border border-border/60"
             >
-              <KeyRound className="w-3.5 h-3.5 text-accent" />
-              <span>فتح فوري بواسطة ولي الأمر (برمز PIN)</span>
+              <span>متابعة التصفح</span>
             </button>
           </div>
         </div>
       </div>
-
-      {/* نافذة التحقق من رمز ولي الأمر للفتح الفوري */}
-      <ParentalGateModal
-        isOpen={showPin}
-        onClose={() => setShowPin(false)}
-        onSuccess={handleParentUnlock}
-        title="إذن ولي الأمر لفتح الألعاب فوراً"
-        subtitle="أدخل الرمز السري لتجاوز وقت القراءة وفتح الألعاب للطفل الآن"
-      />
     </>
   );
 }
