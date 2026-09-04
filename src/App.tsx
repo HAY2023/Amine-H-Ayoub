@@ -184,28 +184,7 @@ const App = () => {
     // تم إزالة فحص التحديثات التلقائي
   }, []);
 
-  // تذكير الدرس اليومي (أثناء فتح التطبيق) — يوجه للصوت مباشرة
-  useEffect(() => {
-    const checkLesson = () => {
-      if (!kidsEnabled()) return;
-      const t = getProfile().lessonTime;
-      if (!t) return;
-      const now = new Date();
-      const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      const todayStr = now.toDateString();
-      let last = ""; try { last = localStorage.getItem("mushaf:lessonNotified") || ""; } catch { /* ignore */ }
-      if (hhmm >= t && last !== todayStr) {
-        try { localStorage.setItem("mushaf:lessonNotified", todayStr); } catch { /* ignore */ }
-        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-          try { new Notification("حان وقت درس القرآن 📖", { body: "هيا نستمع للتلاوات العطرة" }); } catch { /* ignore */ }
-        }
-        toast({ title: "حان وقت درس القرآن 📖", description: "هيا نستمع للتلاوات العطرة" });
-      }
-    };
-    checkLesson();
-    const id = setInterval(checkLesson, 30000);
-    return () => clearInterval(id);
-  }, []);
+
 
   // Ctrl+5 shortcut to toggle site links overlay
   useEffect(() => {

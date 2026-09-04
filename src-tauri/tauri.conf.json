@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Quran",
+  "productName": "Quran-Amine H Ayoub",
   "version": "1.0.0",
   "identifier": "com.learnqurankids.desktop",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "حاج أيوب أمين",
+        "title": "Quran-Amine H Ayoub",
         "width": 450,
         "height": 800,
         "minWidth": 360,

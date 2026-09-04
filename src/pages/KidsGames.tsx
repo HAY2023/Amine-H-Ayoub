@@ -29,6 +29,7 @@ import QuranLockGateModal from "../components/QuranLockGateModal";
 import { toast } from "../hooks/use-toast";
 import { isTimeAllowed } from "../data/kidsSchedule";
 import { calculateStreak, recordTodayActivity } from "../data/kidsBadges";
+import { showLocalNotification } from "../utils/notifications";
 
 async function enterKioskMode() {
   // تم إيقاف تكبير الشاشة التلقائي بناءً على طلب المستخدم
@@ -1923,7 +1924,7 @@ export default function KidsGames() {
       const timeCheck = isTimeAllowed();
       if (!timeCheck.allowed) {
         // حلقة دائمة: تنبيه فقط دون إخراج — الخروج اليدوي برمز ولي الأمر
-        toast({ title: "تنبيه الجدول ⏰", description: timeCheck.reason, variant: "destructive" });
+        void showLocalNotification("تنبيه الجدول ⏰", timeCheck.reason || "انتهى وقت اللعب المسموح حسب الجدول.");
         return;
       }
       
@@ -1933,9 +1934,23 @@ export default function KidsGames() {
         if (mins >= 0.1 || flushExact) {
            const { justExpired, progress } = addPlayMinutes(mins);
            lastPlayTick = now;
+
+           // تنبيه اقتراب نفاد الوقت قبل 5 دقائق
+           const currentProf = getProfile();
+           if (currentProf.playMinutes > 0) {
+             const remaining = currentProf.playMinutes - (progress.played || 0);
+             if (remaining <= 5 && remaining > 0 && !sessionStorage.getItem("mushaf:play_5min_alert")) {
+               sessionStorage.setItem("mushaf:play_5min_alert", "1");
+               void showLocalNotification(
+                 "تنبيه اقتراب نفاد وقت اللعب ⏳",
+                 `بقي ${Math.ceil(remaining)} دقائق فقط على انتهاء وقت اللعب المخصص!`
+               );
+             }
+           }
+
            if (justExpired || progress.playExpired) {
              // حلقة دائمة: تنبيه فقط دون خروج — يغادر الطفل يدوياً برمز ولي الأمر
-             toast({ title: "انتهى وقت اللعب المحدّد ⏰", description: "يمكن لولي الأمر منحه وقتاً إضافياً من لوحة التحكم.", variant: "destructive" });
+             void showLocalNotification("انتهى وقت اللعب المحدّد ⏰", "يمكن لولي الأمر منحه وقتاً إضافياً من لوحة التحكم.");
              return;
            }
         }
@@ -1947,7 +1962,7 @@ export default function KidsGames() {
     const initialCheck = isTimeAllowed();
     if (isParentTrial ? false : (!initialCheck.allowed || getProgress().playExpired)) {
         // حلقة دائمة: تنبيه عند الدخول فقط دون إخراج — الخروج يدوي برمز ولي الأمر
-        toast({ title: "تنبيه الوقت ⏰", description: initialCheck.reason || "انتهى وقت اللعب المحدّد لليوم.", variant: "destructive" });
+        void showLocalNotification("تنبيه الوقت ⏰", initialCheck.reason || "انتهى وقت اللعب المحدّد لليوم.");
     }
     const scheduleInterval = setInterval(() => checkSchedule(false), 30000); // Check every 30s instead of 60s
     

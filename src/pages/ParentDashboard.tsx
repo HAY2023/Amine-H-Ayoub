@@ -33,7 +33,7 @@ import {
   Mail,
   Scale,
 } from "lucide-react";
-import { showLocalNotification, requestNotificationPermission } from "../utils/notifications";
+import { showLocalNotification, requestNotificationPermission, saveReminderSettings } from "../utils/notifications";
 import {
   getProfile,
   updateProfile,
@@ -256,11 +256,12 @@ export default function ParentDashboard() {
   };
 
   // تذكير الدرس
-  const saveLesson = (t: string) => {
+  const saveLesson = async (t: string) => {
     updateProfile(profile.id, { lessonTime: t });
+    saveReminderSettings({ dailyLessonTime: t || "17:00", dailyLessonEnabled: !!t });
     refresh();
-    if (t && typeof Notification !== "undefined" && Notification.permission === "default") {
-      Notification.requestPermission().catch(() => { });
+    if (t) {
+      void requestNotificationPermission();
     }
     toast({ title: t ? `🔔 تم ضبط تذكير الدرس: ${t}` : "تم إلغاء تذكير الدرس" });
   };
@@ -939,8 +940,16 @@ export default function ParentDashboard() {
                   type="button"
                   onClick={async () => {
                     const granted = await requestNotificationPermission();
-                    await showLocalNotification("تذكير القرآن الكريم 🌟", "هذا إشعار تجريبي ناجح! نظام التذكيرات يعمل بامتياز على جهازك.");
-                    toast({ title: "🔔 تم إرسال إشعار التذكير بنجاح!", description: granted ? "يعمل بإشعارات النظام" : "يعمل بتنبيهات التطبيق" });
+                    await showLocalNotification(
+                      "تذكير القرآن الكريم 🌟",
+                      "هذا إشعار تجريبي ناجح! نظام التذكيرات يعمل بامتياز بنغمة هادئة وتنبيه مباشر."
+                    );
+                    if (!granted) {
+                      toast({
+                        title: "تنبيه صلاحيات النظام ℹ️",
+                        description: "يعمل بتنبيهات التطبيق، ويمكنك السماح بالإشعارات من إعدادات النظام لتظهر على سطح المكتب أو الهاتف.",
+                      });
+                    }
                   }}
                   className="w-full p-2.5 rounded-xl bg-accent/15 hover:bg-accent/25 text-accent font-black text-xs flex items-center justify-center gap-2 active:scale-95 transition-all border border-accent/30"
                 >
