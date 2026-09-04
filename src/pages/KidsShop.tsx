@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Star, Lock, Sparkles, Palette, Check, Crown, Eye, Volume2, ShieldCheck, Award, Headphones } from "lucide-react";
+import { ArrowRight, Star, Lock, Sparkles, Palette, Check, Crown, Eye, Volume2, ShieldCheck, Award, Headphones, Clock } from "lucide-react";
 import { 
   getCoins, 
   getProfile, 
@@ -18,6 +18,7 @@ import {
 
 import Avatar from "../components/Avatar";
 import TreasureBox from "../components/TreasureBox";
+import QuranLockGateModal from "../components/QuranLockGateModal";
 import { toast } from "../hooks/use-toast";
 import { cn } from "../lib/utils";
 
@@ -52,6 +53,7 @@ export default function KidsShop() {
 
   const [filterTier, setFilterTier] = useState<string>("all");
   const [previewItem, setPreviewItem] = useState<ShopItem | null>(null);
+  const [showLockGate, setShowLockGate] = useState(false);
 
   useEffect(() => {
     window.addEventListener("mushaf:coins", refresh);
@@ -185,13 +187,22 @@ export default function KidsShop() {
                   </span>
                 </div>
               </div>
-              <button
-                onClick={() => navigate("/audio")}
-                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shrink-0 active:scale-95 transition-all shadow-md flex items-center gap-1.5"
-              >
-                <Headphones className="w-3.5 h-3.5" />
-                <span>استمع الآن 📖</span>
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => setShowLockGate(true)}
+                  className="px-3 py-2 rounded-xl bg-card border border-border hover:border-accent/40 font-bold text-xs text-foreground shrink-0 active:scale-95 transition-all flex items-center gap-1 shadow-sm cursor-pointer"
+                >
+                  <Clock className="w-3.5 h-3.5 text-accent" />
+                  <span>تفاصيل العداد ⏰</span>
+                </button>
+                <button
+                  onClick={() => navigate("/audio")}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shrink-0 active:scale-95 transition-all shadow-md flex items-center gap-1.5"
+                >
+                  <Headphones className="w-3.5 h-3.5" />
+                  <span>استمع الآن 📖</span>
+                </button>
+              </div>
             </div>
           );
         })()}
@@ -526,7 +537,11 @@ export default function KidsShop() {
           </div>
         </div>
       )}
-
+      <QuranLockGateModal
+        isOpen={showLockGate}
+        onClose={() => setShowLockGate(false)}
+        targetName="المتجر"
+      />
     </div>
   );
 }

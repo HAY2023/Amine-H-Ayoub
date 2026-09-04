@@ -88,6 +88,7 @@ import {
   clearLocalSupportMessages,
   SupportReportData,
   createWhatsAppSupportLink,
+  openWhatsAppSupport,
   SUPPORT_WHATSAPP_DISPLAY,
 } from "../services/resendService";
 
@@ -368,7 +369,13 @@ export default function ParentDashboard() {
 
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => setShowSupportModal(true)}
+              onClick={() => {
+                void openWhatsAppSupport();
+                toast({
+                  title: "جاري فتح واتساب الدعم الفني 💬",
+                  description: `مراسلة فورية مباشرة على الرقم (${SUPPORT_WHATSAPP_DISPLAY})`,
+                });
+              }}
               className="h-9 sm:h-10 px-2.5 sm:px-3 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#25D366] text-xs font-black active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
               title={`تواصل مع الدعم الفني عبر واتساب (${SUPPORT_WHATSAPP_DISPLAY})`}
             >

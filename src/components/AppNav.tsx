@@ -60,6 +60,20 @@ export default function AppNav({ className = "" }: AppNavProps) {
     navigate("/games");
   };
 
+  const handleShopClick = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    // لا يدخل للمتجر طالما أنه في وقت الدراسة، بل يعرض العداد التنازلي فوراً بنفس طريقة الألعاب
+    if (isGamesLocked()) {
+      setLockGateTarget("المتجر");
+      setShowLockGate(true);
+      return;
+    }
+    navigate("/shop");
+  };
+
   const refreshState = () => {
     setKidsMode(isKidsMode());
     setPureModeState(isPureMode());
@@ -168,7 +182,7 @@ export default function AppNav({ className = "" }: AppNavProps) {
               </button>
 
               <button
-                onClick={() => navigate("/shop")}
+                onClick={handleShopClick}
                 className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all shrink-0 active:scale-95 ${
                   path === "/shop"
                     ? "bg-accent text-accent-foreground shadow-sm font-extrabold"
@@ -177,7 +191,14 @@ export default function AppNav({ className = "" }: AppNavProps) {
               >
                 <ShoppingBag className="w-4 h-4 shrink-0" />
                 <span>المتجر</span>
-                <span className="text-[10px] text-accent font-black">⭐</span>
+                {isGamesLocked() ? (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-500 text-[10px] font-mono font-black shrink-0 shadow-sm" title="وقت الدراسة: اضغط لعرض العداد التنازلي">
+                    <Lock className="w-2.5 h-2.5 animate-pulse" />
+                    <span>{getCountdownText()}</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-accent font-black">⭐</span>
+                )}
               </button>
             </div>
           ) : pureMode ? (

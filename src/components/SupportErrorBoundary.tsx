@@ -13,7 +13,6 @@ function ErrorFallback({ resetErrorBoundary }: { error: Error; resetErrorBoundar
     const msg =
       `السلام عليكم ورحمة الله وبركاته،\n` +
       `أحتاج مساعدة من الدعم الفني لتطبيق القرآن للأطفال:\n` +
-      `• الحساب: ${profileName}\n` +
       `• إصدار التطبيق: ${CURRENT_VERSION}\n` +
       `• واجهت توقفاً مؤقتاً في التطبيق وأرجو المساعدة.`;
 

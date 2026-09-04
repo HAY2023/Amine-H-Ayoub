@@ -97,7 +97,6 @@ export default function AlMueenAssistant() {
   const openWhatsApp = () => {
     const text =
       `السلام عليكم ورحمة الله، أحتاج مساعدة في تطبيق القرآن الكريم للأطفال:\n` +
-      `- المستخدم: ${activeProfile?.name || "مستخدم"}\n` +
       `- الإصدار: ${CURRENT_VERSION}\n` +
       (userMsg ? `- الرسالة: ${userMsg}` : "");
     void openWhatsAppSupport(text);

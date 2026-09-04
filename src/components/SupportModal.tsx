@@ -9,7 +9,6 @@ import {
   HelpCircle,
   Heart,
   AlertCircle,
-  User,
   Mail,
   MessageSquare,
 } from "lucide-react";
@@ -46,7 +45,6 @@ const REPORT_TYPES: Array<{
 export default function SupportModal({ onClose }: Props) {
   const activeProfile = getProfile();
   const [type, setType] = useState<ReportType>("bug");
-  const [senderName, setSenderName] = useState(activeProfile?.name || "");
   const [description, setDescription] = useState("");
   const [senderEmail, setSenderEmail] = useState("");
   const [sending, setSending] = useState(false);
@@ -70,7 +68,7 @@ export default function SupportModal({ onClose }: Props) {
       typeLabel: typeItem ? typeItem.label : "رسالة عامة",
       description: description.trim(),
       senderEmail: senderEmail.trim() || undefined,
-      profileName: senderName.trim() || activeProfile?.name || "مستخدم التطبيق",
+      profileName: activeProfile?.name || "مستخدم التطبيق",
       appVersion: CURRENT_VERSION,
       platform: typeof navigator !== "undefined" ? navigator.userAgent : "Web",
       timestamp: new Date().toLocaleString("ar-SA"),
@@ -92,11 +90,9 @@ export default function SupportModal({ onClose }: Props) {
   };
 
   const handleDirectQuickWhatsApp = () => {
-    const profileName = senderName.trim() || activeProfile?.name || "مستخدم التطبيق";
     const msg =
       `السلام عليكم ورحمة الله وبركاته،\n` +
       `أحتاج مساعدة وتواصلاً مع الدعم الفني لتطبيق القرآن للأطفال:\n` +
-      `• الحساب: ${profileName}\n` +
       `• الإصدار: ${CURRENT_VERSION}` +
       (description.trim() ? `\n• الرسالة: ${description.trim()}` : "");
 
@@ -211,20 +207,6 @@ export default function SupportModal({ onClose }: Props) {
               </div>
             </div>
 
-            {/* اسم المستخدم / اسم الحساب */}
-            <div className="space-y-1 text-right">
-              <label className="text-xs font-bold text-foreground flex items-center gap-1">
-                <User className="w-3.5 h-3.5 text-muted-foreground" />
-                <span>اسمك أو اسم الحساب</span>
-              </label>
-              <input
-                type="text"
-                value={senderName}
-                onChange={(e) => setSenderName(e.target.value)}
-                placeholder="أدخل اسمك أو اسم الطفل..."
-                className="w-full text-xs p-2.5 rounded-xl bg-muted/60 border border-border text-foreground placeholder-muted-foreground focus:border-accent outline-none transition-colors text-right font-medium"
-              />
-            </div>
 
             {/* نص الرسالة أو البلاغ */}
             <div className="space-y-1 text-right">
@@ -283,7 +265,7 @@ export default function SupportModal({ onClose }: Props) {
                 href={createMailtoSupportLink({
                   typeLabel: REPORT_TYPES.find((t) => t.id === type)?.label || "رسالة",
                   description: description.trim(),
-                  profileName: senderName.trim() || activeProfile?.name || "مستخدم التطبيق",
+                  profileName: activeProfile?.name || "مستخدم التطبيق",
                   appVersion: CURRENT_VERSION,
                 })}
                 className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-[11px] font-medium transition-colors"

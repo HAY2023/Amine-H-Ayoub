@@ -13,7 +13,6 @@ export default function ErrorPage() {
     const msg =
       `السلام عليكم ورحمة الله وبركاته،\n` +
       `أحتاج مساعدة من الدعم الفني لتطبيق القرآن للأطفال:\n` +
-      `• الحساب: ${profile?.name || "مستخدم التطبيق"}\n` +
       `• الإصدار: ${CURRENT_VERSION}\n` +
       `• واجهت توقفاً مؤقتاً وأرجو المساعدة.`;
     void openWhatsAppSupport(msg);

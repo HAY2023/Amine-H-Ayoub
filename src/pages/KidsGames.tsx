@@ -2037,6 +2037,14 @@ export default function KidsGames() {
     setActive(id);
   };
 
+  const openShop = () => {
+    if (!canPlay) {
+      setShowLockGateModal(true);
+      return;
+    }
+    navigate("/shop");
+  };
+
   // الشراء بالنجوم مباشرة — بلا إذن إضافي (النجوم تُربح بالقراءة فقط)
   const buyGame = () => {
     if (!unlockDef) return;
@@ -2899,7 +2907,7 @@ export default function KidsGames() {
             <div className="card-nour p-5 text-center space-y-3 animate-fade-up">
               <div className="flex flex-col items-center gap-2">
                 <button 
-                  onClick={() => navigate("/shop")} 
+                  onClick={openShop} 
                   title="تخصيص الشخصية والمتجر"
                   className="relative group cursor-pointer transition-transform hover:scale-105 active:scale-95"
                 >
@@ -2913,7 +2921,7 @@ export default function KidsGames() {
                 <div className="space-y-0.5">
                   <p className="font-extrabold text-lg sm:text-xl text-foreground">{profile.name ? `مرحباً ${profile.name}` : "مرحباً يا بطل القرآن"}</p>
                   <div className="flex items-center justify-center gap-3">
-                    <button onClick={() => navigate("/shop")} className="text-xs font-extrabold text-accent underline-offset-2 hover:underline flex items-center gap-1">
+                    <button onClick={openShop} className="text-xs font-extrabold text-accent underline-offset-2 hover:underline flex items-center gap-1">
                       خصّص شخصيتك
                     </button>
                     {getProfiles().length > 1 && (
@@ -2967,7 +2975,7 @@ export default function KidsGames() {
             </div>
 
             {/* ركن التخصيص (وجوه وألوان بالنجوم) */}
-            <button onClick={() => navigate("/shop")} className="relative z-10 w-full p-3 rounded-2xl bg-gradient-to-l from-accent/15 to-card border border-accent/40 shadow-soft flex items-center gap-3 active:scale-[0.99]">
+            <button onClick={openShop} className="relative z-10 w-full p-3 rounded-2xl bg-gradient-to-l from-accent/15 to-card border border-accent/40 shadow-soft flex items-center gap-3 active:scale-[0.99]">
               <span className="w-11 h-11 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shrink-0"><Sparkles className="w-6 h-6" /></span>
               <span className="flex-1 text-right"><span className="block font-extrabold text-foreground">خصّص شخصيتك</span><span className="block text-[11px] text-muted-foreground">افتح وجوهاً وألواناً جديدة بنجومك</span></span>
               <span className="inline-flex items-center gap-1 text-accent font-extrabold text-xs sm:text-sm bg-accent/15 px-2.5 py-1 rounded-full"><Star className="w-4 h-4 fill-current" /> {formatCoins(coins)} نجمة</span>

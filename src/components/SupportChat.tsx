@@ -550,7 +550,6 @@ export default function SupportChat({
               const msg =
                 `السلام عليكم ورحمة الله،\n` +
                 `تواصل مع الدعم الفني لتطبيق القرآن للأطفال:\n` +
-                `• الحساب: ${profile?.name || "مستخدم"}\n` +
                 (text ? `• الرسالة: ${text}` : "");
               void openWhatsAppSupport(msg);
             }}

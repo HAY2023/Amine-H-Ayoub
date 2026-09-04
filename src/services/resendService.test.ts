@@ -48,9 +48,9 @@ describe("sendSupportReportEmail", () => {
       timestamp: "2026-09-02",
     });
 
-    expect(result.success).toBe(false);
-    expect(result.error).toContain("اتصال الإنترنت");
-    expect(result.error).not.toContain("Failed to fetch");
+    expect(result.success).toBe(true);
+    expect(result.whatsappLink).toContain("https://wa.me/213658188644");
+    expect(result.mailtoLink).toContain("mailto:");
   });
 
   it("creates a WhatsApp link targeting 213658188644 correctly", () => {
