@@ -43,43 +43,45 @@ export async function downloadQuranCertificate({
   currentSurahNumber?: number;
 }): Promise<void> {
   const canvas = document.createElement("canvas");
-  canvas.width = 1080;
-  canvas.height = 1440;
+  const canvasW = 1080;
+  const canvasH = 980;
+  canvas.width = canvasW;
+  canvas.height = canvasH;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
   // 1. تدرج الخلفية العاجية الملكية الفاخرة
-  const bg = ctx.createLinearGradient(0, 0, 1080, 1440);
+  const bg = ctx.createLinearGradient(0, 0, canvasW, canvasH);
   bg.addColorStop(0, "#FAF6EE");
   bg.addColorStop(0.5, "#F8F2E2");
   bg.addColorStop(1, "#F3E9D2");
   ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, 1080, 1440);
+  ctx.fillRect(0, 0, canvasW, canvasH);
 
   // شبكة إسلامية رقيقة
   ctx.strokeStyle = "rgba(197, 160, 89, 0.08)";
   ctx.lineWidth = 1.5;
-  for (let x = 40; x < 1080; x += 60) {
+  for (let x = 40; x < canvasW; x += 60) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
-    ctx.lineTo(x, 1440);
+    ctx.lineTo(x, canvasH);
     ctx.stroke();
   }
-  for (let y = 40; y < 1440; y += 60) {
+  for (let y = 40; y < canvasH; y += 60) {
     ctx.beginPath();
     ctx.moveTo(0, y);
-    ctx.lineTo(1080, y);
+    ctx.lineTo(canvasW, y);
     ctx.stroke();
   }
 
   // 2. إطار مزدوج مع زوايا أندلسية
   ctx.strokeStyle = "#D4AF37";
   ctx.lineWidth = 8;
-  ctx.strokeRect(36, 36, 1008, 1368);
+  ctx.strokeRect(36, 36, canvasW - 72, canvasH - 72);
 
   ctx.strokeStyle = "#AA771C";
   ctx.lineWidth = 2.5;
-  ctx.strokeRect(48, 48, 984, 1344);
+  ctx.strokeRect(48, 48, canvasW - 96, canvasH - 96);
 
   const drawCorner = (cx: number, cy: number, flipX: number, flipY: number) => {
     ctx.save();
@@ -95,24 +97,28 @@ export async function downloadQuranCertificate({
     ctx.restore();
   };
   drawCorner(48, 48, 1, 1);
-  drawCorner(1032, 48, -1, 1);
-  drawCorner(48, 1392, 1, -1);
-  drawCorner(1032, 1392, -1, -1);
+  drawCorner(canvasW - 48, 48, -1, 1);
+  drawCorner(48, canvasH - 48, 1, -1);
+  drawCorner(canvasW - 48, canvasH - 48, -1, -1);
 
-  // 3. البسملة الشريفة
+  // 3. البسملة الشريفة (خط مكبّر)
   ctx.fillStyle = "#8C6514";
-  ctx.font = "bold 26px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+  ctx.font = "bold 30px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
   ctx.textAlign = "center";
-  ctx.fillText("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", 540, 96);
+  ctx.fillText("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", canvasW / 2, 98);
 
-  // 4. شريط العنوان الأخضر والذهبي
-  const ribbon = ctx.createLinearGradient(190, 118, 890, 190);
+  // 4. شريط العنوان الأخضر والذهبي (خط مكبّر وأكبر حجماً)
+  const ribbonW = 740;
+  const ribbonH = 76;
+  const ribbonX = (canvasW - ribbonW) / 2;
+  const ribbonY = 120;
+  const ribbon = ctx.createLinearGradient(ribbonX, ribbonY, ribbonX + ribbonW, ribbonY + ribbonH);
   ribbon.addColorStop(0, "#124325");
   ribbon.addColorStop(0.5, "#1B6338");
   ribbon.addColorStop(1, "#124325");
   ctx.fillStyle = ribbon;
   ctx.beginPath();
-  ctx.roundRect(190, 118, 700, 72, 24);
+  ctx.roundRect(ribbonX, ribbonY, ribbonW, ribbonH, 26);
   ctx.fill();
 
   ctx.strokeStyle = "#E5C058";
@@ -120,28 +126,29 @@ export async function downloadQuranCertificate({
   ctx.stroke();
 
   ctx.fillStyle = "#FFF7D6";
-  ctx.font = "bold 34px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
-  ctx.fillText("شَهَادَةُ تَمَيُّزٍ وَإِنْجَازٍ قُرْآنِيّ", 540, 166);
+  ctx.font = "bold 38px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+  ctx.fillText("شَهَادَةُ تَمَيُّزٍ وَإِنْجَازٍ قُرْآنِيّ", canvasW / 2, ribbonY + 52);
 
-  ctx.fillStyle = "#555555";
-  ctx.font = "bold 21px 'Tahoma', 'Arial'";
-  ctx.fillText("تُمنح هذه الشهادة المباركة تقديراً واعتزازاً بالهمة العالية", 540, 230);
+  // عبارة التكريم (مكبّرة)
+  ctx.fillStyle = "#444444";
+  ctx.font = "bold 25px 'Cairo', 'Tahoma', 'Arial'";
+  ctx.fillText("تُمنح هذه الشهادة المباركة تقديراً واعتزازاً بالهمة العالية", canvasW / 2, 238);
 
-  // 5. شخصية الطفل (Avatar)
-  const avatarCenterY = 340;
-  const avatarRadius = 78;
+  // 5. شخصية الطفل (Avatar) / الميدالية
+  const avatarCenterY = 345;
+  const avatarRadius = 82;
 
-  const aura = ctx.createRadialGradient(540, avatarCenterY, avatarRadius - 10, 540, avatarCenterY, avatarRadius + 28);
+  const aura = ctx.createRadialGradient(canvasW / 2, avatarCenterY, avatarRadius - 10, canvasW / 2, avatarCenterY, avatarRadius + 30);
   aura.addColorStop(0, "rgba(245, 197, 66, 0.45)");
   aura.addColorStop(1, "rgba(245, 197, 66, 0)");
   ctx.fillStyle = aura;
   ctx.beginPath();
-  ctx.arc(540, avatarCenterY, avatarRadius + 28, 0, Math.PI * 2);
+  ctx.arc(canvasW / 2, avatarCenterY, avatarRadius + 30, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.save();
   ctx.beginPath();
-  ctx.arc(540, avatarCenterY, avatarRadius, 0, Math.PI * 2);
+  ctx.arc(canvasW / 2, avatarCenterY, avatarRadius, 0, Math.PI * 2);
   ctx.closePath();
   ctx.clip();
   ctx.fillStyle = "#FFFFFF";
@@ -150,38 +157,38 @@ export async function downloadQuranCertificate({
   try {
     const avatarImg = await loadCanvasImage(`/avatars/${profile.avatar || "boy1"}.png`);
     if (avatarImg && avatarImg.naturalWidth > 0) {
-      ctx.drawImage(avatarImg, 540 - avatarRadius, avatarCenterY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
+      ctx.drawImage(avatarImg, canvasW / 2 - avatarRadius, avatarCenterY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
     } else {
-      drawCanvasStar(ctx, 540, avatarCenterY, 44, "#F4C542");
+      drawCanvasStar(ctx, canvasW / 2, avatarCenterY, 48, "#F4C542");
     }
   } catch {
-    drawCanvasStar(ctx, 540, avatarCenterY, 44, "#F4C542");
+    drawCanvasStar(ctx, canvasW / 2, avatarCenterY, 48, "#F4C542");
   }
   ctx.restore();
 
   ctx.strokeStyle = "#D4AF37";
   ctx.lineWidth = 5;
   ctx.beginPath();
-  ctx.arc(540, avatarCenterY, avatarRadius + 3, 0, Math.PI * 2);
+  ctx.arc(canvasW / 2, avatarCenterY, avatarRadius + 3, 0, Math.PI * 2);
   ctx.stroke();
 
-  drawCanvasStar(ctx, 425, avatarCenterY, 13, "#E5C058");
-  drawCanvasStar(ctx, 655, avatarCenterY, 13, "#E5C058");
+  drawCanvasStar(ctx, canvasW / 2 - 120, avatarCenterY, 15, "#E5C058");
+  drawCanvasStar(ctx, canvasW / 2 + 120, avatarCenterY, 15, "#E5C058");
 
-  // 6. صفة واسم الطالب بتنسيق سليم
+  // 6. صفة واسم الطالب بتنسيق سليم وخط كبير جداً وواضح
   ctx.fillStyle = "#8C6514";
-  ctx.font = "bold 26px 'Traditional Arabic', 'Amiri', 'Cairo', serif";
-  ctx.fillText("الْقَارِئُ الْحَافِظُ الْمُبَارَكُ", 540, 440);
+  ctx.font = "bold 28px 'Traditional Arabic', 'Amiri', 'Cairo', serif";
+  ctx.fillText("الْقَارِئُ الْحَافِظُ الْمُبَارَكُ", canvasW / 2, 458);
 
   ctx.fillStyle = "#0E4D2B";
-  ctx.font = "bold 46px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
-  ctx.fillText(profile.name || "بطل القرآن الكريم", 540, 485);
+  ctx.font = "bold 52px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+  ctx.fillText(profile.name || "بطل القرآن الكريم", canvasW / 2, 510);
 
-  ctx.fillStyle = "#555555";
-  ctx.font = "19px 'Tahoma', 'Arial'";
-  ctx.fillText("لمواظبته على تلاوة وحفظ كتاب الله الكريم برواية ورش عن نافع", 540, 520);
+  ctx.fillStyle = "#4B5563";
+  ctx.font = "bold 21px 'Cairo', 'Tahoma', 'Arial'";
+  ctx.fillText("لمواظبته على تلاوة وحفظ كتاب الله الكريم برواية ورش عن نافع", canvasW / 2, 548);
 
-  // 7. شبكة بطاقات الإحصائيات (2 × 2)
+  // 7. شبكة بطاقات الإحصائيات (2 × 2) مع خطوط مكبّرة
   const curSurahName = SURAHS.find((s) => s.number === currentSurahNumber)?.name || "النبأ";
   const statCards = [
     { title: "دقائق التلاوة والمدارسة", value: `${minutes || 0} دقيقة`, color: "#16A34A", icon: "⏱️" },
@@ -190,226 +197,74 @@ export async function downloadQuranCertificate({
     { title: "السورة الحالية المتقنة", value: `سورة ${curSurahName}`, color: "#2563EB", icon: "📖" },
   ];
 
+  const cardW = 430;
+  const cardH = 92;
   const cardPositions = [
-    { x: 100, y: 555, w: 425, h: 90 },
-    { x: 555, y: 555, w: 425, h: 90 },
-    { x: 100, y: 660, w: 425, h: 90 },
-    { x: 555, y: 660, w: 425, h: 90 },
+    { x: 95, y: 588, w: cardW, h: cardH },
+    { x: 555, y: 588, w: cardW, h: cardH },
+    { x: 95, y: 696, w: cardW, h: cardH },
+    { x: 555, y: 696, w: cardW, h: cardH },
   ];
 
   statCards.forEach((st, idx) => {
     const pos = cardPositions[idx];
     ctx.fillStyle = "#FFFFFF";
     ctx.beginPath();
-    ctx.roundRect(pos.x, pos.y, pos.w, pos.h, 18);
+    ctx.roundRect(pos.x, pos.y, pos.w, pos.h, 20);
     ctx.fill();
 
     ctx.strokeStyle = "#E8DCBF";
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 2;
     ctx.stroke();
 
     ctx.fillStyle = st.color;
     ctx.beginPath();
-    ctx.arc(pos.x + 45, pos.y + 45, 25, 0, Math.PI * 2);
+    ctx.arc(pos.x + 48, pos.y + 46, 26, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "22px 'Tahoma', 'Segoe UI Emoji', sans-serif";
+    ctx.font = "24px 'Tahoma', 'Segoe UI Emoji', sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(st.icon, pos.x + 45, pos.y + 53);
+    ctx.fillText(st.icon, pos.x + 48, pos.y + 55);
 
     ctx.textAlign = "right";
-    ctx.fillStyle = "#777777";
-    ctx.font = "bold 14px 'Tahoma', 'Arial'";
-    ctx.fillText(st.title, pos.x + pos.w - 18, pos.y + 34);
+    ctx.fillStyle = "#6B7280";
+    ctx.font = "bold 16px 'Cairo', 'Tahoma', 'Arial'";
+    ctx.fillText(st.title, pos.x + pos.w - 20, pos.y + 36);
 
-    ctx.fillStyle = "#222222";
-    ctx.font = "bold 23px 'Tahoma', 'Arial'";
-    ctx.fillText(st.value, pos.x + pos.w - 18, pos.y + 68);
+    ctx.fillStyle = "#111827";
+    ctx.font = "bold 26px 'Cairo', 'Tahoma', 'Arial'";
+    ctx.fillText(st.value, pos.x + pos.w - 20, pos.y + 72);
   });
 
-  // 8. لوحة الحديث الشريف
-  const hadithY = 775;
-  ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+  // 8. لوحة الحديث الشريف بخط مكبّر ورسم أنيق
+  const hadithY = 812;
+  const hadithW = 780;
+  const hadithH = 78;
+  const hadithX = (canvasW - hadithW) / 2;
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
   ctx.beginPath();
-  ctx.roundRect(160, hadithY, 760, 74, 20);
+  ctx.roundRect(hadithX, hadithY, hadithW, hadithH, 22);
   ctx.fill();
   ctx.strokeStyle = "#D4AF37";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  drawCanvasStar(ctx, 190, hadithY + 37, 10, "#E5C058");
-  drawCanvasStar(ctx, 890, hadithY + 37, 10, "#E5C058");
-
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#8C6514";
-  ctx.font = "bold 25px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
-  ctx.fillText("« خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ »", 540, hadithY + 38);
-
-  ctx.fillStyle = "#777777";
-  ctx.font = "14px 'Tahoma', 'Arial'";
-  ctx.fillText("— قال رسول الله ﷺ —", 540, hadithY + 62);
-
-  // 9. البطاقة الرسمية المعتمدة
-  const footCardY = 875;
-  const footCardH = 490;
-  const footGrad = ctx.createLinearGradient(70, footCardY, 1010, footCardY + footCardH);
-  footGrad.addColorStop(0, "#FFFFFF");
-  footGrad.addColorStop(0.5, "#FDFBF7");
-  footGrad.addColorStop(1, "#FAF6EE");
-  ctx.fillStyle = footGrad;
-  ctx.beginPath();
-  ctx.roundRect(70, footCardY, 940, footCardH, 28);
-  ctx.fill();
-
-  ctx.strokeStyle = "#D4AF37";
-  ctx.lineWidth = 3.5;
-  ctx.stroke();
-
-  ctx.strokeStyle = "rgba(212, 175, 55, 0.35)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.roundRect(82, footCardY + 12, 916, footCardH - 24, 20);
-  ctx.stroke();
-
-  // صورة التطبيق
-  const appImgCenterY = footCardY + 115;
-  const appImgCenterX = 185;
-  const appImgRadius = 60;
-
-  const appAura = ctx.createRadialGradient(appImgCenterX, appImgCenterY, appImgRadius - 5, appImgCenterX, appImgCenterY, appImgRadius + 18);
-  appAura.addColorStop(0, "rgba(212, 175, 55, 0.4)");
-  appAura.addColorStop(1, "rgba(212, 175, 55, 0)");
-  ctx.fillStyle = appAura;
-  ctx.beginPath();
-  ctx.arc(appImgCenterX, appImgCenterY, appImgRadius + 18, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(appImgCenterX, appImgCenterY, appImgRadius, 0, Math.PI * 2);
-  ctx.closePath();
-  ctx.clip();
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fill();
-
-  const appPhoto = (await loadCanvasImage("/my-photo.png")) || (await loadCanvasImage("/pwa-512x512.png"));
-  if (appPhoto && appPhoto.naturalWidth > 0) {
-    ctx.drawImage(appPhoto, appImgCenterX - appImgRadius, appImgCenterY - appImgRadius, appImgRadius * 2, appImgRadius * 2);
-  } else {
-    drawCanvasStar(ctx, appImgCenterX, appImgCenterY, 36, "#D4AF37");
-  }
-  ctx.restore();
-
-  ctx.strokeStyle = "#D4AF37";
-  ctx.lineWidth = 4.5;
-  ctx.beginPath();
-  ctx.arc(appImgCenterX, appImgCenterY, appImgRadius + 2, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.textAlign = "right";
-  ctx.fillStyle = "#0E4D2B";
-  ctx.font = "bold 32px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
-  ctx.fillText("تَطْبِيقُ الْمُصْحَفِ الْمُرَتَّلِ بِرِوَايَةِ وَرْش", 955, footCardY + 80);
-
-  ctx.fillStyle = "#8C6514";
-  ctx.font = "bold 24px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
-  ctx.fillText("الْقَارِئُ الشَّيْخُ حَاج أَيُّوب أَمِين", 955, footCardY + 122);
-
-  ctx.fillStyle = "#555555";
-  ctx.font = "17px 'Tahoma', 'Arial'";
-  ctx.fillText("ركن أبطال القرآن الكريم وتحدي الحفظ والمدارسة المتقنة للأطفال", 955, footCardY + 160);
-
-  // خط فاصل
-  ctx.strokeStyle = "rgba(212, 175, 55, 0.4)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(110, footCardY + 205);
-  ctx.lineTo(970, footCardY + 205);
-  ctx.stroke();
-
-  // ختم التميز
-  const sealX = 270;
-  const sealY = footCardY + 315;
-  ctx.save();
-  ctx.translate(sealX, sealY);
-
-  ctx.fillStyle = "#F59E0B";
-  ctx.beginPath();
-  for (let i = 0; i < 24; i++) {
-    const angle = (i * Math.PI) / 12;
-    const r = i % 2 === 0 ? 58 : 50;
-    const px = Math.cos(angle) * r;
-    const py = Math.sin(angle) * r;
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  }
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = "#92400E";
-  ctx.beginPath();
-  ctx.arc(0, 0, 47, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = "#FDE68A";
   ctx.lineWidth = 2.5;
   ctx.stroke();
 
-  ctx.fillStyle = "#FFFFFF";
-  ctx.font = "bold 13px 'Tahoma', sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("وسام التميّز", 0, -10);
-  ctx.fillText("حفظ القرآن", 0, 8);
-  ctx.fillText("مُعْتَمَد ✓", 0, 24);
-  drawCanvasStar(ctx, 0, 36, 6, "#FDE68A");
-  ctx.restore();
-
-  // توقيع المشرف
-  ctx.textAlign = "right";
-  ctx.fillStyle = "#333333";
-  ctx.font = "bold 19px 'Tahoma', 'Arial'";
-  ctx.fillText("تَوْقِيعُ وَإِشْرَافُ الْمُقْرِئِ", 955, footCardY + 270);
-
-  ctx.fillStyle = "#0E4D2B";
-  ctx.font = "bold 26px 'Traditional Arabic', 'Amiri', 'Cairo', serif";
-  ctx.fillText("الْقَارِئُ الشَّيْخُ أَمِين حَاج أَيُّوب", 955, footCardY + 312);
-
-  ctx.fillStyle = "#666666";
-  ctx.font = "italic 16px 'Tahoma', sans-serif";
-  ctx.fillText("« غفر الله له ولوالديه ولمن قرأ واستمع »", 955, footCardY + 345);
-
-  // خانة التاريخ المنظمة
-  const today = new Date();
-  const dateBoxW = 440;
-  const dateBoxH = 64;
-  const dateBoxX = 515;
-  const dateBoxY = footCardY + 395;
-
-  ctx.fillStyle = "rgba(245, 197, 66, 0.15)";
-  ctx.beginPath();
-  ctx.roundRect(dateBoxX, dateBoxY, dateBoxW, dateBoxH, 16);
-  ctx.fill();
-
-  ctx.strokeStyle = "#D4AF37";
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  drawCanvasStar(ctx, hadithX + 32, hadithY + hadithH / 2, 11, "#E5C058");
+  drawCanvasStar(ctx, hadithX + hadithW - 32, hadithY + hadithH / 2, 11, "#E5C058");
 
   ctx.textAlign = "center";
   ctx.fillStyle = "#8C6514";
-  ctx.font = "bold 14px 'Tahoma', 'Arial'";
-  ctx.fillText("تَارِيخُ التَّمَيُّزِ وَالإِنْجَازِ", dateBoxX + dateBoxW / 2, dateBoxY + 24);
+  ctx.font = "bold 29px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
+  ctx.fillText("« خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ »", canvasW / 2, hadithY + 41);
 
-  ctx.fillStyle = "#854D0E";
-  ctx.font = "bold 20px 'Tahoma', 'Arial'";
-  ctx.fillText(`${today.getDate()} / ${today.getMonth() + 1} / ${today.getFullYear()} م`, dateBoxX + dateBoxW / 2, dateBoxY + 50);
+  ctx.fillStyle = "#6B7280";
+  ctx.font = "bold 16px 'Cairo', 'Tahoma', 'Arial'";
+  ctx.fillText("— قال رسول الله ﷺ —", canvasW / 2, hadithY + 66);
 
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#166534";
-  ctx.font = "bold 15px 'Tahoma', 'Arial'";
-  ctx.fillText("🌸 مُبَارَكٌ هَذَا الإِنْجَازُ الْقُرْآنِيُّ 🌸", 280, dateBoxY + 36);
-
-  // تحميل الشهادة
+  // تحميل الشهادة المحسنة
+  const today = new Date();
   const link = document.createElement("a");
   link.download = `شهادة-${profile.name || "بطل-القرآن"}-${today.toISOString().split("T")[0]}.png`;
   link.href = canvas.toDataURL("image/png");

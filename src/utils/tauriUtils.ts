@@ -164,9 +164,13 @@ export async function openExternalUrl(url: string): Promise<void> {
     }
   }
   if (typeof window !== "undefined") {
-    const w = window.open(url, "_blank", "noopener,noreferrer");
-    if (!w) {
-      window.location.href = url;
-    }
+    // استخدام عنصر a خفي لفرض فتح الرابط في تبويب خارجي/تطبيق خارجي لتجاوز بعض قيود المتصفحات
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 }

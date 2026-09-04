@@ -92,7 +92,7 @@ import {
   SUPPORT_WHATSAPP_DISPLAY,
 } from "../services/resendService";
 
-type DashboardTab = "overview" | "goals" | "schedule";
+type DashboardTab = "overview" | "goals";
 
 export default function ParentDashboard() {
   const navigate = useNavigate();
@@ -483,19 +483,10 @@ export default function ParentDashboard() {
               }`}
           >
             <Target className="w-4 h-4" />
-            <span>أهداف وسورة {profile.name || "الطفل"}</span>
+            <span>الإعدادات والأهداف</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab("schedule")}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all shrink-0 ${activeTab === "schedule"
-                ? "bg-card text-accent shadow-sm scale-[1.02]"
-                : "text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            <Clock className="w-4 h-4" />
-            <span>المواعيد والجدول</span>
-          </button>
+
 
 
         </div>
@@ -689,27 +680,6 @@ export default function ParentDashboard() {
               </div>
             </div>
 
-            {/* اختيار الأفاتار من شخصيات الأفاتار */}
-            <div>
-              <label className="block text-xs font-bold text-muted-foreground mb-1.5">
-                شخصية الأفاتار المفضلة
-              </label>
-              <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1 border rounded-xl bg-secondary/30">
-                {KID_AVATARS.map((a) => (
-                  <button
-                    key={a}
-                    onClick={() => setDraft({ ...draft, avatar: a })}
-                    className={`w-11 h-11 rounded-xl p-0.5 transition-all flex items-center justify-center ${draft.avatar === a
-                        ? "ring-2 ring-accent scale-110 bg-accent/20"
-                        : "bg-card hover:bg-secondary"
-                      }`}
-                  >
-                    <Avatar name={a} className="w-full h-full rounded-lg object-cover" />
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* سورة الحفظ الحالية للطفل */}
             <div className="space-y-1.5 p-3 rounded-2xl bg-secondary/50 border border-border/50">
               <div className="flex items-center justify-between">
@@ -736,37 +706,7 @@ export default function ParentDashboard() {
               </select>
             </div>
 
-            {/* رصيد نجوم الطفل مع إمكانية التعديل المباشر */}
-            <div className="space-y-1.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="block text-xs font-bold text-amber-600 dark:text-amber-400">رصيد نجوم الطفل</span>
-                  <span className="text-[10px] text-muted-foreground">
-                    يمكنك تعديل رصيد النجوم المتاح للطفل في المتجر
-                  </span>
-                </div>
-                <span className="text-xs font-black text-amber-500 flex items-center gap-1">
-                  <Star className="w-3.5 h-3.5 fill-current" /> {formatCoins(draft.coins || 0)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  max={100000000}
-                  value={draft.coins || 0}
-                  onChange={(e) => setDraft({ ...draft, coins: Math.max(0, Number(e.target.value)) })}
-                  className="flex-1 rounded-xl bg-card border border-border p-2.5 text-xs font-black text-foreground focus:border-amber-500 outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setDraft({ ...draft, coins: (draft.coins || 0) + 10000 })}
-                  className="px-3 py-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs hover:bg-amber-500/30 transition-all shrink-0 active:scale-95"
-                >
-                  +10,000 ⭐
-                </button>
-              </div>
-            </div>
+
 
             {/* دقائق القراءة اليومية لفتح الألعاب */}
             <div className="space-y-2">
@@ -834,146 +774,137 @@ export default function ParentDashboard() {
               />
             </div>
 
-            <button
-              onClick={saveChild}
-              className="w-full p-3 rounded-xl btn-gold font-bold flex items-center justify-center gap-2 active:scale-95 shadow-md transition-all text-sm"
-            >
-              <Check className="w-5 h-5" /> حفظ تعديلات {draft.name || "الطفل"}
-            </button>
-          </div>
-        )}
+            {/* --- ركن الجدول الزمني --- */}
+            <div className="pt-2 mt-2 border-t border-border/50">
+              {/* موعد الدرس اليومي */}
+              <div className="space-y-2 pb-4 border-b border-border/50">
+                <p className="font-bold text-accent flex items-center gap-2">
+                  <Bell className="w-4 h-4" /> تذكير الدرس القرآني اليومي
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  يرسل التطبيق تنبيهاً تشجيعياً للطفل عند حلول هذا الوقت كل يوم للبدء في القراءة.
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="time"
+                    value={profile.lessonTime || ""}
+                    onChange={(e) => saveLesson(e.target.value)}
+                    className="flex-1 rounded-xl bg-secondary border border-border p-2.5 text-foreground font-bold"
+                  />
+                  {profile.lessonTime && (
+                    <button
+                      onClick={() => saveLesson("")}
+                      className="px-3.5 py-2.5 rounded-xl bg-destructive/15 text-destructive font-bold text-xs hover:bg-destructive/25 transition-colors"
+                    >
+                      إلغاء التذكير
+                    </button>
+                  )}
+                </div>
+              </div>
 
-        {/* ── التبويب 3: المواعيد والجدول ── */}
-        {activeTab === "schedule" && (
-          <div className="card-nour p-4 space-y-4 shadow-soft animate-fade-in">
-            {/* موعد الدرس اليومي */}
-            <div className="space-y-2 pb-4 border-b border-border/50">
-              <p className="font-bold text-accent flex items-center gap-2">
-                <Bell className="w-4 h-4" /> تذكير الدرس القرآني اليومي
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                يرسل التطبيق تنبيهاً تشجيعياً للطفل عند حلول هذا الوقت كل يوم للبدء في القراءة.
-              </p>
-              <div className="flex items-center gap-2">
-                <input
-                  type="time"
-                  value={profile.lessonTime || ""}
-                  onChange={(e) => saveLesson(e.target.value)}
-                  className="flex-1 rounded-xl bg-secondary border border-border p-2.5 text-foreground font-bold"
-                />
-                {profile.lessonTime && (
+              {/* جدول أوقات اللعب الصارم */}
+              <div className="space-y-3 pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-accent flex items-center gap-2">
+                      <Clock className="w-4 h-4" /> جدول أوقات اللعب الصارم
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      تحديد ساعات وأيام محددة يُسمح فيها بفتح ركن الألعاب.
+                    </p>
+                  </div>
                   <button
-                    onClick={() => saveLesson("")}
-                    className="px-3.5 py-2.5 rounded-xl bg-destructive/15 text-destructive font-bold text-xs hover:bg-destructive/25 transition-colors"
+                    onClick={() => {
+                      const s = { ...schedule, enabled: !schedule.enabled };
+                      setSchedule(s);
+                      saveKidsSchedule(s);
+                      toast({ title: s.enabled ? "✓ تم تفعيل جدول اللعب" : "تم تعطيل جدول اللعب" });
+                    }}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${schedule.enabled ? "bg-accent" : "bg-muted-foreground/30"
+                      }`}
                   >
-                    إلغاء التذكير
+                    <div
+                      className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${schedule.enabled ? "left-0.5" : "left-[26px]"
+                        }`}
+                    />
                   </button>
+                </div>
+
+                {schedule.enabled && (
+                  <div className="p-3 rounded-2xl bg-secondary/40 border border-border/50 space-y-3 animate-fade-down">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[11px] text-muted-foreground font-bold mb-1 block">
+                          مسموح من الساعة:
+                        </label>
+                        <input
+                          type="time"
+                          value={schedule.startTime}
+                          onChange={(e) => {
+                            const s = { ...schedule, startTime: e.target.value };
+                            setSchedule(s);
+                            saveKidsSchedule(s);
+                          }}
+                          className="w-full rounded-xl bg-card border border-border p-2 text-xs font-bold text-foreground"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-muted-foreground font-bold mb-1 block">
+                          إلى الساعة:
+                        </label>
+                        <input
+                          type="time"
+                          value={schedule.endTime}
+                          onChange={(e) => {
+                            const s = { ...schedule, endTime: e.target.value };
+                            setSchedule(s);
+                            saveKidsSchedule(s);
+                          }}
+                          className="w-full rounded-xl bg-card border border-border p-2 text-xs font-bold text-foreground"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-muted-foreground font-bold mb-1.5 block">
+                        الأيام المسموح فيها باللعب:
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          "الأحد",
+                          "الإثنين",
+                          "الثلاثاء",
+                          "الأربعاء",
+                          "الخميس",
+                          "الجمعة",
+                          "السبت",
+                        ].map((day, idx) => {
+                          const isAllowed = schedule.allowedDays.includes(idx);
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => {
+                                const days = isAllowed
+                                  ? schedule.allowedDays.filter((d) => d !== idx)
+                                  : [...schedule.allowedDays, idx];
+                                const s = { ...schedule, allowedDays: days };
+                                setSchedule(s);
+                                saveKidsSchedule(s);
+                              }}
+                              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-colors ${isAllowed
+                                  ? "bg-accent text-accent-foreground border-accent shadow-sm"
+                                  : "bg-secondary text-muted-foreground border-border hover:border-accent/40"
+                                }`}
+                            >
+                              {day}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-
-            {/* جدول أوقات اللعب الصارم */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-accent flex items-center gap-2">
-                    <Clock className="w-4 h-4" /> جدول أوقات اللعب الصارم
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    تحديد ساعات وأيام محددة يُسمح فيها بفتح ركن الألعاب.
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    const s = { ...schedule, enabled: !schedule.enabled };
-                    setSchedule(s);
-                    saveKidsSchedule(s);
-                    toast({ title: s.enabled ? "✓ تم تفعيل جدول اللعب" : "تم تعطيل جدول اللعب" });
-                  }}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${schedule.enabled ? "bg-accent" : "bg-muted-foreground/30"
-                    }`}
-                >
-                  <div
-                    className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${schedule.enabled ? "left-0.5" : "left-[26px]"
-                      }`}
-                  />
-                </button>
-              </div>
-
-              {schedule.enabled && (
-                <div className="p-3 rounded-2xl bg-secondary/40 border border-border/50 space-y-3 animate-fade-down">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[11px] text-muted-foreground font-bold mb-1 block">
-                        مسموح من الساعة:
-                      </label>
-                      <input
-                        type="time"
-                        value={schedule.startTime}
-                        onChange={(e) => {
-                          const s = { ...schedule, startTime: e.target.value };
-                          setSchedule(s);
-                          saveKidsSchedule(s);
-                        }}
-                        className="w-full rounded-xl bg-card border border-border p-2 text-xs font-bold text-foreground"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] text-muted-foreground font-bold mb-1 block">
-                        إلى الساعة:
-                      </label>
-                      <input
-                        type="time"
-                        value={schedule.endTime}
-                        onChange={(e) => {
-                          const s = { ...schedule, endTime: e.target.value };
-                          setSchedule(s);
-                          saveKidsSchedule(s);
-                        }}
-                        className="w-full rounded-xl bg-card border border-border p-2 text-xs font-bold text-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] text-muted-foreground font-bold mb-1.5 block">
-                      الأيام المسموح فيها باللعب:
-                    </label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[
-                        "الأحد",
-                        "الإثنين",
-                        "الثلاثاء",
-                        "الأربعاء",
-                        "الخميس",
-                        "الجمعة",
-                        "السبت",
-                      ].map((day, idx) => {
-                        const isAllowed = schedule.allowedDays.includes(idx);
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => {
-                              const days = isAllowed
-                                ? schedule.allowedDays.filter((d) => d !== idx)
-                                : [...schedule.allowedDays, idx];
-                              const s = { ...schedule, allowedDays: days };
-                              setSchedule(s);
-                              saveKidsSchedule(s);
-                            }}
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-colors ${isAllowed
-                                ? "bg-accent text-accent-foreground border-accent shadow-sm"
-                                : "bg-card text-muted-foreground border-border hover:border-accent/40"
-                              }`}
-                          >
-                            {day}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* نظام إشعارات التذكير الذكية */}
@@ -1018,6 +949,62 @@ export default function ParentDashboard() {
                 </button>
               </div>
             </div>
+
+            {/* استيراد كود التكوين للمطور */}
+            <div className="space-y-3 pt-3 border-t border-border/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-accent flex items-center gap-2 text-xs sm:text-sm">
+                    <KeyRound className="w-4 h-4" /> استيراد كود المطور
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    أدخل الكود المستخرج من أداة المطور الخارجية لتحديث النجوم والعناصر.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  id="dev-code-input"
+                  placeholder="الصق الكود هنا..."
+                  className="flex-1 rounded-xl bg-secondary border border-border p-2.5 text-xs text-foreground focus:border-accent outline-none" 
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                     const input = document.getElementById('dev-code-input') as HTMLInputElement;
+                     if (!input.value) return;
+                     try {
+                        const payload = JSON.parse(decodeURIComponent(escape(atob(input.value))));
+                        if (payload.type === 'DEV_TOOL_UPDATE') {
+                           if (payload.coins !== undefined) {
+                              setCoins(payload.coins);
+                           }
+                           if (payload.items && Array.isArray(payload.items)) {
+                              const currProf = getProfile();
+                              updateProfile(currProf.id, { inventory: Array.from(new Set([...(currProf.inventory || []), ...payload.items])) });
+                           }
+                           refresh();
+                           toast({ title: '✓ تم استيراد وتحديث البيانات بنجاح!' });
+                           input.value = '';
+                        }
+                     } catch(e) {
+                        toast({ title: 'كود غير صالح', variant: 'destructive' });
+                     }
+                  }}
+                  className="px-3 py-2.5 rounded-xl bg-accent text-accent-foreground font-bold text-xs flex items-center gap-1 hover:bg-accent/90"
+                >
+                  <Check className="w-3.5 h-3.5" /> تطبيق
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={saveChild}
+              className="w-full p-3 rounded-xl btn-gold font-bold flex items-center justify-center gap-2 active:scale-95 shadow-md transition-all text-sm mt-4"
+            >
+              <Check className="w-5 h-5" /> حفظ تعديلات {draft.name || "الطفل"}
+            </button>
           </div>
         )}
 

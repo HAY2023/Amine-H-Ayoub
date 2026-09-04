@@ -1,0 +1,3615 @@
+{
+  "questions": [
+    {
+      "id": "ayahs_count_36",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة يس؟",
+      "options": [
+        "83",
+        "85",
+        "80",
+        "81"
+      ],
+      "correct_answer": "83"
+    },
+    {
+      "id": "ayahs_count_37",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الصافات؟",
+      "options": [
+        "187",
+        "183",
+        "182",
+        "184"
+      ],
+      "correct_answer": "182"
+    },
+    {
+      "id": "ayahs_count_38",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة ص؟",
+      "options": [
+        "88",
+        "93",
+        "85",
+        "89"
+      ],
+      "correct_answer": "88"
+    },
+    {
+      "id": "ayahs_count_39",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الزمر؟",
+      "options": [
+        "75",
+        "73",
+        "74",
+        "80"
+      ],
+      "correct_answer": "75"
+    },
+    {
+      "id": "ayahs_count_40",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة غافر؟",
+      "options": [
+        "82",
+        "83",
+        "84",
+        "85"
+      ],
+      "correct_answer": "85"
+    },
+    {
+      "id": "ayahs_count_41",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة فصلت؟",
+      "options": [
+        "59",
+        "55",
+        "51",
+        "54"
+      ],
+      "correct_answer": "54"
+    },
+    {
+      "id": "ayahs_count_42",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الشورى؟",
+      "options": [
+        "50",
+        "55",
+        "54",
+        "53"
+      ],
+      "correct_answer": "53"
+    },
+    {
+      "id": "ayahs_count_43",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الزخرف؟",
+      "options": [
+        "87",
+        "88",
+        "89",
+        "86"
+      ],
+      "correct_answer": "89"
+    },
+    {
+      "id": "ayahs_count_44",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الدخان؟",
+      "options": [
+        "58",
+        "59",
+        "57",
+        "60"
+      ],
+      "correct_answer": "59"
+    },
+    {
+      "id": "ayahs_count_45",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الجاثية؟",
+      "options": [
+        "34",
+        "38",
+        "39",
+        "37"
+      ],
+      "correct_answer": "37"
+    },
+    {
+      "id": "ayahs_count_46",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الأحقاف؟",
+      "options": [
+        "40",
+        "37",
+        "34",
+        "35"
+      ],
+      "correct_answer": "35"
+    },
+    {
+      "id": "ayahs_count_47",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة محمد؟",
+      "options": [
+        "43",
+        "38",
+        "40",
+        "35"
+      ],
+      "correct_answer": "38"
+    },
+    {
+      "id": "ayahs_count_48",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الفتح؟",
+      "options": [
+        "28",
+        "34",
+        "30",
+        "29"
+      ],
+      "correct_answer": "29"
+    },
+    {
+      "id": "ayahs_count_49",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الحجرات؟",
+      "options": [
+        "17",
+        "15",
+        "18",
+        "23"
+      ],
+      "correct_answer": "18"
+    },
+    {
+      "id": "ayahs_count_50",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة ق؟",
+      "options": [
+        "44",
+        "50",
+        "47",
+        "45"
+      ],
+      "correct_answer": "45"
+    },
+    {
+      "id": "ayahs_count_51",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الذاريات؟",
+      "options": [
+        "62",
+        "58",
+        "60",
+        "61"
+      ],
+      "correct_answer": "60"
+    },
+    {
+      "id": "ayahs_count_52",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الطور؟",
+      "options": [
+        "54",
+        "49",
+        "50",
+        "46"
+      ],
+      "correct_answer": "49"
+    },
+    {
+      "id": "ayahs_count_53",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة النجم؟",
+      "options": [
+        "64",
+        "62",
+        "59",
+        "63"
+      ],
+      "correct_answer": "62"
+    },
+    {
+      "id": "ayahs_count_54",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة القمر؟",
+      "options": [
+        "57",
+        "55",
+        "53",
+        "52"
+      ],
+      "correct_answer": "55"
+    },
+    {
+      "id": "ayahs_count_55",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الرحمن؟",
+      "options": [
+        "78",
+        "76",
+        "77",
+        "75"
+      ],
+      "correct_answer": "78"
+    },
+    {
+      "id": "ayahs_count_56",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الواقعة؟",
+      "options": [
+        "96",
+        "95",
+        "94",
+        "93"
+      ],
+      "correct_answer": "96"
+    },
+    {
+      "id": "ayahs_count_57",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الحديد؟",
+      "options": [
+        "26",
+        "34",
+        "29",
+        "27"
+      ],
+      "correct_answer": "29"
+    },
+    {
+      "id": "ayahs_count_58",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة المجادلة؟",
+      "options": [
+        "20",
+        "22",
+        "24",
+        "21"
+      ],
+      "correct_answer": "22"
+    },
+    {
+      "id": "ayahs_count_59",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الحشر؟",
+      "options": [
+        "24",
+        "26",
+        "22",
+        "25"
+      ],
+      "correct_answer": "24"
+    },
+    {
+      "id": "ayahs_count_60",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الممتحنة؟",
+      "options": [
+        "13",
+        "15",
+        "18",
+        "10"
+      ],
+      "correct_answer": "13"
+    },
+    {
+      "id": "ayahs_count_61",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الصف؟",
+      "options": [
+        "15",
+        "14",
+        "13",
+        "16"
+      ],
+      "correct_answer": "14"
+    },
+    {
+      "id": "ayahs_count_62",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الجمعة؟",
+      "options": [
+        "11",
+        "12",
+        "8",
+        "9"
+      ],
+      "correct_answer": "11"
+    },
+    {
+      "id": "ayahs_count_63",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة المنافقون؟",
+      "options": [
+        "10",
+        "11",
+        "13",
+        "8"
+      ],
+      "correct_answer": "11"
+    },
+    {
+      "id": "ayahs_count_64",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة التغابن؟",
+      "options": [
+        "15",
+        "18",
+        "17",
+        "23"
+      ],
+      "correct_answer": "18"
+    },
+    {
+      "id": "ayahs_count_65",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الطلاق؟",
+      "options": [
+        "12",
+        "17",
+        "11",
+        "9"
+      ],
+      "correct_answer": "12"
+    },
+    {
+      "id": "ayahs_count_66",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة التحريم؟",
+      "options": [
+        "9",
+        "13",
+        "12",
+        "10"
+      ],
+      "correct_answer": "12"
+    },
+    {
+      "id": "ayahs_count_67",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الملك؟",
+      "options": [
+        "27",
+        "31",
+        "30",
+        "35"
+      ],
+      "correct_answer": "30"
+    },
+    {
+      "id": "ayahs_count_68",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة القلم؟",
+      "options": [
+        "49",
+        "51",
+        "52",
+        "53"
+      ],
+      "correct_answer": "52"
+    },
+    {
+      "id": "ayahs_count_69",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الحاقة؟",
+      "options": [
+        "57",
+        "50",
+        "52",
+        "49"
+      ],
+      "correct_answer": "52"
+    },
+    {
+      "id": "ayahs_count_70",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة المعارج؟",
+      "options": [
+        "49",
+        "44",
+        "41",
+        "42"
+      ],
+      "correct_answer": "44"
+    },
+    {
+      "id": "ayahs_count_71",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة نوح؟",
+      "options": [
+        "25",
+        "26",
+        "28",
+        "27"
+      ],
+      "correct_answer": "28"
+    },
+    {
+      "id": "ayahs_count_72",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الجن؟",
+      "options": [
+        "28",
+        "29",
+        "30",
+        "33"
+      ],
+      "correct_answer": "28"
+    },
+    {
+      "id": "ayahs_count_73",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة المزمل؟",
+      "options": [
+        "20",
+        "22",
+        "17",
+        "18"
+      ],
+      "correct_answer": "20"
+    },
+    {
+      "id": "ayahs_count_74",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة المدثر؟",
+      "options": [
+        "58",
+        "56",
+        "53",
+        "57"
+      ],
+      "correct_answer": "56"
+    },
+    {
+      "id": "ayahs_count_75",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة القيامة؟",
+      "options": [
+        "37",
+        "40",
+        "41",
+        "45"
+      ],
+      "correct_answer": "40"
+    },
+    {
+      "id": "ayahs_count_76",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الإنسان؟",
+      "options": [
+        "36",
+        "31",
+        "28",
+        "32"
+      ],
+      "correct_answer": "31"
+    },
+    {
+      "id": "ayahs_count_77",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة المرسلات؟",
+      "options": [
+        "48",
+        "51",
+        "49",
+        "50"
+      ],
+      "correct_answer": "50"
+    },
+    {
+      "id": "ayahs_count_78",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة النبأ؟",
+      "options": [
+        "37",
+        "39",
+        "42",
+        "40"
+      ],
+      "correct_answer": "40"
+    },
+    {
+      "id": "ayahs_count_79",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة النازعات؟",
+      "options": [
+        "51",
+        "45",
+        "46",
+        "43"
+      ],
+      "correct_answer": "46"
+    },
+    {
+      "id": "ayahs_count_80",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة عبس؟",
+      "options": [
+        "43",
+        "47",
+        "44",
+        "42"
+      ],
+      "correct_answer": "42"
+    },
+    {
+      "id": "ayahs_count_81",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة التكوير؟",
+      "options": [
+        "26",
+        "28",
+        "29",
+        "31"
+      ],
+      "correct_answer": "29"
+    },
+    {
+      "id": "ayahs_count_82",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الانفطار؟",
+      "options": [
+        "21",
+        "24",
+        "19",
+        "18"
+      ],
+      "correct_answer": "19"
+    },
+    {
+      "id": "ayahs_count_83",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة المطففين؟",
+      "options": [
+        "36",
+        "37",
+        "41",
+        "34"
+      ],
+      "correct_answer": "36"
+    },
+    {
+      "id": "ayahs_count_84",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الانشقاق؟",
+      "options": [
+        "23",
+        "25",
+        "26",
+        "27"
+      ],
+      "correct_answer": "25"
+    },
+    {
+      "id": "ayahs_count_85",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة البروج؟",
+      "options": [
+        "22",
+        "19",
+        "27",
+        "20"
+      ],
+      "correct_answer": "22"
+    },
+    {
+      "id": "ayahs_count_86",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الطارق؟",
+      "options": [
+        "19",
+        "17",
+        "14",
+        "18"
+      ],
+      "correct_answer": "17"
+    },
+    {
+      "id": "ayahs_count_87",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الأعلى؟",
+      "options": [
+        "16",
+        "19",
+        "18",
+        "20"
+      ],
+      "correct_answer": "19"
+    },
+    {
+      "id": "ayahs_count_88",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الغاشية؟",
+      "options": [
+        "24",
+        "25",
+        "23",
+        "26"
+      ],
+      "correct_answer": "26"
+    },
+    {
+      "id": "ayahs_count_89",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الفجر؟",
+      "options": [
+        "30",
+        "28",
+        "32",
+        "35"
+      ],
+      "correct_answer": "30"
+    },
+    {
+      "id": "ayahs_count_90",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة البلد؟",
+      "options": [
+        "19",
+        "18",
+        "22",
+        "20"
+      ],
+      "correct_answer": "20"
+    },
+    {
+      "id": "ayahs_count_91",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الشمس؟",
+      "options": [
+        "14",
+        "16",
+        "13",
+        "15"
+      ],
+      "correct_answer": "15"
+    },
+    {
+      "id": "ayahs_count_92",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الليل؟",
+      "options": [
+        "21",
+        "22",
+        "19",
+        "26"
+      ],
+      "correct_answer": "21"
+    },
+    {
+      "id": "ayahs_count_93",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الضحى؟",
+      "options": [
+        "12",
+        "10",
+        "16",
+        "11"
+      ],
+      "correct_answer": "11"
+    },
+    {
+      "id": "ayahs_count_94",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الشرح؟",
+      "options": [
+        "8",
+        "5",
+        "9",
+        "7"
+      ],
+      "correct_answer": "8"
+    },
+    {
+      "id": "ayahs_count_95",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة التين؟",
+      "options": [
+        "7",
+        "8",
+        "13",
+        "5"
+      ],
+      "correct_answer": "8"
+    },
+    {
+      "id": "ayahs_count_96",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة العلق؟",
+      "options": [
+        "16",
+        "20",
+        "18",
+        "19"
+      ],
+      "correct_answer": "19"
+    },
+    {
+      "id": "ayahs_count_97",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة القدر؟",
+      "options": [
+        "2",
+        "5",
+        "10",
+        "4"
+      ],
+      "correct_answer": "5"
+    },
+    {
+      "id": "ayahs_count_98",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة البينة؟",
+      "options": [
+        "13",
+        "8",
+        "6",
+        "5"
+      ],
+      "correct_answer": "8"
+    },
+    {
+      "id": "ayahs_count_99",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الزلزلة؟",
+      "options": [
+        "9",
+        "6",
+        "5",
+        "8"
+      ],
+      "correct_answer": "8"
+    },
+    {
+      "id": "ayahs_count_100",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة العاديات؟",
+      "options": [
+        "13",
+        "9",
+        "12",
+        "11"
+      ],
+      "correct_answer": "11"
+    },
+    {
+      "id": "ayahs_count_101",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة القارعة؟",
+      "options": [
+        "10",
+        "11",
+        "12",
+        "13"
+      ],
+      "correct_answer": "11"
+    },
+    {
+      "id": "ayahs_count_102",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة التكاثر؟",
+      "options": [
+        "5",
+        "7",
+        "10",
+        "8"
+      ],
+      "correct_answer": "8"
+    },
+    {
+      "id": "ayahs_count_103",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة العصر؟",
+      "options": [
+        "5",
+        "2",
+        "8",
+        "3"
+      ],
+      "correct_answer": "3"
+    },
+    {
+      "id": "ayahs_count_104",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الهمزة؟",
+      "options": [
+        "7",
+        "11",
+        "10",
+        "9"
+      ],
+      "correct_answer": "9"
+    },
+    {
+      "id": "ayahs_count_105",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الفيل؟",
+      "options": [
+        "5",
+        "4",
+        "10",
+        "3"
+      ],
+      "correct_answer": "5"
+    },
+    {
+      "id": "ayahs_count_106",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة قريش؟",
+      "options": [
+        "4",
+        "1",
+        "9",
+        "3"
+      ],
+      "correct_answer": "4"
+    },
+    {
+      "id": "ayahs_count_107",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الماعون؟",
+      "options": [
+        "7",
+        "5",
+        "9",
+        "12"
+      ],
+      "correct_answer": "7"
+    },
+    {
+      "id": "ayahs_count_108",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الكوثر؟",
+      "options": [
+        "8",
+        "1",
+        "5",
+        "3"
+      ],
+      "correct_answer": "3"
+    },
+    {
+      "id": "ayahs_count_109",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الكافرون؟",
+      "options": [
+        "6",
+        "3",
+        "5",
+        "4"
+      ],
+      "correct_answer": "6"
+    },
+    {
+      "id": "ayahs_count_110",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة النصر؟",
+      "options": [
+        "3",
+        "2",
+        "5",
+        "8"
+      ],
+      "correct_answer": "3"
+    },
+    {
+      "id": "ayahs_count_111",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة المسد؟",
+      "options": [
+        "7",
+        "3",
+        "2",
+        "5"
+      ],
+      "correct_answer": "5"
+    },
+    {
+      "id": "ayahs_count_112",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الإخلاص؟",
+      "options": [
+        "6",
+        "9",
+        "3",
+        "4"
+      ],
+      "correct_answer": "4"
+    },
+    {
+      "id": "ayahs_count_113",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الفلق؟",
+      "options": [
+        "5",
+        "10",
+        "4",
+        "2"
+      ],
+      "correct_answer": "5"
+    },
+    {
+      "id": "ayahs_count_114",
+      "type": "multiple_choice",
+      "question": "كم عدد آيات سورة الناس؟",
+      "options": [
+        "8",
+        "6",
+        "5",
+        "7"
+      ],
+      "correct_answer": "6"
+    },
+    {
+      "id": "revelation_type_36",
+      "type": "true_false",
+      "question": "هل سورة يس مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_37",
+      "type": "true_false",
+      "question": "هل سورة الصافات مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_38",
+      "type": "true_false",
+      "question": "هل سورة ص مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_39",
+      "type": "true_false",
+      "question": "هل سورة الزمر مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_40",
+      "type": "true_false",
+      "question": "هل سورة غافر مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_41",
+      "type": "true_false",
+      "question": "هل سورة فصلت مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_42",
+      "type": "true_false",
+      "question": "هل سورة الشورى مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_43",
+      "type": "true_false",
+      "question": "هل سورة الزخرف مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_44",
+      "type": "true_false",
+      "question": "هل سورة الدخان مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_45",
+      "type": "true_false",
+      "question": "هل سورة الجاثية مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_46",
+      "type": "true_false",
+      "question": "هل سورة الأحقاف مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_47",
+      "type": "true_false",
+      "question": "هل سورة محمد مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_48",
+      "type": "true_false",
+      "question": "هل سورة الفتح مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_49",
+      "type": "true_false",
+      "question": "هل سورة الحجرات مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_50",
+      "type": "true_false",
+      "question": "هل سورة ق مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_51",
+      "type": "true_false",
+      "question": "هل سورة الذاريات مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_52",
+      "type": "true_false",
+      "question": "هل سورة الطور مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_53",
+      "type": "true_false",
+      "question": "هل سورة النجم مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_54",
+      "type": "true_false",
+      "question": "هل سورة القمر مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_55",
+      "type": "true_false",
+      "question": "هل سورة الرحمن مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_56",
+      "type": "true_false",
+      "question": "هل سورة الواقعة مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_57",
+      "type": "true_false",
+      "question": "هل سورة الحديد مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_58",
+      "type": "true_false",
+      "question": "هل سورة المجادلة مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_59",
+      "type": "true_false",
+      "question": "هل سورة الحشر مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_60",
+      "type": "true_false",
+      "question": "هل سورة الممتحنة مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_61",
+      "type": "true_false",
+      "question": "هل سورة الصف مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_62",
+      "type": "true_false",
+      "question": "هل سورة الجمعة مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_63",
+      "type": "true_false",
+      "question": "هل سورة المنافقون مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_64",
+      "type": "true_false",
+      "question": "هل سورة التغابن مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_65",
+      "type": "true_false",
+      "question": "هل سورة الطلاق مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_66",
+      "type": "true_false",
+      "question": "هل سورة التحريم مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_67",
+      "type": "true_false",
+      "question": "هل سورة الملك مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_68",
+      "type": "true_false",
+      "question": "هل سورة القلم مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_69",
+      "type": "true_false",
+      "question": "هل سورة الحاقة مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_70",
+      "type": "true_false",
+      "question": "هل سورة المعارج مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_71",
+      "type": "true_false",
+      "question": "هل سورة نوح مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_72",
+      "type": "true_false",
+      "question": "هل سورة الجن مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_73",
+      "type": "true_false",
+      "question": "هل سورة المزمل مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_74",
+      "type": "true_false",
+      "question": "هل سورة المدثر مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_75",
+      "type": "true_false",
+      "question": "هل سورة القيامة مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_76",
+      "type": "true_false",
+      "question": "هل سورة الإنسان مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_77",
+      "type": "true_false",
+      "question": "هل سورة المرسلات مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_78",
+      "type": "true_false",
+      "question": "هل سورة النبأ مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_79",
+      "type": "true_false",
+      "question": "هل سورة النازعات مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_80",
+      "type": "true_false",
+      "question": "هل سورة عبس مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_81",
+      "type": "true_false",
+      "question": "هل سورة التكوير مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_82",
+      "type": "true_false",
+      "question": "هل سورة الانفطار مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_83",
+      "type": "true_false",
+      "question": "هل سورة المطففين مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_84",
+      "type": "true_false",
+      "question": "هل سورة الانشقاق مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_85",
+      "type": "true_false",
+      "question": "هل سورة البروج مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_86",
+      "type": "true_false",
+      "question": "هل سورة الطارق مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_87",
+      "type": "true_false",
+      "question": "هل سورة الأعلى مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_88",
+      "type": "true_false",
+      "question": "هل سورة الغاشية مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_89",
+      "type": "true_false",
+      "question": "هل سورة الفجر مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_90",
+      "type": "true_false",
+      "question": "هل سورة البلد مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_91",
+      "type": "true_false",
+      "question": "هل سورة الشمس مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_92",
+      "type": "true_false",
+      "question": "هل سورة الليل مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_93",
+      "type": "true_false",
+      "question": "هل سورة الضحى مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_94",
+      "type": "true_false",
+      "question": "هل سورة الشرح مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_95",
+      "type": "true_false",
+      "question": "هل سورة التين مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_96",
+      "type": "true_false",
+      "question": "هل سورة العلق مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_97",
+      "type": "true_false",
+      "question": "هل سورة القدر مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_98",
+      "type": "true_false",
+      "question": "هل سورة البينة مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_99",
+      "type": "true_false",
+      "question": "هل سورة الزلزلة مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_100",
+      "type": "true_false",
+      "question": "هل سورة العاديات مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_101",
+      "type": "true_false",
+      "question": "هل سورة القارعة مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_102",
+      "type": "true_false",
+      "question": "هل سورة التكاثر مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_103",
+      "type": "true_false",
+      "question": "هل سورة العصر مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_104",
+      "type": "true_false",
+      "question": "هل سورة الهمزة مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_105",
+      "type": "true_false",
+      "question": "هل سورة الفيل مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_106",
+      "type": "true_false",
+      "question": "هل سورة قريش مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_107",
+      "type": "true_false",
+      "question": "هل سورة الماعون مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_108",
+      "type": "true_false",
+      "question": "هل سورة الكوثر مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_109",
+      "type": "true_false",
+      "question": "هل سورة الكافرون مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_110",
+      "type": "true_false",
+      "question": "هل سورة النصر مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مدنية"
+    },
+    {
+      "id": "revelation_type_111",
+      "type": "true_false",
+      "question": "هل سورة المسد مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_112",
+      "type": "true_false",
+      "question": "هل سورة الإخلاص مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_113",
+      "type": "true_false",
+      "question": "هل سورة الفلق مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "revelation_type_114",
+      "type": "true_false",
+      "question": "هل سورة الناس مكية أم مدنية؟",
+      "options": [
+        "مكية",
+        "مدنية"
+      ],
+      "correct_answer": "مكية"
+    },
+    {
+      "id": "next_surah_36",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة يس في ترتيب المصحف؟",
+      "options": [
+        "الصافات",
+        "فصلت",
+        "التكوير",
+        "الجمعة"
+      ],
+      "correct_answer": "الصافات"
+    },
+    {
+      "id": "next_surah_37",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الصافات في ترتيب المصحف؟",
+      "options": [
+        "ص",
+        "الجاثية",
+        "المسد",
+        "الصف"
+      ],
+      "correct_answer": "ص"
+    },
+    {
+      "id": "next_surah_38",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة ص في ترتيب المصحف؟",
+      "options": [
+        "غافر",
+        "الزمر",
+        "الحشر",
+        "التكوير"
+      ],
+      "correct_answer": "الزمر"
+    },
+    {
+      "id": "next_surah_39",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الزمر في ترتيب المصحف؟",
+      "options": [
+        "غافر",
+        "القيامة",
+        "الطور",
+        "الحاقة"
+      ],
+      "correct_answer": "غافر"
+    },
+    {
+      "id": "next_surah_40",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة غافر في ترتيب المصحف؟",
+      "options": [
+        "الغاشية",
+        "فصلت",
+        "الفجر",
+        "الدخان"
+      ],
+      "correct_answer": "فصلت"
+    },
+    {
+      "id": "next_surah_41",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة فصلت في ترتيب المصحف؟",
+      "options": [
+        "الانشقاق",
+        "البروج",
+        "الجاثية",
+        "الشورى"
+      ],
+      "correct_answer": "الشورى"
+    },
+    {
+      "id": "next_surah_42",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الشورى في ترتيب المصحف؟",
+      "options": [
+        "التحريم",
+        "الطور",
+        "الزخرف",
+        "الشرح"
+      ],
+      "correct_answer": "الزخرف"
+    },
+    {
+      "id": "next_surah_43",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الزخرف في ترتيب المصحف؟",
+      "options": [
+        "الزلزلة",
+        "الدخان",
+        "القارعة",
+        "الإنسان"
+      ],
+      "correct_answer": "الدخان"
+    },
+    {
+      "id": "next_surah_44",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الدخان في ترتيب المصحف؟",
+      "options": [
+        "الزمر",
+        "الممتحنة",
+        "الصافات",
+        "الجاثية"
+      ],
+      "correct_answer": "الجاثية"
+    },
+    {
+      "id": "next_surah_45",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الجاثية في ترتيب المصحف؟",
+      "options": [
+        "الأحقاف",
+        "الشمس",
+        "الشرح",
+        "الزلزلة"
+      ],
+      "correct_answer": "الأحقاف"
+    },
+    {
+      "id": "next_surah_46",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الأحقاف في ترتيب المصحف؟",
+      "options": [
+        "المنافقون",
+        "الماعون",
+        "محمد",
+        "المعارج"
+      ],
+      "correct_answer": "محمد"
+    },
+    {
+      "id": "next_surah_47",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة محمد في ترتيب المصحف؟",
+      "options": [
+        "الحجرات",
+        "المنافقون",
+        "الفتح",
+        "البلد"
+      ],
+      "correct_answer": "الفتح"
+    },
+    {
+      "id": "next_surah_48",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الفتح في ترتيب المصحف؟",
+      "options": [
+        "المسد",
+        "القمر",
+        "غافر",
+        "الحجرات"
+      ],
+      "correct_answer": "الحجرات"
+    },
+    {
+      "id": "next_surah_49",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الحجرات في ترتيب المصحف؟",
+      "options": [
+        "التين",
+        "ق",
+        "القدر",
+        "الفلق"
+      ],
+      "correct_answer": "ق"
+    },
+    {
+      "id": "next_surah_50",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة ق في ترتيب المصحف؟",
+      "options": [
+        "الكافرون",
+        "الذاريات",
+        "النازعات",
+        "الحشر"
+      ],
+      "correct_answer": "الذاريات"
+    },
+    {
+      "id": "next_surah_51",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الذاريات في ترتيب المصحف؟",
+      "options": [
+        "الفتح",
+        "المنافقون",
+        "التكاثر",
+        "الطور"
+      ],
+      "correct_answer": "الطور"
+    },
+    {
+      "id": "next_surah_52",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الطور في ترتيب المصحف؟",
+      "options": [
+        "النجم",
+        "غافر",
+        "الفلق",
+        "القيامة"
+      ],
+      "correct_answer": "النجم"
+    },
+    {
+      "id": "next_surah_53",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة النجم في ترتيب المصحف؟",
+      "options": [
+        "القمر",
+        "الطور",
+        "الانشقاق",
+        "الحشر"
+      ],
+      "correct_answer": "القمر"
+    },
+    {
+      "id": "next_surah_54",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة القمر في ترتيب المصحف؟",
+      "options": [
+        "الماعون",
+        "الرحمن",
+        "الزمر",
+        "الملك"
+      ],
+      "correct_answer": "الرحمن"
+    },
+    {
+      "id": "next_surah_55",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الرحمن في ترتيب المصحف؟",
+      "options": [
+        "القدر",
+        "الواقعة",
+        "الفتح",
+        "النصر"
+      ],
+      "correct_answer": "الواقعة"
+    },
+    {
+      "id": "next_surah_56",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الواقعة في ترتيب المصحف؟",
+      "options": [
+        "غافر",
+        "الضحى",
+        "المسد",
+        "الحديد"
+      ],
+      "correct_answer": "الحديد"
+    },
+    {
+      "id": "next_surah_57",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الحديد في ترتيب المصحف؟",
+      "options": [
+        "الفتح",
+        "الماعون",
+        "الصافات",
+        "المجادلة"
+      ],
+      "correct_answer": "المجادلة"
+    },
+    {
+      "id": "next_surah_58",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة المجادلة في ترتيب المصحف؟",
+      "options": [
+        "النجم",
+        "الجمعة",
+        "الحشر",
+        "الشورى"
+      ],
+      "correct_answer": "الحشر"
+    },
+    {
+      "id": "next_surah_59",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الحشر في ترتيب المصحف؟",
+      "options": [
+        "القدر",
+        "الممتحنة",
+        "الليل",
+        "الناس"
+      ],
+      "correct_answer": "الممتحنة"
+    },
+    {
+      "id": "next_surah_60",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الممتحنة في ترتيب المصحف؟",
+      "options": [
+        "الملك",
+        "الفتح",
+        "العاديات",
+        "الصف"
+      ],
+      "correct_answer": "الصف"
+    },
+    {
+      "id": "next_surah_61",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الصف في ترتيب المصحف؟",
+      "options": [
+        "الهمزة",
+        "الجمعة",
+        "الحشر",
+        "القارعة"
+      ],
+      "correct_answer": "الجمعة"
+    },
+    {
+      "id": "next_surah_62",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الجمعة في ترتيب المصحف؟",
+      "options": [
+        "القيامة",
+        "المنافقون",
+        "غافر",
+        "المجادلة"
+      ],
+      "correct_answer": "المنافقون"
+    },
+    {
+      "id": "next_surah_63",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة المنافقون في ترتيب المصحف؟",
+      "options": [
+        "التغابن",
+        "القارعة",
+        "الفلق",
+        "الطارق"
+      ],
+      "correct_answer": "التغابن"
+    },
+    {
+      "id": "next_surah_64",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة التغابن في ترتيب المصحف؟",
+      "options": [
+        "الحديد",
+        "الممتحنة",
+        "التين",
+        "الطلاق"
+      ],
+      "correct_answer": "الطلاق"
+    },
+    {
+      "id": "next_surah_65",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الطلاق في ترتيب المصحف؟",
+      "options": [
+        "التين",
+        "التحريم",
+        "الحديد",
+        "التغابن"
+      ],
+      "correct_answer": "التحريم"
+    },
+    {
+      "id": "next_surah_66",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة التحريم في ترتيب المصحف؟",
+      "options": [
+        "الفيل",
+        "الليل",
+        "المجادلة",
+        "الملك"
+      ],
+      "correct_answer": "الملك"
+    },
+    {
+      "id": "next_surah_67",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الملك في ترتيب المصحف؟",
+      "options": [
+        "البروج",
+        "القمر",
+        "القلم",
+        "قريش"
+      ],
+      "correct_answer": "القلم"
+    },
+    {
+      "id": "next_surah_68",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة القلم في ترتيب المصحف؟",
+      "options": [
+        "الكوثر",
+        "الغاشية",
+        "المزمل",
+        "الحاقة"
+      ],
+      "correct_answer": "الحاقة"
+    },
+    {
+      "id": "next_surah_69",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الحاقة في ترتيب المصحف؟",
+      "options": [
+        "المعارج",
+        "قريش",
+        "الشمس",
+        "الحديد"
+      ],
+      "correct_answer": "المعارج"
+    },
+    {
+      "id": "next_surah_70",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة المعارج في ترتيب المصحف؟",
+      "options": [
+        "نوح",
+        "الحجرات",
+        "الحشر",
+        "الشمس"
+      ],
+      "correct_answer": "نوح"
+    },
+    {
+      "id": "next_surah_71",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة نوح في ترتيب المصحف؟",
+      "options": [
+        "الزمر",
+        "الجن",
+        "الممتحنة",
+        "القدر"
+      ],
+      "correct_answer": "الجن"
+    },
+    {
+      "id": "next_surah_72",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الجن في ترتيب المصحف؟",
+      "options": [
+        "الحجرات",
+        "المزمل",
+        "الزلزلة",
+        "الماعون"
+      ],
+      "correct_answer": "المزمل"
+    },
+    {
+      "id": "next_surah_73",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة المزمل في ترتيب المصحف؟",
+      "options": [
+        "نوح",
+        "الدخان",
+        "الليل",
+        "المدثر"
+      ],
+      "correct_answer": "المدثر"
+    },
+    {
+      "id": "next_surah_74",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة المدثر في ترتيب المصحف؟",
+      "options": [
+        "الطلاق",
+        "القيامة",
+        "الانشقاق",
+        "التغابن"
+      ],
+      "correct_answer": "القيامة"
+    },
+    {
+      "id": "next_surah_75",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة القيامة في ترتيب المصحف؟",
+      "options": [
+        "الماعون",
+        "الجاثية",
+        "الإنسان",
+        "التكاثر"
+      ],
+      "correct_answer": "الإنسان"
+    },
+    {
+      "id": "next_surah_76",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الإنسان في ترتيب المصحف؟",
+      "options": [
+        "النبأ",
+        "القدر",
+        "المرسلات",
+        "القيامة"
+      ],
+      "correct_answer": "المرسلات"
+    },
+    {
+      "id": "next_surah_77",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة المرسلات في ترتيب المصحف؟",
+      "options": [
+        "فصلت",
+        "الفجر",
+        "التكوير",
+        "النبأ"
+      ],
+      "correct_answer": "النبأ"
+    },
+    {
+      "id": "next_surah_78",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة النبأ في ترتيب المصحف؟",
+      "options": [
+        "الدخان",
+        "النازعات",
+        "قريش",
+        "الجن"
+      ],
+      "correct_answer": "النازعات"
+    },
+    {
+      "id": "next_surah_79",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة النازعات في ترتيب المصحف؟",
+      "options": [
+        "العاديات",
+        "عبس",
+        "الحجرات",
+        "الحديد"
+      ],
+      "correct_answer": "عبس"
+    },
+    {
+      "id": "next_surah_80",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة عبس في ترتيب المصحف؟",
+      "options": [
+        "الناس",
+        "التغابن",
+        "التكوير",
+        "قريش"
+      ],
+      "correct_answer": "التكوير"
+    },
+    {
+      "id": "next_surah_81",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة التكوير في ترتيب المصحف؟",
+      "options": [
+        "الممتحنة",
+        "الانفطار",
+        "يس",
+        "الحديد"
+      ],
+      "correct_answer": "الانفطار"
+    },
+    {
+      "id": "next_surah_82",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الانفطار في ترتيب المصحف؟",
+      "options": [
+        "القدر",
+        "البينة",
+        "المطففين",
+        "المرسلات"
+      ],
+      "correct_answer": "المطففين"
+    },
+    {
+      "id": "next_surah_83",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة المطففين في ترتيب المصحف؟",
+      "options": [
+        "فصلت",
+        "الحشر",
+        "الفيل",
+        "الانشقاق"
+      ],
+      "correct_answer": "الانشقاق"
+    },
+    {
+      "id": "next_surah_84",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الانشقاق في ترتيب المصحف؟",
+      "options": [
+        "الطارق",
+        "الصافات",
+        "الواقعة",
+        "البروج"
+      ],
+      "correct_answer": "البروج"
+    },
+    {
+      "id": "next_surah_85",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة البروج في ترتيب المصحف؟",
+      "options": [
+        "النازعات",
+        "الطارق",
+        "الانشقاق",
+        "الرحمن"
+      ],
+      "correct_answer": "الطارق"
+    },
+    {
+      "id": "next_surah_86",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الطارق في ترتيب المصحف؟",
+      "options": [
+        "القدر",
+        "الأعلى",
+        "الكافرون",
+        "الحشر"
+      ],
+      "correct_answer": "الأعلى"
+    },
+    {
+      "id": "next_surah_87",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الأعلى في ترتيب المصحف؟",
+      "options": [
+        "النجم",
+        "المرسلات",
+        "الغاشية",
+        "البينة"
+      ],
+      "correct_answer": "الغاشية"
+    },
+    {
+      "id": "next_surah_88",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الغاشية في ترتيب المصحف؟",
+      "options": [
+        "يس",
+        "الفجر",
+        "المجادلة",
+        "الزمر"
+      ],
+      "correct_answer": "الفجر"
+    },
+    {
+      "id": "next_surah_89",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الفجر في ترتيب المصحف؟",
+      "options": [
+        "البلد",
+        "الطلاق",
+        "الفلق",
+        "ص"
+      ],
+      "correct_answer": "البلد"
+    },
+    {
+      "id": "next_surah_90",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة البلد في ترتيب المصحف؟",
+      "options": [
+        "المرسلات",
+        "القدر",
+        "قريش",
+        "الشمس"
+      ],
+      "correct_answer": "الشمس"
+    },
+    {
+      "id": "next_surah_91",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الشمس في ترتيب المصحف؟",
+      "options": [
+        "العلق",
+        "الليل",
+        "الفيل",
+        "الجمعة"
+      ],
+      "correct_answer": "الليل"
+    },
+    {
+      "id": "next_surah_92",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الليل في ترتيب المصحف؟",
+      "options": [
+        "القمر",
+        "الضحى",
+        "الفتح",
+        "الشمس"
+      ],
+      "correct_answer": "الضحى"
+    },
+    {
+      "id": "next_surah_93",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الضحى في ترتيب المصحف؟",
+      "options": [
+        "الانشقاق",
+        "الشرح",
+        "النازعات",
+        "فصلت"
+      ],
+      "correct_answer": "الشرح"
+    },
+    {
+      "id": "next_surah_94",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الشرح في ترتيب المصحف؟",
+      "options": [
+        "التين",
+        "الصافات",
+        "الفجر",
+        "الهمزة"
+      ],
+      "correct_answer": "التين"
+    },
+    {
+      "id": "next_surah_95",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة التين في ترتيب المصحف؟",
+      "options": [
+        "المعارج",
+        "العلق",
+        "الكافرون",
+        "الفجر"
+      ],
+      "correct_answer": "العلق"
+    },
+    {
+      "id": "next_surah_96",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة العلق في ترتيب المصحف؟",
+      "options": [
+        "القلم",
+        "القدر",
+        "غافر",
+        "القمر"
+      ],
+      "correct_answer": "القدر"
+    },
+    {
+      "id": "next_surah_97",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة القدر في ترتيب المصحف؟",
+      "options": [
+        "المسد",
+        "الناس",
+        "الفتح",
+        "البينة"
+      ],
+      "correct_answer": "البينة"
+    },
+    {
+      "id": "next_surah_98",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة البينة في ترتيب المصحف؟",
+      "options": [
+        "الفلق",
+        "المسد",
+        "الزلزلة",
+        "المجادلة"
+      ],
+      "correct_answer": "الزلزلة"
+    },
+    {
+      "id": "next_surah_99",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الزلزلة في ترتيب المصحف؟",
+      "options": [
+        "الطور",
+        "العاديات",
+        "الأعلى",
+        "المرسلات"
+      ],
+      "correct_answer": "العاديات"
+    },
+    {
+      "id": "next_surah_100",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة العاديات في ترتيب المصحف؟",
+      "options": [
+        "الفيل",
+        "يس",
+        "الصافات",
+        "القارعة"
+      ],
+      "correct_answer": "القارعة"
+    },
+    {
+      "id": "next_surah_101",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة القارعة في ترتيب المصحف؟",
+      "options": [
+        "النازعات",
+        "الممتحنة",
+        "التكاثر",
+        "الدخان"
+      ],
+      "correct_answer": "التكاثر"
+    },
+    {
+      "id": "next_surah_102",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة التكاثر في ترتيب المصحف؟",
+      "options": [
+        "النازعات",
+        "النبأ",
+        "الحشر",
+        "العصر"
+      ],
+      "correct_answer": "العصر"
+    },
+    {
+      "id": "next_surah_103",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة العصر في ترتيب المصحف؟",
+      "options": [
+        "التغابن",
+        "الزمر",
+        "الهمزة",
+        "العلق"
+      ],
+      "correct_answer": "الهمزة"
+    },
+    {
+      "id": "next_surah_104",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الهمزة في ترتيب المصحف؟",
+      "options": [
+        "الواقعة",
+        "الذاريات",
+        "الفيل",
+        "الليل"
+      ],
+      "correct_answer": "الفيل"
+    },
+    {
+      "id": "next_surah_105",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الفيل في ترتيب المصحف؟",
+      "options": [
+        "قريش",
+        "نوح",
+        "المزمل",
+        "التغابن"
+      ],
+      "correct_answer": "قريش"
+    },
+    {
+      "id": "next_surah_106",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة قريش في ترتيب المصحف؟",
+      "options": [
+        "الإنسان",
+        "النصر",
+        "الماعون",
+        "التكاثر"
+      ],
+      "correct_answer": "الماعون"
+    },
+    {
+      "id": "next_surah_107",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الماعون في ترتيب المصحف؟",
+      "options": [
+        "الضحى",
+        "التكاثر",
+        "الكوثر",
+        "يس"
+      ],
+      "correct_answer": "الكوثر"
+    },
+    {
+      "id": "next_surah_108",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الكوثر في ترتيب المصحف؟",
+      "options": [
+        "الفتح",
+        "الحشر",
+        "الكافرون",
+        "يس"
+      ],
+      "correct_answer": "الكافرون"
+    },
+    {
+      "id": "next_surah_109",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الكافرون في ترتيب المصحف؟",
+      "options": [
+        "النصر",
+        "الرحمن",
+        "الانفطار",
+        "الناس"
+      ],
+      "correct_answer": "النصر"
+    },
+    {
+      "id": "next_surah_110",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة النصر في ترتيب المصحف؟",
+      "options": [
+        "المدثر",
+        "الأحقاف",
+        "العلق",
+        "المسد"
+      ],
+      "correct_answer": "المسد"
+    },
+    {
+      "id": "next_surah_111",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة المسد في ترتيب المصحف؟",
+      "options": [
+        "الضحى",
+        "الإخلاص",
+        "الانفطار",
+        "المنافقون"
+      ],
+      "correct_answer": "الإخلاص"
+    },
+    {
+      "id": "next_surah_112",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الإخلاص في ترتيب المصحف؟",
+      "options": [
+        "الانشقاق",
+        "الصافات",
+        "الملك",
+        "الفلق"
+      ],
+      "correct_answer": "الفلق"
+    },
+    {
+      "id": "next_surah_113",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تأتي مباشرة بعد سورة الفلق في ترتيب المصحف؟",
+      "options": [
+        "الناس",
+        "القدر",
+        "الليل",
+        "البروج"
+      ],
+      "correct_answer": "الناس"
+    },
+    {
+      "id": "prev_surah_37",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الصافات مباشرة في المصحف؟",
+      "options": [
+        "يس",
+        "الممتحنة",
+        "النجم",
+        "عبس"
+      ],
+      "correct_answer": "يس"
+    },
+    {
+      "id": "prev_surah_38",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة ص مباشرة في المصحف؟",
+      "options": [
+        "الجن",
+        "الضحى",
+        "الصافات",
+        "يس"
+      ],
+      "correct_answer": "الصافات"
+    },
+    {
+      "id": "prev_surah_39",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الزمر مباشرة في المصحف؟",
+      "options": [
+        "الشورى",
+        "ص",
+        "المسد",
+        "القلم"
+      ],
+      "correct_answer": "ص"
+    },
+    {
+      "id": "prev_surah_40",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة غافر مباشرة في المصحف؟",
+      "options": [
+        "الزمر",
+        "الدخان",
+        "التغابن",
+        "الانشقاق"
+      ],
+      "correct_answer": "الزمر"
+    },
+    {
+      "id": "prev_surah_41",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة فصلت مباشرة في المصحف؟",
+      "options": [
+        "الدخان",
+        "غافر",
+        "الفتح",
+        "الإنسان"
+      ],
+      "correct_answer": "غافر"
+    },
+    {
+      "id": "prev_surah_42",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الشورى مباشرة في المصحف؟",
+      "options": [
+        "الممتحنة",
+        "فصلت",
+        "الناس",
+        "الجاثية"
+      ],
+      "correct_answer": "فصلت"
+    },
+    {
+      "id": "prev_surah_43",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الزخرف مباشرة في المصحف؟",
+      "options": [
+        "التكوير",
+        "الغاشية",
+        "المنافقون",
+        "الشورى"
+      ],
+      "correct_answer": "الشورى"
+    },
+    {
+      "id": "prev_surah_44",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الدخان مباشرة في المصحف؟",
+      "options": [
+        "المسد",
+        "غافر",
+        "الناس",
+        "الزخرف"
+      ],
+      "correct_answer": "الزخرف"
+    },
+    {
+      "id": "prev_surah_45",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الجاثية مباشرة في المصحف؟",
+      "options": [
+        "المجادلة",
+        "الملك",
+        "الدخان",
+        "الجن"
+      ],
+      "correct_answer": "الدخان"
+    },
+    {
+      "id": "prev_surah_46",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الأحقاف مباشرة في المصحف؟",
+      "options": [
+        "الماعون",
+        "الجاثية",
+        "الفتح",
+        "الشرح"
+      ],
+      "correct_answer": "الجاثية"
+    },
+    {
+      "id": "prev_surah_47",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة محمد مباشرة في المصحف؟",
+      "options": [
+        "الطلاق",
+        "الزمر",
+        "الأحقاف",
+        "النازعات"
+      ],
+      "correct_answer": "الأحقاف"
+    },
+    {
+      "id": "prev_surah_48",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الفتح مباشرة في المصحف؟",
+      "options": [
+        "التحريم",
+        "محمد",
+        "القيامة",
+        "غافر"
+      ],
+      "correct_answer": "محمد"
+    },
+    {
+      "id": "prev_surah_49",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الحجرات مباشرة في المصحف؟",
+      "options": [
+        "الفجر",
+        "الفتح",
+        "الناس",
+        "ص"
+      ],
+      "correct_answer": "الفتح"
+    },
+    {
+      "id": "prev_surah_50",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة ق مباشرة في المصحف؟",
+      "options": [
+        "محمد",
+        "الحجرات",
+        "الحديد",
+        "المنافقون"
+      ],
+      "correct_answer": "الحجرات"
+    },
+    {
+      "id": "prev_surah_51",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الذاريات مباشرة في المصحف؟",
+      "options": [
+        "الأحقاف",
+        "ق",
+        "الطلاق",
+        "الفيل"
+      ],
+      "correct_answer": "ق"
+    },
+    {
+      "id": "prev_surah_52",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الطور مباشرة في المصحف؟",
+      "options": [
+        "الشرح",
+        "التكاثر",
+        "الذاريات",
+        "المزمل"
+      ],
+      "correct_answer": "الذاريات"
+    },
+    {
+      "id": "prev_surah_53",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة النجم مباشرة في المصحف؟",
+      "options": [
+        "الإنسان",
+        "الهمزة",
+        "الواقعة",
+        "الطور"
+      ],
+      "correct_answer": "الطور"
+    },
+    {
+      "id": "prev_surah_54",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة القمر مباشرة في المصحف؟",
+      "options": [
+        "الأعلى",
+        "النجم",
+        "الماعون",
+        "الناس"
+      ],
+      "correct_answer": "النجم"
+    },
+    {
+      "id": "prev_surah_55",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الرحمن مباشرة في المصحف؟",
+      "options": [
+        "القمر",
+        "الصافات",
+        "الإخلاص",
+        "البينة"
+      ],
+      "correct_answer": "القمر"
+    },
+    {
+      "id": "prev_surah_56",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الواقعة مباشرة في المصحف؟",
+      "options": [
+        "النبأ",
+        "النصر",
+        "البينة",
+        "الرحمن"
+      ],
+      "correct_answer": "الرحمن"
+    },
+    {
+      "id": "prev_surah_57",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الحديد مباشرة في المصحف؟",
+      "options": [
+        "الرحمن",
+        "المدثر",
+        "الواقعة",
+        "المعارج"
+      ],
+      "correct_answer": "الواقعة"
+    },
+    {
+      "id": "prev_surah_58",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة المجادلة مباشرة في المصحف؟",
+      "options": [
+        "الماعون",
+        "الحديد",
+        "يس",
+        "التين"
+      ],
+      "correct_answer": "الحديد"
+    },
+    {
+      "id": "prev_surah_59",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الحشر مباشرة في المصحف؟",
+      "options": [
+        "المجادلة",
+        "النصر",
+        "الطور",
+        "فصلت"
+      ],
+      "correct_answer": "المجادلة"
+    },
+    {
+      "id": "prev_surah_60",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الممتحنة مباشرة في المصحف؟",
+      "options": [
+        "التكاثر",
+        "العصر",
+        "النبأ",
+        "الحشر"
+      ],
+      "correct_answer": "الحشر"
+    },
+    {
+      "id": "prev_surah_61",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الصف مباشرة في المصحف؟",
+      "options": [
+        "الإنسان",
+        "الطلاق",
+        "محمد",
+        "الممتحنة"
+      ],
+      "correct_answer": "الممتحنة"
+    },
+    {
+      "id": "prev_surah_62",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الجمعة مباشرة في المصحف؟",
+      "options": [
+        "الصف",
+        "الحجرات",
+        "العاديات",
+        "الصافات"
+      ],
+      "correct_answer": "الصف"
+    },
+    {
+      "id": "prev_surah_63",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة المنافقون مباشرة في المصحف؟",
+      "options": [
+        "الجمعة",
+        "الطور",
+        "الحشر",
+        "الضحى"
+      ],
+      "correct_answer": "الجمعة"
+    },
+    {
+      "id": "prev_surah_64",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة التغابن مباشرة في المصحف؟",
+      "options": [
+        "فصلت",
+        "المنافقون",
+        "الجمعة",
+        "الهمزة"
+      ],
+      "correct_answer": "المنافقون"
+    },
+    {
+      "id": "prev_surah_65",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الطلاق مباشرة في المصحف؟",
+      "options": [
+        "التغابن",
+        "الجمعة",
+        "الفتح",
+        "الغاشية"
+      ],
+      "correct_answer": "التغابن"
+    },
+    {
+      "id": "prev_surah_66",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة التحريم مباشرة في المصحف؟",
+      "options": [
+        "الطلاق",
+        "الطور",
+        "الحجرات",
+        "قريش"
+      ],
+      "correct_answer": "الطلاق"
+    },
+    {
+      "id": "prev_surah_67",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الملك مباشرة في المصحف؟",
+      "options": [
+        "التكوير",
+        "الفلق",
+        "الطور",
+        "التحريم"
+      ],
+      "correct_answer": "التحريم"
+    },
+    {
+      "id": "prev_surah_68",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة القلم مباشرة في المصحف؟",
+      "options": [
+        "عبس",
+        "الكافرون",
+        "البلد",
+        "الملك"
+      ],
+      "correct_answer": "الملك"
+    },
+    {
+      "id": "prev_surah_69",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الحاقة مباشرة في المصحف؟",
+      "options": [
+        "فصلت",
+        "الصف",
+        "القلم",
+        "الواقعة"
+      ],
+      "correct_answer": "القلم"
+    },
+    {
+      "id": "prev_surah_70",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة المعارج مباشرة في المصحف؟",
+      "options": [
+        "القيامة",
+        "الممتحنة",
+        "الحاقة",
+        "المرسلات"
+      ],
+      "correct_answer": "الحاقة"
+    },
+    {
+      "id": "prev_surah_71",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة نوح مباشرة في المصحف؟",
+      "options": [
+        "الكوثر",
+        "الرحمن",
+        "المعارج",
+        "النازعات"
+      ],
+      "correct_answer": "المعارج"
+    },
+    {
+      "id": "prev_surah_72",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الجن مباشرة في المصحف؟",
+      "options": [
+        "نوح",
+        "المزمل",
+        "الغاشية",
+        "الناس"
+      ],
+      "correct_answer": "نوح"
+    },
+    {
+      "id": "prev_surah_73",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة المزمل مباشرة في المصحف؟",
+      "options": [
+        "الجن",
+        "النجم",
+        "الشرح",
+        "البلد"
+      ],
+      "correct_answer": "الجن"
+    },
+    {
+      "id": "prev_surah_74",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة المدثر مباشرة في المصحف؟",
+      "options": [
+        "الممتحنة",
+        "المزمل",
+        "المسد",
+        "القلم"
+      ],
+      "correct_answer": "المزمل"
+    },
+    {
+      "id": "prev_surah_75",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة القيامة مباشرة في المصحف؟",
+      "options": [
+        "المدثر",
+        "النازعات",
+        "البروج",
+        "التكاثر"
+      ],
+      "correct_answer": "المدثر"
+    },
+    {
+      "id": "prev_surah_76",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الإنسان مباشرة في المصحف؟",
+      "options": [
+        "القيامة",
+        "البلد",
+        "التين",
+        "الكافرون"
+      ],
+      "correct_answer": "القيامة"
+    },
+    {
+      "id": "prev_surah_77",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة المرسلات مباشرة في المصحف؟",
+      "options": [
+        "الإنسان",
+        "الشمس",
+        "العصر",
+        "النازعات"
+      ],
+      "correct_answer": "الإنسان"
+    },
+    {
+      "id": "prev_surah_78",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة النبأ مباشرة في المصحف؟",
+      "options": [
+        "الإخلاص",
+        "المرسلات",
+        "المزمل",
+        "غافر"
+      ],
+      "correct_answer": "المرسلات"
+    },
+    {
+      "id": "prev_surah_79",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة النازعات مباشرة في المصحف؟",
+      "options": [
+        "النبأ",
+        "البلد",
+        "الدخان",
+        "الأحقاف"
+      ],
+      "correct_answer": "النبأ"
+    },
+    {
+      "id": "prev_surah_80",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة عبس مباشرة في المصحف؟",
+      "options": [
+        "النازعات",
+        "الجن",
+        "الحاقة",
+        "التكوير"
+      ],
+      "correct_answer": "النازعات"
+    },
+    {
+      "id": "prev_surah_81",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة التكوير مباشرة في المصحف؟",
+      "options": [
+        "محمد",
+        "عبس",
+        "التحريم",
+        "الهمزة"
+      ],
+      "correct_answer": "عبس"
+    },
+    {
+      "id": "prev_surah_82",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الانفطار مباشرة في المصحف؟",
+      "options": [
+        "النصر",
+        "التكوير",
+        "الغاشية",
+        "الناس"
+      ],
+      "correct_answer": "التكوير"
+    },
+    {
+      "id": "prev_surah_83",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة المطففين مباشرة في المصحف؟",
+      "options": [
+        "الجاثية",
+        "الانفطار",
+        "التغابن",
+        "القيامة"
+      ],
+      "correct_answer": "الانفطار"
+    },
+    {
+      "id": "prev_surah_84",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الانشقاق مباشرة في المصحف؟",
+      "options": [
+        "المنافقون",
+        "المطففين",
+        "التكوير",
+        "القمر"
+      ],
+      "correct_answer": "المطففين"
+    },
+    {
+      "id": "prev_surah_85",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة البروج مباشرة في المصحف؟",
+      "options": [
+        "الزلزلة",
+        "الانشقاق",
+        "القدر",
+        "الشورى"
+      ],
+      "correct_answer": "الانشقاق"
+    },
+    {
+      "id": "prev_surah_86",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الطارق مباشرة في المصحف؟",
+      "options": [
+        "الرحمن",
+        "البروج",
+        "العاديات",
+        "نوح"
+      ],
+      "correct_answer": "البروج"
+    },
+    {
+      "id": "prev_surah_87",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الأعلى مباشرة في المصحف؟",
+      "options": [
+        "الرحمن",
+        "التحريم",
+        "الناس",
+        "الطارق"
+      ],
+      "correct_answer": "الطارق"
+    },
+    {
+      "id": "prev_surah_88",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الغاشية مباشرة في المصحف؟",
+      "options": [
+        "التين",
+        "الهمزة",
+        "الكوثر",
+        "الأعلى"
+      ],
+      "correct_answer": "الأعلى"
+    },
+    {
+      "id": "prev_surah_89",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الفجر مباشرة في المصحف؟",
+      "options": [
+        "قريش",
+        "محمد",
+        "الممتحنة",
+        "الغاشية"
+      ],
+      "correct_answer": "الغاشية"
+    },
+    {
+      "id": "prev_surah_90",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة البلد مباشرة في المصحف؟",
+      "options": [
+        "الصافات",
+        "الفجر",
+        "الناس",
+        "القمر"
+      ],
+      "correct_answer": "الفجر"
+    },
+    {
+      "id": "prev_surah_91",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الشمس مباشرة في المصحف؟",
+      "options": [
+        "الانفطار",
+        "العصر",
+        "البلد",
+        "القدر"
+      ],
+      "correct_answer": "البلد"
+    },
+    {
+      "id": "prev_surah_92",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الليل مباشرة في المصحف؟",
+      "options": [
+        "الشمس",
+        "القلم",
+        "النازعات",
+        "الزخرف"
+      ],
+      "correct_answer": "الشمس"
+    },
+    {
+      "id": "prev_surah_93",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الضحى مباشرة في المصحف؟",
+      "options": [
+        "الليل",
+        "الجن",
+        "الواقعة",
+        "الشرح"
+      ],
+      "correct_answer": "الليل"
+    },
+    {
+      "id": "prev_surah_94",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الشرح مباشرة في المصحف؟",
+      "options": [
+        "الضحى",
+        "الماعون",
+        "الليل",
+        "غافر"
+      ],
+      "correct_answer": "الضحى"
+    },
+    {
+      "id": "prev_surah_95",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة التين مباشرة في المصحف؟",
+      "options": [
+        "الشرح",
+        "الحشر",
+        "القلم",
+        "الغاشية"
+      ],
+      "correct_answer": "الشرح"
+    },
+    {
+      "id": "prev_surah_96",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة العلق مباشرة في المصحف؟",
+      "options": [
+        "التين",
+        "الصافات",
+        "التحريم",
+        "يس"
+      ],
+      "correct_answer": "التين"
+    },
+    {
+      "id": "prev_surah_97",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة القدر مباشرة في المصحف؟",
+      "options": [
+        "الإنسان",
+        "العلق",
+        "القارعة",
+        "الفتح"
+      ],
+      "correct_answer": "العلق"
+    },
+    {
+      "id": "prev_surah_98",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة البينة مباشرة في المصحف؟",
+      "options": [
+        "القدر",
+        "يس",
+        "الحديد",
+        "القلم"
+      ],
+      "correct_answer": "القدر"
+    },
+    {
+      "id": "prev_surah_99",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الزلزلة مباشرة في المصحف؟",
+      "options": [
+        "البينة",
+        "الليل",
+        "التين",
+        "التكاثر"
+      ],
+      "correct_answer": "البينة"
+    },
+    {
+      "id": "prev_surah_100",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة العاديات مباشرة في المصحف؟",
+      "options": [
+        "عبس",
+        "نوح",
+        "البروج",
+        "الزلزلة"
+      ],
+      "correct_answer": "الزلزلة"
+    },
+    {
+      "id": "prev_surah_101",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة القارعة مباشرة في المصحف؟",
+      "options": [
+        "الواقعة",
+        "العاديات",
+        "نوح",
+        "القدر"
+      ],
+      "correct_answer": "العاديات"
+    },
+    {
+      "id": "prev_surah_102",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة التكاثر مباشرة في المصحف؟",
+      "options": [
+        "البلد",
+        "البينة",
+        "البروج",
+        "القارعة"
+      ],
+      "correct_answer": "القارعة"
+    },
+    {
+      "id": "prev_surah_103",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة العصر مباشرة في المصحف؟",
+      "options": [
+        "الجمعة",
+        "التكاثر",
+        "التحريم",
+        "الغاشية"
+      ],
+      "correct_answer": "التكاثر"
+    },
+    {
+      "id": "prev_surah_104",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الهمزة مباشرة في المصحف؟",
+      "options": [
+        "العلق",
+        "العصر",
+        "الحشر",
+        "الشورى"
+      ],
+      "correct_answer": "العصر"
+    },
+    {
+      "id": "prev_surah_105",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الفيل مباشرة في المصحف؟",
+      "options": [
+        "محمد",
+        "الناس",
+        "المرسلات",
+        "الهمزة"
+      ],
+      "correct_answer": "الهمزة"
+    },
+    {
+      "id": "prev_surah_106",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة قريش مباشرة في المصحف؟",
+      "options": [
+        "الطارق",
+        "الواقعة",
+        "الحجرات",
+        "الفيل"
+      ],
+      "correct_answer": "الفيل"
+    },
+    {
+      "id": "prev_surah_107",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الماعون مباشرة في المصحف؟",
+      "options": [
+        "قريش",
+        "الطلاق",
+        "النصر",
+        "الطارق"
+      ],
+      "correct_answer": "قريش"
+    },
+    {
+      "id": "prev_surah_108",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الكوثر مباشرة في المصحف؟",
+      "options": [
+        "الماعون",
+        "الممتحنة",
+        "الفجر",
+        "ق"
+      ],
+      "correct_answer": "الماعون"
+    },
+    {
+      "id": "prev_surah_109",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الكافرون مباشرة في المصحف؟",
+      "options": [
+        "الحاقة",
+        "الكوثر",
+        "الحديد",
+        "الأحقاف"
+      ],
+      "correct_answer": "الكوثر"
+    },
+    {
+      "id": "prev_surah_110",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة النصر مباشرة في المصحف؟",
+      "options": [
+        "القمر",
+        "الكافرون",
+        "المجادلة",
+        "العلق"
+      ],
+      "correct_answer": "الكافرون"
+    },
+    {
+      "id": "prev_surah_111",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة المسد مباشرة في المصحف؟",
+      "options": [
+        "النصر",
+        "قريش",
+        "المرسلات",
+        "الضحى"
+      ],
+      "correct_answer": "النصر"
+    },
+    {
+      "id": "prev_surah_112",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الإخلاص مباشرة في المصحف؟",
+      "options": [
+        "المسد",
+        "النبأ",
+        "الذاريات",
+        "العاديات"
+      ],
+      "correct_answer": "المسد"
+    },
+    {
+      "id": "prev_surah_113",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الفلق مباشرة في المصحف؟",
+      "options": [
+        "الانفطار",
+        "الإخلاص",
+        "النازعات",
+        "الواقعة"
+      ],
+      "correct_answer": "الإخلاص"
+    },
+    {
+      "id": "prev_surah_114",
+      "type": "multiple_choice",
+      "question": "ما هي السورة التي تسبق سورة الناس مباشرة في المصحف؟",
+      "options": [
+        "الانفطار",
+        "نوح",
+        "الفلق",
+        "الإخلاص"
+      ],
+      "correct_answer": "الفلق"
+    }
+  ],
+  "total": 314
+}

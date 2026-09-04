@@ -11,10 +11,9 @@ export default function ErrorPage() {
   const handleWhatsAppContact = () => {
     const profile = getProfile();
     const msg =
-      `السلام عليكم ورحمة الله وبركاته،\n` +
-      `أحتاج مساعدة من الدعم الفني لتطبيق القرآن للأطفال:\n` +
-      `• الإصدار: ${CURRENT_VERSION}\n` +
-      `• واجهت توقفاً مؤقتاً وأرجو المساعدة.`;
+      `السلام عليكم ورحمة الله تعالى وبركاته\n` +
+      `أنا أواجه مشكلة في شاشة الخطأ وتوقف التطبيق مؤقتاً.\n` +
+      `الإصدار: ${CURRENT_VERSION}`;
     void openWhatsAppSupport(msg);
   };
 

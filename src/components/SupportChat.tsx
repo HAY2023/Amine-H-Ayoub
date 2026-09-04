@@ -548,9 +548,8 @@ export default function SupportChat({
               const text = input.trim();
               const profile = getProfile();
               const msg =
-                `السلام عليكم ورحمة الله،\n` +
-                `تواصل مع الدعم الفني لتطبيق القرآن للأطفال:\n` +
-                (text ? `• الرسالة: ${text}` : "");
+                `السلام عليكم ورحمة الله تعالى وبركاته\n` +
+                `أنا أواجه مشكلة في ` + (text ? text : "");
               void openWhatsAppSupport(msg);
             }}
             className="w-10 h-10 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white flex items-center justify-center shrink-0 transition-all active:scale-95 cursor-pointer shadow-sm"

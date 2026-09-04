@@ -4,11 +4,26 @@ import { supabase } from "@/lib/supabase";
 import { getDeviceId } from "./deviceInfo";
 import { getKidsSchedule, isTimeAllowed } from "../data/kidsSchedule";
 import { toast } from "@/hooks/use-toast";
+import { requestPermission, sendNotification, isPermissionGranted } from "@tauri-apps/plugin-notification";
+import { isTauri } from "./tauriUtils";
 
 let notificationPermissionRequested = false;
 
 // Request notification permission
 export async function requestNotificationPermission() {
+  try {
+    if (await isTauri()) {
+      let granted = await isPermissionGranted();
+      if (!granted) {
+        const permission = await requestPermission();
+        granted = permission === "granted";
+      }
+      return granted;
+    }
+  } catch (err) {
+    console.error("Tauri permission error:", err);
+  }
+
   if (typeof window === "undefined" || !("Notification" in window)) return false;
   if (Notification.permission === "granted") return true;
   if (Notification.permission !== "denied") {
@@ -20,6 +35,22 @@ export async function requestNotificationPermission() {
 }
 
 export async function showLocalNotification(title: string, body: string) {
+  try {
+    if (await isTauri()) {
+      let granted = await isPermissionGranted();
+      if (!granted) {
+        const permission = await requestPermission();
+        granted = permission === "granted";
+      }
+      if (granted) {
+        sendNotification({ title, body });
+        return;
+      }
+    }
+  } catch (err) {
+    console.error("Tauri notification error:", err);
+  }
+
   if (typeof window !== "undefined" && "Notification" in window) {
     if (Notification.permission === "default") {
       await requestNotificationPermission();

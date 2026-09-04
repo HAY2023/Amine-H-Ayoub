@@ -41,25 +41,20 @@ export function createMailtoSupportLink(report: Partial<SupportReportData>): str
 
 /** إنشاء رابط واتساب مباشر لإرسال الرسالة إلى الدعم الفني فوراً (0658188644) */
 export function createWhatsAppSupportLink(report?: Partial<SupportReportData> | string): string {
-  let message = "";
+  let message = "السلام عليكم ورحمة الله تعالى وبركاته . أنا أواجه مشكلة في ";
+  
   if (typeof report === "string") {
-    message = report.trim();
-  } else if (report) {
-    const lines: string[] = [
-      `*السلام عليكم ورحمة الله وبركاته*`,
-      `*رسالة دعم من تطبيق القرآن للأطفال:*`,
-    ];
-    if (report.typeLabel) lines.push(`• النوع: ${report.typeLabel}`);
-    if (report.profileName) lines.push(`• من: ${report.profileName}`);
-    if (report.senderEmail) lines.push(`• وسيلة الاتصال: ${report.senderEmail}`);
-    if (report.appVersion) lines.push(`• الإصدار: ${report.appVersion}`);
-    if (report.description) lines.push(`\n*نص الرسالة:*\n${report.description}`);
-    message = lines.join("\n");
-  } else {
-    message = "السلام عليكم ورحمة الله وبركاته، أرجو المساعدة من الدعم الفني لتطبيق القرآن الكريم للأطفال.";
+    if (report && !report.startsWith("السلام عليكم")) {
+      message += report;
+    } else if (report) {
+      message = report;
+    }
+  } else if (report && report.typeLabel) {
+    message += report.typeLabel;
   }
 
-  return `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  // استخدام الرابط المباشر للتطبيق لضمان فتحه خارج التطبيق/الموقع
+  return `whatsapp://send?phone=${SUPPORT_WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`;
 }
 
 /** فتح محادثة واتساب المباشرة مع الدعم الفني على رقم 0658188644 في المتصفح أو التطبيق */

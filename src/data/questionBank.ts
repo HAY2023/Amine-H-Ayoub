@@ -88,48 +88,65 @@ export const addQuestions = (list: BankQuestion[]) => {
   if (add.length) saveBank([...getBank(), ...add]);
 };
 
-// ── سيرفر الأسئلة (توليد عشوائي من نص المصحف على الخادم) ──
-const QS_URL_KEY = "mushaf:questionsServerUrl";
-export const DEFAULT_QUESTIONS_SERVER = "https://hammoualiyoucef20-quran-questions.hf.space";
+// ── سيرفر الأسئلة (مساحة ثابتة Static JSON على HuggingFace) ──
+const QS_URL_KEY = "mushaf:questionsServerUrl:v2";
+export const DEFAULT_QUESTIONS_SERVER = "https://hammoualiyoucef20-quran-kids-quiz.static.hf.space/questions.json";
 
 export const getQuestionServerUrl = (): string => {
   try { return localStorage.getItem(QS_URL_KEY) || DEFAULT_QUESTIONS_SERVER; } catch { return DEFAULT_QUESTIONS_SERVER; }
 };
 export const setQuestionServerUrl = (url: string) => {
-  try { localStorage.setItem(QS_URL_KEY, url.trim().replace(/\/+$/, "")); } catch { /* ignore */ }
+  try { localStorage.setItem(QS_URL_KEY, url.trim()); } catch { /* ignore */ }
 };
 
 interface ServerQuestion {
   id: string;
   type: string;
-  surahNum: number;
-  surahName: string;
-  prompt: string;
+  question: string;
   options: string[];
-  answer: string;
+  correct_answer: string;
 }
 
-/** جلب أسئلة جديدة من سيرفر الأسئلة (توليد عشوائي على الخادم) */
-export const fetchFromQuestionServer = async (surahNum: number, count = 10, type = "missingword"): Promise<BankQuestion[]> => {
+/** تسجيل وتحديث عداد التحميلات السحابي */
+export const recordQuestionDownload = async () => {
+  if (typeof window === "undefined" || !hasValidSupabaseKey()) return;
+  try {
+    const { data } = await supabase.from("store").select("value").eq("key", "stats:downloads_count").maybeSingle();
+    const current = (data?.value && typeof data.value === "number") ? data.value : 126;
+    await supabase.from("store").upsert({ key: "stats:downloads_count", value: current + 1 });
+  } catch { /* ignore */ }
+};
+
+/** جلب أسئلة من ملف JSON الثابت على سيرفر HuggingFace واختيار مجموعة عشوائياً */
+export const fetchFromQuestionServer = async (surahNum: number, count = 60, type = "missingword"): Promise<BankQuestion[]> => {
   if (typeof navigator !== "undefined" && !navigator.onLine) return [];
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 6000);
-    const res = await fetch(`${getQuestionServerUrl()}/questions?surah=${surahNum}&type=${type}&count=${count}`, { signal: controller.signal, cache: "no-store" });
+    const res = await fetch(getQuestionServerUrl(), { signal: controller.signal, cache: "no-store" });
     clearTimeout(timer);
     if (!res.ok) return [];
+    
     const data = await res.json();
     const list: ServerQuestion[] = Array.isArray(data?.questions) ? data.questions : [];
     const answered = new Set(getAnsweredIds());
-    return list
-      .filter(q => q && q.id && !answered.has(q.id) && Array.isArray(q.options) && q.options.length >= 3)
-      .map(q => ({
-        id: `srv-${q.id}`,
-        surahNum: q.surahNum,
-        surahName: q.surahName,
-        ayahText: q.prompt,
-        missingWord: q.answer,
-        options: q.options,
-      }));
+    
+    // فلترة الأسئلة التي لم يجب عليها الطفل، وتجنب الأسئلة التالفة
+    let available = list.filter(q => q && q.id && !answered.has(q.id) && Array.isArray(q.options) && q.options.length >= 2);
+    
+    // ترتيب عشوائي للاسئلة المتاحة
+    available = available.sort(() => 0.5 - Math.random());
+    
+    // تسجيل تحميل ناجح في العداد السحابي
+    void recordQuestionDownload();
+
+    return available.slice(0, count).map(q => ({
+      id: `srv-${q.id}`,
+      surahNum: surahNum || 0,
+      surahName: "",
+      ayahText: q.question,
+      missingWord: q.correct_answer,
+      options: q.options,
+    }));
   } catch { return []; }
 };

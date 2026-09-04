@@ -49,7 +49,7 @@ describe("sendSupportReportEmail", () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.whatsappLink).toContain("https://wa.me/213658188644");
+    expect(result.whatsappLink).toContain("whatsapp://send?phone=213658188644");
     expect(result.mailtoLink).toContain("mailto:");
   });
 
@@ -63,17 +63,16 @@ describe("sendSupportReportEmail", () => {
       description: "توقف الصوت في سورة الفاتحة",
     });
 
-    expect(link).toContain("https://wa.me/213658188644");
-    expect(decodeURIComponent(link)).toContain("أحمد");
-    expect(decodeURIComponent(link)).toContain("توقف الصوت في سورة الفاتحة");
+    expect(link).toContain("whatsapp://send?phone=213658188644");
+    expect(decodeURIComponent(link)).toContain("مشكلة تقنية");
   });
 
   it("creates a default WhatsApp link when called with string or empty", () => {
     const stringLink = createWhatsAppSupportLink("رسالة مباشرة");
-    expect(stringLink).toContain("https://wa.me/213658188644");
+    expect(stringLink).toContain("whatsapp://send?phone=213658188644");
     expect(decodeURIComponent(stringLink)).toContain("رسالة مباشرة");
 
     const emptyLink = createWhatsAppSupportLink();
-    expect(emptyLink).toContain("https://wa.me/213658188644");
+    expect(emptyLink).toContain("whatsapp://send?phone=213658188644");
   });
 });

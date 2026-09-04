@@ -273,19 +273,27 @@ function animConfetti() {
 }
 requestAnimationFrame(animConfetti);
 
-// 25+ Rich Quranic Words
+// تنظيف التشكيل — أحرف صافية فقط
+function cleanLetters(text) {
+  return text
+    .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u06DF-\u06E8\u0640]/g, "")
+    .replace(/[أإآٱ]/g, "ا")
+    .trim();
+}
+
+// كلمات قرآنية (بدون تشكيل — أحرف صافية)
 const WORDS = [
-  { word: "مَكَّة", hint: "البلد الحرام وفيها الكعبة المشرفة" },
-  { word: "الْحَمْد", hint: "أول كلمة بعد البسملة في سورة الفاتحة" },
-  { word: "النُّور", hint: "الله نور السماوات والأرض" },
-  { word: "الصَّبْر", hint: "واستعينوا بالصبر والصلاة" },
-  { word: "الْجَنَّة", hint: "دار النعيم التي أعدها الله للمتقين" },
-  { word: "الصَّلَاة", hint: "عمود الدين والركن الثاني من أركان الإسلام" },
-  { word: "الْكَوْثَر", hint: "إنا أعطيناك الكوثر" },
-  { word: "الْفَلَق", hint: "قل أعوذ برب الفلق" },
-  { word: "الْإِخْلَاص", hint: "سورة التوحيد الخالص لله وحده" },
-  { word: "الرَّحْمَة", hint: "ورحمتي وسعت كل شيء" },
-  { word: "التَّقْوَى", hint: "وتزودوا فإن خير الزاد التقوى" }
+  { word: "مكة", hint: "البلد الحرام وفيها الكعبة المشرفة" },
+  { word: "الحمد", hint: "أول كلمة بعد البسملة في سورة الفاتحة" },
+  { word: "النور", hint: "الله نور السماوات والأرض" },
+  { word: "الصبر", hint: "واستعينوا بالصبر والصلاة" },
+  { word: "الجنة", hint: "دار النعيم التي أعدها الله للمتقين" },
+  { word: "الصلاة", hint: "عمود الدين والركن الثاني من أركان الإسلام" },
+  { word: "الكوثر", hint: "إنا أعطيناك الكوثر" },
+  { word: "الفلق", hint: "قل أعوذ برب الفلق" },
+  { word: "الاخلاص", hint: "سورة التوحيد الخالص لله وحده" },
+  { word: "الرحمة", hint: "ورحمتي وسعت كل شيء" },
+  { word: "التقوى", hint: "وتزودوا فإن خير الزاد التقوى" }
 ];
 
 let s = 0, lv = 1, currentWordObj = null, letters = [], nextIndex = 0;
@@ -303,7 +311,8 @@ function round() {
   targetLabel.textContent = `رتّب الكلمة الكريمة: (${currentWordObj.hint})`;
   mueenHint.textContent = `تلميح المُعِين: ${currentWordObj.hint}`;
 
-  letters = currentWordObj.word.split('');
+  const cleanWord = cleanLetters(currentWordObj.word);
+  letters = cleanWord.split('');
   slotsContainer.innerHTML = '';
   letters.forEach(() => {
     const slot = document.createElement('div');
@@ -313,7 +322,7 @@ function round() {
   });
 
   // Scramble letters
-  const indexed = letters.map((c, i) => ({ c, i }));
+  const indexed = letters.map((c, i) => ({ c, i, used: false }));
   indexed.sort(() => Math.random() - 0.5);
 
   pool.innerHTML = '';
@@ -323,13 +332,17 @@ function round() {
     btn.textContent = item.c;
 
     btn.addEventListener('click', () => {
-      if (item.i === nextIndex) {
+      if (item.used) return;
+      // التحقق بقيمة الحرف وليس موقعه — لقبول الحروف المكررة
+      if (item.c === letters[nextIndex]) {
         // Correct next letter
         playTap();
+        item.used = true;
         const slots = slotsContainer.querySelectorAll('.slot');
         slots[nextIndex].textContent = item.c;
         slots[nextIndex].classList.add('filled');
-        btn.remove();
+        btn.style.opacity = '0.15';
+        btn.style.pointerEvents = 'none';
         nextIndex++;
 
         if (nextIndex === letters.length) {
@@ -362,10 +375,11 @@ function round() {
 
 // Mu'een Helper Click: Place the next letter automatically!
 mueenCard.addEventListener('click', () => {
+  if (nextIndex >= letters.length) return;
   const targetChar = letters[nextIndex];
   const buttons = pool.querySelectorAll('.letter-btn');
   for (let b of buttons) {
-    if (b.textContent === targetChar) {
+    if (b.textContent === targetChar && b.style.opacity !== '0.15') {
       b.click();
       break;
     }

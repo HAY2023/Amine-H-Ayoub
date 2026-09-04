@@ -141,11 +141,11 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
   // حروف الكلمة نظيفة بدون تشكيل نهائياً
   const letters = useMemo(() => currentWord.cleanWord.split(""), [currentWord.cleanWord]);
 
-  // الحروف المبعثرة
-  const [scrambled, setScrambled] = useState<{ c: string; originalIndex: number }[]>([]);
+  // الحروف المبعثرة — نتتبع الاستخدام بفهرس الخلط وليس الأصلي
+  const [scrambled, setScrambled] = useState<{ c: string; originalIndex: number; id: number }[]>([]);
 
   useEffect(() => {
-    const arr = letters.map((c, originalIndex) => ({ c, originalIndex }));
+    const arr = letters.map((c, originalIndex) => ({ c, originalIndex, id: originalIndex }));
     arr.sort(() => Math.random() - 0.5);
     setScrambled(arr);
     setPlacedIndices([]);
@@ -154,13 +154,14 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
 
   const nextNeededIndex = placedIndices.length;
 
-  const handleLetterClick = (item: { c: string; originalIndex: number }, scrambledIndex: number) => {
-    if (placedIndices.includes(item.originalIndex)) return;
+  const handleLetterClick = (item: { c: string; originalIndex: number; id: number }, scrambledIndex: number) => {
+    if (placedIndices.includes(item.id)) return;
 
-    if (item.originalIndex === nextNeededIndex) {
+    // التحقق من قيمة الحرف وليس موقعه — لقبول الحروف المكررة (مثل «ا» و«ل» في «الصلاة»)
+    if (item.c === letters[nextNeededIndex]) {
       // الحرف صحيح بالترتيب!
       playSound("correct");
-      const newPlaced = [...placedIndices, item.originalIndex];
+      const newPlaced = [...placedIndices, item.id];
       setPlacedIndices(newPlaced);
 
       if (newPlaced.length === letters.length) {
@@ -235,7 +236,7 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
       {/* خانات ترتيب الحروف المجردة (الكلمة المستهدفة) */}
       <div className="flex flex-wrap justify-center items-center gap-1.5 sm:gap-2.5 py-3.5 px-2 bg-secondary/20 rounded-3xl border border-border/40">
         {letters.map((char, idx) => {
-          const isFilled = placedIndices.includes(idx);
+          const isFilled = idx < placedIndices.length;
           return (
             <div
               key={idx}
@@ -256,7 +257,7 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
         <p className="text-xs font-bold text-muted-foreground">اضغط على الحرف التالي بالترتيب:</p>
         <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
           {scrambled.map((item, idx) => {
-            const isUsed = placedIndices.includes(item.originalIndex);
+            const isUsed = placedIndices.includes(item.id);
             const isMistake = mistakeAnim === idx;
 
             return (

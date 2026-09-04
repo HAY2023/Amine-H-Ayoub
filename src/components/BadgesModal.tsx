@@ -39,6 +39,14 @@ const ICON_COMPONENTS: Record<string, React.ComponentType<{ className?: string }
   Headphones,
 };
 
+function formatDaysCount(count: number): string {
+  if (count <= 0) return "0 يوم";
+  if (count === 1) return "يوم واحد";
+  if (count === 2) return "يومان";
+  if (count >= 3 && count <= 10) return `${count} أيام`;
+  return `${count} يوماً`;
+}
+
 export default function BadgesModal({ onClose }: Props) {
   const [badges, setBadges] = useState<Badge[]>([]);
   const [filter, setFilter] = useState<"all" | "unlocked" | "streak">("all");
@@ -65,8 +73,9 @@ export default function BadgesModal({ onClose }: Props) {
       const prog = getProgress();
       const c = getCoins();
       await downloadQuranCertificate({
-        profile,
-        streakDays: streakInfo.currentStreak || 1,
+        studentName: profile.name || "بطل القرآن الصغير",
+        currentStreak: streakInfo.currentStreak,
+        longestStreak: streakInfo.longestStreak,
         minutes: prog.minutes || 0,
         coins: c || 0,
         currentSurahNumber: profile.currentSurah || 36,
@@ -155,10 +164,10 @@ export default function BadgesModal({ onClose }: Props) {
               </span>
               <div>
                 <span className="block font-black text-lg text-white tracking-wide drop-shadow-md">
-                  سلسلة الحماس: <span className="text-amber-400">{streakInfo.currentStreak} {streakInfo.currentStreak === 1 ? "يوم" : "أيام"}</span> 🔥
+                  سلسلة الحماس: <span className="text-amber-400">{formatDaysCount(streakInfo.currentStreak)}</span> 🔥
                 </span>
                 <span className="block text-[11px] text-amber-200/60 font-medium mt-0.5">
-                  أطول سلسلة حققتها: {streakInfo.longestStreak} يوماً
+                  أطول سلسلة حققتها: {formatDaysCount(streakInfo.longestStreak)}
                 </span>
               </div>
             </div>
@@ -167,39 +176,64 @@ export default function BadgesModal({ onClose }: Props) {
             </span>
           </div>
 
-          {/* دوائر أيام الأسبوع (شكل مسار متصل) */}
+          {/* دوائر أيام الأسبوع (مسار يبدأ من اليمين [السبت] وينتهي في اليسار [اليوم]) */}
           <div className="pt-2 pb-2 relative z-10 w-full">
-            {/* خط المسار الخلفي الثابت */}
-            <div className="absolute top-[22px] left-[10%] right-[10%] h-1 bg-zinc-800/80 rounded-full shadow-inner"></div>
+            {/* خط المسار الخلفي الثابت الشامل بين مراكز الدوائر */}
+            <div 
+              className="absolute top-[26px] -translate-y-1/2 left-[7.14%] right-[7.14%] h-1 bg-zinc-800/80 rounded-full shadow-inner pointer-events-none"
+            />
             
-            <div className="flex items-center justify-between gap-1 relative">
+            {/* مقاطع المسار النشط المتوهج بين الأيام المتتالية المنجزة */}
+            <div 
+              className="absolute top-[26px] -translate-y-1/2 left-[7.14%] right-[7.14%] h-1 flex pointer-events-none z-0" 
+              dir="rtl"
+            >
+              {[0, 1, 2, 3, 4, 5].map((segIdx) => {
+                const isSegmentActive =
+                  Boolean(streakInfo.thisWeekDays[segIdx]) &&
+                  Boolean(streakInfo.thisWeekDays[segIdx + 1]);
+                return (
+                  <div
+                    key={segIdx}
+                    className={`flex-1 h-full transition-all duration-500 ${
+                      isSegmentActive
+                        ? "bg-gradient-to-l from-amber-400 via-orange-500 to-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.7)]"
+                        : "bg-transparent"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+            
+            <div className="grid grid-cols-7 relative z-10 w-full" dir="rtl">
               {[0, 1, 2, 3, 4, 5, 6].map((idx) => {
                 const active = streakInfo.thisWeekDays[idx];
+                const isToday = idx === 6;
                 return (
-                <div key={idx} className="flex flex-col items-center gap-2 flex-1 relative group">
-                  <div
-                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 z-10 ${
-                      active
-                        ? "bg-gradient-to-br from-amber-400 to-orange-600 ring-4 ring-stone-900 shadow-[0_0_15px_rgba(245,158,11,0.7)] scale-110"
-                        : "bg-zinc-900 ring-2 ring-zinc-800 shadow-inner group-hover:bg-zinc-800"
-                    }`}
-                  >
-                    {active ? (
-                      <Flame className="w-5 h-5 fill-white text-white drop-shadow-md" />
-                    ) : (
-                      <div className="w-2 h-2 rounded-full bg-zinc-700/50"></div>
-                    )}
+                  <div key={idx} className="flex flex-col items-center gap-2 group">
+                    <div
+                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 ${
+                        active
+                          ? "bg-gradient-to-br from-amber-400 to-orange-600 ring-4 ring-stone-900 shadow-[0_0_15px_rgba(245,158,11,0.7)] scale-110"
+                          : "bg-zinc-900 ring-2 ring-zinc-800 shadow-inner group-hover:bg-zinc-800"
+                      }`}
+                    >
+                      {active ? (
+                        <Flame className="w-5 h-5 fill-white text-white drop-shadow-md" />
+                      ) : (
+                        <div className="w-2 h-2 rounded-full bg-zinc-700/50"></div>
+                      )}
+                    </div>
+                    <span className={`text-[11px] font-bold truncate w-full text-center transition-colors ${
+                      isToday 
+                        ? "text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)] scale-110" 
+                        : active 
+                          ? "text-amber-200/90" 
+                          : "text-zinc-500"
+                    }`}>
+                      {isToday ? "اليوم" : (streakInfo.dayNamesArr[idx] || "")}
+                    </span>
                   </div>
-                  <span className={`text-[11px] font-bold truncate w-full text-center transition-colors ${
-                    idx === 6 
-                      ? "text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)] scale-110" 
-                      : active 
-                        ? "text-amber-200/90" 
-                        : "text-zinc-500"
-                  }`}>
-                    {idx === 6 ? "اليوم" : (streakInfo.dayNamesArr[idx] || "")}
-                  </span>
-                </div>
                 );
               })}
             </div>
@@ -213,7 +247,7 @@ export default function BadgesModal({ onClose }: Props) {
               </span>
               <div>
                 <span className="text-xs font-black text-white block">
-                  أيام الحماس هذا الشهر: <span className="text-amber-400">{Math.max(streakInfo.monthActiveCount, streakInfo.currentStreak, 1)} يوماً</span> 🔥
+                  أيام الحماس هذا الشهر: <span className="text-amber-400">{formatDaysCount(Math.max(streakInfo.monthActiveCount, streakInfo.currentStreak, 1))}</span> 🔥
                 </span>
                 <span className="text-[10px] text-zinc-400 font-medium">
                   {streakInfo.monthActiveCount >= 20 ? "همة قرآنية أسطورية متميزة! 🌟" : "واصل التلاوة لزيادة أيام همتك وحماسك"}

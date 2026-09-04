@@ -36,7 +36,6 @@ import ProfilePicker, { isPicked, markPicked } from "./components/ProfilePicker.
 import { logAppOpen } from "./utils/analytics.ts";
 import { useBackgroundNotifications, showLocalNotification } from "./utils/notifications.ts";
 import { claimDailyRewards, incrementStreak } from "./data/dailyRewards";
-import DeveloperPanel from "./components/DeveloperPanel";
 
 const queryClient = new QueryClient();
 
@@ -108,9 +107,27 @@ const App = () => {
   };
   const [showPicker, setShowPicker] = useState(shouldGate);
   const [showExitGate, setShowExitGate] = useState(false);
-  const [showDevPanel, setShowDevPanel] = useState(false);
 
   useEffect(() => {
+    // Security: Block right-click context menu
+    const blockContextMenu = (e: MouseEvent) => e.preventDefault();
+    document.addEventListener("contextmenu", blockContextMenu);
+
+    // Security: Block dev tools shortcuts
+    const blockDevTools = (e: KeyboardEvent) => {
+      // F12
+      if (e.key === "F12") e.preventDefault();
+      // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+      if (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "J" || e.key === "C" || e.key === "i" || e.key === "j" || e.key === "c")) {
+        e.preventDefault();
+      }
+      // Ctrl+U (View Source)
+      if (e.ctrlKey && (e.key === "U" || e.key === "u")) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("keydown", blockDevTools);
+
     const unlistenPromise = setupTauriCloseHandler(() => {
       setShowExitGate(true);
     });
@@ -121,6 +138,8 @@ const App = () => {
     window.addEventListener("mushaf:request_exit", handleGlobalExitRequest);
 
     return () => {
+      document.removeEventListener("contextmenu", blockContextMenu);
+      document.removeEventListener("keydown", blockDevTools);
       unlistenPromise.then((unsub) => unsub && unsub());
       window.removeEventListener("mushaf:request_exit", handleGlobalExitRequest);
     };
@@ -200,18 +219,6 @@ const App = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Ctrl+Alt+2 shortcut to toggle developer panel
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.altKey && e.key === '2') {
-        e.preventDefault();
-        setShowDevPanel(prev => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
   return (
       <AudioContextProvider>
       <QueryClientProvider client={queryClient}>
@@ -244,7 +251,6 @@ const App = () => {
               </Routes>
             </Suspense>
             <SiteLinksOverlay open={showSiteLinks} onClose={() => setShowSiteLinks(false)} />
-            <DeveloperPanel open={showDevPanel} onClose={() => setShowDevPanel(false)} />
             {showWelcome && <WelcomeOverlay onDone={() => { markPicked(); setShowWelcome(false); setShowPicker(false); }} />}
             {!showWelcome && showPicker && <ProfilePicker onPicked={() => setShowPicker(false)} />}
             {showExitGate && (
