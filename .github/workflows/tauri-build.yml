@@ -45,8 +45,14 @@ jobs:
           done
           gh release edit "v1.0.0" --title "Quran-Amine H Ayoub v1.0.0" --latest || true
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Tauri CLI
+        run: npm install -D @tauri-apps/cli@^2
+
       - name: Generate app icon
-        run: npx --yes @tauri-apps/cli@^2 icon src-tauri/icons/app-icon.png
+        run: npx tauri icon src-tauri/icons/app-icon.png
 
       - name: Build Windows desktop app (Tauri)
         uses: tauri-apps/tauri-action@v0
@@ -177,6 +183,7 @@ jobs:
       - name: Build Android Mobile AAB (Google Play Store Bundle)
         run: |
           cd src-tauri/gen/android
+          chmod +x gradlew
           ./gradlew bundleUniversalRelease || ./gradlew bundleRelease
           cd ../../..
 
@@ -310,6 +317,7 @@ jobs:
       - name: Build Android TV AAB (Google Play TV Bundle)
         run: |
           cd src-tauri/gen/android
+          chmod +x gradlew
           ./gradlew bundleUniversalRelease || ./gradlew bundleRelease
           cd ../../..
 
