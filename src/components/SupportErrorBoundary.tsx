@@ -1,62 +1,23 @@
 import { ErrorBoundary } from "react-error-boundary";
-import { AlertTriangle, Send, RefreshCw, Trash2, Loader2, Mail } from "lucide-react";
+import { RefreshCw, Trash2, HeartHandshake } from "lucide-react";
 import { Button } from "./ui/button";
-import { useState } from "react";
-import { sendSupportReportEmail, createMailtoSupportLink } from "@/services/resendService";
+import WhatsAppIcon from "./WhatsAppIcon";
+import { openWhatsAppSupport, SUPPORT_WHATSAPP_DISPLAY } from "@/services/resendService";
 import { getProfile } from "@/data/kidsProfile";
 import { CURRENT_VERSION } from "@/utils/updateChecker";
-import { toast } from "@/hooks/use-toast";
 
-function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+function ErrorFallback({ resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  const handleWhatsAppContact = () => {
+    const activeProfile = getProfile();
+    const profileName = activeProfile?.name || "مستخدم التطبيق";
+    const msg =
+      `السلام عليكم ورحمة الله وبركاته،\n` +
+      `أحتاج مساعدة من الدعم الفني لتطبيق القرآن للأطفال:\n` +
+      `• الحساب: ${profileName}\n` +
+      `• إصدار التطبيق: ${CURRENT_VERSION}\n` +
+      `• واجهت توقفاً مؤقتاً في التطبيق وأرجو المساعدة.`;
 
-  const handleDirectSend = async () => {
-    setSending(true);
-    setStatusMsg("جاري تجهيز تقرير الخطأ...");
-    let copied = false;
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(`Error: ${error.message}\nStack: ${error.stack || "N/A"}`);
-        copied = true;
-      }
-    } catch {
-      /* ignore */
-    }
-
-    try {
-      const activeProfile = getProfile();
-      const res = await sendSupportReportEmail({
-        type: "bug",
-        typeLabel: "مشكلة تقنية (تلقائي)",
-        description: `Crash Report:\n${error.message}\nStack: ${error.stack || "N/A"}`,
-        profileName: activeProfile?.name || "مستخدم التطبيق",
-        appVersion: CURRENT_VERSION,
-        platform: typeof navigator !== "undefined" ? navigator.userAgent : "Web",
-        timestamp: new Date().toLocaleString("ar-SA"),
-      });
-
-      setSent(true);
-      if (res.success) {
-        setStatusMsg("✓ تم إرسال التقرير بنجاح للدعم الفني وسيتم فحصه فوراً. شكراً لمساعدتك!");
-        toast({
-          title: "تم إرسال التقرير بنجاح 🌸",
-          description: "شكراً لك، سنقوم بحل المشكلة في أقرب وقت.",
-        });
-      } else {
-        setStatusMsg(copied ? "✓ تم نسخ تفاصيل الخطأ للحافظة بنجاح. يمكنك لصقها وإرسالها لنا." : "تم تسجيل تفاصيل الخطأ.");
-        toast({
-          title: "تم نسخ تفاصيل الخطأ",
-          description: "يمكنك إرسالها إلينا مباشرة.",
-        });
-      }
-    } catch {
-      setSent(true);
-      setStatusMsg(copied ? "✓ تم نسخ تفاصيل الخطأ للحافظة بنجاح." : "تم رصد الخطأ.");
-    } finally {
-      setSending(false);
-    }
+    void openWhatsAppSupport(msg);
   };
 
   const handleHardReset = () => {
@@ -75,66 +36,57 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 font-quran text-right" dir="rtl">
-      <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl border-2 border-red-100 flex flex-col items-center text-center gap-5">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-red-500">
-          <AlertTriangle className="w-8 h-8" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-emerald-50/50 via-slate-50 to-teal-50/50 p-4 font-quran text-right" dir="rtl">
+      <div className="max-w-md w-full bg-white/95 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-emerald-100/80 flex flex-col items-center text-center gap-6 animate-in zoom-in-95 duration-200">
+        
+        {/* أيقونة ودودة ومطمئنة */}
+        <div className="w-20 h-20 bg-emerald-500/10 text-emerald-600 rounded-3xl flex items-center justify-center ring-8 ring-emerald-500/5 shadow-inner">
+          <HeartHandshake className="w-10 h-10" />
         </div>
 
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold text-slate-800">عفواً! حدث خطأ غير متوقع</h2>
-          <p className="text-slate-600 text-sm">
-            تم تسجيل الخطأ ويمكنك إرساله للدعم الفني أو إعادة تحميل التطبيق.
+        {/* رسالة لطيفة بدون أي نصوص أخطاء تقنية */}
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black text-slate-800">نعتذر منك، حدث توقف مؤقت بسيط 🌸</h2>
+          <p className="text-slate-600 text-sm leading-relaxed max-w-xs mx-auto font-medium">
+            لا تقلق، جميع محفوظاتك وبياناتك في أمان تام. نحن هنا لمساعدتك في أي وقت لحل المشكلة فوراً.
           </p>
         </div>
 
-        <div className="bg-slate-100 rounded-xl p-3 w-full text-left overflow-auto max-h-28">
-          <pre className="text-xs text-slate-600 font-mono whitespace-pre-wrap" dir="ltr">
-            {error.message || "Unknown error"}
-          </pre>
-        </div>
+        {/* الأزرار والإجراءات */}
+        <div className="flex flex-col w-full gap-3">
+          {/* زر واتساب الرئيسي المباشر للرقم 0658188644 */}
+          <button
+            type="button"
+            onClick={handleWhatsAppContact}
+            className="w-full h-14 text-base bg-[#25D366] hover:bg-[#20bd5a] active:scale-[0.98] transition-all rounded-2xl text-white font-extrabold shadow-lg shadow-[#25D366]/25 flex items-center justify-center gap-3 cursor-pointer"
+          >
+            <WhatsAppIcon className="w-6 h-6 text-white shrink-0" />
+            <span>تواصل مع الدعم الفني عبر واتساب ({SUPPORT_WHATSAPP_DISPLAY})</span>
+          </button>
 
-        <div className="flex flex-col w-full gap-2.5">
+          {/* زر إعادة المحاولة */}
           <Button
             onClick={resetErrorBoundary}
-            className="w-full h-12 text-base bg-emerald-600 hover:bg-emerald-700 rounded-xl text-white font-bold flex items-center justify-center gap-2"
+            className="w-full h-12 text-sm bg-slate-800 hover:bg-slate-900 active:scale-[0.98] transition-all rounded-2xl text-white font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm"
           >
             <RefreshCw className="w-4 h-4" />
-            إعادة المحاولة والتشغيل
+            <span>إعادة تشغيل التطبيق</span>
           </Button>
 
-          <Button
-            onClick={handleDirectSend}
-            disabled={sending || sent}
-            variant="outline"
-            className="w-full h-12 text-sm border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl font-bold flex items-center justify-center gap-2"
-          >
-            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 rotate-180" />}
-            {sent ? "تم إرسال التقرير لحسابك عبر الخادم ✓" : "إرسال تقرير بالخطأ للدعم الفني تلقائياً"}
-          </Button>
-
-          <a
-            href={createMailtoSupportLink({
-              typeLabel: "بلاغ خطأ تلقائي",
-              description: `Crash Report:\n${error.message}\nStack: ${error.stack || "N/A"}`,
-              appVersion: CURRENT_VERSION,
-              platform: typeof navigator !== "undefined" ? navigator.userAgent : "Web",
-            })}
-            className="w-full h-11 text-xs border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
-          >
-            <Mail className="w-4 h-4 text-amber-700" />
-            فتح الإيميل والإرسال مباشرة إلى (hammoualiyoucef20@gmail.com)
-          </a>
-
+          {/* زر مسح الذاكرة المؤقتة والبدء من جديد */}
           <Button
             onClick={handleHardReset}
             variant="ghost"
-            className="w-full text-xs text-slate-400 hover:text-red-500 rounded-xl font-medium flex items-center justify-center gap-1.5"
+            className="w-full h-10 text-xs text-slate-500 hover:text-slate-800 hover:bg-slate-100/60 rounded-xl font-medium flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            مسح الذاكرة المؤقتة وإعادة التشغيل
+            <span>مسح الذاكرة المؤقتة والعودة للرئيسية</span>
           </Button>
         </div>
+
+        <p className="text-[11px] text-slate-400 font-medium">
+          الدعم الفني متاح دائماً لخدمتكم ومساعدتكم عبر واتساب
+        </p>
       </div>
     </div>
   );

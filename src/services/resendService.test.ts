@@ -13,7 +13,12 @@ vi.mock("@/lib/supabase", () => ({
   },
 }));
 
-import { sendSupportReportEmail } from "@/services/resendService";
+import {
+  sendSupportReportEmail,
+  createWhatsAppSupportLink,
+  SUPPORT_WHATSAPP_NUMBER,
+  SUPPORT_WHATSAPP_DISPLAY,
+} from "@/services/resendService";
 
 describe("sendSupportReportEmail", () => {
   beforeEach(() => {
@@ -46,5 +51,29 @@ describe("sendSupportReportEmail", () => {
     expect(result.success).toBe(false);
     expect(result.error).toContain("اتصال الإنترنت");
     expect(result.error).not.toContain("Failed to fetch");
+  });
+
+  it("creates a WhatsApp link targeting 213658188644 correctly", () => {
+    expect(SUPPORT_WHATSAPP_NUMBER).toBe("213658188644");
+    expect(SUPPORT_WHATSAPP_DISPLAY).toBe("0658188644");
+
+    const link = createWhatsAppSupportLink({
+      typeLabel: "مشكلة تقنية",
+      profileName: "أحمد",
+      description: "توقف الصوت في سورة الفاتحة",
+    });
+
+    expect(link).toContain("https://wa.me/213658188644");
+    expect(decodeURIComponent(link)).toContain("أحمد");
+    expect(decodeURIComponent(link)).toContain("توقف الصوت في سورة الفاتحة");
+  });
+
+  it("creates a default WhatsApp link when called with string or empty", () => {
+    const stringLink = createWhatsAppSupportLink("رسالة مباشرة");
+    expect(stringLink).toContain("https://wa.me/213658188644");
+    expect(decodeURIComponent(stringLink)).toContain("رسالة مباشرة");
+
+    const emptyLink = createWhatsAppSupportLink();
+    expect(emptyLink).toContain("https://wa.me/213658188644");
   });
 });

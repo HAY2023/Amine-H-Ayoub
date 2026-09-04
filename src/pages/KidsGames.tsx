@@ -2705,8 +2705,8 @@ export default function KidsGames() {
 
     ctx.textAlign = "center";
     ctx.fillStyle = "#FDE047";
-    ctx.font = "bold 20px 'Tahoma', 'Arial'";
-    ctx.fillText(`التاريخ: ${today.getDate()} / ${today.getMonth() + 1} / ${today.getFullYear()} م`, dateBoxX + dateBoxW / 2, dateBoxY + 35);
+    ctx.font = "bold 18px 'Tahoma', 'Arial'";
+    ctx.fillText(`${today.getDate()} / ${today.getMonth() + 1} / ${today.getFullYear()} م`, dateBoxX + dateBoxW / 2, dateBoxY + 35);
 
     // رسالة فخر في اليسار
     ctx.textAlign = "center";
@@ -3096,9 +3096,9 @@ export default function KidsGames() {
 
       {/* نافذة شهادة التقدم */}
       {showCertificate && (
-        <div className="fixed inset-0 z-[230] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto" onClick={() => setShowCertificate(false)}>
-          <div className="w-full max-w-md bg-card rounded-3xl shadow-2xl border border-border p-6 animate-fade-up" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 z-[230] flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto" onClick={() => setShowCertificate(false)}>
+          <div className="w-full max-w-md bg-card rounded-3xl shadow-2xl border border-border p-4 sm:p-6 max-h-[92vh] overflow-y-auto animate-fade-up" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 text-rose-500 font-extrabold text-xs px-3 py-1.5"><Award className="w-3.5 h-3.5" /> شهادة التقدم</span>
               <button onClick={() => setShowCertificate(false)} aria-label="إغلاق" className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center active:scale-95 transition-transform"><X className="w-4 h-4" /></button>
             </div>

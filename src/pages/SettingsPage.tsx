@@ -9,6 +9,8 @@ import PinModal from "../components/PinModal";
 import ParentalGateModal from "../components/ParentalGateModal";
 import AdminGamesModal from "../components/AdminGamesModal";
 import SupportModal from "../components/SupportModal";
+import WhatsAppIcon from "../components/WhatsAppIcon";
+import { SUPPORT_WHATSAPP_DISPLAY } from "../services/resendService";
 import { toast } from "../hooks/use-toast";
 
 import { hasKidsPin, setKidsPin, removeKidsPin, setKidsLocked, isKidsMode } from "../data/kidsLock";
@@ -331,7 +333,12 @@ export default function SettingsPage() {
 
         {/* ===== التطبيق ===== */}
         <Section label="التطبيق">
-          <Item icon={<MessageSquare className="w-5 h-5 text-accent" />} title="تواصل مع الدعم الفني والإبلاغ" desc="إرسال مشكلة تقنية أو اقتراح لفريق العمل" onClick={() => setShowSupport(true)} />
+          <Item
+            icon={<WhatsAppIcon className="w-5 h-5 text-[#25D366]" />}
+            title={`تواصل مع الدعم الفني عبر واتساب (${SUPPORT_WHATSAPP_DISPLAY})`}
+            desc="مراسلة مباشرة فورية أو الإبلاغ عن مشكلة واقتراح"
+            onClick={() => setShowSupport(true)}
+          />
           <Item icon={<Power className="w-5 h-5 text-destructive" />} title="إغلاق التطبيق والخروج" desc="إغلاق نافذة التطبيق بالكامل وحفظ الجلسة" onClick={() => closeTauriApp()} />
         </Section>
 

@@ -13,10 +13,11 @@ import {
   Bot,
   Compass,
 } from "lucide-react";
-import { createMailtoSupportLink, saveSupportMessageLocally } from "@/services/resendService";
+import { createMailtoSupportLink, saveSupportMessageLocally, openWhatsAppSupport, SUPPORT_WHATSAPP_DISPLAY } from "@/services/resendService";
 import { getProfile } from "@/data/kidsProfile";
 import { CURRENT_VERSION } from "@/utils/updateChecker";
 import { toast } from "@/hooks/use-toast";
+import WhatsAppIcon from "./WhatsAppIcon";
 
 type ActiveTab = "companion" | "guide" | "support";
 
@@ -94,14 +95,12 @@ export default function AlMueenAssistant() {
   };
 
   const openWhatsApp = () => {
-    const text = encodeURIComponent(
+    const text =
       `السلام عليكم ورحمة الله، أحتاج مساعدة في تطبيق القرآن الكريم للأطفال:\n` +
       `- المستخدم: ${activeProfile?.name || "مستخدم"}\n` +
       `- الإصدار: ${CURRENT_VERSION}\n` +
-      (userMsg ? `- الرسالة: ${userMsg}` : "")
-    );
-    // WhatsApp direct support link
-    window.open(`https://wa.me/?text=${text}`, "_blank");
+      (userMsg ? `- الرسالة: ${userMsg}` : "");
+    void openWhatsAppSupport(text);
   };
 
   const openMailto = () => {
@@ -280,10 +279,10 @@ export default function AlMueenAssistant() {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={openWhatsApp}
-                    className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95"
+                    className="p-2.5 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
                   >
-                    <MessageSquare className="w-4 h-4" />
-                    <span>مراسلة واتساب فورية</span>
+                    <WhatsAppIcon className="w-4 h-4 text-white" />
+                    <span>مراسلة واتساب ({SUPPORT_WHATSAPP_DISPLAY})</span>
                   </button>
 
                   <button

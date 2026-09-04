@@ -4,8 +4,9 @@ import { X, MessageSquare, Send, Loader2, Paperclip, UploadCloud, CheckCheck, Re
 import { hasValidSupabaseKey, supabase } from "@/lib/supabase";
 import { getDeviceId } from "@/utils/deviceInfo";
 import { toast } from "@/hooks/use-toast";
-import { sendSupportReportEmail } from "@/services/resendService";
+import { sendSupportReportEmail, openWhatsAppSupport, SUPPORT_WHATSAPP_DISPLAY } from "@/services/resendService";
 import { getProfile } from "@/data/kidsProfile";
+import WhatsAppIcon from "./WhatsAppIcon";
 
 export type SupportMessage = {
   id: string;
@@ -368,20 +369,29 @@ export default function SupportChat({
           </div>
         </div>
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => void openWhatsAppSupport()}
+            className="flex items-center gap-1.5 text-xs bg-[#25D366] hover:bg-[#20bd5a] text-white font-black px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
+            title={`تواصل مباشر عبر واتساب (${SUPPORT_WHATSAPP_DISPLAY})`}
+          >
+            <WhatsAppIcon className="w-4 h-4 text-white" />
+            <span className="hidden sm:inline">واتساب {SUPPORT_WHATSAPP_DISPLAY}</span>
+            <span className="sm:hidden">واتساب</span>
+          </button>
           <a
             href="mailto:hammoualiyoucef20@gmail.com?subject=%D8%AF%D8%B9%D9%85%20%D8%AA%D8%B7%D8%A8%D9%8A%D9%82%20%D8%A7%D9%84%D9%82%D8%B1%D8%A2%D9%86"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-[11px] bg-accent/15 text-accent font-bold px-2.5 py-1.5 rounded-xl hover:bg-accent/25 transition-all"
+            className="hidden sm:flex items-center gap-1 text-[11px] bg-secondary text-secondary-foreground font-bold px-2 py-1.5 rounded-xl hover:bg-muted transition-all"
             title="إرسال رسالة مباشرة عبر البريد الإلكتروني (Gmail)"
           >
             <Mail className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">إيميل مباشر</span>
           </a>
           {onClose && (
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center hover:brightness-95 active:scale-95 text-secondary-foreground transition-all"
+              className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center hover:brightness-95 active:scale-95 text-secondary-foreground transition-all cursor-pointer"
               title="إغلاق النافذة"
             >
               <X className="w-4 h-4" />
@@ -399,9 +409,36 @@ export default function SupportChat({
       )}
 
       {/* Messages Scroll Area */}
+      <div className="mx-4 mt-3 rounded-2xl bg-[#25D366]/10 border border-[#25D366]/25 p-2.5 flex items-center justify-between gap-2 text-right shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-sm">
+            <WhatsAppIcon className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <b className="text-xs font-bold text-foreground block">تواصل فوري ومباشر عبر واتساب ({SUPPORT_WHATSAPP_DISPLAY})</b>
+            <span className="text-[10px] text-muted-foreground">للحصول على استجابة سريعة ومباشرة من المشرف</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => void openWhatsAppSupport()}
+          className="text-xs font-bold px-2.5 py-1 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg active:scale-95 transition-all shrink-0 cursor-pointer shadow-sm"
+        >
+          مراسلة 💬
+        </button>
+      </div>
+
       {connectionError && (
-        <div className="mx-4 mt-3 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive" role="status">
-          {connectionError}
+        <div className="mx-4 mt-2 rounded-xl border border-amber-300/60 bg-amber-500/10 p-2.5 text-xs text-foreground space-y-1.5" role="status">
+          <p className="text-amber-800 dark:text-amber-300 font-medium">{connectionError}</p>
+          <button
+            type="button"
+            onClick={() => void openWhatsAppSupport()}
+            className="flex items-center gap-1.5 text-xs bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold px-2.5 py-1 rounded-lg active:scale-95 transition-all cursor-pointer shadow-sm w-fit"
+          >
+            <WhatsAppIcon className="w-3.5 h-3.5 text-white" />
+            <span>فتح واتساب للدعم المباشر ({SUPPORT_WHATSAPP_DISPLAY})</span>
+          </button>
         </div>
       )}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-muted/20">
@@ -504,6 +541,24 @@ export default function SupportChat({
             disabled={sending}
             className="flex-1 max-h-28 min-h-[42px] py-2.5 px-3.5 rounded-xl bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none leading-relaxed"
           />
+
+          <button
+            type="button"
+            onClick={() => {
+              const text = input.trim();
+              const profile = getProfile();
+              const msg =
+                `السلام عليكم ورحمة الله،\n` +
+                `تواصل مع الدعم الفني لتطبيق القرآن للأطفال:\n` +
+                `• الحساب: ${profile?.name || "مستخدم"}\n` +
+                (text ? `• الرسالة: ${text}` : "");
+              void openWhatsAppSupport(msg);
+            }}
+            className="w-10 h-10 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white flex items-center justify-center shrink-0 transition-all active:scale-95 cursor-pointer shadow-sm"
+            title={`إرسال المحادثة إلى واتساب (${SUPPORT_WHATSAPP_DISPLAY})`}
+          >
+            <WhatsAppIcon className="w-5 h-5 text-white" />
+          </button>
 
           <button
             type="submit"

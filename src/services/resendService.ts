@@ -1,5 +1,6 @@
 import { hasValidSupabaseKey, supabase } from "@/lib/supabase";
 import { getDeviceId } from "@/utils/deviceInfo";
+import { openExternalUrl } from "@/utils/tauriUtils";
 
 export interface SupportReportData {
   id?: string;
@@ -15,6 +16,8 @@ export interface SupportReportData {
 }
 
 export const SUPPORT_EMAILS = ["hammoualiyoucef20@gmail.com", "Amine.hyoub@gmail.com"];
+export const SUPPORT_WHATSAPP_NUMBER = "213658188644";
+export const SUPPORT_WHATSAPP_DISPLAY = "0658188644";
 export const LOCAL_INBOX_KEY = "mushaf:support_inbox_v1";
 
 /** إنشاء رابط بريد إلكتروني مباشر لفتح تطبيق البريد بنقرة واحدة */
@@ -36,17 +39,33 @@ export function createMailtoSupportLink(report: Partial<SupportReportData>): str
   return `mailto:${to}?subject=${subject}&body=${body}`;
 }
 
-/** إنشاء رابط واتساب مباشر لإرسال الرسالة إلى المشرف فوراً بدون وساطة خوادم */
-export function createWhatsAppSupportLink(report: Partial<SupportReportData>): string {
-  const message =
-    `*السلام عليكم ورحمة الله وبركاته*\n` +
-    `*رسالة دعم من تطبيق القرآن للأطفال:*\n` +
-    `• النوع: ${report.typeLabel || "رسالة"}\n` +
-    `• من: ${report.profileName || "مستخدم التطبيق"}\n` +
-    `• للتواصل: ${report.senderEmail || "غير محدد"}\n` +
-    `• الإصدار: ${report.appVersion || "1.0.0"}\n\n` +
-    `*نص الرسالة:*\n${report.description || ""}`;
-  return `https://wa.me/?text=${encodeURIComponent(message)}`;
+/** إنشاء رابط واتساب مباشر لإرسال الرسالة إلى الدعم الفني فوراً (0658188644) */
+export function createWhatsAppSupportLink(report?: Partial<SupportReportData> | string): string {
+  let message = "";
+  if (typeof report === "string") {
+    message = report.trim();
+  } else if (report) {
+    const lines: string[] = [
+      `*السلام عليكم ورحمة الله وبركاته*`,
+      `*رسالة دعم من تطبيق القرآن للأطفال:*`,
+    ];
+    if (report.typeLabel) lines.push(`• النوع: ${report.typeLabel}`);
+    if (report.profileName) lines.push(`• من: ${report.profileName}`);
+    if (report.senderEmail) lines.push(`• وسيلة الاتصال: ${report.senderEmail}`);
+    if (report.appVersion) lines.push(`• الإصدار: ${report.appVersion}`);
+    if (report.description) lines.push(`\n*نص الرسالة:*\n${report.description}`);
+    message = lines.join("\n");
+  } else {
+    message = "السلام عليكم ورحمة الله وبركاته، أرجو المساعدة من الدعم الفني لتطبيق القرآن الكريم للأطفال.";
+  }
+
+  return `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+}
+
+/** فتح محادثة واتساب المباشرة مع الدعم الفني على رقم 0658188644 في المتصفح أو التطبيق */
+export async function openWhatsAppSupport(report?: Partial<SupportReportData> | string): Promise<void> {
+  const url = createWhatsAppSupportLink(report);
+  await openExternalUrl(url);
 }
 
 /** حفظ الرسالة في صندوق وارد الإدارة المحلي على الجهاز */

@@ -81,12 +81,14 @@ import Avatar from "../components/Avatar";
 import BadgesModal from "../components/BadgesModal";
 import ParentalGateModal from "../components/ParentalGateModal";
 import SupportModal from "../components/SupportModal";
+import WhatsAppIcon from "../components/WhatsAppIcon";
 import {
   getLocalSupportMessages,
   deleteLocalSupportMessage,
   clearLocalSupportMessages,
   SupportReportData,
   createWhatsAppSupportLink,
+  SUPPORT_WHATSAPP_DISPLAY,
 } from "../services/resendService";
 
 type DashboardTab = "overview" | "goals" | "schedule";
@@ -367,11 +369,12 @@ export default function ParentDashboard() {
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setShowSupportModal(true)}
-              className="h-9 sm:h-10 px-2.5 sm:px-3 rounded-xl bg-accent/15 text-accent text-xs font-bold hover:bg-accent/25 active:scale-95 transition-all flex items-center gap-1"
-              title="تواصل مع الدعم الفني"
+              className="h-9 sm:h-10 px-2.5 sm:px-3 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#25D366] text-xs font-black active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+              title={`تواصل مع الدعم الفني عبر واتساب (${SUPPORT_WHATSAPP_DISPLAY})`}
             >
-              <MessageSquare className="w-4 h-4" />
-              <span className="hidden sm:inline">الدعم</span>
+              <WhatsAppIcon className="w-4 h-4 text-[#25D366]" />
+              <span className="hidden sm:inline">واتساب {SUPPORT_WHATSAPP_DISPLAY}</span>
+              <span className="sm:hidden">واتساب</span>
             </button>
             <button
               onClick={() => navigate("/games")}

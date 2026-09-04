@@ -13,7 +13,15 @@ import {
   Mail,
   MessageSquare,
 } from "lucide-react";
-import { sendSupportReportEmail, SupportReportData, createMailtoSupportLink, createWhatsAppSupportLink } from "@/services/resendService";
+import WhatsAppIcon from "./WhatsAppIcon";
+import {
+  sendSupportReportEmail,
+  SupportReportData,
+  createMailtoSupportLink,
+  openWhatsAppSupport,
+  SUPPORT_WHATSAPP_DISPLAY,
+  saveSupportMessageLocally,
+} from "@/services/resendService";
 import { getProfile } from "@/data/kidsProfile";
 import { CURRENT_VERSION } from "@/utils/updateChecker";
 import { toast } from "@/hooks/use-toast";
@@ -45,10 +53,10 @@ export default function SupportModal({ onClose }: Props) {
   const [sentSuccess, setSentSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendWhatsApp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!description.trim()) {
-      setErrorMessage("يرجى كتابة نص الرسالة أو وصف المشكلة");
+      setErrorMessage("يرجى كتابة نص الرسالة أو وصف المشكلة أولاً");
       return;
     }
 
@@ -68,23 +76,31 @@ export default function SupportModal({ onClose }: Props) {
       timestamp: new Date().toLocaleString("ar-SA"),
     };
 
-    const res = await sendSupportReportEmail(reportData);
-    setSending(false);
+    // حفظ محلي وإرسال تقرير خلفي للأرشفة
+    saveSupportMessageLocally(reportData);
+    void sendSupportReportEmail(reportData);
 
-    if (res.success) {
-      setSentSuccess(true);
-      toast({
-        title: "تم إرسال الرسالة بنجاح! 🌸",
-        description: "شكراً لتواصلك معنا، سنرد عليك في أقرب وقت.",
-      });
-    } else {
-      setErrorMessage(res.error || "تعذر إرسال الرسالة، يرجى المحاولة لاحقاً");
-      toast({
-        title: "تعذر الإرسال",
-        description: res.error || "تحقق من اتصال الإنترنت",
-        variant: "destructive",
-      });
-    }
+    // فتح واتساب فوراً للرقم المحدد 0658188644
+    await openWhatsAppSupport(reportData);
+
+    setSending(false);
+    setSentSuccess(true);
+    toast({
+      title: "جاري فتح واتساب 💬",
+      description: `تم تجهيز رسالتك للإرسال إلى الدعم الفني (${SUPPORT_WHATSAPP_DISPLAY}).`,
+    });
+  };
+
+  const handleDirectQuickWhatsApp = () => {
+    const profileName = senderName.trim() || activeProfile?.name || "مستخدم التطبيق";
+    const msg =
+      `السلام عليكم ورحمة الله وبركاته،\n` +
+      `أحتاج مساعدة وتواصلاً مع الدعم الفني لتطبيق القرآن للأطفال:\n` +
+      `• الحساب: ${profileName}\n` +
+      `• الإصدار: ${CURRENT_VERSION}` +
+      (description.trim() ? `\n• الرسالة: ${description.trim()}` : "");
+
+    void openWhatsAppSupport(msg);
   };
 
   return (
@@ -96,7 +112,7 @@ export default function SupportModal({ onClose }: Props) {
         {/* زر الإغلاق */}
         <button
           onClick={onClose}
-          className="absolute top-4 left-4 p-2 rounded-full text-muted-foreground hover:bg-muted transition-colors"
+          className="absolute top-4 left-4 p-2 rounded-full text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
           aria-label="إغلاق"
         >
           <X className="w-5 h-5" />
@@ -104,38 +120,68 @@ export default function SupportModal({ onClose }: Props) {
 
         {/* رأس النافذة */}
         <div className="text-center space-y-1 pt-1">
-          <div className="mx-auto w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-1">
-            <MessageSquare className="w-6 h-6" />
+          <div className="mx-auto w-12 h-12 rounded-2xl bg-[#25D366]/15 text-[#25D366] flex items-center justify-center mb-1">
+            <WhatsAppIcon className="w-7 h-7" />
           </div>
-          <h3 className="font-extrabold text-xl text-foreground">تواصل مع الدعم الفني</h3>
+          <h3 className="font-extrabold text-xl text-foreground">الدعم الفني المباشر</h3>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            أرسل ملاحظاتك أو استفساراتك وسيقوم فريق العمل بالرد عليك
+            تواصل سريع ومباشر مع فريق الدعم الفني عبر واتساب
           </p>
         </div>
 
+        {/* بطاقة فتح واتساب الفورية */}
+        <button
+          type="button"
+          onClick={handleDirectQuickWhatsApp}
+          className="w-full p-3 rounded-2xl bg-[#25D366]/10 border border-[#25D366]/30 hover:bg-[#25D366]/20 transition-all text-right flex items-center justify-between gap-3 group cursor-pointer shadow-sm"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-sm">
+              <WhatsAppIcon className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <b className="text-xs font-bold text-foreground block">محادثة واتساب مباشرة ({SUPPORT_WHATSAPP_DISPLAY})</b>
+              <span className="text-[11px] text-muted-foreground">انقر هنا لفتح واتساب ومراسلة الدعم فوراً</span>
+            </div>
+          </div>
+          <span className="text-xs font-bold text-[#25D366] group-hover:translate-x-[-2px] transition-transform">
+            فتح 💬
+          </span>
+        </button>
+
         {sentSuccess ? (
-          <div className="py-8 text-center space-y-4 animate-in fade-in zoom-in duration-300">
-            <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center ring-4 ring-emerald-500/20">
+          <div className="py-6 text-center space-y-4 animate-in fade-in zoom-in duration-300">
+            <div className="mx-auto w-16 h-16 rounded-full bg-[#25D366]/15 text-[#25D366] flex items-center justify-center ring-4 ring-[#25D366]/20">
               <CheckCircle2 className="w-10 h-10" />
             </div>
             <div className="space-y-1">
-              <h4 className="font-extrabold text-lg text-foreground">تم استلام رسالتك بنجاح!</h4>
+              <h4 className="font-extrabold text-lg text-foreground">تم توجيه رسالتك إلى واتساب!</h4>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
-                شكراً جزيلاً لك. وصلت رسالتك إلى بريد الدعم الفني وسنحرص على قراءتها والرد عليك.
+                شكراً لتواصلك معنا على الرقم <span className="font-bold text-[#25D366]">{SUPPORT_WHATSAPP_DISPLAY}</span>، وسنحرص على الرد عليك ومساعدتك بأسرع وقت إن شاء الله.
               </p>
             </div>
-            <button
-              onClick={onClose}
-              className="btn-gold px-8 py-3 rounded-2xl font-bold text-sm shadow-md active:scale-95 transition-transform"
-            >
-              تم
-            </button>
+            <div className="flex gap-2 justify-center">
+              <button
+                type="button"
+                onClick={handleDirectQuickWhatsApp}
+                className="px-5 py-2.5 rounded-xl bg-[#25D366] text-white font-bold text-xs flex items-center gap-1.5 shadow cursor-pointer active:scale-95 transition-all"
+              >
+                <WhatsAppIcon className="w-4 h-4 text-white" />
+                <span>إعادة فتح واتساب</span>
+              </button>
+              <button
+                onClick={onClose}
+                className="btn-gold px-6 py-2.5 rounded-xl font-bold text-xs shadow-md active:scale-95 transition-transform cursor-pointer"
+              >
+                إغلاق
+              </button>
+            </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-3.5">
+          <form onSubmit={handleSendWhatsApp} className="space-y-3.5">
             {/* نوع الرسالة */}
             <div className="space-y-1.5 text-right">
-              <label className="text-xs font-bold text-foreground block">نوع الرسالة</label>
+              <label className="text-xs font-bold text-foreground block">نوع الموضوع</label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                 {REPORT_TYPES.map((item) => {
                   const Icon = item.icon;
@@ -145,16 +191,16 @@ export default function SupportModal({ onClose }: Props) {
                       key={item.id}
                       type="button"
                       onClick={() => setType(item.id)}
-                      className={`h-16 rounded-2xl p-1.5 flex flex-col items-center justify-center gap-1 border transition-all text-xs font-bold ${
+                      className={`h-16 rounded-2xl p-1.5 flex flex-col items-center justify-center gap-1 border transition-all text-xs font-bold cursor-pointer ${
                         isSelected
-                          ? "border-emerald-600 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shadow-sm ring-1 ring-emerald-500/30 scale-[1.02]"
+                          ? "border-[#25D366] bg-[#25D366]/10 text-emerald-700 dark:text-emerald-400 shadow-sm ring-1 ring-[#25D366]/30 scale-[1.02]"
                           : "border-border bg-muted/50 text-muted-foreground hover:bg-muted"
                       }`}
                     >
                       <Icon
                         className={`w-4 h-4 ${
                           isSelected
-                            ? "text-emerald-600 dark:text-emerald-400"
+                            ? "text-[#25D366]"
                             : "text-muted-foreground"
                         }`}
                       />
@@ -180,25 +226,10 @@ export default function SupportModal({ onClose }: Props) {
               />
             </div>
 
-            {/* البريد الإلكتروني للتواصل */}
-            <div className="space-y-1 text-right">
-              <label className="text-xs font-bold text-foreground flex items-center gap-1">
-                <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                <span>بريدك الإلكتروني (للرد عليك)</span>
-              </label>
-              <input
-                type="email"
-                value={senderEmail}
-                onChange={(e) => setSenderEmail(e.target.value)}
-                placeholder="example@gmail.com (اختياري)..."
-                className="w-full text-xs p-2.5 rounded-xl bg-muted/60 border border-border text-foreground placeholder-muted-foreground focus:border-accent outline-none transition-colors text-right"
-              />
-            </div>
-
             {/* نص الرسالة أو البلاغ */}
             <div className="space-y-1 text-right">
               <label className="text-xs font-bold text-foreground block">
-                نص الرسالة أو الملاحظة <span className="text-destructive">*</span>
+                نص الرسالة أو الاستفسار <span className="text-destructive">*</span>
               </label>
               <div className="relative">
                 <textarea
@@ -209,7 +240,7 @@ export default function SupportModal({ onClose }: Props) {
                       setErrorMessage("");
                     }
                   }}
-                  placeholder="اكتب هنا تفاصيل رسالتك أو اقتراحك وسنقرأها بعناية..."
+                  placeholder="اكتب هنا ما تحتاجه أو المشكلة التي واجهتك وسيرد عليك الدعم الفني فوراً على واتساب..."
                   rows={4}
                   className="w-full text-xs p-3 rounded-2xl bg-muted/60 border border-border text-foreground placeholder-muted-foreground focus:border-accent outline-none transition-colors resize-none leading-relaxed"
                 />
@@ -219,7 +250,7 @@ export default function SupportModal({ onClose }: Props) {
               </div>
             </div>
 
-            {/* رسالة الخطأ إن وُجدت */}
+            {/* رسالة التنبيه إن وُجدت */}
             {errorMessage && (
               <div className="flex items-center gap-1.5 text-xs text-destructive font-bold">
                 <AlertCircle className="w-4 h-4 shrink-0" />
@@ -227,58 +258,39 @@ export default function SupportModal({ onClose }: Props) {
               </div>
             )}
 
-            {/* زر الإرسال */}
+            {/* زر الإرسال الرئيسي عبر واتساب */}
             <button
               type="submit"
               disabled={sending || !description.trim()}
-              className="w-full h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
+              className="w-full h-13 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-[#25D366]/20 active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
             >
               {sending ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>جاري إرسال الرسالة...</span>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>جاري فتح واتساب...</span>
                 </>
               ) : (
                 <>
-                  <Send className="w-4 h-4 rotate-180" />
-                  <span>إرسال الرسالة الآن 🚀</span>
+                  <WhatsAppIcon className="w-5 h-5 text-white" />
+                  <span>إرسال الرسالة عبر واتساب ({SUPPORT_WHATSAPP_DISPLAY})</span>
                 </>
               )}
             </button>
 
-            <div className="pt-2 text-center border-t border-border/50 space-y-2">
-              <span className="text-[11px] text-muted-foreground block">قنوات التواصل المباشرة الفورية:</span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <a
-                  href={createWhatsAppSupportLink({
-                    typeLabel: REPORT_TYPES.find((t) => t.id === type)?.label || "رسالة",
-                    description: description.trim(),
-                    profileName: senderName.trim() || activeProfile?.name || "مستخدم التطبيق",
-                    senderEmail: senderEmail.trim(),
-                    appVersion: CURRENT_VERSION,
-                  })}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="py-2.5 px-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  مراسلة واتساب فورية
-                </a>
-
-                <a
-                  href={createMailtoSupportLink({
-                    typeLabel: REPORT_TYPES.find((t) => t.id === type)?.label || "رسالة",
-                    description: description.trim(),
-                    profileName: senderName.trim() || activeProfile?.name || "مستخدم التطبيق",
-                    senderEmail: senderEmail.trim(),
-                    appVersion: CURRENT_VERSION,
-                  })}
-                  className="py-2.5 px-3 rounded-xl border border-border bg-secondary hover:bg-secondary/80 text-secondary-foreground font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <Mail className="w-3.5 h-3.5 text-accent" />
-                  تطبيق البريد مباشرة
-                </a>
-              </div>
+            {/* خيارات إضافية */}
+            <div className="pt-2 text-center border-t border-border/50 flex items-center justify-center gap-3 text-xs">
+              <a
+                href={createMailtoSupportLink({
+                  typeLabel: REPORT_TYPES.find((t) => t.id === type)?.label || "رسالة",
+                  description: description.trim(),
+                  profileName: senderName.trim() || activeProfile?.name || "مستخدم التطبيق",
+                  appVersion: CURRENT_VERSION,
+                })}
+                className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-[11px] font-medium transition-colors"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>أو الإرسال عبر البريد الإلكتروني</span>
+              </a>
             </div>
           </form>
         )}

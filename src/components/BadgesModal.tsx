@@ -47,7 +47,9 @@ export default function BadgesModal({ onClose }: Props) {
     longestStreak: 0,
     thisWeekDays: [false, false, false, false, false, false, false],
     dayNamesArr: ["", "", "", "", "", "", ""],
+    monthActiveCount: 0,
   });
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const profile = getProfile();
 
@@ -55,6 +57,32 @@ export default function BadgesModal({ onClose }: Props) {
     checkAndUnlockBadges();
     setBadges(getBadgesList());
     setStreakInfo(calculateStreak());
+  };
+
+  const handleDownloadCertificate = async () => {
+    setIsDownloading(true);
+    try {
+      const prog = getProgress();
+      const c = getCoins();
+      await downloadQuranCertificate({
+        profile,
+        streakDays: streakInfo.currentStreak || 1,
+        minutes: prog.minutes || 0,
+        coins: c || 0,
+        currentSurahNumber: profile.currentSurah || 36,
+      });
+      toast({
+        title: "🎉 تم تحميل شهادة الإنجاز والحماس بنجاح!",
+        description: "تم حفظ الصورة بجودة عالية في جهازك.",
+      });
+    } catch {
+      toast({
+        title: "تعذر إنشاء الشهادة حالياً",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   useEffect(() => {
@@ -175,6 +203,32 @@ export default function BadgesModal({ onClose }: Props) {
                 );
               })}
             </div>
+          </div>
+
+          {/* شريط إحصائية أيام الحماس في الشهر وزر تحميل الشهادة الفاخرة */}
+          <div className="pt-3 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-2.5 relative z-10">
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-black text-sm border border-amber-500/30">
+                📅
+              </span>
+              <div>
+                <span className="text-xs font-black text-white block">
+                  أيام الحماس هذا الشهر: <span className="text-amber-400">{Math.max(streakInfo.monthActiveCount, streakInfo.currentStreak, 1)} يوماً</span> 🔥
+                </span>
+                <span className="text-[10px] text-zinc-400 font-medium">
+                  {streakInfo.monthActiveCount >= 20 ? "همة قرآنية أسطورية متميزة! 🌟" : "واصل التلاوة لزيادة أيام همتك وحماسك"}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleDownloadCertificate}
+              disabled={isDownloading}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-stone-950 font-black text-xs flex items-center gap-1.5 shadow-lg active:scale-95 transition-all cursor-pointer shrink-0"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{isDownloading ? "جاري التجهيز..." : "تحميل شهادة الحماس"}</span>
+            </button>
           </div>
         </div>
 
