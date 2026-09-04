@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { Lightbulb, CheckCircle2, Star, ArrowLeft } from "lucide-react";
-import { addCoins } from "../data/kidsProfile";
+import { addCoins, spendCoins, getCoins, formatCoins } from "../data/kidsProfile";
 import { GameDef } from "../data/gameCatalog";
+import { toast } from "../hooks/use-toast";
 
 interface WordBuilderGameProps {
   def: GameDef;
@@ -9,17 +10,22 @@ interface WordBuilderGameProps {
 }
 
 interface QuranWord {
-  displayWord: string; // الكلمة للعرض النهائي
+  displayWord: string; // الكلمة للعرض النهائي (أحرف صافية مجردة بدون أي تشكيل)
   cleanWord: string;   // الكلمة بدون أي تشكيل لتفكيك الحروف
   meaning: string;
   surah: string;
 }
 
-// دالة تنظيف التشكيل والحركات والمدود من النص العربي
-function removeTashkeel(text: string): string {
+/**
+ * دالة تنظيف التشكيل والحركات والمدود وضبط المصاحف تماماً
+ * تجرد النص ليبقى أحرفاً عربية صافية بدون تشكيل أو حركات نهائياً
+ */
+function cleanLettersOnly(text: string): string {
   return text
-    .replace(/[\u064B-\u065F\u0670\u0640]/g, "") // إزالة حركات الإعراب والتنوين والشدة
-    .replace(/أ|إ|آ/g, "ا") // توحيد الألفات لتسهيل اللعب على الطفل
+    // إزالة جميع علامات التشكيل، الحركات، التنوين، الشدة، السكون، وعلامات الضبط القرآني
+    .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u06DF-\u06E8\u0640]/g, "")
+    // توحيد الألفات (همزة وصل، قطع، مدة) لتسهيل التهجئة النقية على الطفل
+    .replace(/[أإآٱ]/g, "ا")
     .trim();
 }
 
@@ -56,13 +62,16 @@ const RAW_WORDS = [
   { word: "يَس", meaning: "قلب القرآن الكريم والسورة العظيمة", surah: "سورة يس (36)" },
 ];
 
-// معالجة الكلمات وتجريدها تماماً من التشكيل لمنع أي بطاقة حركة منفصلة
-const QURAN_WORDS: QuranWord[] = RAW_WORDS.map((item) => ({
-  displayWord: item.word,
-  cleanWord: removeTashkeel(item.word),
-  meaning: item.meaning,
-  surah: item.surah,
-}));
+// الكلمات مجردة تماماً من أي تشكيل — أحرف صافية فقط للعرض والتفكيك
+const QURAN_WORDS: QuranWord[] = RAW_WORDS.map((item) => {
+  const clean = cleanLettersOnly(item.word);
+  return {
+    displayWord: clean,
+    cleanWord: clean,
+    meaning: item.meaning,
+    surah: item.surah,
+  };
+});
 
 function playSound(type: "correct" | "wrong" | "win") {
   try {
@@ -117,9 +126,16 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
 
   const [wordIdx, setWordIdx] = useState(0);
   const [score, setScore] = useState(0);
+  const [coins, setCoins] = useState(getCoins);
   const [placedIndices, setPlacedIndices] = useState<number[]>([]);
   const [showHint, setShowHint] = useState(false);
   const [mistakeAnim, setMistakeAnim] = useState<number | null>(null);
+
+  useEffect(() => {
+    const handleCoins = () => setCoins(getCoins());
+    window.addEventListener("mushaf:coins", handleCoins);
+    return () => window.removeEventListener("mushaf:coins", handleCoins);
+  }, []);
 
   const currentWord = shuffledPool[wordIdx % shuffledPool.length];
   // حروف الكلمة نظيفة بدون تشكيل نهائياً
@@ -162,12 +178,26 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
     }
   };
 
+  // التلميح بنجوم: خصم 1 نجمة لكشف الحرف التالي
   const useMueenHint = () => {
-    if (nextNeededIndex < letters.length) {
-      playSound("correct");
-      setPlacedIndices((prev) => [...prev, nextNeededIndex]);
-      setShowHint(true);
+    if (placedIndices.length === letters.length || nextNeededIndex >= letters.length) return;
+
+    if (!spendCoins(1)) {
+      toast({
+        title: "النجوم غير كافية!",
+        description: "تحتاج إلى نجمة واحدة ⭐ للحصول على مساعدة المُعِين. اقرأ واستمع للقرآن لتكسب نجوماً!",
+        variant: "destructive",
+      });
+      return;
     }
+
+    playSound("correct");
+    setPlacedIndices((prev) => [...prev, nextNeededIndex]);
+    setShowHint(true);
+    toast({
+      title: "مساعدة المُعِين 💡 (-1 ⭐)",
+      description: `تم كشف الحرف (${letters[nextNeededIndex]}) بخصم نجمة واحدة من رصيدك.`,
+    });
   };
 
   const nextWord = () => {
@@ -178,13 +208,13 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
 
   return (
     <div className="space-y-4 text-center animate-fade-up max-w-xl mx-auto" dir="rtl">
-      {/* شريط الإحصائيات العلوي الملكي */}
-      <div className="flex items-center justify-between text-xs font-bold text-muted-foreground px-3 py-1.5 bg-secondary/50 rounded-2xl border border-border/60">
-        <span className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 px-3 py-1 rounded-full font-black">
+      {/* شريط الإحصائيات العلوي الملكي الموحد */}
+      <div className="flex items-center justify-between text-xs font-bold text-muted-foreground px-3.5 py-2 bg-secondary/50 backdrop-blur-sm rounded-2xl border border-border/70 shadow-sm">
+        <span className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full font-black">
           {currentWord.surah}
         </span>
-        <span className="text-amber-500 font-black text-sm flex items-center gap-1">
-          <Star className="w-4 h-4 fill-amber-500" /> {score} نجمة
+        <span className="text-amber-500 font-black text-sm flex items-center gap-1 bg-amber-500/15 px-3 py-1 rounded-full border border-amber-500/30 shadow-inner">
+          <Star className="w-4 h-4 fill-amber-500" /> {formatCoins(coins)} نجمة
         </span>
         <span className="text-muted-foreground font-extrabold">
           الكلمة {(wordIdx % shuffledPool.length) + 1} من {shuffledPool.length}
@@ -202,8 +232,8 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
         </p>
       </div>
 
-      {/* خانات ترتيب الحروف (الكلمة المستهدفة) */}
-      <div className="flex flex-wrap justify-center items-center gap-1.5 sm:gap-2.5 py-3 px-2 bg-secondary/20 rounded-3xl border border-border/40">
+      {/* خانات ترتيب الحروف المجردة (الكلمة المستهدفة) */}
+      <div className="flex flex-wrap justify-center items-center gap-1.5 sm:gap-2.5 py-3.5 px-2 bg-secondary/20 rounded-3xl border border-border/40">
         {letters.map((char, idx) => {
           const isFilled = placedIndices.includes(idx);
           return (
@@ -221,7 +251,7 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
         })}
       </div>
 
-      {/* مجموعة الحروف المبعثرة النظيفة (بدون تشكيل تماماً!) */}
+      {/* مجموعة الحروف المبعثرة النظيفة (أحرف فقط بدون تشكيل إطلاقاً) */}
       <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-card via-card to-secondary/40 border-2 border-border/70 shadow-lg space-y-2.5">
         <p className="text-xs font-bold text-muted-foreground">اضغط على الحرف التالي بالترتيب:</p>
         <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
@@ -249,27 +279,28 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
         </div>
       </div>
 
-      {/* زر المُعِين القرآني الذكي للمساعدة */}
+      {/* زر المُعِين القرآني الذكي للمساعدة بالنجوم */}
       <button
         onClick={useMueenHint}
         disabled={isWordDone}
-        className="w-full p-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/30 active:scale-98 transition-all flex items-center justify-between text-right cursor-pointer"
+        className="w-full p-3.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/30 active:scale-98 transition-all flex items-center justify-between text-right cursor-pointer shadow-sm disabled:opacity-50"
       >
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
             <Lightbulb className="w-4 h-4 animate-pulse" />
           </div>
           <div className="text-xs">
-            <span className="text-amber-500 font-black block">المُعِين القرآني:</span>
+            <span className="text-amber-500 font-black block">المُعِين القرآني الذكي:</span>
             <span className="text-muted-foreground font-semibold">
               {showHint
                 ? `كشف لك المُعِين الحرف المطلوب: (${letters[placedIndices[placedIndices.length - 1]]})!`
-                : "هل تريد مساعدة؟ اضغط هنا ليكشف لك المُعِين الحرف التالي 💡"}
+                : "اضغط هنا ليكشف لك المُعِين الحرف التالي (تكلفة المساعدة: 1 نجمة)"}
             </span>
           </div>
         </div>
-        <span className="text-[11px] font-black text-amber-500 bg-amber-500/15 px-3 py-1 rounded-full border border-amber-500/25 shrink-0">
-          مساعدة
+        <span className="text-[11px] font-black text-amber-500 bg-amber-500/20 px-3 py-1 rounded-full border border-amber-500/30 shrink-0 flex items-center gap-1 shadow-sm">
+          <Star className="w-3 h-3 fill-amber-500" />
+          <span>تلميح (-1 ⭐)</span>
         </span>
       </button>
 

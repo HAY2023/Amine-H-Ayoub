@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Star, RefreshCw, CheckCircle2, Flame, Heart } from "lucide-react";
-import { addCoins } from "../data/kidsProfile";
+import { useState, useEffect, useMemo } from "react";
+import { Star, RefreshCw, CheckCircle2, Flame, Heart, Lightbulb, ArrowLeft } from "lucide-react";
+import { addCoins, spendCoins, getCoins, formatCoins } from "../data/kidsProfile";
 import { GameDef } from "../data/gameCatalog";
+import { toast } from "../hooks/use-toast";
 
 interface CatchStarGameProps {
   def: GameDef;
@@ -29,7 +30,7 @@ const STAR_ROUNDS = [
       { id: "7", text: "الْبِرّ", isGood: true, surahRef: "آل عمران" },
       { id: "8", text: "الْغَفْلَة", isGood: false },
     ],
-    hint: "ابحث عن الصبر، الصدق، التقوى والإحسان!",
+    hint: "ابحث عن الصبر، الصدق، التقوى والإحسان في كتاب الله!",
   },
   {
     title: "اجمع كلمات سورة الإخلاص العظيمة",
@@ -57,26 +58,94 @@ const STAR_ROUNDS = [
       { id: "5", text: "الْحَمِيم", isGood: false },
       { id: "6", text: "جَنَّةُ الْخُلْد", isGood: true, surahRef: "الفرقان" },
     ],
-    hint: "الفردوس، جنات عدن، ودار السلام!",
+    hint: "الفردوس، جنات عدن، ودار السلام، وجنة الخلد!",
   },
 ];
+
+function playSound(type: "correct" | "wrong" | "hint" | "win") {
+  try {
+    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    if (type === "correct") {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.14);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.14);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+    } else if (type === "wrong") {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(130, ctx.currentTime + 0.22);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.22);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.23);
+    } else if (type === "hint") {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.16);
+    } else if (type === "win") {
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.08 + 0.25);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + idx * 0.08);
+        osc.stop(ctx.currentTime + idx * 0.08 + 0.26);
+      });
+    }
+  } catch {
+    /* AudioContext fallback */
+  }
+}
 
 export default function CatchStarGame({ def: _def }: CatchStarGameProps) {
   const [roundIdx, setRoundIdx] = useState(0);
   const [collected, setCollected] = useState<string[]>([]);
   const [score, setScore] = useState(0);
+  const [coins, setCoins] = useState(getCoins);
   const [lives, setLives] = useState(3);
   const [streak, setStreak] = useState(0);
   const [roundDone, setRoundDone] = useState(false);
+  const [showHint, setShowHint] = useState(false);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleCoins = () => setCoins(getCoins());
+    window.addEventListener("mushaf:coins", handleCoins);
+    return () => window.removeEventListener("mushaf:coins", handleCoins);
+  }, []);
 
   const currentRound = STAR_ROUNDS[roundIdx % STAR_ROUNDS.length];
-  const requiredCount = currentRound.items.filter((i) => i.isGood).length;
+  const goodItems = useMemo(() => currentRound.items.filter((i) => i.isGood), [currentRound]);
+  const requiredCount = goodItems.length;
 
   const handleStarClick = (item: StarItem) => {
     if (collected.includes(item.id) || roundDone || lives <= 0) return;
 
     if (item.isGood) {
-      // Good star!
+      playSound("correct");
       const newCollected = [...collected, item.id];
       setCollected(newCollected);
       const newStreak = streak + 1;
@@ -86,12 +155,40 @@ export default function CatchStarGame({ def: _def }: CatchStarGameProps) {
       addCoins(bonus);
 
       if (newCollected.length === requiredCount) {
+        playSound("win");
         setRoundDone(true);
       }
     } else {
-      // Wrong distractor star
+      playSound("wrong");
       setStreak(0);
       setLives((l) => Math.max(0, l - 1));
+    }
+  };
+
+  // المساعدة بتكلفة 1 نجمة: إبراز نجمة صحيحة غير ملتقطة + إظهار التلميح
+  const useMueenHint = () => {
+    if (roundDone || lives <= 0) return;
+
+    if (!spendCoins(1)) {
+      toast({
+        title: "النجوم غير كافية!",
+        description: "تحتاج إلى نجمة واحدة ⭐ للحصول على مساعدة المُعِين. اقرأ واستمع للقرآن لتكسب نجوماً!",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    playSound("hint");
+    setShowHint(true);
+
+    const remainingGood = goodItems.find((i) => !collected.includes(i.id));
+    if (remainingGood) {
+      setHighlightedId(remainingGood.id);
+      setTimeout(() => setHighlightedId(null), 3000);
+      toast({
+        title: "مساعدة المُعِين 💡 (-1 ⭐)",
+        description: `أبرز لك المُعِين النجمة الصحيحة «${remainingGood.text}» بنجاح!`,
+      });
     }
   };
 
@@ -100,86 +197,103 @@ export default function CatchStarGame({ def: _def }: CatchStarGameProps) {
     setCollected([]);
     setRoundDone(false);
     setLives(3);
+    setShowHint(false);
+    setHighlightedId(null);
   };
 
   const isGameOver = lives <= 0;
 
   if (isGameOver) {
     return (
-      <div className="space-y-4 text-center py-6 animate-fade-up">
-        <p className="text-4xl">💫</p>
-        <h3 className="text-lg font-bold text-foreground">انتهت المحاولات يا بطل</h3>
-        <p className="text-xs text-muted-foreground">جمعت {score} نجمة مباركة، حاول مرة أخرى!</p>
+      <div className="space-y-4 text-center py-6 animate-fade-up max-w-xl mx-auto" dir="rtl">
+        <p className="text-5xl animate-bounce">💫</p>
+        <h3 className="text-xl font-black text-foreground">انتهت المحاولات يا بطل القرآن</h3>
+        <p className="text-sm text-muted-foreground font-bold">جمعت {score} نجمة مباركة، حاول مرة أخرى وتفوق!</p>
         <button
           onClick={() => {
             setLives(3);
             setCollected([]);
             setRoundDone(false);
             setStreak(0);
+            setShowHint(false);
+            setHighlightedId(null);
           }}
-          className="btn-gold mx-auto px-6 py-2 rounded-xl font-bold flex items-center gap-2"
+          className="btn-gold mx-auto px-7 py-3 rounded-2xl font-black flex items-center gap-2 text-base shadow-xl hover:brightness-105 active:scale-95 transition-all"
         >
-          <RefreshCw className="w-4 h-4" /> إعادة المحاولة
+          <RefreshCw className="w-5 h-5" /> إعادة المحاولة
         </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 text-center animate-fade-up">
-      {/* HUD Header */}
-      <div className="flex items-center justify-between text-xs font-bold text-muted-foreground px-1">
-        <div className="flex items-center gap-1 text-rose-400">
+    <div className="space-y-4 text-center animate-fade-up max-w-xl mx-auto" dir="rtl">
+      {/* شريط الإحصائيات العلوي الملكي الموحد */}
+      <div className="flex items-center justify-between text-xs font-bold text-muted-foreground px-3.5 py-2 bg-secondary/50 backdrop-blur-sm rounded-2xl border border-border/70 shadow-sm">
+        <div className="flex items-center gap-1 text-rose-500">
           {Array.from({ length: 3 }, (_, i) => (
             <Heart
               key={i}
-              className={`w-4 h-4 ${i < lives ? "fill-rose-500 text-rose-500" : "text-muted-foreground opacity-30"}`}
+              className={`w-4 h-4 transition-all ${
+                i < lives ? "fill-rose-500 text-rose-500 scale-110" : "text-muted-foreground opacity-25 scale-90"
+              }`}
             />
           ))}
         </div>
-        <span className="text-amber-500 font-extrabold text-sm">⭐ {score} نجمة</span>
-        <span>
+        <span className="text-amber-500 font-black text-sm flex items-center gap-1 bg-amber-500/15 px-3 py-1 rounded-full border border-amber-500/30 shadow-inner">
+          <Star className="w-4 h-4 fill-amber-500" /> {formatCoins(coins)} نجمة
+        </span>
+        <span className="text-muted-foreground font-extrabold">
           الهدف: {collected.length} / {requiredCount}
         </span>
       </div>
 
-      {/* Mission Banner */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-teal-500/15 to-amber-500/15 border border-amber-500/30 space-y-1">
-        <h3 className="font-extrabold text-foreground text-sm sm:text-base">{currentRound.title}</h3>
-        <p className="text-xs text-muted-foreground">{currentRound.targetDesc}</p>
+      {/* بطاقة المهمة القرآنية الفاخرة */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-card via-card/95 to-secondary/30 border-2 border-accent/25 shadow-xl space-y-1.5 text-right">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-black text-accent uppercase tracking-wider">مهمة صيد النجوم:</p>
+          <span className="text-[10px] font-bold text-muted-foreground">اختر النجوم المباركة وتجنب البقية</span>
+        </div>
+        <h3 className="font-black text-foreground text-base sm:text-lg">{currentRound.title}</h3>
+        <p className="text-xs text-muted-foreground font-medium">{currentRound.targetDesc}</p>
       </div>
 
-      {/* Streak Notification */}
+      {/* شارة السلسلة الماهرة */}
       {streak >= 3 && (
-        <div className="inline-flex items-center gap-1 bg-amber-500/15 text-amber-500 border border-amber-500/30 px-3 py-0.5 rounded-full text-xs font-extrabold animate-pulse">
-          <Flame className="w-3.5 h-3.5 text-orange-500" /> صائد ماهر: {streak} نجوم متتالية!
+        <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 text-amber-500 border border-amber-500/30 px-3.5 py-1 rounded-full text-xs font-black animate-pulse shadow-sm">
+          <Flame className="w-4 h-4 text-orange-500 fill-orange-500" /> صائد ماهر: {streak} نجوم متتالية!
         </div>
       )}
 
-      {/* Floating Star Cards Grid */}
+      {/* شبكة النجوم التفاعلية الفاخرة */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
         {currentRound.items.map((item) => {
           const isCollected = collected.includes(item.id);
+          const isHighlighted = highlightedId === item.id;
 
           return (
             <button
               key={item.id}
               onClick={() => handleStarClick(item)}
               disabled={isCollected || roundDone}
-              className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col items-center justify-center gap-1.5 min-h-[85px] sm:min-h-[95px] transition-all active:scale-95 ${
+              className={`p-3.5 sm:p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-1.5 min-h-[90px] sm:min-h-[105px] transition-all duration-200 active:scale-95 cursor-pointer shadow-sm ${
                 isCollected
-                  ? "bg-emerald-500/20 border-emerald-500 text-emerald-400 scale-95 opacity-80"
-                  : "bg-card hover:bg-amber-500/10 border-border hover:border-amber-500/50 shadow-sm"
+                  ? "bg-gradient-to-br from-emerald-600/30 to-emerald-800/40 border-emerald-400 text-emerald-300 scale-95 opacity-85 shadow-emerald-500/20"
+                  : isHighlighted
+                  ? "bg-amber-500/30 border-amber-400 scale-105 animate-bounce shadow-lg shadow-amber-500/40 ring-4 ring-amber-400/40"
+                  : "bg-secondary/80 hover:bg-secondary border-border hover:border-amber-500/50"
               }`}
             >
               <Star
                 className={`w-6 h-6 transition-all ${
                   isCollected
-                    ? "fill-emerald-400 text-emerald-400 scale-110 animate-bounce"
+                    ? "fill-emerald-400 text-emerald-400 scale-110"
+                    : isHighlighted
+                    ? "fill-amber-400 text-amber-300 scale-125 animate-pulse"
                     : "fill-amber-400 text-amber-500"
                 }`}
               />
-              <span className="font-black text-sm sm:text-base text-foreground">{item.text}</span>
+              <span className="font-black text-sm sm:text-base text-foreground leading-tight">{item.text}</span>
               {item.surahRef && isCollected && (
                 <span className="text-[10px] text-emerald-400 font-bold">{item.surahRef}</span>
               )}
@@ -188,31 +302,46 @@ export default function CatchStarGame({ def: _def }: CatchStarGameProps) {
         })}
       </div>
 
-      {/* Al-Mu'een Cheer & Hint */}
-      <div className="p-3 rounded-xl bg-teal-500/10 border border-teal-500/25 flex items-center justify-between text-right text-xs">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">💡</span>
-          <div>
-            <b className="text-teal-400 block font-bold">المُعِين القرآني:</b>
-            <span className="text-muted-foreground">{currentRound.hint}</span>
+      {/* زر المُعِين القرآني الذكي للمساعدة بنجوم (-1 ⭐) */}
+      <button
+        onClick={useMueenHint}
+        disabled={roundDone || lives <= 0}
+        className="w-full p-3.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/30 active:scale-98 transition-all flex items-center justify-between text-right cursor-pointer shadow-sm disabled:opacity-50"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+            <Lightbulb className="w-4 h-4 animate-pulse" />
+          </div>
+          <div className="text-xs min-w-0">
+            <span className="text-amber-500 font-black block">المُعِين القرآني الذكي:</span>
+            <span className="text-muted-foreground font-semibold truncate block">
+              {showHint ? currentRound.hint : "اضغط هنا ليكشف لك المُعِين نجمة صحيحة (تكلفة: 1 نجمة)"}
+            </span>
           </div>
         </div>
-      </div>
+        <span className="text-[11px] font-black text-amber-500 bg-amber-500/20 px-3 py-1 rounded-full border border-amber-500/30 shrink-0 flex items-center gap-1 shadow-sm">
+          <Star className="w-3 h-3 fill-amber-500" />
+          <span>تلميح (-1 ⭐)</span>
+        </span>
+      </button>
 
-      {/* Completion Banner */}
+      {/* بطاقة اكتمال المرحلة */}
       {roundDone && (
-        <div className="p-4 rounded-xl bg-card border border-emerald-500/40 space-y-2 animate-in fade-in zoom-in-95">
-          <div className="flex items-center justify-center gap-2 font-black text-emerald-400 text-base">
-            <CheckCircle2 className="w-5 h-5" /> ما شاء الله! جمعت كل النجوم المباركة! 🌟
+        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-card via-card to-secondary/30 border-2 border-emerald-500/50 shadow-xl space-y-3 animate-fade-up text-right">
+          <div className="flex items-center justify-center gap-2 font-black text-emerald-400 text-base sm:text-lg">
+            <CheckCircle2 className="w-6 h-6 text-emerald-400 animate-bounce" />
+            <span>ما شاء الله! جمعت كل النجوم المباركة! 🌟</span>
           </div>
           <button
             onClick={nextRound}
-            className="btn-gold mx-auto px-6 py-2 rounded-xl font-bold text-sm shadow-md mt-1"
+            className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black text-base shadow-lg hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-2"
           >
-            المرحلة التالية ←
+            <span>المرحلة التالية</span>
+            <ArrowLeft className="w-5 h-5" />
           </button>
         </div>
       )}
     </div>
   );
 }
+
