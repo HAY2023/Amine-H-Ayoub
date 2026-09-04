@@ -157,11 +157,7 @@ jobs:
         run: npx tauri android build --apk --target aarch64
 
       - name: Build Mobile AAB (Google Play Bundle)
-        run: |
-          cd src-tauri/gen/android
-          chmod +x gradlew
-          ./gradlew bundleUniversalRelease || ./gradlew bundleRelease
-          cd ../../..
+        run: npx tauri android build --aab --target aarch64
 
       - name: Prepare and sign 2 Mobile files (AAB + APK)
         run: |
@@ -177,23 +173,39 @@ jobs:
             -dname "CN=QuranKids, OU=App, O=QuranKids, L=Algiers, ST=Algiers, C=DZ"
 
           # ① توقيع APK
-          RAW_APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -type f | head -1)
+          RAW_APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*release*.apk" -type f 2>/dev/null | head -1)
+          if [ -z "$RAW_APK" ]; then
+            RAW_APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -type f 2>/dev/null | head -1)
+          fi
+          if [ -z "$RAW_APK" ]; then
+            RAW_APK=$(find src-tauri -name "*.apk" -type f 2>/dev/null | head -1)
+          fi
+          echo "Found Mobile APK: $RAW_APK"
           if [ -n "$RAW_APK" ]; then
             "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" "dist-mobile/Quran_${VERSION}_Android_Mobile.apk"
             "$BUILD_TOOLS_DIR/apksigner" sign --ks "$KEYSTORE" --ks-pass "pass:quran2026" "dist-mobile/Quran_${VERSION}_Android_Mobile.apk"
             echo "✅ Mobile APK signed"
           else
             echo "::error::No Mobile APK found!"
+            exit 1
           fi
 
           # ② توقيع AAB
-          RAW_AAB=$(find src-tauri/gen/android/app/build/outputs/bundle -name "*.aab" -type f | head -1)
+          RAW_AAB=$(find src-tauri/gen/android/app/build/outputs/bundle -name "*release*.aab" -type f 2>/dev/null | head -1)
+          if [ -z "$RAW_AAB" ]; then
+            RAW_AAB=$(find src-tauri/gen/android/app/build/outputs/bundle -name "*.aab" -type f 2>/dev/null | head -1)
+          fi
+          if [ -z "$RAW_AAB" ]; then
+            RAW_AAB=$(find src-tauri -name "*.aab" -type f 2>/dev/null | head -1)
+          fi
+          echo "Found Mobile AAB: $RAW_AAB"
           if [ -n "$RAW_AAB" ]; then
             cp "$RAW_AAB" "dist-mobile/Quran_${VERSION}_Android_Mobile.aab"
             jarsigner -keystore "$KEYSTORE" -storepass "quran2026" -keypass "quran2026" "dist-mobile/Quran_${VERSION}_Android_Mobile.aab" "quran"
             echo "✅ Mobile AAB signed"
           else
             echo "::error::No Mobile AAB found!"
+            exit 1
           fi
 
           echo "=== Mobile files (2/6) ==="
@@ -275,11 +287,7 @@ jobs:
         run: npx tauri android build --apk --target aarch64
 
       - name: Build TV AAB (Google Play TV Bundle)
-        run: |
-          cd src-tauri/gen/android
-          chmod +x gradlew
-          ./gradlew bundleUniversalRelease || ./gradlew bundleRelease
-          cd ../../..
+        run: npx tauri android build --aab --target aarch64
 
       - name: Prepare and sign 2 TV files (AAB + APK)
         run: |
@@ -295,23 +303,39 @@ jobs:
             -dname "CN=QuranTV, OU=App, O=QuranKids, L=Algiers, ST=Algiers, C=DZ"
 
           # ③ توقيع TV APK
-          RAW_APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -type f | head -1)
+          RAW_APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*release*.apk" -type f 2>/dev/null | head -1)
+          if [ -z "$RAW_APK" ]; then
+            RAW_APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -type f 2>/dev/null | head -1)
+          fi
+          if [ -z "$RAW_APK" ]; then
+            RAW_APK=$(find src-tauri -name "*.apk" -type f 2>/dev/null | head -1)
+          fi
+          echo "Found TV APK: $RAW_APK"
           if [ -n "$RAW_APK" ]; then
             "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" "dist-tv/Quran_${VERSION}_Android_TV.apk"
             "$BUILD_TOOLS_DIR/apksigner" sign --ks "$KEYSTORE" --ks-pass "pass:quran2026" "dist-tv/Quran_${VERSION}_Android_TV.apk"
             echo "✅ TV APK signed"
           else
             echo "::error::No TV APK found!"
+            exit 1
           fi
 
           # ④ توقيع TV AAB
-          RAW_AAB=$(find src-tauri/gen/android/app/build/outputs/bundle -name "*.aab" -type f | head -1)
+          RAW_AAB=$(find src-tauri/gen/android/app/build/outputs/bundle -name "*release*.aab" -type f 2>/dev/null | head -1)
+          if [ -z "$RAW_AAB" ]; then
+            RAW_AAB=$(find src-tauri/gen/android/app/build/outputs/bundle -name "*.aab" -type f 2>/dev/null | head -1)
+          fi
+          if [ -z "$RAW_AAB" ]; then
+            RAW_AAB=$(find src-tauri -name "*.aab" -type f 2>/dev/null | head -1)
+          fi
+          echo "Found TV AAB: $RAW_AAB"
           if [ -n "$RAW_AAB" ]; then
             cp "$RAW_AAB" "dist-tv/Quran_${VERSION}_Android_TV.aab"
             jarsigner -keystore "$KEYSTORE" -storepass "quran2026" -keypass "quran2026" "dist-tv/Quran_${VERSION}_Android_TV.aab" "qurantv"
             echo "✅ TV AAB signed"
           else
             echo "::error::No TV AAB found!"
+            exit 1
           fi
 
           echo "=== TV files (2/6) ==="
@@ -329,7 +353,7 @@ jobs:
   publish:
     name: "🚀 Publish 6 Store-Ready Files"
     needs: [windows, android-mobile, android-tv]
-    if: always() && (needs.windows.result == 'success' || needs.android-mobile.result == 'success' || needs.android-tv.result == 'success')
+    if: always() && needs.windows.result == 'success' && needs.android-mobile.result == 'success' && needs.android-tv.result == 'success'
     runs-on: ubuntu-22.04
     permissions:
       contents: write
