@@ -273,19 +273,19 @@ function animConfetti() {
 }
 requestAnimationFrame(animConfetti);
 
-// 25+ Rich Quranic Words
+// 25+ Rich Quranic Words (بدون تشكيل - أحرف صافية للطفل)
 const WORDS = [
-  { word: "مَكَّة", hint: "البلد الحرام وفيها الكعبة المشرفة" },
-  { word: "الْحَمْد", hint: "أول كلمة بعد البسملة في سورة الفاتحة" },
-  { word: "النُّور", hint: "الله نور السماوات والأرض" },
-  { word: "الصَّبْر", hint: "واستعينوا بالصبر والصلاة" },
-  { word: "الْجَنَّة", hint: "دار النعيم التي أعدها الله للمتقين" },
-  { word: "الصَّلَاة", hint: "عمود الدين والركن الثاني من أركان الإسلام" },
-  { word: "الْكَوْثَر", hint: "إنا أعطيناك الكوثر" },
-  { word: "الْفَلَق", hint: "قل أعوذ برب الفلق" },
-  { word: "الْإِخْلَاص", hint: "سورة التوحيد الخالص لله وحده" },
-  { word: "الرَّحْمَة", hint: "ورحمتي وسعت كل شيء" },
-  { word: "التَّقْوَى", hint: "وتزودوا فإن خير الزاد التقوى" }
+  { word: "مكة", hint: "البلد الحرام وفيها الكعبة المشرفة" },
+  { word: "الحمد", hint: "أول كلمة بعد البسملة في سورة الفاتحة" },
+  { word: "النور", hint: "الله نور السماوات والأرض" },
+  { word: "الصبر", hint: "واستعينوا بالصبر والصلاة" },
+  { word: "الجنة", hint: "دار النعيم التي أعدها الله للمتقين" },
+  { word: "الصلاة", hint: "عمود الدين والركن الثاني من أركان الإسلام" },
+  { word: "الكوثر", hint: "إنا أعطيناك الكوثر" },
+  { word: "الفلق", hint: "قل أعوذ برب الفلق" },
+  { word: "الإخلاص", hint: "سورة التوحيد الخالص لله وحده" },
+  { word: "الرحمة", hint: "ورحمتي وسعت كل شيء" },
+  { word: "التقوى", hint: "وتزودوا فإن خير الزاد التقوى" }
 ];
 
 let s = 0, lv = 1, currentWordObj = null, letters = [], nextIndex = 0;
@@ -303,7 +303,8 @@ function round() {
   targetLabel.textContent = `رتّب الكلمة الكريمة: (${currentWordObj.hint})`;
   mueenHint.textContent = `تلميح المُعِين: ${currentWordObj.hint}`;
 
-  letters = currentWordObj.word.split('');
+  const cleanWord = currentWordObj.word.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "");
+  letters = cleanWord.split('');
   slotsContainer.innerHTML = '';
   letters.forEach(() => {
     const slot = document.createElement('div');

@@ -182,33 +182,6 @@ const GameHud = ({ g }: { g: Game }) => {
   );
 };
 
-function useRoundTimer(roundKey: unknown, seconds: number, onExpire: () => void, enabled = true) {
-  const [left, setLeft] = useState(seconds);
-  const cb = useRef(onExpire); cb.current = onExpire;
-  useEffect(() => {
-    setLeft(seconds);
-    if (!enabled) return;
-    const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
-    const start = now();
-    const id = setInterval(() => {
-      const rem = Math.max(0, seconds - (now() - start) / 1000);
-      setLeft(rem);
-      if (rem <= 0) { clearInterval(id); cb.current(); }
-    }, 100);
-    return () => clearInterval(id);
-  }, [roundKey, seconds, enabled]);
-  return left;
-}
-const TimerBar = ({ left, seconds }: { left: number; seconds: number }) => {
-  const pct = Math.max(0, Math.min(100, (left / seconds) * 100));
-  const danger = left <= seconds * 0.3;
-  return (
-    <div className="h-2 rounded-full bg-secondary overflow-hidden">
-      <div className={`h-full transition-[width] duration-100 ${danger ? "bg-destructive" : "bg-sky-500"}`} style={{ width: `${pct}%` }} />
-    </div>
-  );
-};
-
 const ROUNDS = 20;
 const SessionBar = ({ q }: { q: number }) => (
   <p className="text-[11px] text-muted-foreground font-bold">السؤال {Math.min(q, ROUNDS)} من {ROUNDS}</p>
@@ -529,13 +502,11 @@ function WhichEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
     return shuffle([a, b]);
   };
   const [two, setTwo] = useState(pair);
-  const [round, setRound] = useState(0);
   const [qNum, setQNum] = useState(1);
   const [reveal, setReveal] = useState(false);
   const g = useGame();
   const finished = qNum > ROUNDS;
-  const next = (nn: number) => { setReveal(false); setQNum(nn); if (nn <= ROUNDS) { setTwo(pair()); setRound(r => r + 1); } };
-  const left = useRoundTimer(round, 8, () => { g.miss(); setReveal(true); window.setTimeout(() => next(qNum + 1), 1100); }, !reveal && !finished);
+  const next = (nn: number) => { setReveal(false); setQNum(nn); if (nn <= ROUNDS) { setTwo(pair()); } };
   const choose = (s: typeof SURAHS[number]) => {
     if (reveal || finished) return;
     const other = two.find(x => x.number !== s.number)!;
@@ -543,14 +514,13 @@ function WhichEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
     setReveal(true);
     window.setTimeout(() => next(qNum + 1), 1100);
   };
-  const replay = () => { g.reset(); setQNum(1); setTwo(pair()); setRound(r => r + 1); };
+  const replay = () => { g.reset(); setQNum(1); setTwo(pair()); };
   if (finished) return <ResultCard g={g} onReplay={replay} />;
   const maxCount = Math.max(...two.map(s => s.ayahCount));
   return (
     <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
       <p className="text-muted-foreground text-base sm:text-lg font-medium">أيّ سورة عدد آياتها أكثر؟</p>
-      <TimerBar left={left} seconds={8} />
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {two.map(s => (
           <button key={s.number} onClick={() => choose(s)}
@@ -581,14 +551,12 @@ function QuizEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
     return { s, opts: shuffle([...opts]) };
   };
   const [q, setQ] = useState(make);
-  const [round, setRound] = useState(0);
   const [qNum, setQNum] = useState(1);
   const [reveal, setReveal] = useState(false);
   const [chosen, setChosen] = useState<number | null>(null);
   const g = useGame();
   const finished = qNum > ROUNDS;
-  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) { setQ(make()); setRound(r => r + 1); } };
-  const left = useRoundTimer(round, 8, () => { g.miss(); setReveal(true); window.setTimeout(() => next(qNum + 1), 1100); }, !reveal && !finished);
+  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) { setQ(make()); } };
   const answer = (n: number) => {
     if (reveal || finished) return;
     setChosen(n);
@@ -596,13 +564,12 @@ function QuizEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
     setReveal(true);
     window.setTimeout(() => next(qNum + 1), 1100);
   };
-  const replay = () => { g.reset(); setQNum(1); setQ(make()); setRound(r => r + 1); };
+  const replay = () => { g.reset(); setQNum(1); setQ(make()); };
   if (finished) return <ResultCard g={g} onReplay={replay} />;
   return (
     <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
       <p className="text-foreground text-base sm:text-lg font-bold">كم عدد آيات سورة <span className="text-accent">{q.s.name}</span>؟</p>
-      <TimerBar left={left} seconds={8} />
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {q.opts.map((n, i) => {
           const cls = reveal && n === q.s.ayahCount ? "bg-success/20 border-success/60 text-success"
@@ -626,14 +593,12 @@ function CountEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
     return { s, opts: shuffle([s, ...wrong]) };
   };
   const [q, setQ] = useState(make);
-  const [round, setRound] = useState(0);
   const [qNum, setQNum] = useState(1);
   const [reveal, setReveal] = useState(false);
   const [chosen, setChosen] = useState<number | null>(null);
   const g = useGame();
   const finished = qNum > ROUNDS;
-  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) { setQ(make()); setRound(r => r + 1); } };
-  const left = useRoundTimer(round, 9, () => { g.miss(); setReveal(true); window.setTimeout(() => next(qNum + 1), 1100); }, !reveal && !finished);
+  const next = (nn: number) => { setReveal(false); setChosen(null); setQNum(nn); if (nn <= ROUNDS) { setQ(make()); } };
   const choose = (n: number) => {
     if (reveal || finished) return;
     setChosen(n);
@@ -641,13 +606,12 @@ function CountEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
     setReveal(true);
     window.setTimeout(() => next(qNum + 1), 1100);
   };
-  const replay = () => { orderRef.current = shuffle(pool); g.reset(); setQNum(1); setQ(make()); setRound(r => r + 1); };
+  const replay = () => { orderRef.current = shuffle(pool); g.reset(); setQNum(1); setQ(make()); };
   if (finished) return <ResultCard g={g} onReplay={replay} />;
   return (
     <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
       <p className="text-foreground text-base sm:text-lg font-bold">أيّ سورة عدد آياتها <span className="text-accent">{q.s.ayahCount}</span>؟</p>
-      <TimerBar left={left} seconds={9} />
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {q.opts.map(s => {
           const cls = reveal && s.number === q.s.number ? "bg-success/20 border-success/60 text-success"
@@ -1229,7 +1193,6 @@ function AyahSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
   };
 
   const [q, setQ] = useState(make);
-  const [round, setRound] = useState(0);
   const [qNum, setQNum] = useState(1);
   const [reveal, setReveal] = useState(false);
   const [chosen, setChosen] = useState<number | null>(null);
@@ -1242,15 +1205,8 @@ function AyahSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
     setQNum(nn); 
     if (nn <= ROUNDS) { 
       setQ(make()); 
-      setRound(r => r + 1); 
     } 
   };
-
-  const left = useRoundTimer(round, 12, () => { 
-    g.miss(); 
-    setReveal(true); 
-    window.setTimeout(() => next(qNum + 1), 1300); 
-  }, !reveal && !finished);
 
   const choose = (n: number) => {
     if (reveal || finished) return;
@@ -1265,7 +1221,6 @@ function AyahSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
     g.reset(); 
     setQNum(1); 
     setQ(make()); 
-    setRound(r => r + 1); 
   };
 
   if (finished) return <ResultCard g={g} onReplay={replay} />;
@@ -1274,7 +1229,6 @@ function AyahSurahPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
     <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
       <p className="text-muted-foreground text-sm sm:text-base font-bold">من أي سورة هذه الآية الكريمة؟</p>
-      <TimerBar left={left} seconds={12} />
       <div className="p-3 sm:p-5 rounded-2xl bg-accent/10 border border-accent/40 font-amiri text-lg sm:text-2xl leading-loose text-foreground game-content">{q.ayah.text}</div>
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {q.opts.map(o => {
@@ -1325,7 +1279,6 @@ function AyahOrderPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
   };
 
   const [q, setQ] = useState(make);
-  const [round, setRound] = useState(0);
   const [qNum, setQNum] = useState(1);
   const [picked, setPicked] = useState<number[]>([]);
   const [reveal, setReveal] = useState(false);
@@ -1338,15 +1291,8 @@ function AyahOrderPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
     setQNum(nn); 
     if (nn <= ROUNDS) { 
       setQ(make()); 
-      setRound(r => r + 1); 
     } 
   };
-
-  const left = useRoundTimer(round, 15, () => { 
-    g.miss(); 
-    setReveal(true); 
-    window.setTimeout(() => next(qNum + 1), 1400); 
-  }, !reveal && !finished);
 
   const tap = (k: number) => {
     if (reveal || finished || picked.includes(k)) return;
@@ -1371,7 +1317,6 @@ function AyahOrderPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
     setQNum(1); 
     setPicked([]); 
     setQ(make()); 
-    setRound(r => r + 1); 
   };
 
   if (finished) return <ResultCard g={g} onReplay={replay} />;
@@ -1379,7 +1324,6 @@ function AyahOrderPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: Ga
     <div className="space-y-4 text-center">
       <SessionBar q={qNum} />
       <p className="text-muted-foreground text-sm">من سورة <b className="text-accent">{q.s.name}</b> — اضغط الآيات الثلاث بترتيبها الصحيح</p>
-      <TimerBar left={left} seconds={15} />
       <div className="grid gap-2">
         {q.opts.map(a => {
           const order = picked.indexOf(a.k);
@@ -1405,45 +1349,23 @@ function AyahLongerEngine({ def, minSurah }: { def: GameDef; minSurah: number })
   return <AyahLongerPlay corpus={corpus} def={def} minSurah={minSurah} />;
 }
 function AyahLongerPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: GameDef; minSurah: number }) {
-  const pool = poolFor(def, minSurah).map(s => s.number);
-  const eligible = corpus.filter(c => c.ayahs.length >= 2 && pool.includes(c.app));
-  const orderRef = useRef(shuffle(eligible));
+  const pool = poolFor(def, minSurah);
+  const eligible = corpus.filter(c => pool.some(s => s.number === c.app) && c.ayahs.length >= 2);
   const usedPairsRef = useRef<Set<string>>(new Set());
 
-  const getNext = () => { 
-    if (!orderRef.current.length) orderRef.current = shuffle(eligible); 
-    return orderRef.current.pop() || eligible[0]; 
-  };
-
-  const wc = (t: string) => t.split(" ").length;
+  const wc = (t: string) => t.trim().split(/\s+/).length;
 
   const make = () => {
-    let a = getNext();
-    let b = getNext();
-    let ao = a.ayahs[0];
-    let bo = b.ayahs[0];
+    let a = eligible[0], b = eligible[1] || eligible[0];
+    let ao = a.ayahs[0], bo = b.ayahs[0];
 
-    for (let t = 0; t < 25; t++) {
-      a = getNext();
-      b = getNext();
-      if (a.app === b.app && eligible.length > 1) b = getNext();
+    for (let t = 0; t < 20; t++) {
+      a = eligible[Math.floor(Math.random() * eligible.length)];
+      b = eligible[Math.floor(Math.random() * eligible.length)];
       ao = a.ayahs[Math.floor(Math.random() * a.ayahs.length)];
       bo = b.ayahs[Math.floor(Math.random() * b.ayahs.length)];
-
-      const closeBo = b.ayahs
-        .filter(x => x.text !== ao.text && Math.abs(wc(x.text) - wc(ao.text)) <= 2)
-        .sort((x, y) => Math.abs(wc(x.text) - wc(ao.text)) - Math.abs(wc(y.text) - wc(ao.text)));
-      if (closeBo.length) {
-        bo = closeBo[Math.floor(Math.random() * Math.min(3, closeBo.length))];
-      }
-
-      if (wc(ao.text) === wc(bo.text)) {
-        const alt = a.ayahs.filter(x => x.text !== ao.text && Math.abs(wc(x.text) - wc(bo.text)) === 1);
-        if (alt.length) ao = alt[Math.floor(Math.random() * alt.length)];
-      }
-
-      const key = [ao.text, bo.text].sort().join("###");
-      if (!usedPairsRef.current.has(key)) {
+      const key = `${a.app}:${ao.n}-${b.app}:${bo.n}`;
+      if (Math.abs(wc(ao.text) - wc(bo.text)) >= 2 && !usedPairsRef.current.has(key)) {
         usedPairsRef.current.add(key);
         break;
       }
@@ -1453,7 +1375,6 @@ function AyahLongerPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: G
   };
 
   const [q, setQ] = useState(make);
-  const [round, setRound] = useState(0);
   const [qNum, setQNum] = useState(1);
   const [reveal, setReveal] = useState(false);
   const [chosen, setChosen] = useState<"a" | "b" | null>(null);
@@ -1466,15 +1387,8 @@ function AyahLongerPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: G
     setQNum(nn); 
     if (nn <= ROUNDS) { 
       setQ(make()); 
-      setRound(r => r + 1); 
     } 
   };
-
-  const left = useRoundTimer(round, 12, () => { 
-    g.miss(); 
-    setReveal(true); 
-    window.setTimeout(() => next(qNum + 1), 1300); 
-  }, !reveal && !finished);
 
   const choose = (w: "a" | "b") => {
     if (reveal || finished) return;
@@ -1489,7 +1403,6 @@ function AyahLongerPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: G
     g.reset(); 
     setQNum(1); 
     setQ(make()); 
-    setRound(r => r + 1); 
   };
 
   if (finished) return <ResultCard g={g} onReplay={replay} />;
@@ -1510,7 +1423,6 @@ function AyahLongerPlay({ corpus, def, minSurah }: { corpus: SurahText[]; def: G
     <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
       <p className="text-muted-foreground text-base sm:text-lg font-medium">أيّ الآيتين كلماتها أكثر؟</p>
-      <TimerBar left={left} seconds={12} />
       <div className="grid grid-cols-2 gap-2 sm:gap-4">
         {card("a", q.ao.text, q.an, wc(q.ao.text))}
         {card("b", q.bo.text, q.bn, wc(q.bo.text))}
@@ -1553,7 +1465,6 @@ function SurahOrderEngine({ def, minSurah }: { def: GameDef; minSurah: number })
   };
 
   const [q, setQ] = useState(make);
-  const [round, setRound] = useState(0);
   const [qNum, setQNum] = useState(1);
   const [picked, setPicked] = useState<number[]>([]);
   const [reveal, setReveal] = useState(false);
@@ -1566,15 +1477,8 @@ function SurahOrderEngine({ def, minSurah }: { def: GameDef; minSurah: number })
     setQNum(nn); 
     if (nn <= ROUNDS) { 
       setQ(make()); 
-      setRound(r => r + 1); 
     } 
   };
-
-  const left = useRoundTimer(round, 15, () => { 
-    g.miss(); 
-    setReveal(true); 
-    window.setTimeout(() => next(qNum + 1), 1400); 
-  }, !reveal && !finished);
 
   const tap = (n: number) => {
     if (reveal || finished || picked.includes(n)) return;
@@ -1600,7 +1504,6 @@ function SurahOrderEngine({ def, minSurah }: { def: GameDef; minSurah: number })
     setQNum(1); 
     setPicked([]); 
     setQ(make()); 
-    setRound(r => r + 1); 
   };
 
   if (finished) return <ResultCard g={g} onReplay={replay} />;
@@ -1609,7 +1512,6 @@ function SurahOrderEngine({ def, minSurah }: { def: GameDef; minSurah: number })
     <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
       <p className="text-muted-foreground text-base sm:text-lg font-medium">اضغط السور الأربع حسب ترتيبها في المصحف</p>
-      <TimerBar left={left} seconds={15} />
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {q.four.map(s => {
           const order = picked.indexOf(s.number);
@@ -1648,7 +1550,6 @@ function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
   };
 
   const [q, setQ] = useState(make);
-  const [round, setRound] = useState(0);
   const [qNum, setQNum] = useState(1);
   const [reveal, setReveal] = useState(false);
   const [chosen, setChosen] = useState<number | null>(null);
@@ -1661,15 +1562,8 @@ function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
     setQNum(nn); 
     if (nn <= ROUNDS) { 
       setQ(make()); 
-      setRound(r => r + 1); 
     } 
   };
-
-  const left = useRoundTimer(round, 10, () => { 
-    g.miss(); 
-    setReveal(true); 
-    window.setTimeout(() => next(qNum + 1), 1300); 
-  }, !reveal && !finished);
 
   const choose = (n: number) => {
     if (reveal || finished) return;
@@ -1684,7 +1578,6 @@ function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
     g.reset(); 
     setQNum(1); 
     setQ(make()); 
-    setRound(r => r + 1); 
   };
 
   if (finished) return <ResultCard g={g} onReplay={replay} />;
@@ -1693,7 +1586,6 @@ function SurahNumEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
     <div className="space-y-3 sm:space-y-4 text-center">
       <SessionBar q={qNum} />
       <p className="text-foreground text-base sm:text-lg font-bold">ما رقم سورة <span className="text-accent">{q.s.name}</span> في ترتيب المصحف؟</p>
-      <TimerBar left={left} seconds={10} />
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {q.opts.map(n => {
           const cls = reveal && n === q.s.number ? "bg-success/20 border-success/60 text-success"
