@@ -1,5 +1,6 @@
-name: Build 3 Core Platforms (Windows + Android Mobile + Android TV)
+name: Build Store-Ready Packages (6 Files)
 
+# يعمل عند دفع إلى main أو وسم إصدار أو تشغيل يدوي
 on:
   workflow_dispatch:
   push:
@@ -14,13 +15,23 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# ═══════════════════════════════════════════════════════════════════
+#   يُنتج بالضبط 6 ملفات جاهزة للمتاجر:
+#   ① Quran_1.0.0_Android_Mobile.aab   → Google Play Store (هاتف)
+#   ② Quran_1.0.0_Android_Mobile.apk   → توزيع مباشر (هاتف)
+#   ③ Quran_1.0.0_Android_TV.aab       → Google Play Store (تلفاز)
+#   ④ Quran_1.0.0_Android_TV.apk       → توزيع مباشر (تلفاز)
+#   ⑤ Quran-Amine-H-Ayoub_1.0.0_Setup.exe         → ويندوز
+#   ⑥ Quran-Amine-H-Ayoub_1.0.0_Microsoft_Store.msi → متجر مايكروسوفت
+# ═══════════════════════════════════════════════════════════════════
+
 jobs:
-  # ───────────── 1. تطبيق ويندوز وميكروسوفت ستور (EXE + MSI) ─────────────
+  # ╔═══════════════════════════════════════════════╗
+  # ║  1/3 — 💻 ويندوز: EXE + MSI                  ║
+  # ╚═══════════════════════════════════════════════╝
   windows:
-    name: 💻 Build Windows & Microsoft Store (EXE & MSI)
+    name: "💻 Windows (EXE + MSI)"
     runs-on: windows-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -35,16 +46,6 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
-      - name: Clean up obsolete releases and set v1.0.0 as Latest
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for tag in "v1.0.1" "v1.0.15"; do
-            gh release delete "$tag" --yes --cleanup-tag || true
-          done
-          gh release edit "v1.0.0" --title "Quran-Amine H Ayoub v1.0.0" --latest || true
-
       - name: Install dependencies
         run: npm ci
 
@@ -54,79 +55,54 @@ jobs:
       - name: Generate app icon
         run: npx tauri icon src-tauri/icons/app-icon.png
 
-      - name: Build Windows desktop app (Tauri)
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.0' }}
-          releaseName: "Quran-Amine H Ayoub ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.0' }}"
-          releaseBody: "Quran Kareem - Reciter Sheikh Hajj Ayoub Amine (المصحف المرتل برواية ورش — القارئ الشيخ حاج أيوب أمين)"
-          releaseDraft: false
-          prerelease: false
+      # بناء مباشر بدون tauri-action لتجنب رفع ملفات إضافية
+      - name: Build Windows app (Tauri)
+        run: npx tauri build
 
-      - name: Prepare Windows & Microsoft Store Installers
+      - name: Prepare 2 Windows files
         shell: bash
         run: |
           mkdir -p dist-windows
-          TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then VERSION="1.0.0"; fi
+          VERSION="1.0.0"
 
-          MSI_FILE=$(find src-tauri/target/release/bundle -name "*.msi" | head -1)
-          EXE_FILE=$(find src-tauri/target/release/bundle -name "*.exe" | head -1)
+          EXE_FILE=$(find src-tauri/target/release/bundle/nsis -name "*.exe" -type f 2>/dev/null | head -1)
+          if [ -z "$EXE_FILE" ]; then
+            EXE_FILE=$(find src-tauri/target/release/bundle -name "*.exe" -type f | head -1)
+          fi
+          MSI_FILE=$(find src-tauri/target/release/bundle/msi -name "*.msi" -type f 2>/dev/null | head -1)
+          if [ -z "$MSI_FILE" ]; then
+            MSI_FILE=$(find src-tauri/target/release/bundle -name "*.msi" -type f | head -1)
+          fi
+
+          if [ -n "$EXE_FILE" ]; then
+            cp "$EXE_FILE" "dist-windows/Quran-Amine-H-Ayoub_${VERSION}_Setup.exe"
+            echo "✅ EXE: $(du -h "dist-windows/Quran-Amine-H-Ayoub_${VERSION}_Setup.exe" | cut -f1)"
+          else
+            echo "::error::No EXE found!"
+          fi
 
           if [ -n "$MSI_FILE" ]; then
             cp "$MSI_FILE" "dist-windows/Quran-Amine-H-Ayoub_${VERSION}_Microsoft_Store.msi"
-          fi
-          if [ -n "$EXE_FILE" ]; then
-            cp "$EXE_FILE" "dist-windows/Quran-Amine-H-Ayoub_${VERSION}_Setup.exe"
+            echo "✅ MSI: $(du -h "dist-windows/Quran-Amine-H-Ayoub_${VERSION}_Microsoft_Store.msi" | cut -f1)"
+          else
+            echo "::error::No MSI found!"
           fi
 
-      - name: Upload Windows Installers Artifact
-        uses: actions/upload-artifact@v4
+          echo "=== Windows files (2/6) ==="
+          ls -lh dist-windows/
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: windows-microsoft-store-installer
-          if-no-files-found: warn
+          name: windows-files
+          if-no-files-found: error
           path: dist-windows/*
 
-      - name: Attach Windows Packages to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="${{ github.ref_name }}"
-          if [ "$TAG" = "main" ]; then TAG="v1.0.0"; fi
-          gh release upload "$TAG" dist-windows/* --clobber || true
-
-      - name: Upload Windows Setup to Hugging Face
-        if: success()
-        shell: bash
-        run: |
-          EXE_FILE=$(find dist-windows -name "*.exe" | head -1)
-          TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then VERSION="1.0.0"; fi
-          
-          if [ -n "$EXE_FILE" ] && [ -n "${{ secrets.HF_TOKEN }}" ]; then
-            echo "Uploading Windows EXE to Hugging Face (Quran_${VERSION}_x64-setup.exe)..."
-            curl -f -X POST \
-              -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
-              --data-binary "@$EXE_FILE" \
-              "https://huggingface.co/api/datasets/hammoualiyoucef20/quran-app-releases/upload/main/Quran_${VERSION}_x64-setup.exe" || true
-            curl -f -X POST \
-              -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
-              --data-binary "@$EXE_FILE" \
-              "https://huggingface.co/api/datasets/hammoualiyoucef20/quran-app-releases/upload/main/Quran_1.0.0_x64-setup.exe" || true
-          fi
-
-  # ───────────── 2. تطبيق أندرويد للهواتف (AAB + APK) ─────────────
+  # ╔═══════════════════════════════════════════════╗
+  # ║  2/3 — 📱 أندرويد هاتف: AAB + APK             ║
+  # ╚═══════════════════════════════════════════════╝
   android-mobile:
-    name: 📱 Build Android Mobile (AAB & APK)
+    name: "📱 Android Mobile (AAB + APK)"
     runs-on: ubuntu-22.04
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -171,87 +147,70 @@ jobs:
       - name: Initialize Android project
         run: npx tauri android init || true
 
-      - name: Inject custom app icon into Android project
+      - name: Inject custom app icon
         run: |
           npx tauri icon src-tauri/icons/app-icon.png
           mkdir -p src-tauri/gen/android/app/src/main/res
           cp -rf src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/ || true
 
-      - name: Build Android Mobile APK
+      - name: Build Mobile APK
         run: npx tauri android build --apk --target aarch64
 
-      - name: Build Android Mobile AAB (Google Play Store Bundle)
+      - name: Build Mobile AAB (Google Play Bundle)
         run: |
           cd src-tauri/gen/android
           chmod +x gradlew
           ./gradlew bundleUniversalRelease || ./gradlew bundleRelease
           cd ../../..
 
-      - name: Prepare and sign mobile AAB and APK
+      - name: Prepare and sign 2 Mobile files (AAB + APK)
         run: |
-          TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then VERSION="1.0.0"; fi
-
+          VERSION="1.0.0"
           BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools/" | sort -V | tail -1)"
-          mkdir -p dist-android-mobile
+          mkdir -p dist-mobile
 
-          FALLBACK_KS="${{ runner.temp }}/release.keystore"
-          keytool -genkeypair -v -keystore "$FALLBACK_KS" -alias "quran" -keyalg RSA -keysize 2048 -validity 10000 -storepass "quran2026" -keypass "quran2026" -dname "CN=QuranKids"
+          # إنشاء مفتاح التوقيع
+          KEYSTORE="${{ runner.temp }}/release.keystore"
+          keytool -genkeypair -v -keystore "$KEYSTORE" -alias "quran" \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "quran2026" -keypass "quran2026" \
+            -dname "CN=QuranKids, OU=App, O=QuranKids, L=Algiers, ST=Algiers, C=DZ"
 
-          # Sign APK
+          # ① توقيع APK
           RAW_APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -type f | head -1)
           if [ -n "$RAW_APK" ]; then
-            "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" "dist-android-mobile/Quran_${VERSION}_Android_Mobile.apk"
-            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" "dist-android-mobile/Quran_${VERSION}_Android_Mobile.apk"
+            "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" "dist-mobile/Quran_${VERSION}_Android_Mobile.apk"
+            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$KEYSTORE" --ks-pass "pass:quran2026" "dist-mobile/Quran_${VERSION}_Android_Mobile.apk"
+            echo "✅ Mobile APK signed"
+          else
+            echo "::error::No Mobile APK found!"
           fi
 
-          # Sign AAB (Google Play Bundle)
+          # ② توقيع AAB
           RAW_AAB=$(find src-tauri/gen/android/app/build/outputs/bundle -name "*.aab" -type f | head -1)
           if [ -n "$RAW_AAB" ]; then
-            cp "$RAW_AAB" "dist-android-mobile/Quran_${VERSION}_Android_Mobile.aab"
-            jarsigner -keystore "$FALLBACK_KS" -storepass "quran2026" -keypass "quran2026" "dist-android-mobile/Quran_${VERSION}_Android_Mobile.aab" "quran"
+            cp "$RAW_AAB" "dist-mobile/Quran_${VERSION}_Android_Mobile.aab"
+            jarsigner -keystore "$KEYSTORE" -storepass "quran2026" -keypass "quran2026" "dist-mobile/Quran_${VERSION}_Android_Mobile.aab" "quran"
+            echo "✅ Mobile AAB signed"
+          else
+            echo "::error::No Mobile AAB found!"
           fi
 
-      - name: Upload Mobile AAB and APK Artifact
-        uses: actions/upload-artifact@v4
+          echo "=== Mobile files (2/6) ==="
+          ls -lh dist-mobile/
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: android-mobile-bundle-and-apk
-          path: dist-android-mobile/*
+          name: android-mobile-files
+          if-no-files-found: error
+          path: dist-mobile/*
 
-      - name: Attach Mobile Packages to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="${{ github.ref_name }}"
-          if [ "$TAG" = "main" ]; then TAG="v1.0.0"; fi
-          gh release upload "$TAG" dist-android-mobile/* --clobber || true
-
-      - name: Upload Android Mobile Artifacts to Hugging Face
-        if: success()
-        run: |
-          TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then VERSION="1.0.0"; fi
-
-          for f in dist-android-mobile/*; do
-            FNAME=$(basename "$f")
-            if [ -f "$f" ] && [ -n "${{ secrets.HF_TOKEN }}" ]; then
-              echo "Uploading $FNAME to Hugging Face..."
-              curl -f -X POST \
-                -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
-                --data-binary "@$f" \
-                "https://huggingface.co/api/datasets/hammoualiyoucef20/quran-app-releases/upload/main/$FNAME" || true
-            fi
-          done
-
-  # ───────────── 3. تطبيق التلفاز الذكي (Android TV AAB + APK) ─────────────
+  # ╔═══════════════════════════════════════════════╗
+  # ║  3/3 — 📺 أندرويد تلفاز: AAB + APK            ║
+  # ╚═══════════════════════════════════════════════╝
   android-tv:
-    name: 📺 Build Android TV (AAB & APK)
+    name: "📺 Android TV (AAB + APK)"
     runs-on: ubuntu-22.04
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -295,7 +254,7 @@ jobs:
       - name: Initialize Android project
         run: npx tauri android init || true
 
-      - name: Inject custom app icon into Android project
+      - name: Inject custom app icon
         run: |
           npx tauri icon src-tauri/icons/app-icon.png
           mkdir -p src-tauri/gen/android/app/src/main/res
@@ -305,77 +264,175 @@ jobs:
         run: |
           MANIFEST="src-tauri/gen/android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST" ]; then
-            # Ensure touch is not required for Android TV
+            # دعم واجهة التلفاز + لا يتطلب شاشة لمس
             sed -i '/<manifest/a \    <uses-feature android:name="android.software.leanback" android:required="false" \/>\n    <uses-feature android:name="android.hardware.touchscreen" android:required="false" \/>' "$MANIFEST"
-            # Add Leanback Launcher category for Android TV launcher home screen
+            # إضافة LEANBACK_LAUNCHER ليظهر في قائمة التلفاز
             sed -i '/<category android:name="android.intent.category.LAUNCHER" \/>/a \                <category android:name="android.intent.category.LEANBACK_LAUNCHER" \/>' "$MANIFEST"
+            echo "✅ Android TV Manifest configured"
           fi
 
-      - name: Build Android TV APK
+      - name: Build TV APK
         run: npx tauri android build --apk --target aarch64
 
-      - name: Build Android TV AAB (Google Play TV Bundle)
+      - name: Build TV AAB (Google Play TV Bundle)
         run: |
           cd src-tauri/gen/android
           chmod +x gradlew
           ./gradlew bundleUniversalRelease || ./gradlew bundleRelease
           cd ../../..
 
-      - name: Prepare and sign TV AAB and APK
+      - name: Prepare and sign 2 TV files (AAB + APK)
         run: |
-          TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then VERSION="1.0.0"; fi
-
+          VERSION="1.0.0"
           BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools/" | sort -V | tail -1)"
-          mkdir -p dist-android-tv
+          mkdir -p dist-tv
 
-          FALLBACK_KS="${{ runner.temp }}/tv.keystore"
-          keytool -genkeypair -v -keystore "$FALLBACK_KS" -alias "qurantv" -keyalg RSA -keysize 2048 -validity 10000 -storepass "quran2026" -keypass "quran2026" -dname "CN=QuranTV"
+          # إنشاء مفتاح التوقيع
+          KEYSTORE="${{ runner.temp }}/tv.keystore"
+          keytool -genkeypair -v -keystore "$KEYSTORE" -alias "qurantv" \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "quran2026" -keypass "quran2026" \
+            -dname "CN=QuranTV, OU=App, O=QuranKids, L=Algiers, ST=Algiers, C=DZ"
 
-          # Sign TV APK
+          # ③ توقيع TV APK
           RAW_APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -type f | head -1)
           if [ -n "$RAW_APK" ]; then
-            "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" "dist-android-tv/Quran_${VERSION}_Android_TV.apk"
-            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$FALLBACK_KS" --ks-pass "pass:quran2026" "dist-android-tv/Quran_${VERSION}_Android_TV.apk"
+            "$BUILD_TOOLS_DIR/zipalign" -f -p 4 "$RAW_APK" "dist-tv/Quran_${VERSION}_Android_TV.apk"
+            "$BUILD_TOOLS_DIR/apksigner" sign --ks "$KEYSTORE" --ks-pass "pass:quran2026" "dist-tv/Quran_${VERSION}_Android_TV.apk"
+            echo "✅ TV APK signed"
+          else
+            echo "::error::No TV APK found!"
           fi
 
-          # Sign TV AAB (Google Play TV Bundle)
+          # ④ توقيع TV AAB
           RAW_AAB=$(find src-tauri/gen/android/app/build/outputs/bundle -name "*.aab" -type f | head -1)
           if [ -n "$RAW_AAB" ]; then
-            cp "$RAW_AAB" "dist-android-tv/Quran_${VERSION}_Android_TV.aab"
-            jarsigner -keystore "$FALLBACK_KS" -storepass "quran2026" -keypass "quran2026" "dist-android-tv/Quran_${VERSION}_Android_TV.aab" "qurantv"
+            cp "$RAW_AAB" "dist-tv/Quran_${VERSION}_Android_TV.aab"
+            jarsigner -keystore "$KEYSTORE" -storepass "quran2026" -keypass "quran2026" "dist-tv/Quran_${VERSION}_Android_TV.aab" "qurantv"
+            echo "✅ TV AAB signed"
+          else
+            echo "::error::No TV AAB found!"
           fi
 
-      - name: Upload TV AAB and APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-tv-bundle-and-apk
-          path: dist-android-tv/*
+          echo "=== TV files (2/6) ==="
+          ls -lh dist-tv/
 
-      - name: Attach TV Packages to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-tv-files
+          if-no-files-found: error
+          path: dist-tv/*
+
+  # ╔═══════════════════════════════════════════════════════════════╗
+  # ║  🚀 النشر: رفع 6 ملفات فقط إلى GitHub Release + HuggingFace ║
+  # ╚═══════════════════════════════════════════════════════════════╝
+  publish:
+    name: "🚀 Publish 6 Store-Ready Files"
+    needs: [windows, android-mobile, android-tv]
+    if: always() && (needs.windows.result == 'success' || needs.android-mobile.result == 'success' || needs.android-tv.result == 'success')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # تحميل جميع artifacts من الوظائف الثلاث
+      - uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Collect all 6 files into one folder
+        run: |
+          mkdir -p release-files
+          find all-artifacts -type f \( -name "*.exe" -o -name "*.msi" -o -name "*.aab" -o -name "*.apk" \) -exec cp {} release-files/ \;
+
+          echo ""
+          echo "╔══════════════════════════════════════════════╗"
+          echo "║     📦 6 Store-Ready Files for v1.0.0        ║"
+          echo "╠══════════════════════════════════════════════╣"
+
+          COUNT=0
+          for f in release-files/*; do
+            COUNT=$((COUNT+1))
+            SIZE=$(du -h "$f" | cut -f1)
+            NAME=$(basename "$f")
+            echo "║  $COUNT. $NAME ($SIZE)"
+          done
+
+          echo "╠══════════════════════════════════════════════╣"
+          echo "║  Total: $COUNT files                         ║"
+          echo "╚══════════════════════════════════════════════╝"
+
+          if [ "$COUNT" -lt 1 ]; then
+            echo "::error::No files found to publish!"
+            exit 1
+          fi
+
+      # حذف جميع الملفات القديمة من الإصدار ورفع الـ 6 فقط
+      - name: Clean old assets and upload 6 files to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${{ github.ref_name }}"
-          if [ "$TAG" = "main" ]; then TAG="v1.0.0"; fi
-          gh release upload "$TAG" dist-android-tv/* --clobber || true
+          TAG="v1.0.0"
 
-      - name: Upload Android TV Artifacts to Hugging Face
+          # إنشاء release إذا لم يكن موجوداً
+          gh release view "$TAG" > /dev/null 2>&1 || \
+            gh release create "$TAG" \
+              --title "Quran-Amine H Ayoub v1.0.0" \
+              --notes "المصحف المرتل برواية ورش — القارئ الشيخ حاج أيوب أمين" \
+              --latest
+
+          # حذف جميع الملفات القديمة
+          echo "🗑️ Removing old assets..."
+          ASSETS=$(gh release view "$TAG" --json assets -q '.assets[].name' 2>/dev/null || true)
+          if [ -n "$ASSETS" ]; then
+            echo "$ASSETS" | while IFS= read -r name; do
+              if [ -n "$name" ]; then
+                echo "  Deleting: $name"
+                gh release delete-asset "$TAG" "$name" --yes 2>/dev/null || true
+              fi
+            done
+          fi
+
+          # رفع الـ 6 ملفات الجديدة فقط
+          echo ""
+          echo "📤 Uploading 6 store-ready files..."
+          gh release upload "$TAG" release-files/* --clobber
+
+          # تحديث عنوان الإصدار
+          gh release edit "$TAG" \
+            --title "Quran-Amine H Ayoub v1.0.0" \
+            --notes "المصحف المرتل برواية ورش — القارئ الشيخ حاج أيوب أمين
+
+          📱 Google Play (هاتف): Quran_1.0.0_Android_Mobile.aab
+          📺 Google Play (تلفاز): Quran_1.0.0_Android_TV.aab
+          🤖 APK مباشر (هاتف): Quran_1.0.0_Android_Mobile.apk
+          📺 APK مباشر (تلفاز): Quran_1.0.0_Android_TV.apk
+          💻 ويندوز: Quran-Amine-H-Ayoub_1.0.0_Setup.exe
+          🏪 متجر مايكروسوفت: Quran-Amine-H-Ayoub_1.0.0_Microsoft_Store.msi" \
+            --latest
+
+          echo ""
+          echo "✅ Release v1.0.0 updated with exactly 6 files!"
+
+      # رفع إلى HuggingFace
+      - name: Upload 6 files to Hugging Face
         if: success()
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then VERSION="1.0.0"; fi
+          if [ -z "$HF_TOKEN" ]; then
+            echo "⚠️ HF_TOKEN not set, skipping Hugging Face upload"
+            exit 0
+          fi
 
-          for f in dist-android-tv/*; do
+          for f in release-files/*; do
             FNAME=$(basename "$f")
-            if [ -f "$f" ] && [ -n "${{ secrets.HF_TOKEN }}" ]; then
-              echo "Uploading $FNAME to Hugging Face..."
-              curl -f -X POST \
-                -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
-                --data-binary "@$f" \
-                "https://huggingface.co/api/datasets/hammoualiyoucef20/quran-app-releases/upload/main/$FNAME" || true
-            fi
+            echo "📤 Uploading $FNAME to HuggingFace..."
+            curl -f -X PUT \
+              -H "Authorization: Bearer $HF_TOKEN" \
+              -T "$f" \
+              "https://huggingface.co/api/datasets/hammoualiyoucef20/quran-app-releases/upload/main/$FNAME" || \
+            echo "⚠️ Failed to upload $FNAME (non-fatal)"
           done
+          echo "✅ HuggingFace upload complete"
