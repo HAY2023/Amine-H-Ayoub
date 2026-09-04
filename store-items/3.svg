@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520">
+  <defs>
+    <linearGradient id="g3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e0e7ff"/>
+      <stop offset="45%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#312e81"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="520" fill="#f5f3ff"/>
+  <rect x="120" y="100" width="560" height="300" rx="36" fill="url(#g3)" opacity="0.95"/>
+  <circle cx="230" cy="205" r="66" fill="#c7d2fe" opacity="0.9"/>
+  <circle cx="420" cy="205" r="92" fill="#e0e7ff" opacity="0.85"/>
+  <circle cx="585" cy="205" r="52" fill="#a5b4fc" opacity="0.9"/>
+  <path d="M160 332C260 260 330 250 418 314C480 360 540 358 640 320" fill="none" stroke="#eef2ff" stroke-width="14" stroke-linecap="round"/>
+  <text x="400" y="445" fill="#1e1b4b" font-size="34" font-family="Tahoma, Arial, sans-serif" font-weight="700" text-anchor="middle">ملف فخم</text>
+</svg>

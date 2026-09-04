@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520">
+  <defs>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#dcfce7"/>
+      <stop offset="45%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#14532d"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="520" fill="#eefcf4"/>
+  <rect x="90" y="90" width="620" height="340" rx="34" fill="url(#g2)" opacity="0.9"/>
+  <rect x="158" y="160" width="484" height="190" rx="24" fill="#f0fdf4" opacity="0.75"/>
+  <path d="M200 330L310 226L390 291L482 188L595 330" fill="none" stroke="#14532d" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="310" cy="226" r="18" fill="#14532d"/>
+  <circle cx="482" cy="188" r="18" fill="#14532d"/>
+  <text x="400" y="445" fill="#14532d" font-size="34" font-family="Tahoma, Arial, sans-serif" font-weight="700" text-anchor="middle">تصميم أنيق</text>
+</svg>
