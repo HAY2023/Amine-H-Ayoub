@@ -73,15 +73,18 @@ const QURAN_WORDS: QuranWord[] = RAW_WORDS.map((item) => {
   };
 });
 
-function playSound(type: "correct" | "wrong" | "win") {
+function playSound(type: "correct" | "wrong" | "win", step = 0) {
   try {
     const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     if (type === "correct") {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sine";
-      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+      
+      const baseFreq = 587.33 + (step * 45); // زيادة النغمة مع كل حرف
+      osc.frequency.setValueAtTime(baseFreq, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, ctx.currentTime + 0.12);
+      
       gain.gain.setValueAtTime(0.2, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
       osc.connect(gain);
@@ -166,7 +169,7 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
     // التحقق من قيمة الحرف وليس موقعه — لقبول الحروف المكررة (مثل «ا» و«ل» في «الصلاة»)
     if (item.c === letters[nextNeededIndex]) {
       // الحرف صحيح بالترتيب!
-      playSound("correct");
+      playSound("correct", nextNeededIndex);
       const newPlaced = [...placedIndices, item.id];
       setPlacedIndices(newPlaced);
 
@@ -198,7 +201,7 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
       return;
     }
 
-    playSound("correct");
+    playSound("correct", nextNeededIndex);
     setPlacedIndices((prev) => [...prev, itemIndexToUse()]);
     setShowHint(true);
     toast({

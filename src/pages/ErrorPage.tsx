@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useRouteError } from "react-router-dom";
 import { RefreshCw, HeartHandshake, Home } from "lucide-react";
 import WhatsAppIcon from "@/components/WhatsAppIcon";
 import { openWhatsAppSupport, SUPPORT_WHATSAPP_DISPLAY } from "@/services/resendService";
@@ -7,13 +7,16 @@ import { CURRENT_VERSION } from "@/utils/updateChecker";
 
 export default function ErrorPage() {
   const navigate = useNavigate();
+  const routeError = useRouteError() as Error;
 
   const handleWhatsAppContact = () => {
     const profile = getProfile();
+    const errMsg = routeError ? (routeError.message || String(routeError)) : "توقف غير متوقع";
     const msg =
       `السلام عليكم ورحمة الله تعالى وبركاته\n` +
       `أنا أواجه مشكلة في شاشة الخطأ وتوقف التطبيق مؤقتاً.\n` +
-      `الإصدار: ${CURRENT_VERSION}`;
+      `الإصدار: ${CURRENT_VERSION}\n` +
+      `وصف الخطأ: ${errMsg}`;
     void openWhatsAppSupport(msg);
   };
 

@@ -139,6 +139,25 @@ const PRAISE_SUPER = ["ما شاء الله!", "أنت عبقري!", "أسطور
 const ENCOURAGE_MISTAKE = ["حاول ثانية يا بطل! 🌟", "لا بأس، التكرار يعلّم!", "ركّز جيداً، أنت تستطيع! 💪", "قريب جداً! استمر! ✨"];
 
 const GameHud = ({ g }: { g: Game }) => {
+  const [showPraise, setShowPraise] = useState(false);
+  const [showWrong, setShowWrong] = useState(false);
+
+  useEffect(() => {
+    if (g.flash > 0) {
+      setShowPraise(true);
+      const t = setTimeout(() => setShowPraise(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [g.flash]);
+
+  useEffect(() => {
+    if (g.wrongFlash > 0) {
+      setShowWrong(true);
+      const t = setTimeout(() => setShowWrong(false), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [g.wrongFlash]);
+
   const getPraise = () => {
     if (g.streak >= 5) return PRAISE_SUPER[g.flash % PRAISE_SUPER.length];
     if (g.streak >= 3) return PRAISE_GOOD[g.flash % PRAISE_GOOD.length];
@@ -169,17 +188,20 @@ const GameHud = ({ g }: { g: Game }) => {
           +{g.gain}<Star className="w-3.5 h-3.5 fill-current" />
         </span>
       )}
-      {g.flash > 0 && (
+      {showPraise && (
         <span key={`p-${g.flash}`} className="pointer-events-none fixed left-1/2 top-1/3 z-[60] -translate-x-1/2 font-extrabold text-accent drop-shadow-lg animate-celebrate"
           style={{ fontSize: g.streak >= 5 ? "2.2rem" : g.streak >= 3 ? "1.8rem" : "1.4rem" }}>
           {getPraise()}
         </span>
       )}
-      {g.wrongFlash > 0 && (
-        <span key={`w-${g.wrongFlash}`} className="pointer-events-none fixed left-1/2 top-1/3 z-[60] -translate-x-1/2 font-extrabold text-amber-500 drop-shadow-lg animate-bounce"
-          style={{ fontSize: "1.2rem" }}>
-          {getEncourage()}
-        </span>
+      {showWrong && (
+        <div key={`w-${g.wrongFlash}`} className="pointer-events-none fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 animate-popup-center flex flex-col items-center">
+          <div className="bg-card/95 backdrop-blur-md px-8 py-5 rounded-3xl border-2 border-rose-500/50 shadow-[0_0_40px_rgba(244,63,94,0.3)] flex items-center justify-center">
+            <span className="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-rose-400 text-2xl sm:text-3xl whitespace-nowrap">
+              {getEncourage()}
+            </span>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -282,17 +304,17 @@ function OrderEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
             const placed = n < nextNum;
             return (
               <button key={n} onClick={() => tap(n)} disabled={placed}
-                className={`p-3 rounded-xl border text-right font-amiri text-lg leading-relaxed transition-colors active:scale-[0.98] ${placed ? "bg-primary/15 border-primary/50 text-foreground" : "bg-secondary border-border text-secondary-foreground hover:border-accent/50"}`}>
-                <span className={`inline-flex w-6 h-6 ml-2 rounded-full text-[11px] items-center justify-center align-middle font-sans font-bold ${placed ? "bg-primary text-primary-foreground" : "bg-border text-muted-foreground"}`}>{placed ? n : "؟"}</span>
+                className={`p-3 sm:p-4 rounded-2xl border-2 text-right font-amiri text-lg sm:text-xl font-bold leading-relaxed transition-all active:scale-95 shadow-sm ${placed ? "bg-emerald-500/15 border-emerald-500/50 text-emerald-500 opacity-80" : "bg-secondary/80 border-border text-foreground hover:border-amber-400/80 hover:bg-secondary"}`}>
+                <span className={`inline-flex w-7 h-7 ml-3 rounded-full text-[13px] items-center justify-center align-middle font-sans font-black shadow-sm ${placed ? "bg-emerald-500 text-emerald-950" : "bg-secondary-foreground/10 text-muted-foreground"}`}>{placed ? n : "؟"}</span>
                 {ayahText(n)}
               </button>
             );
           })}
         </div>
       ) : (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2 sm:gap-3">
           {order.map(n => (
-            <button key={n} onClick={() => tap(n)} disabled={n < nextNum} className={`aspect-square rounded-xl font-extrabold text-2xl border active:scale-95 transition-colors ${n < nextNum ? "bg-primary border-primary text-primary-foreground" : "bg-secondary border-border text-secondary-foreground"}`}>{n}</button>
+            <button key={n} onClick={() => tap(n)} disabled={n < nextNum} className={`aspect-square rounded-2xl font-black text-2xl sm:text-3xl border-2 active:scale-95 transition-all shadow-sm ${n < nextNum ? "bg-emerald-500 border-emerald-500 text-emerald-950 opacity-80 scale-95" : "bg-secondary/80 border-border text-foreground hover:border-amber-400 hover:bg-secondary"}`}>{n}</button>
           ))}
         </div>
       )}
@@ -557,7 +579,7 @@ function WhichEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {two.map(s => (
           <button key={s.number} onClick={() => choose(s)}
-            className={`p-4 sm:p-6 rounded-xl border font-bold text-lg sm:text-xl active:scale-95 transition-colors ${reveal && s.ayahCount === maxCount ? "bg-success/20 border-success/60 text-success" : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground"}`}>
+            className={`p-4 sm:p-6 rounded-2xl border-2 font-black text-lg sm:text-xl active:scale-95 transition-all shadow-sm ${reveal && s.ayahCount === maxCount ? "bg-emerald-500/20 border-emerald-500 text-emerald-500 shadow-emerald-500/20" : "bg-secondary/80 border-border hover:border-amber-400 hover:bg-secondary text-foreground"}`}>
             <span className="block">{s.name}</span>
             {reveal && <span className="block mt-1 text-xs sm:text-sm font-extrabold text-muted-foreground">{s.ayahCount} آيات</span>}
           </button>
@@ -608,10 +630,10 @@ function QuizEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
       <TimerBar left={left} seconds={8} />
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {q.opts.map((n, i) => {
-          const cls = reveal && n === q.s.ayahCount ? "bg-success/20 border-success/60 text-success"
-            : reveal && n === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
-            : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
-          return <button key={i} onClick={() => answer(n)} className={`p-4 sm:p-5 rounded-xl border font-extrabold text-xl sm:text-2xl active:scale-95 transition-colors ${cls}`}>{n}</button>;
+          const cls = reveal && n === q.s.ayahCount ? "bg-emerald-500/20 border-emerald-500 text-emerald-500 shadow-emerald-500/20"
+            : reveal && n === chosen ? "bg-rose-500/20 border-rose-500 text-rose-500"
+            : "bg-secondary/80 border-border hover:border-amber-400 hover:bg-secondary text-foreground shadow-sm";
+          return <button key={i} onClick={() => answer(n)} className={`p-4 sm:p-5 rounded-2xl border-2 font-black text-xl sm:text-2xl active:scale-95 transition-all ${cls}`}>{n}</button>;
         })}
       </div>
       <GameHud g={g} />
@@ -693,10 +715,10 @@ function ServerQuizEngine({ def }: { def: GameDef }) {
       <TimerBar left={left} seconds={12} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
         {q.options.map((opt, i) => {
-          const cls = reveal && opt === q.correct_answer ? "bg-success/20 border-success/60 text-success"
-            : reveal && opt === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
-            : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
-          return <button key={i} onClick={() => answer(opt)} className={`p-4 sm:p-5 rounded-xl border font-bold text-lg active:scale-95 transition-colors ${cls}`}>{opt}</button>;
+          const cls = reveal && opt === q.correct_answer ? "bg-emerald-500/20 border-emerald-500 text-emerald-500 shadow-emerald-500/20"
+            : reveal && opt === chosen ? "bg-rose-500/20 border-rose-500 text-rose-500"
+            : "bg-secondary/80 border-border hover:border-amber-400 hover:bg-secondary text-foreground shadow-sm";
+          return <button key={i} onClick={() => answer(opt)} className={`p-4 sm:p-5 rounded-2xl border-2 font-black text-lg active:scale-95 transition-all ${cls}`}>{opt}</button>;
         })}
       </div>
       <GameHud g={g} />
@@ -738,11 +760,11 @@ function CountEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
       <TimerBar left={left} seconds={9} />
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {q.opts.map(s => {
-          const cls = reveal && s.number === q.s.number ? "bg-success/20 border-success/60 text-success"
-            : reveal && s.number === chosen ? "bg-destructive/20 border-destructive/60 text-destructive"
-            : "bg-secondary border-border hover:border-accent/50 text-secondary-foreground";
+          const cls = reveal && s.number === q.s.number ? "bg-emerald-500/20 border-emerald-500 text-emerald-500 shadow-emerald-500/20"
+            : reveal && s.number === chosen ? "bg-rose-500/20 border-rose-500 text-rose-500"
+            : "bg-secondary/80 border-border hover:border-amber-400 hover:bg-secondary text-foreground shadow-sm";
           return (
-            <button key={s.number} onClick={() => choose(s.number)} className={`p-3 sm:p-5 rounded-xl border font-bold text-base sm:text-lg active:scale-95 transition-colors min-h-[55px] sm:min-h-[70px] ${cls}`}>
+            <button key={s.number} onClick={() => choose(s.number)} className={`p-3 sm:p-5 rounded-2xl border-2 font-black text-base sm:text-lg active:scale-95 transition-all min-h-[55px] sm:min-h-[70px] ${cls}`}>
               {s.name}{reveal && <span className="mr-1 text-xs font-extrabold text-muted-foreground">({s.ayahCount} آيات)</span>}
             </button>
           );
@@ -2434,12 +2456,22 @@ export default function KidsGames() {
     const filename = `شهادة-${safeName}-${today.toISOString().split("T")[0]}.png`;
     const dataUrl = canvas.toDataURL("image/png");
 
-    const link = document.createElement("a");
-    link.download = filename;
-    link.href = dataUrl;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (typeof window !== "undefined" && (window as any).__TAURI__) {
+      try {
+        const base64Data = dataUrl.split(",")[1];
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("save_base64_image", { base64Data, filename });
+      } catch (e) {
+        console.error(e);
+      }
+    } else {
+      const link = document.createElement("a");
+      link.download = filename;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
 
     setCertificateReady(true);
     toast({ title: "🎉 تم حفظ الشهادة الفاخرة!", description: "تم حفظ الصورة بجودة فائقة في جهازك" });
@@ -2708,8 +2740,22 @@ export default function KidsGames() {
         }
       }
 
+      const filename = `ميلستون-${milestoneData.days}يوم-${profile.name || "بطل"}.png`;
+      if (typeof window !== "undefined" && (window as any).__TAURI__) {
+        try {
+          const dataUrl = canvas.toDataURL("image/png");
+          const base64Data = dataUrl.split(",")[1];
+          const { invoke } = await import("@tauri-apps/api/core");
+          await invoke("save_base64_image", { base64Data, filename });
+          toast({ title: "تم حفظ الصورة الفاخرة!", description: "تم الحفظ بنجاح في جهازك" });
+          return;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
       const link = document.createElement("a");
-      link.download = `ميلستون-${milestoneData.days}يوم-${profile.name || "بطل"}.png`;
+      link.download = filename;
       link.href = URL.createObjectURL(blob);
       link.click();
       URL.revokeObjectURL(link.href);

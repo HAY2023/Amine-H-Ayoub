@@ -6,14 +6,16 @@ import { openWhatsAppSupport, SUPPORT_WHATSAPP_DISPLAY } from "@/services/resend
 import { getProfile } from "@/data/kidsProfile";
 import { CURRENT_VERSION } from "@/utils/updateChecker";
 
-function ErrorFallback({ resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
   const handleWhatsAppContact = () => {
     const activeProfile = getProfile();
     const profileName = activeProfile?.name || "مستخدم التطبيق";
+    const errMsg = error ? (error.message || String(error)) : "توقف غير متوقع";
     const msg =
       `السلام عليكم ورحمة الله وبركاته،\n` +
       `أحتاج مساعدة من الدعم الفني لتطبيق القرآن للأطفال:\n` +
       `• إصدار التطبيق: ${CURRENT_VERSION}\n` +
+      `• وصف الخطأ: ${errMsg}\n` +
       `• واجهت توقفاً مؤقتاً في التطبيق وأرجو المساعدة.`;
 
     void openWhatsAppSupport(msg);
