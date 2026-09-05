@@ -138,7 +138,6 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
   const [score, setScore] = useState(0);
   const [coins, setCoins] = useState(getCoins);
   const [placedIndices, setPlacedIndices] = useState<number[]>([]);
-  const [showHint, setShowHint] = useState(false);
   const [mistakeAnim, setMistakeAnim] = useState<number | null>(null);
 
   useEffect(() => {
@@ -158,7 +157,6 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
     const arr = letters.map((c, originalIndex) => ({ c, originalIndex, id: originalIndex }));
     setScrambled(shuffleArray(arr));
     setPlacedIndices([]);
-    setShowHint(false);
   }, [letters]);
 
   const nextNeededIndex = placedIndices.length;
@@ -188,34 +186,7 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
     }
   };
 
-  // التلميح بنجوم: خصم 1 نجمة لكشف الحرف التالي
-  const useMueenHint = () => {
-    if (placedIndices.length === letters.length || nextNeededIndex >= letters.length) return;
-
-    if (!spendCoins(1)) {
-      toast({
-        title: "النجوم غير كافية!",
-        description: "تحتاج إلى نجمة واحدة ⭐ للحصول على مساعدة المُعِين. اقرأ واستمع للقرآن لتكسب نجوماً!",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    playSound("correct", nextNeededIndex);
-    setPlacedIndices((prev) => [...prev, itemIndexToUse()]);
-    setShowHint(true);
-    toast({
-      title: "مساعدة المُعِين 💡 (-1 ⭐)",
-      description: `تم كشف الحرف (${letters[nextNeededIndex]}) بخصم نجمة واحدة من رصيدك.`,
-    });
   };
-
-  const itemIndexToUse = () => {
-     // Find the actual scrambled item ID that matches the character we need
-     const targetChar = letters[nextNeededIndex];
-     const matchingItem = scrambled.find(s => s.c === targetChar && !placedIndices.includes(s.id));
-     return matchingItem ? matchingItem.id : nextNeededIndex;
-  }
 
   const nextWord = () => {
     setWordIdx((prev) => prev + 1);
@@ -239,7 +210,6 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
             setWordIdx(0);
             setScore(0);
             setPlacedIndices([]);
-            setShowHint(false);
           }}
           className="btn-gold mx-auto px-7 py-3 rounded-2xl font-black flex items-center gap-2 text-base shadow-xl hover:brightness-105 active:scale-95 transition-all"
         >
@@ -328,30 +298,8 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
         </div>
       </div>
 
-      {/* زر المُعِين القرآني الذكي للمساعدة بالنجوم */}
-      <button
-        onClick={useMueenHint}
-        disabled={isWordDone}
-        className="w-full p-3.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/30 active:scale-98 transition-all flex items-center justify-between text-right cursor-pointer shadow-sm disabled:opacity-50"
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
-            <Lightbulb className="w-4 h-4 animate-pulse" />
-          </div>
-          <div className="text-xs">
-            <span className="text-amber-500 font-black block">المُعِين القرآني الذكي:</span>
-            <span className="text-muted-foreground font-semibold">
-              {showHint
-                ? `كشف لك المُعِين الحرف المطلوب: (${letters[placedIndices[placedIndices.length - 1]]})!`
-                : "اضغط هنا ليكشف لك المُعِين الحرف التالي (تكلفة المساعدة: 1 نجمة)"}
-            </span>
-          </div>
         </div>
-        <span className="text-[11px] font-black text-amber-500 bg-amber-500/20 px-3 py-1 rounded-full border border-amber-500/30 shrink-0 flex items-center gap-1 shadow-sm">
-          <Star className="w-3 h-3 fill-amber-500" />
-          <span>تلميح (-1 ⭐)</span>
-        </span>
-      </button>
+      </div>
 
       {/* بطاقة النجاح واكتمال الكلمة */}
       {isWordDone && (
