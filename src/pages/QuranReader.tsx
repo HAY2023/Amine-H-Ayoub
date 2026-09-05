@@ -126,7 +126,7 @@ export default function QuranReader() {
   return <MushafComingSoon />;
 }
 
-function _UnusedQuranReader() {
+function UnusedQuranReader() {
   const navigate = useNavigate();
   const { requestPlay, notifyStop, registerAudio, unregisterAudio, simultaneousMode, setSimultaneousMode } = useAudioContext();
 

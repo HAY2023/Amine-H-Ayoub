@@ -283,7 +283,7 @@ export async function downloadStreakCertificate({
   const filename = `شهادة-حماس-${safeName}-${today.toISOString().split("T")[0]}.png`;
   const dataUrl = canvas.toDataURL("image/png");
 
-  if (typeof window !== "undefined" && (window as any).__TAURI__) {
+  if (typeof window !== "undefined" && (window as Record<string, unknown>).__TAURI__) {
     try {
       const base64Data = dataUrl.split(",")[1];
       const { invoke } = await import("@tauri-apps/api/core");

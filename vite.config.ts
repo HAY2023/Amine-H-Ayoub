@@ -64,9 +64,11 @@ export default defineConfig(({ mode }) => ({
             res.end('saved');
           });
         });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         server.middlewares.use('/api/send-email', async (req: any, res: any) => {
           if (req.method === 'POST') {
             let body = '';
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             req.on('data', (chunk: any) => body += chunk);
             req.on('end', async () => {
               try {
@@ -83,6 +85,7 @@ export default defineConfig(({ mode }) => ({
                 res.setHeader('Content-Type', 'application/json');
                 res.statusCode = resp.status;
                 res.end(JSON.stringify(data));
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               } catch (err: any) {
                 res.statusCode = 500;
                 res.end(JSON.stringify({ error: err.message }));
