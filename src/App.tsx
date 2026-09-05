@@ -36,6 +36,7 @@ import ProfilePicker, { isPicked, markPicked } from "./components/ProfilePicker.
 import { logAppOpen } from "./utils/analytics.ts";
 import { useBackgroundNotifications, showLocalNotification } from "./utils/notifications.ts";
 import { claimDailyRewards, incrementStreak } from "./data/dailyRewards";
+import { setupRemoteControlListeners, setupGamepadListener } from "./utils/controllerNavigation";
 
 const queryClient = new QueryClient();
 

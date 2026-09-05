@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Check, Wrench, User, Baby, Plus, Trash2, Minus, KeyRound, Shield, BookOpen, Headphones, Settings, Star, Gamepad2, Puzzle, Trophy, Sparkles, BookmarkCheck, ArrowLeftRight } from "lucide-react";
+import { Check, Wrench, User, Baby, Plus, Trash2, Minus, KeyRound, Shield, BookOpen, Headphones, Settings, Star, Gamepad2, Puzzle, Trophy, Sparkles, BookmarkCheck, ArrowLeftRight, Youtube } from "lucide-react";
 
 import { setAppMode, addProfile, setActiveProfile, kidsHidden, setKidsHidden, setPureMode, isPureMode, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
 import { setKidsPin, setKidsLocked } from "../data/kidsLock";
 import Avatar from "./Avatar";
+import { openExternalUrl } from "../utils/tauriUtils";
 
 
 
@@ -153,6 +154,15 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
                   {kidsOff ? "استمع إلى تلاوات القرآن الكريم برواية ورش بصوت الشيخ حاج أيوب أمين." : "استمع للتلاوات العطرة مع ألعاب تعليمية وركن أطفال آمن."}
                 </p>
               </div>
+
+              {/* زر الاشتراك في قناة يوتيوب */}
+              <button
+                onClick={() => void openExternalUrl("https://www.youtube.com/@aminehadjyoub?sub_confirmation=1")}
+                className="group w-full max-w-sm mx-auto flex items-center justify-center gap-2.5 px-5 py-3 rounded-2xl bg-gradient-to-l from-red-600 to-red-500 text-white font-bold text-sm shadow-lg hover:shadow-red-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                <Youtube className="w-5 h-5 shrink-0 group-hover:animate-bounce" />
+                <span>اشترك في قناتنا على يوتيوب</span>
+              </button>
 
               <div aria-hidden className="mx-auto w-24 h-px bg-gradient-to-l from-transparent via-accent/60 to-transparent" />
             </div>

@@ -150,6 +150,14 @@ export async function closeTauriApp(): Promise<void> {
  */
 export async function openExternalUrl(url: string): Promise<void> {
   if (!url) return;
+  // الخروج من وضع ملء الشاشة أولاً لضمان فتح الروابط الخارجية بشكل صحيح
+  if (document.fullscreenElement) {
+    try {
+      await document.exitFullscreen();
+    } catch {
+      /* ignore — continue opening the URL even if exit fails */
+    }
+  }
   if (isTauri()) {
     try {
       await invoke("plugin:opener|open", { path: url });
