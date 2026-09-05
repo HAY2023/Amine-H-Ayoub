@@ -2431,10 +2431,15 @@ export default function KidsGames() {
     // تحميل الشهادة
     const today = new Date();
     const safeName = displayName.replace(/\s+/g, "-");
+    const filename = `شهادة-${safeName}-${today.toISOString().split("T")[0]}.png`;
+    const dataUrl = canvas.toDataURL("image/png");
+
     const link = document.createElement("a");
-    link.download = `شهادة-${safeName}-${today.toISOString().split("T")[0]}.png`;
-    link.href = canvas.toDataURL("image/png");
+    link.download = filename;
+    link.href = dataUrl;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
 
     setCertificateReady(true);
     toast({ title: "🎉 تم حفظ الشهادة الفاخرة!", description: "تم حفظ الصورة بجودة فائقة في جهازك" });

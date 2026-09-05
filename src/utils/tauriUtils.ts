@@ -182,3 +182,16 @@ export async function openExternalUrl(url: string): Promise<void> {
     document.body.removeChild(a);
   }
 }
+
+/**
+ * Saves a base64 image string to the user's Downloads folder on Tauri.
+ */
+export async function saveBase64Image(base64Data: string, filename: string): Promise<string | null> {
+  if (!isTauri()) return null;
+  try {
+    return await invoke<string>("save_base64_image", { base64Data, filename });
+  } catch (e) {
+    console.error("Failed to save image via Tauri:", e);
+    return null;
+  }
+}
