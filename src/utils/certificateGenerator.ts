@@ -283,6 +283,17 @@ export async function downloadStreakCertificate({
   const filename = `شهادة-حماس-${safeName}-${today.toISOString().split("T")[0]}.png`;
   const dataUrl = canvas.toDataURL("image/png");
 
+  if (typeof window !== "undefined" && (window as any).__TAURI__) {
+    try {
+      const base64Data = dataUrl.split(",")[1];
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("save_base64_image", { base64Data, filename });
+      return;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   const link = document.createElement("a");
   link.download = filename;
   link.href = dataUrl;

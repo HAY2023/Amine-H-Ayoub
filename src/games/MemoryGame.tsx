@@ -162,10 +162,10 @@ export default function MemoryGame({ onBack, def, minSurah }: MemoryGameProps) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-md flex flex-col items-center justify-center p-2 sm:p-4">
-      <div className="w-full max-w-sm sm:max-w-2xl bg-card rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-border">
+    <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-md flex flex-col items-center justify-center p-4 font-quran text-right" dir="rtl">
+      <div className="w-full max-w-3xl bg-gradient-to-br from-card via-card to-secondary/30 rounded-3xl shadow-2xl overflow-hidden border-2 border-border flex flex-col h-[90vh] sm:h-[80vh]">
         {/* Header */}
-        <div className="bg-accent/10 p-2 sm:p-4 flex items-center justify-between border-b border-border">
+        <div className="bg-secondary/40 p-4 flex items-center justify-between border-b border-border shrink-0">
           <h2 className="text-sm sm:text-xl font-bold text-foreground flex items-center gap-1 sm:gap-2">
             <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
             <span className="hidden sm:inline">لعبة الذاكرة: السورة ومعناها</span>
@@ -205,11 +205,11 @@ export default function MemoryGame({ onBack, def, minSurah }: MemoryGameProps) {
                     key={index}
                     onClick={() => handleCardClick(index)}
                     disabled={lockBoard || card.isMatched}
-                    className={`aspect-square min-h-[60px] sm:min-h-[100px] rounded-lg sm:rounded-xl text-xs sm:text-base font-bold transition-all duration-300 ${
+                    className={`aspect-square min-h-[60px] sm:min-h-[100px] rounded-2xl text-xs sm:text-base font-black transition-all duration-300 border-2 shadow-sm ${
                       card.isFlipped || card.isMatched 
-                        ? 'bg-card border-2 border-accent text-foreground' 
-                        : 'bg-accent text-transparent hover:bg-accent/90 shadow-md'
-                    } ${card.isMatched ? 'bg-success/20 border-success text-success scale-95 opacity-80' : ''} ${lockBoard ? 'cursor-not-allowed' : 'active:scale-95'}`}
+                        ? 'bg-gradient-to-br from-card via-card to-accent/10 border-accent/80 text-foreground shadow-lg' 
+                        : 'bg-emerald-950 text-transparent border-amber-400/30 hover:border-amber-400/80 hover:shadow-amber-500/15'
+                    } ${card.isMatched ? 'bg-emerald-500/20 border-emerald-500 text-emerald-500 scale-95 opacity-80' : ''} ${lockBoard ? 'cursor-not-allowed' : 'active:scale-95'}`}
                   >
                     <div className={`w-full h-full flex flex-col items-center justify-center p-1 sm:p-2 text-center break-words leading-tight transition-opacity duration-300 ${card.isFlipped || card.isMatched ? 'opacity-100' : 'opacity-0'}`}>
                       <span className="line-clamp-2 sm:line-clamp-3">{card.text}</span>

@@ -150,15 +150,27 @@ export async function closeTauriApp(): Promise<void> {
  */
 export async function openExternalUrl(url: string): Promise<void> {
   if (!url) return;
-  // الخروج من وضع ملء الشاشة أولاً لضمان فتح الروابط الخارجية بشكل صحيح
-  if (document.fullscreenElement) {
+  // الخروج من وضع ملء الشاشة أولاً لضمان فتح الروابط الخارجية بشكل صحيح (للويندوز والويب)
+  if (typeof document !== "undefined" && document.fullscreenElement) {
     try {
       await document.exitFullscreen();
     } catch {
-      /* ignore — continue opening the URL even if exit fails */
+      /* ignore */
     }
   }
+  
   if (isTauri()) {
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      const appWindow = getCurrentWindow();
+      const isFs = await appWindow.isFullscreen();
+      if (isFs) {
+        await appWindow.setFullscreen(false);
+      }
+    } catch (e) {
+      console.error("Failed to exit Tauri fullscreen:", e);
+    }
+    
     try {
       await invoke("plugin:opener|open", { path: url });
       return;
