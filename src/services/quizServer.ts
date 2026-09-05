@@ -12,6 +12,17 @@ const LOCAL_STORAGE_ANSWERED_KEY = "mushaf:quiz_answered_v1";
 // ⚠️ عندما ترفع السيرفر على HuggingFace قم بتبديل هذا الرابط برابط الـ Space الخاص بك
 const HUGGINGFACE_API_URL = "https://your-username-your-spacename.hf.space/api/questions";
 
+const FALLBACK_QUESTIONS: ServerQuestion[] = [
+  { id: "f1", type: "multiple_choice", question: "كم عدد سور القرآن الكريم؟", options: ["114 سورة", "110 سورة", "120 سورة", "100 سورة"], correct_answer: "114 سورة" },
+  { id: "f2", type: "multiple_choice", question: "ما هي أطول سورة في القرآن الكريم؟", options: ["سورة البقرة", "سورة آل عمران", "سورة النساء", "سورة الأعراف"], correct_answer: "سورة البقرة" },
+  { id: "f3", type: "multiple_choice", question: "ما هي السورة التي لا تبدأ ببسم الله الرحمن الرحيم؟", options: ["سورة التوبة", "سورة النمل", "سورة الأنفال", "سورة محمد"], correct_answer: "سورة التوبة" },
+  { id: "f4", type: "multiple_choice", question: "ما هي السورة التي تسمى قلب القرآن؟", options: ["سورة يس", "سورة الرحمن", "سورة الملك", "سورة الكهف"], correct_answer: "سورة يس" },
+  { id: "f5", type: "multiple_choice", question: "ما هي السورة التي تعادل قراءتها ثلث القرآن؟", options: ["سورة الإخلاص", "سورة الفلق", "سورة الناس", "سورة الكافرون"], correct_answer: "سورة الإخلاص" },
+  { id: "f6", type: "multiple_choice", question: "في أي سورة ذُكرت البسملة مرتين؟", options: ["سورة النمل", "سورة التوبة", "سورة النحل", "سورة القصص"], correct_answer: "سورة النمل" },
+  { id: "f7", type: "multiple_choice", question: "كم عدد أجزاء القرآن الكريم؟", options: ["30 جزءاً", "60 جزءاً", "20 جزءاً", "114 جزءاً"], correct_answer: "30 جزءاً" },
+  { id: "f8", type: "multiple_choice", question: "ما هي أعظم آية في القرآن الكريم؟", options: ["آية الكرسي", "أواخر سورة البقرة", "أول سورة الكهف", "سورة الفاتحة"], correct_answer: "آية الكرسي" }
+];
+
 // استرجاع الأسئلة المجابة من التخزين المحلي
 export function getAnsweredQuestions(): string[] {
   try {
@@ -44,17 +55,20 @@ export function clearAnsweredQuestions() {
 export function getLocalQuizPool(): ServerQuestion[] {
   try {
     const data = localStorage.getItem(LOCAL_STORAGE_POOL_KEY);
-    return data ? JSON.parse(data) : [];
+    const parsed = data ? JSON.parse(data) : [];
+    return parsed.length > 0 ? parsed : FALLBACK_QUESTIONS;
   } catch {
-    return [];
+    return FALLBACK_QUESTIONS;
   }
 }
+
 
 // جلب وتحديث الأسئلة من السيرفر في الخلفية
 export async function syncQuestionsFromServer() {
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     console.log("No internet connection. Using cached quiz pool.");
-    return getLocalQuizPool();
+    const local = getLocalQuizPool();
+    return local.length > 0 ? local : FALLBACK_QUESTIONS;
   }
 
   try {
@@ -87,10 +101,13 @@ export async function syncQuestionsFromServer() {
       return questions;
     }
 
-    return getLocalQuizPool();
+    const local = getLocalQuizPool();
+    return local.length > 0 ? local : FALLBACK_QUESTIONS;
   } catch (error) {
     console.error("Failed to sync quiz from HuggingFace server:", error);
     // العودة لاستخدام المسبح المحلي إذا فشل الاتصال بالسيرفر
-    return getLocalQuizPool();
+    const local = getLocalQuizPool();
+    return local.length > 0 ? local : FALLBACK_QUESTIONS;
   }
 }
+
