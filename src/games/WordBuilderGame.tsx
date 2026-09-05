@@ -186,8 +186,6 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
     }
   };
 
-  };
-
   const nextWord = () => {
     setWordIdx((prev) => prev + 1);
   };
@@ -298,8 +296,6 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
         </div>
       </div>
 
-        </div>
-      </div>
 
       {/* بطاقة النجاح واكتمال الكلمة */}
       {isWordDone && (
