@@ -53,8 +53,8 @@ export function createWhatsAppSupportLink(report?: Partial<SupportReportData> | 
     message += report.typeLabel;
   }
 
-  // استخدام الرابط المباشر للتطبيق لضمان فتحه خارج التطبيق/الموقع
-  return `whatsapp://send?phone=${SUPPORT_WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`;
+  // استخدام wa.me لضمان العمل على جميع الأجهزة (ويندوز يفتح في المتصفح، الهاتف يفتح واتساب مباشرة)
+  return `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
 
 /** فتح محادثة واتساب المباشرة مع الدعم الفني على رقم 0658188644 في المتصفح أو التطبيق */
