@@ -183,10 +183,17 @@ function playSound(type: "correct" | "wrong" | "hint" | "win") {
   }
 }
 
+function shuffleArray<T>(array: T[]): T[] {
+  const newArr = [...array];
+  for (let i = newArr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+  }
+  return newArr;
+}
+
 export default function AyahMathGame({ def: _def }: AyahMathGameProps) {
-  const shuffledList = useMemo(() => {
-    return [...MATH_QUESTIONS].sort(() => 0.5 - Math.random());
-  }, []);
+  const [shuffledList, setShuffledList] = useState<MathQuestion[]>(() => shuffleArray(MATH_QUESTIONS));
 
   const [qIdx, setQIdx] = useState(0);
   const [score, setScore] = useState(0);
@@ -253,7 +260,7 @@ export default function AyahMathGame({ def: _def }: AyahMathGameProps) {
   };
 
   const nextQuestion = () => {
-    setQIdx((idx) => (idx + 1) % shuffledList.length);
+    setQIdx((idx) => idx + 1);
     setAnswered(false);
     setChosenOpt(null);
     setShowHint(false);
@@ -274,6 +281,7 @@ export default function AyahMathGame({ def: _def }: AyahMathGameProps) {
         </p>
         <button
           onClick={() => {
+            setShuffledList(shuffleArray(MATH_QUESTIONS));
             setQIdx(0);
             setScore(0);
             setStreak(0);
@@ -301,7 +309,7 @@ export default function AyahMathGame({ def: _def }: AyahMathGameProps) {
           <Star className="w-4 h-4 fill-amber-500" /> {formatCoins(coins)} نجمة
         </span>
         <span className="text-muted-foreground font-extrabold">
-          السؤال {(qIdx % shuffledList.length) + 1} من {shuffledList.length}
+          السؤال {qIdx + 1} من {shuffledList.length}
         </span>
       </div>
 
@@ -322,18 +330,20 @@ export default function AyahMathGame({ def: _def }: AyahMathGameProps) {
           {currentQ.question}
         </p>
 
-        {/* حبات اللؤلؤ القرآني التفاعلية (عداد بصري ملهم) */}
-        <div className="flex flex-wrap justify-center gap-2 p-2.5 bg-secondary/30 rounded-2xl max-w-sm mx-auto items-center border border-border/40 shadow-inner">
-          {Array.from({ length: currentQ.correct }, (_, i) => (
-            <div
-              key={i}
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 text-slate-950 font-black text-xs flex items-center justify-center shadow-md animate-in zoom-in ring-2 ring-amber-400/30"
-              style={{ animationDelay: `${i * 50}ms` }}
-            >
-              {i + 1}
-            </div>
-          ))}
-        </div>
+        {/* حبات اللؤلؤ القرآني التفاعلية (تظهر فقط بعد الإجابة) */}
+        {answered && (
+          <div className="flex flex-wrap justify-center gap-2 p-2.5 bg-secondary/30 rounded-2xl max-w-sm mx-auto items-center border border-border/40 shadow-inner">
+            {Array.from({ length: currentQ.correct }, (_, i) => (
+              <div
+                key={i}
+                className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 text-slate-950 font-black text-xs flex items-center justify-center shadow-md animate-in zoom-in ring-2 ring-amber-400/30"
+                style={{ animationDelay: `${i * 50}ms` }}
+              >
+                {i + 1}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* شبكة الخيارات 2×2 */}
@@ -420,4 +430,5 @@ export default function AyahMathGame({ def: _def }: AyahMathGameProps) {
     </div>
   );
 }
+
 

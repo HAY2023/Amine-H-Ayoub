@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Lightbulb, CheckCircle2, Star, ArrowLeft } from "lucide-react";
+import { Lightbulb, CheckCircle2, Star, ArrowLeft, Trophy, RefreshCw } from "lucide-react";
 import { addCoins, spendCoins, getCoins, formatCoins } from "../data/kidsProfile";
 import { GameDef } from "../data/gameCatalog";
 import { toast } from "../hooks/use-toast";
@@ -118,11 +118,18 @@ function playSound(type: "correct" | "wrong" | "win") {
   }
 }
 
+function shuffleArray<T>(array: T[]): T[] {
+  const newArr = [...array];
+  for (let i = newArr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+  }
+  return newArr;
+}
+
 export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
-  // خلط قائمة الكلمات عشوائياً لمنع التكرار
-  const shuffledPool = useMemo(() => {
-    return [...QURAN_WORDS].sort(() => Math.random() - 0.5);
-  }, []);
+  // خلط قائمة الكلمات عشوائياً لمنع التكرار وحفظها في State لتجديدها عند انتهاء اللعبة
+  const [shuffledPool, setShuffledPool] = useState<QuranWord[]>(() => shuffleArray(QURAN_WORDS));
 
   const [wordIdx, setWordIdx] = useState(0);
   const [score, setScore] = useState(0);
@@ -146,8 +153,7 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
 
   useEffect(() => {
     const arr = letters.map((c, originalIndex) => ({ c, originalIndex, id: originalIndex }));
-    arr.sort(() => Math.random() - 0.5);
-    setScrambled(arr);
+    setScrambled(shuffleArray(arr));
     setPlacedIndices([]);
     setShowHint(false);
   }, [letters]);
@@ -193,7 +199,7 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
     }
 
     playSound("correct");
-    setPlacedIndices((prev) => [...prev, nextNeededIndex]);
+    setPlacedIndices((prev) => [...prev, itemIndexToUse()]);
     setShowHint(true);
     toast({
       title: "مساعدة المُعِين 💡 (-1 ⭐)",
@@ -201,9 +207,44 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
     });
   };
 
+  const itemIndexToUse = () => {
+     // Find the actual scrambled item ID that matches the character we need
+     const targetChar = letters[nextNeededIndex];
+     const matchingItem = scrambled.find(s => s.c === targetChar && !placedIndices.includes(s.id));
+     return matchingItem ? matchingItem.id : nextNeededIndex;
+  }
+
   const nextWord = () => {
     setWordIdx((prev) => prev + 1);
   };
+
+  const isFinished = wordIdx >= shuffledPool.length;
+
+  if (isFinished) {
+    return (
+      <div className="space-y-4 text-center py-6 animate-fade-up max-w-xl mx-auto" dir="rtl">
+        <Trophy className="w-16 h-16 mx-auto text-emerald-400 drop-shadow-lg animate-bounce" />
+        <h3 className="text-xl sm:text-2xl font-black text-foreground">
+          ما شاء الله! أنهيت جميع الكلمات بنجاح 🌟
+        </h3>
+        <p className="text-sm text-muted-foreground font-bold">
+          جمعت {score} نجمة مباركة في ترتيب كلمات القرآن
+        </p>
+        <button
+          onClick={() => {
+            setShuffledPool(shuffleArray(QURAN_WORDS));
+            setWordIdx(0);
+            setScore(0);
+            setPlacedIndices([]);
+            setShowHint(false);
+          }}
+          className="btn-gold mx-auto px-7 py-3 rounded-2xl font-black flex items-center gap-2 text-base shadow-xl hover:brightness-105 active:scale-95 transition-all"
+        >
+          <RefreshCw className="w-5 h-5" /> العب جولة جديدة
+        </button>
+      </div>
+    );
+  }
 
   const isWordDone = placedIndices.length === letters.length;
 
@@ -218,7 +259,7 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
           <Star className="w-4 h-4 fill-amber-500" /> {formatCoins(coins)} نجمة
         </span>
         <span className="text-muted-foreground font-extrabold">
-          الكلمة {(wordIdx % shuffledPool.length) + 1} من {shuffledPool.length}
+          الكلمة {wordIdx + 1} من {shuffledPool.length}
         </span>
       </div>
 
@@ -237,6 +278,10 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
       <div className="flex flex-wrap justify-center items-center gap-1.5 sm:gap-2.5 py-3.5 px-2 bg-secondary/20 rounded-3xl border border-border/40">
         {letters.map((char, idx) => {
           const isFilled = idx < placedIndices.length;
+          // Find the actual character that was placed, or default to the target char
+          const placedCharId = placedIndices[idx];
+          const actualChar = scrambled.find(s => s.id === placedCharId)?.c || char;
+
           return (
             <div
               key={idx}
@@ -246,7 +291,7 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
                   : "bg-card/70 border-dashed border-border/80 text-muted-foreground/50 shadow-inner"
               }`}
             >
-              {isFilled ? char : "؟"}
+              {isFilled ? actualChar : "؟"}
             </div>
           );
         })}
