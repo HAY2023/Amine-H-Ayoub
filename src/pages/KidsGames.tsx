@@ -153,7 +153,7 @@ const GameHud = ({ g }: { g: Game }) => {
   useEffect(() => {
     if (g.wrongFlash > 0) {
       setShowWrong(true);
-      const t = setTimeout(() => setShowWrong(false), 2500);
+      const t = setTimeout(() => setShowWrong(false), 1000);
       return () => clearTimeout(t);
     }
   }, [g.wrongFlash]);

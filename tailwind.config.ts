@@ -133,7 +133,7 @@ export default {
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "fade-up": "fade-up 0.4s cubic-bezier(0.22,1,0.36,1) both",
         "scale-up": "scale-up 0.3s cubic-bezier(0.22,1,0.36,1) both",
-        "popup-center": "popup-center 2s ease-in-out forwards",
+        "popup-center": "popup-center 1s ease-in-out forwards",
         float: "float 4s ease-in-out infinite",
       },
     },
