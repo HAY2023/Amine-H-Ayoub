@@ -384,34 +384,6 @@ export default function AyahMathGame({ def: _def }: AyahMathGameProps) {
     }
   };
 
-  // المساعدة بتكلفة 1 نجمة: حذف خيار خاطئ + إظهار التلميح
-  const useMueenHint = () => {
-    if (answered || showHint) return;
-
-    if (!spendCoins(1)) {
-      toast({
-        title: "النجوم غير كافية!",
-        description: "تحتاج إلى نجمة واحدة ⭐ للحصول على مساعدة المُعِين. اقرأ واستمع للقرآن لتكسب نجوماً!",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    playSound("hint");
-    setShowHint(true);
-
-    // حذف خيار خاطئ
-    const wrongOpts = currentQ.options.filter((o) => o !== currentQ.correct);
-    const toEliminate = wrongOpts[Math.floor(Math.random() * wrongOpts.length)];
-    if (toEliminate) {
-      setEliminatedOpts([toEliminate]);
-    }
-
-    toast({
-      title: "مساعدة المُعِين 💡 (-1 ⭐)",
-      description: `تم خصم نجمة واحدة وحذف خيار خاطئ (${toEliminate}) وإظهار تلميح الحساب!`,
-    });
-  };
 
   const nextQuestion = () => {
     setQIdx((idx) => idx + 1);
@@ -532,30 +504,6 @@ export default function AyahMathGame({ def: _def }: AyahMathGameProps) {
         })}
       </div>
 
-      {/* زر المُعِين القرآني الذكي للمساعدة بنجوم (-1 ⭐) */}
-      <button
-        onClick={useMueenHint}
-        disabled={answered || showHint}
-        className="w-full p-3.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/30 active:scale-98 transition-all flex items-center justify-between text-right cursor-pointer shadow-sm disabled:opacity-50"
-      >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
-            <Lightbulb className="w-4 h-4 animate-pulse" />
-          </div>
-          <div className="text-xs min-w-0">
-            <span className="text-amber-500 font-black block">المُعِين القرآني الذكي:</span>
-            <span className="text-muted-foreground font-semibold truncate block">
-              {showHint
-                ? currentQ.hint
-                : "اضغط هنا ليكشف لك المُعِين تلميحاً حسابياً ويحذف خياراً خاطئاً (تكلفة: 1 نجمة)"}
-            </span>
-          </div>
-        </div>
-        <span className="text-[11px] font-black text-amber-500 bg-amber-500/20 px-3 py-1 rounded-full border border-amber-500/30 shrink-0 flex items-center gap-1 shadow-sm">
-          <Star className="w-3 h-3 fill-amber-500" />
-          <span>{showHint ? "مُفعّل ✓" : "تلميح (-1 ⭐)"}</span>
-        </span>
-      </button>
 
       {/* نتيجة الإجابة والتغذية الراجعة والزر التالي */}
       {answered && (

@@ -649,36 +649,6 @@ export default function DetectiveGame({ def: _def }: DetectiveGameProps) {
     }
   };
 
-  // المساعدة بتكلفة 1 نجمة: حذف إجابتين خاطئتين + إظهار التلميح
-  const useMueenClue = () => {
-    if (answered || isTimedOut || showHint) return;
-
-    if (!spendCoins(1)) {
-      toast({
-        title: "النجوم غير كافية!",
-        description: "تحتاج إلى نجمة واحدة ⭐ للحصول على مساعدة المحقق القرآني. اقرأ واستمع للقرآن لتكسب نجوماً!",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    playSound("hint");
-    setShowHint(true);
-
-    // استبعاد إجابة خاطئة أو إجابتين
-    const wrongIdxs = shuffledOptions
-      .map((opt, i) => (!opt.isOdd ? i : -1))
-      .filter((i) => i !== -1);
-    
-    // خلط واختيار ما يصل إلى إجابتين لحذفهما
-    const toEliminate = wrongIdxs.sort(() => 0.5 - Math.random()).slice(0, 2);
-    setEliminatedIdxs(toEliminate);
-
-    toast({
-      title: "مساعدة المحقق الذكي 💡 (-1 ⭐)",
-      description: "تم خصم نجمة واحدة وحذف خيارين خاطئين وكشف دليل قرآني محكم!",
-    });
-  };
 
   const nextQuestion = () => {
     const nextIdx = (qIndex + 1) % questionsPool.length;

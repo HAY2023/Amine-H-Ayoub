@@ -300,32 +300,6 @@ export default function CatchStarGame({ def: _def }: CatchStarGameProps) {
     }
   };
 
-  // المساعدة بتكلفة 1 نجمة: إبراز نجمة صحيحة غير ملتقطة + إظهار التلميح
-  const useMueenHint = () => {
-    if (roundDone || lives <= 0) return;
-
-    if (!spendCoins(1)) {
-      toast({
-        title: "النجوم غير كافية!",
-        description: "تحتاج إلى نجمة واحدة ⭐ للحصول على مساعدة المُعِين. اقرأ واستمع للقرآن لتكسب نجوماً!",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    playSound("hint");
-    setShowHint(true);
-
-    const remainingGood = goodItems.find((i) => !collected.includes(i.id));
-    if (remainingGood) {
-      setHighlightedId(remainingGood.id);
-      setTimeout(() => setHighlightedId(null), 3000);
-      toast({
-        title: "مساعدة المُعِين 💡 (-1 ⭐)",
-        description: `أبرز لك المُعِين النجمة الصحيحة «${remainingGood.text}» بنجاح!`,
-      });
-    }
-  };
 
   const nextRound = () => {
     setRoundIdx((r) => r + 1);
