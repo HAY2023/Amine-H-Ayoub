@@ -2343,9 +2343,11 @@ export default function KidsGames() {
     ctx.font = "bold 28px 'Traditional Arabic', 'Amiri', 'Cairo', serif";
     ctx.fillText("الْقَارِئُ الْحَافِظُ الْمُبَارَكُ", canvasW / 2, 458);
 
+    const displayName = (!profile.name || profile.name === "طفلي" || profile.name === "الطفل 1") ? "بطل القرآن الكريم" : profile.name;
+
     ctx.fillStyle = "#0E4D2B";
     ctx.font = "bold 52px 'Traditional Arabic', 'Amiri', 'Cairo', 'Tahoma', serif";
-    ctx.fillText(profile.name || "بطل القرآن الكريم", canvasW / 2, 510);
+    ctx.fillText(displayName, canvasW / 2, 510);
 
     ctx.fillStyle = "#4B5563";
     ctx.font = "bold 21px 'Cairo', 'Tahoma', 'Arial'";
@@ -2428,8 +2430,9 @@ export default function KidsGames() {
 
     // تحميل الشهادة
     const today = new Date();
+    const safeName = displayName.replace(/\s+/g, "-");
     const link = document.createElement("a");
-    link.download = `شهادة-${profile.name || "بطل-القرآن"}-${today.toISOString().split("T")[0]}.png`;
+    link.download = `شهادة-${safeName}-${today.toISOString().split("T")[0]}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
 

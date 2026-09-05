@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { getBadgesList, calculateStreak, checkAndUnlockBadges, Badge } from "@/data/kidsBadges";
 import { getProfile, getProgress, getCoins } from "@/data/kidsProfile";
-import { downloadQuranCertificate } from "@/utils/certificateGenerator";
+import { downloadStreakCertificate } from "@/utils/certificateGenerator";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
@@ -72,13 +72,13 @@ export default function BadgesModal({ onClose }: Props) {
     try {
       const prog = getProgress();
       const c = getCoins();
-      await downloadQuranCertificate({
+      await downloadStreakCertificate({
         studentName: profile.name || "بطل القرآن الصغير",
+        avatarName: profile.avatar || "boy1",
         currentStreak: streakInfo.currentStreak,
         longestStreak: streakInfo.longestStreak,
         minutes: prog.minutes || 0,
         coins: c || 0,
-        currentSurahNumber: profile.currentSurah || 36,
       });
       toast({
         title: "🎉 تم تحميل شهادة الإنجاز والحماس بنجاح!",
