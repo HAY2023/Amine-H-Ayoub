@@ -963,55 +963,6 @@ export default function ParentDashboard() {
               </div>
             </div>
 
-            {/* استيراد كود التكوين للمطور */}
-            <div className="space-y-3 pt-3 border-t border-border/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-accent flex items-center gap-2 text-xs sm:text-sm">
-                    <KeyRound className="w-4 h-4" /> استيراد كود المطور
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    أدخل الكود المستخرج من أداة المطور الخارجية لتحديث النجوم والعناصر.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  id="dev-code-input"
-                  placeholder="الصق الكود هنا..."
-                  className="flex-1 rounded-xl bg-secondary border border-border p-2.5 text-xs text-foreground focus:border-accent outline-none" 
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                     const input = document.getElementById('dev-code-input') as HTMLInputElement;
-                     if (!input.value) return;
-                     try {
-                        const payload = JSON.parse(decodeURIComponent(escape(atob(input.value))));
-                        if (payload.type === 'DEV_TOOL_UPDATE') {
-                           if (payload.coins !== undefined) {
-                              setCoins(payload.coins);
-                           }
-                           if (payload.items && Array.isArray(payload.items)) {
-                              const currProf = getProfile();
-                              updateProfile(currProf.id, { inventory: Array.from(new Set([...(currProf.inventory || []), ...payload.items])) });
-                           }
-                           refresh();
-                           toast({ title: '✓ تم استيراد وتحديث البيانات بنجاح!' });
-                           input.value = '';
-                        }
-                     } catch(e) {
-                        toast({ title: 'كود غير صالح', variant: 'destructive' });
-                     }
-                  }}
-                  className="px-3 py-2.5 rounded-xl bg-accent text-accent-foreground font-bold text-xs flex items-center gap-1 hover:bg-accent/90"
-                >
-                  <Check className="w-3.5 h-3.5" /> تطبيق
-                </button>
-              </div>
-            </div>
-
             <button
               onClick={saveChild}
               className="w-full p-3 rounded-xl btn-gold font-bold flex items-center justify-center gap-2 active:scale-95 shadow-md transition-all text-sm mt-4"

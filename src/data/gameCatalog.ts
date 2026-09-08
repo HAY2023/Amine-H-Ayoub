@@ -14,7 +14,7 @@ export interface GameDef {
   cost: number;
   tint: string;
   icon: string;
-  params?: { pairs?: number; minSurah?: number; maxSurah?: number; minAyah?: number; maxAyah?: number };
+  params?: { pairs?: number; timeLimit?: number; minSurah?: number; maxSurah?: number; minAyah?: number; maxAyah?: number };
   custom?: boolean;
   desc?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -164,6 +164,8 @@ export const setGameCost = (gameId: string, cost: number) => {
   const overrides = getPriceOverrides();
   overrides[gameId] = cost;
   try { localStorage.setItem(PRICE_OVERRIDE_KEY, JSON.stringify(overrides)); } catch { /* ignore */ }
+  // مزامنة مركزية: السعر يصل لكل الأجهزة عبر جدول store
+  if (hasValidSupabaseKey()) supabase.from("store").upsert({ key: PRICE_OVERRIDE_KEY, value: overrides }).then(() => {}, () => {});
   if (typeof window !== "undefined") window.dispatchEvent(new Event("mushaf:gamecatalog"));
 };
 
@@ -197,6 +199,12 @@ export const syncGameCatalogFromServer = async () => {
       const list = (data.value as GameDef[]).filter(isValid).map(g => ({ ...g, custom: true }));
       serverGames = list;
       localStorage.setItem(CATALOG_KEY, JSON.stringify(list));
+      window.dispatchEvent(new Event("mushaf:gamecatalog"));
+    }
+    // جلب تجاوزات الأسعار المركزية (من لوحة admin.html)
+    const { data: pData } = await supabase.from("store").select("value").eq("key", PRICE_OVERRIDE_KEY).maybeSingle();
+    if (pData && pData.value && typeof pData.value === "object") {
+      localStorage.setItem(PRICE_OVERRIDE_KEY, JSON.stringify(pData.value));
       window.dispatchEvent(new Event("mushaf:gamecatalog"));
     }
   } catch (e) { console.debug("sync game catalog:", e); }

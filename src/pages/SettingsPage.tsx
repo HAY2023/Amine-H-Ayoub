@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Moon, Sun, Baby, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete, Headphones, Power, Check, Bell, Clock } from "lucide-react";
+import { ArrowRight, Moon, Sun, Baby, ChevronLeft, X, BarChart3, Wrench, User, GraduationCap, BookOpen, Lock, Settings as SettingsIcon, MessageSquare, Delete, Headphones, Power, Check, Bell, Clock, Star, Gift } from "lucide-react";
 import { isMushafDevEnabled, setMushafDev, closeTauriApp } from "../utils/tauriUtils";
-import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHidden, setPureMode, isPureMode, type AppMode } from "../data/kidsProfile";
+import { getAppMode, setAppMode, getProfiles, addProfile, kidsHidden, setKidsHidden, setPureMode, isPureMode, getCoins, addCoins, type AppMode } from "../data/kidsProfile";
+import { redeemOneTimeCode, syncAdminDataFromServer } from "../data/titles";
 import { getReminderSettings, saveReminderSettings, showLocalNotification, requestNotificationPermission, type ReminderSettings } from "../utils/notifications";
 
 
@@ -72,6 +73,9 @@ export default function SettingsPage() {
   const [pinFlow, setPinFlow] = useState<null | "verifyOld" | "setNew">(null);
   const [pendingMode, setPendingMode] = useState<AppMode | null>(null);
   const [bgAudio, setBgAudio] = useState(isBackgroundAudioEnabled);
+  const [coins, setCoins] = useState(getCoins);
+  const [rewardCode, setRewardCode] = useState("");
+  const [rewardCodeMessage, setRewardCodeMessage] = useState("");
   const [reminders, setReminders] = useState<ReminderSettings>(getReminderSettings);
   const updateReminders = (patch: Partial<ReminderSettings>) => {
     const next = saveReminderSettings(patch);
@@ -79,6 +83,19 @@ export default function SettingsPage() {
   };
   const changePin = () => setPinFlow(hasKidsPin() ? "verifyOld" : "setNew");
   const removePin = () => { removeKidsPin(); setHasPin(false); toast({ title: "أُزيلت كلمة المرور" }); };
+  const redeemRewardCode = async () => {
+    await syncAdminDataFromServer();
+    const amount = redeemOneTimeCode(rewardCode);
+    if (amount < 0) {
+      setRewardCodeMessage("الكود غير صالح أو استُخدم من قبل");
+      return;
+    }
+    addCoins(amount);
+    setCoins(getCoins());
+    setRewardCode("");
+    setRewardCodeMessage(`تمت إضافة ${amount} نجمة إلى الملف النشط`);
+    toast({ title: `تمت إضافة ${amount} ⭐` });
+  };
 
   const changeMode = (m: AppMode, style?: "pure" | "flexible") => {
     if (m === "kids" && kidsHidden()) {
@@ -295,6 +312,32 @@ export default function SettingsPage() {
             desc="اطّلع على تقدّم الأطفال وإعداداتهم." 
             onClick={() => navigate("/parent")}
           />
+        </Section>
+
+        <Section label="النجوم والمكافآت">
+          <div className="p-3 space-y-3">
+            <div className="flex items-center justify-between rounded-xl bg-accent/10 border border-accent/20 p-3">
+              <span className="flex items-center gap-2 text-sm font-extrabold"><Star className="w-5 h-5 fill-current text-amber-500" /> رصيد الملف النشط</span>
+              <span className="text-lg font-black text-accent">{coins.toLocaleString("en-US")} ⭐</span>
+            </div>
+            <div className="space-y-2">
+              <p className="text-[11px] text-muted-foreground">أدخل كود المكافأة لإضافة النجوم مباشرة، دون طلب تفعيل التطبيق.</p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  value={rewardCode}
+                  onChange={(event) => { setRewardCode(event.target.value.toUpperCase()); setRewardCodeMessage(""); }}
+                  placeholder="مثال: ABC12345"
+                  aria-label="كود النجوم"
+                  dir="ltr"
+                  className="min-w-0 flex-1 rounded-xl bg-background border border-border px-3 py-3 text-center text-sm font-bold tracking-wider"
+                />
+                <button type="button" onClick={() => void redeemRewardCode()} disabled={!rewardCode.trim()} className="w-full shrink-0 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-accent-foreground disabled:opacity-40 flex items-center justify-center gap-1 sm:w-auto">
+                  <Gift className="w-4 h-4" /> إضافة
+                </button>
+              </div>
+              {rewardCodeMessage && <p className="text-xs font-bold text-center text-accent">{rewardCodeMessage}</p>}
+            </div>
+          </div>
         </Section>
 
         {/* ===== المظهر ===== */}

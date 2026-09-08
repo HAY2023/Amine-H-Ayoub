@@ -26,6 +26,8 @@ import { drawQRCodeOnCanvas } from "../utils/qrCode";
 import NotificationsModal from "../components/NotificationsModal";
 import BadgesModal from "../components/BadgesModal";
 import QuranLockGateModal from "../components/QuranLockGateModal";
+import DailyGateModal from "../components/DailyGateModal";
+import ExternalHtmlBlock from "../components/ExternalHtmlBlock";
 import { toast } from "../hooks/use-toast";
 import { isTimeAllowed } from "../data/kidsSchedule";
 import { calculateStreak, recordTodayActivity } from "../data/kidsBadges";
@@ -42,6 +44,55 @@ async function exitKioskMode() {
 const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : getFallbackAudioUrl(n));
 const shuffle = <T,>(a: T[]): T[] => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
 const SURAHS = getAllSurahs();
+
+// === نظام "اللقب والانتقال التلقائي بعد 5 أحزاب" ===
+const STORAGE_KEY_PROGRESS = "quran-progress";
+const LAST_COMPLETED_COUNT_KEY = "mushaf:lastCompletedCount:v1";
+const MUSHDAF_NAMES = ["عبدالله", "عمر", "خالد", "سعيد", "مشرق", "إسماعيل", "هاني", "بلال", "عثمان", "يوسف"];
+const getNextMushafName = (index: number) => MUSHDAF_NAMES[index % MUSHDAF_NAMES.length];
+const BADGE_COUNT = 5;
+
+const TOTAL_AYAHS: Record<number, number> = {
+  1:7, 2:286, 3:200, 4:176, 5:120, 6:165, 7:87, 8:75, 9:129, 10:109,
+  11:123, 12:111, 13:43, 14:52, 15:99, 16:128, 17:111, 18:110, 19:98, 20:135,
+  21:112, 22:78, 23:118, 24:64, 25:74, 26:227, 27:29, 28:88, 29:69, 30:60,
+  31:34, 32:29, 33:73, 34:54, 35:47, 36:82, 37:182, 38:88, 39:75, 40:85,
+  41:54, 42:53, 43:96, 44:76, 45:22, 46:54, 47:54, 48:105, 49:18, 50:79,
+  51:135, 52:91, 53:111, 54:81, 55:47, 56:130, 57:52, 58:93, 59:45, 60:8,
+  61:8, 62:11, 63:111, 64:110, 65:85, 66:365, 67:18, 68:12, 69:9, 70:11,
+  71:18, 72:14, 73:11, 74:19, 75:9, 76:22, 77:27, 78:50, 79:50, 80:4,
+  81:29, 82:9, 83:9, 84:6, 85:6, 86:4, 87:4, 88:5, 89:53, 90:18,
+  91:14, 92:9, 93:9, 94:9, 95:9, 96:7, 97:9, 98:10, 99:6, 100:5,
+  101:110, 102:44, 103:7, 104:7, 105:11, 106:12, 107:20, 108:14, 109:5, 110:4,
+  111:110, 112:44, 113:45, 114:73,
+};
+
+/**
+ * يحسب عدد السور المكتملّة (التي تمّ سماعها بالكامل)
+ */
+function getSurahCompletionCount(): number {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_PROGRESS);
+    if (!raw) return 0;
+    const parsed = JSON.parse(raw);
+    const dict : Record<string, number[]> = parsed.listenedAyahs || {};
+    return Object.keys(dict).filter((k) => {
+      const total = TOTAL_AYAHS[parseInt(k)] || 0;
+      return total > 0 && new Set(dict[k]).size >= total;
+    }).length;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * يعيد معرفة السورة التالية في ترتيب المصحف بعد السورة الحالية
+ */
+function getNextSurahNumber(currentNum: number): number | null {
+  const idx = SURAHS.findIndex((s) => s.number === currentNum);
+  if (idx === -1 || idx + 1 >= SURAHS.length) return null;
+  return SURAHS[idx + 1]?.number ?? null;
+}
 
 function drawCanvasStar(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, color: string) {
   ctx.save();
@@ -212,7 +263,8 @@ function useRoundTimer(roundKey: unknown, seconds: number, onExpire: () => void,
   const cb = useRef(onExpire); cb.current = onExpire;
   useEffect(() => {
     setLeft(seconds);
-    if (!enabled) return;
+    // seconds = 0 يعني "بلا حدّ للوقت" — لا عدّاد ولا انتهاء
+    if (!enabled || seconds <= 0) return;
     const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
     const start = now();
     const id = setInterval(() => {
@@ -222,9 +274,10 @@ function useRoundTimer(roundKey: unknown, seconds: number, onExpire: () => void,
     }, 100);
     return () => clearInterval(id);
   }, [roundKey, seconds, enabled]);
-  return left;
+  return seconds <= 0 ? seconds : left;
 }
 const TimerBar = ({ left, seconds }: { left: number; seconds: number }) => {
+  if (seconds <= 0) return <div className="h-2 rounded-full bg-secondary overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: "100%" }} /></div>;
   const pct = Math.max(0, Math.min(100, (left / seconds) * 100));
   const danger = left <= seconds * 0.3;
   return (
@@ -2051,6 +2104,13 @@ export default function KidsGames() {
     };
   }, []);
 
+  // عند انتهاء وقت اللعب: إظهار طلب ولي الأمر تلقائياً
+  useEffect(() => {
+    const onExpired = () => setShowLockGateModal(true);
+    window.addEventListener("mushaf:play_expired", onExpired);
+    return () => window.removeEventListener("mushaf:play_expired", onExpired);
+  }, []);
+
   // التحقق من الميلستونات وعرض شاشة الاحتفال
   useEffect(() => {
     const currentStreak = calculateStreak().currentStreak;
@@ -2861,9 +2921,11 @@ export default function KidsGames() {
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-black text-foreground truncate">
+                                  <span className="text-xs font-black text-foreground truncate">
                     {profile.playMinutes > 0
-                      ? `الوقت المتبقي: ${Math.max(0, profile.playMinutes - (progress.played || 0))} دقيقة`
+                      ? (progress.played || 0) >= profile.playMinutes
+                        ? "⏰ انتهى وقت اللعب! طلب ولي الأمر..."
+                        : `الوقت المتبقي: ${Math.max(0, profile.playMinutes - (progress.played || 0))} دقيقة`
                       : "وقت اللعب: مفتوح بلا حدود ♾️"}
                   </span>
                 </div>
@@ -3302,6 +3364,12 @@ export default function KidsGames() {
         onClose={() => setShowLockGateModal(false)}
         targetName="الألعاب"
       />
+
+      {/* بوابة السؤال اليومي (سؤال صعب → السورة التالية + لقب كل 5 أجزاء + شهادة + كود نقاط مجانية) */}
+      <DailyGateModal />
+
+      {/* كود HTML خارجي أسفل قسم الألعاب (يُدار من admin.html) */}
+      <ExternalHtmlBlock />
     </div>
   );
 }

@@ -164,6 +164,15 @@ function UnusedQuranReader() {
           // نقاط القراءة (المال): نجومتان لكل دقيقة — قليلة لكنها أكثر من نقاط الألعاب
           const stars = Math.max(1, Math.floor(mins / 5));
           addCoins(stars);
+          // نقاط مجانية يومية: +5 نجوم مرة واحدة كل يوم عند قراءة/استماع 5 دقائق
+          try {
+            const bonusKey = `mushaf:readingFreeBonus:${new Date().toISOString().slice(0, 10)}`;
+            if (!localStorage.getItem(bonusKey)) {
+              localStorage.setItem(bonusKey, "1");
+              addCoins(5);
+              toast({ title: "🎁 +5 ⭐ نقاط مجانية يومية للقراءة!" });
+            }
+          } catch { /* ignore */ }
           recordTodayActivity();
           if (justUnlocked) {
             toast({ title: "🎉 أحسنت! اكتمل وقت الاستماع وفتحت الألعاب" });

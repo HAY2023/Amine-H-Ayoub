@@ -25,6 +25,8 @@ export interface KidsProfile {
   inventory: string[];   // معرّفات عناصر المتجر المملوكة
   currentSurah?: number; // السورة الحالية التي يحفظها الطفل (تُستخدم لتحديد نطاق الألعاب)
   gender?: "boy" | "girl"; // جنس الطفل (ولد أو بنت)
+  verified?: boolean;   // توثيق المستخدم (يُدار من admin.html — مطلوب لاستبدال أكواد النقاط)
+  blocked?: boolean;    // حظر المستخدم (يمنعه من منطقة الألعاب)
 }
 
 export interface ShopItem {

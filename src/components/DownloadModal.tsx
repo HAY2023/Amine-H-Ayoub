@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { X, Smartphone, Monitor, Tv, Apple, Download, CheckCircle2, Sparkles, ExternalLink } from "lucide-react";
+import { openExternalUrl } from "../utils/tauriUtils";
 
 interface DownloadModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const HF_BASE = "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main";
+export const RELEASE_BASE = "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0";
+const RELEASE_VERSION = "1.0.0";
 
 export const DOWNLOAD_PACKAGES = [
   {
@@ -19,7 +21,20 @@ export const DOWNLOAD_PACKAGES = [
     icon: <Smartphone className="w-7 h-7 text-emerald-400" />,
     color: "from-emerald-600/30 to-emerald-950/40 border-emerald-500/40 hover:border-emerald-400",
     btnColor: "bg-emerald-600 hover:bg-emerald-500 text-white",
-    url: `${HF_BASE}/Quran_1.0.0_Android.apk`,
+    url: `${RELEASE_BASE}/Quran_1.0.0_Android_Mobile.apk`,
+    isDirect: true,
+  },
+  {
+    id: "android-aab",
+    name: "حزمة أندرويد للمتجر (AAB)",
+    platform: "Google Play - Android Mobile",
+    desc: "حزمة Google Play الرسمية لهواتف أندرويد",
+    version: RELEASE_VERSION,
+    size: "AAB",
+    icon: <Smartphone className="w-7 h-7 text-emerald-400" />,
+    color: "from-teal-600/30 to-teal-950/40 border-teal-500/40 hover:border-teal-400",
+    btnColor: "bg-teal-600 hover:bg-teal-500 text-white",
+    url: `${RELEASE_BASE}/Quran_${RELEASE_VERSION}_Android_Mobile.aab`,
     isDirect: true,
   },
   {
@@ -32,7 +47,20 @@ export const DOWNLOAD_PACKAGES = [
     icon: <Monitor className="w-7 h-7 text-blue-400" />,
     color: "from-blue-600/30 to-blue-950/40 border-blue-500/40 hover:border-blue-400",
     btnColor: "bg-blue-600 hover:bg-blue-500 text-white",
-    url: `${HF_BASE}/Quran_1.0.0_x64-setup.exe`,
+    url: `${RELEASE_BASE}/Quran-Amine-H-Ayoub_${RELEASE_VERSION}_Setup.exe`,
+    isDirect: true,
+  },
+  {
+    id: "windows-msi",
+    name: "برنامج ويندوز للمتجر (MSI)",
+    platform: "Microsoft Store - Windows 10 / 11",
+    desc: "حزمة MSI لتثبيت التطبيق على أجهزة ويندوز",
+    version: RELEASE_VERSION,
+    size: "MSI",
+    icon: <Monitor className="w-7 h-7 text-cyan-400" />,
+    color: "from-cyan-600/30 to-cyan-950/40 border-cyan-500/40 hover:border-cyan-400",
+    btnColor: "bg-cyan-600 hover:bg-cyan-500 text-white",
+    url: `${RELEASE_BASE}/Quran-Amine-H-Ayoub_${RELEASE_VERSION}_Microsoft_Store.msi`,
     isDirect: true,
   },
   {
@@ -45,7 +73,20 @@ export const DOWNLOAD_PACKAGES = [
     icon: <Tv className="w-7 h-7 text-purple-400" />,
     color: "from-purple-600/30 to-purple-950/40 border-purple-500/40 hover:border-purple-400",
     btnColor: "bg-purple-600 hover:bg-purple-500 text-white",
-    url: `${HF_BASE}/Quran_1.0.0_Android_TV.apk`,
+    url: `${RELEASE_BASE}/Quran_1.0.0_Android_TV.apk`,
+    isDirect: true,
+  },
+  {
+    id: "tv-aab",
+    name: "حزمة التلفاز للمتجر (AAB)",
+    platform: "Google Play - Android TV",
+    desc: "حزمة Google Play المخصصة لشاشات التلفاز وTV Box",
+    version: RELEASE_VERSION,
+    size: "AAB",
+    icon: <Tv className="w-7 h-7 text-purple-400" />,
+    color: "from-violet-600/30 to-violet-950/40 border-violet-500/40 hover:border-violet-400",
+    btnColor: "bg-violet-600 hover:bg-violet-500 text-white",
+    url: `${RELEASE_BASE}/Quran_${RELEASE_VERSION}_Android_TV.aab`,
     isDirect: true,
   },
   {
@@ -68,13 +109,13 @@ export default function DownloadModal({ isOpen, onClose }: DownloadModalProps) {
 
   if (!isOpen) return null;
 
-  const handleDownload = (pkg: typeof DOWNLOAD_PACKAGES[0]) => {
+  const handleDownload = async (pkg: typeof DOWNLOAD_PACKAGES[0]) => {
     if (pkg.isDirect) {
       setDownloadingId(pkg.id);
       setTimeout(() => setDownloadingId(null), 3000);
-      window.location.href = pkg.url;
+      await openExternalUrl(pkg.url);
     } else {
-      window.open(pkg.url, "_blank");
+      await openExternalUrl(pkg.url);
     }
   };
 

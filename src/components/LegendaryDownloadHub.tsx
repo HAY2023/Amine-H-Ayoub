@@ -1,16 +1,20 @@
 import { useState } from "react";
 import { Apple, Smartphone, Monitor, Tv, Download } from "lucide-react";
+import { openExternalUrl } from "../utils/tauriUtils";
 
 export default function LegendaryDownloadHub() {
   const [isOpen, setIsOpen] = useState(true);
 
-  const HF_BASE = "https://huggingface.co/datasets/hammoualiyoucef20/quran-app-releases/resolve/main";
+  const RELEASE_BASE = "https://github.com/HAY2023/Amine-H-Ayoub/releases/download/v1.0.0";
 
   const platforms = [
     { name: "iOS", icon: <Apple className="w-6 h-6" />, desc: "iPhone & iPad", url: "https://amine-h-ayoub.vercel.app/", color: "from-gray-700 to-gray-900" },
-    { name: "Android", icon: <Smartphone className="w-6 h-6" />, desc: "هواتف وأجهزة أندرويد (APK)", url: `${HF_BASE}/Quran_1.0.0_Android.apk`, color: "from-emerald-500 to-emerald-700" },
-    { name: "Windows", icon: <Monitor className="w-6 h-6" />, desc: "كمبيوتر ولابتوب (EXE)", url: `${HF_BASE}/Quran_1.0.0_x64-setup.exe`, color: "from-blue-500 to-blue-700" },
-    { name: "Smart TV", icon: <Tv className="w-6 h-6" />, desc: "شاشات Android TV (APK)", url: `${HF_BASE}/Quran_1.0.0_Android_TV.apk`, color: "from-purple-500 to-purple-700" },
+    { name: "Android", icon: <Smartphone className="w-6 h-6" />, desc: "هواتف أندرويد (APK)", url: `${RELEASE_BASE}/Quran_1.0.0_Android_Mobile.apk`, color: "from-emerald-500 to-emerald-700" },
+    { name: "Android AAB", icon: <Smartphone className="w-6 h-6" />, desc: "حزمة Google Play للهاتف", url: `${RELEASE_BASE}/Quran_1.0.0_Android_Mobile.aab`, color: "from-teal-500 to-teal-700" },
+    { name: "Windows", icon: <Monitor className="w-6 h-6" />, desc: "كمبيوتر ولابتوب (EXE)", url: `${RELEASE_BASE}/Quran-Amine-H-Ayoub_1.0.0_Setup.exe`, color: "from-blue-500 to-blue-700" },
+    { name: "Windows MSI", icon: <Monitor className="w-6 h-6" />, desc: "حزمة Microsoft Store (MSI)", url: `${RELEASE_BASE}/Quran-Amine-H-Ayoub_1.0.0_Microsoft_Store.msi`, color: "from-cyan-500 to-cyan-700" },
+    { name: "Smart TV", icon: <Tv className="w-6 h-6" />, desc: "شاشات Android TV (APK)", url: `${RELEASE_BASE}/Quran_1.0.0_Android_TV.apk`, color: "from-purple-500 to-purple-700" },
+    { name: "TV AAB", icon: <Tv className="w-6 h-6" />, desc: "حزمة Google Play للتلفاز", url: `${RELEASE_BASE}/Quran_1.0.0_Android_TV.aab`, color: "from-violet-500 to-violet-700" },
   ];
 
   return (
@@ -58,6 +62,7 @@ export default function LegendaryDownloadHub() {
                 <a
                   key={platform.name}
                   href={platform.url}
+                  onClick={(event) => { event.preventDefault(); void openExternalUrl(platform.url); }}
                   className={`absolute top-1/2 left-1/2 flex flex-col items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br ${platform.color} shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-110 transition-all duration-300 border border-white/20 group backdrop-blur-md z-10 ${isOpen ? 'scale-100' : 'scale-50'}`}
                   style={{
                     transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,

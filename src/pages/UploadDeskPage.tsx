@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Upload, Trash2, FileText, Image, Play, Video, File, CheckCircle2 } from "lucide-react";
 
 const STORAGE_KEY = "upload-desk:items:v1";
+const FILE_DB_NAME = "mushaf-upload-desk";
+const FILE_STORE_NAME = "files";
 
 interface UploadedItem {
   id: string;
@@ -40,6 +42,50 @@ function saveItems(items: UploadedItem[]) {
   }
 }
 
+function openFileDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(FILE_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(FILE_STORE_NAME)) {
+        request.result.createObjectStore(FILE_STORE_NAME);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveFileBlob(id: string, file: Blob) {
+  const db = await openFileDb();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(FILE_STORE_NAME, "readwrite");
+    transaction.objectStore(FILE_STORE_NAME).put(file, id);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+  db.close();
+}
+
+async function getFileBlob(id: string): Promise<Blob | null> {
+  const db = await openFileDb();
+  return new Promise((resolve, reject) => {
+    const request = db.transaction(FILE_STORE_NAME, "readonly").objectStore(FILE_STORE_NAME).get(id);
+    request.onsuccess = () => { db.close(); resolve(request.result || null); };
+    request.onerror = () => { db.close(); reject(request.error); };
+  });
+}
+
+async function deleteFileBlob(id: string) {
+  const db = await openFileDb();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(FILE_STORE_NAME, "readwrite");
+    transaction.objectStore(FILE_STORE_NAME).delete(id);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+  db.close();
+}
+
 function getPreviewKind(type: string): PreviewKind {
   if (type.startsWith("image/")) return "image";
   if (type.startsWith("audio/")) return "audio";
@@ -63,6 +109,31 @@ export default function UploadDeskPage() {
 
   useEffect(() => {
     saveItems(items);
+  }, [items]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const restoreImages = async () => {
+      const imageItems = items.filter(item => getPreviewKind(item.type) === "image");
+      const restored = await Promise.all(imageItems.map(async item => {
+        try {
+          const blob = await getFileBlob(item.id);
+          return blob ? [item.id, URL.createObjectURL(blob)] as const : null;
+        } catch {
+          return null;
+        }
+      }));
+      if (cancelled) {
+        restored.forEach(entry => { if (entry) URL.revokeObjectURL(entry[1]); });
+        return;
+      }
+      setFileUrls(prev => ({
+        ...prev,
+        ...Object.fromEntries(restored.filter((entry): entry is readonly [string, string] => !!entry)),
+      }));
+    };
+    void restoreImages();
+    return () => { cancelled = true; };
   }, [items]);
 
   useEffect(() => {
@@ -127,6 +198,11 @@ export default function UploadDeskPage() {
 
     const url = URL.createObjectURL(file);
     setFileUrls(prev => ({ ...prev, [id]: url }));
+    try {
+      await saveFileBlob(id, file);
+    } catch {
+      setUploadStatus("تعذر حفظ الصورة محليًا، لكن سيستمر رفعها إلى الخادم إن كان متاحًا.");
+    }
 
     await uploadFileToServer(file);
 
@@ -176,6 +252,7 @@ export default function UploadDeskPage() {
   }, [selectedFile]);
 
   const handleRemove = (id: string) => {
+    void deleteFileBlob(id).catch(() => {});
     setItems(prev => prev.filter(item => item.id !== id));
     setFileUrls(prev => {
       const next = { ...prev };
@@ -312,6 +389,7 @@ export default function UploadDeskPage() {
                         <p className="font-bold text-foreground">{item.name}</p>
                         <p className="text-xs text-muted-foreground">{item.type || "غير معروف"} · {formatSize(item.size)}</p>
                         <p className="text-xs text-muted-foreground">{new Date(item.uploadedAt).toLocaleString()}</p>
+                        {kind === "image" && url && <img src={url} alt={item.name} className="mt-2 h-24 w-32 rounded-xl border border-border object-cover" />}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">

@@ -52,21 +52,6 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
     }
 
     const urlStr = typeof input === "string" ? input : input instanceof URL ? input.toString() : input instanceof Request ? input.url : "";
-    // If querying the unmigrated 'store' table, safely mock a successful empty response
-    // to prevent 404 network errors in the browser console.
-    if (urlStr.includes("/rest/v1/store")) {
-      const method = (init?.method || "GET").toUpperCase();
-      const mockBody = method === "GET" ? "[]" : "{}";
-      return new Response(mockBody, {
-        status: 200,
-        statusText: "OK",
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Range": "0-0/0",
-        },
-      });
-    }
-
     const headers = new Headers(
       typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined,
     );

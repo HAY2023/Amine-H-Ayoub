@@ -63,10 +63,16 @@ export default function QuranLockGateModal({ isOpen, onClose, targetName = "ال
     navigate("/audio");
   };
 
+    // رسائل ذكية عند انتهاء وقت اللعب
+  const isTimeUp = !!progress.playExpired;
   const handleParentUnlock = () => {
     unlockToday();
     setShowPin(false);
-    toast({ title: "🎉 فُتحت الألعاب بنجاح لهذا اليوم بإذن ولي الأمر!" });
+    toast({
+      title: isTimeUp
+        ? "🎉 شكراً يا ولي الأمر! 🌟 تم منح وقت لعب إضافي للطفل الآن."
+        : "🎉 فُتحت الألعاب بنجاح لهذا اليوم بإذن ولي الأمر!",
+    });
     onClose();
     navigate("/games");
   };

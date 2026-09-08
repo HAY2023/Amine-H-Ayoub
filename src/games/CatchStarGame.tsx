@@ -255,6 +255,9 @@ function playSound(type: "correct" | "wrong" | "hint" | "win") {
   }
 }
 
+// إعدادات الوقت — قابلة للتخصيص من خلال def.params أو افتراضيات
+const DEFAULT_TIME_LIMIT_SECONDS = 60; // 60 ثانية افتراضياً لكل جولة
+
 export default function CatchStarGame({ def: _def }: CatchStarGameProps) {
   const [roundIdx, setRoundIdx] = useState(0);
   const [collected, setCollected] = useState<string[]>([]);
@@ -265,6 +268,38 @@ export default function CatchStarGame({ def: _def }: CatchStarGameProps) {
   const [roundDone, setRoundDone] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  // --- نظام العداد (timeLeft == 0 يعني غير محدود) ---
+  const timeLimit = _def?.params?.timeLimit ?? DEFAULT_TIME_LIMIT_SECONDS;
+  const [timeLeft, setTimeLeft] = useState<number>(timeLimit);
+  const [elapsed, setElapsed] = useState(0); // وقت مضى منذ بدء الجولة (ثواني)
+
+  useEffect(() => {
+    // إعادة تعيين العداد عند بدء جولة جديدة
+    setTimeLeft(timeLimit);
+    setElapsed(0);
+  }, [roundIdx, timeLimit]);
+
+  // مؤقت العد التنازلي — يتوقف عندما يكون timeLeft == 0 (وضع غير محدود)
+  useEffect(() => {
+    if (roundDone || lives <= 0 || timeLeft <= 0) return; // 0 = غير محدود
+    if (timeLeft === undefined) return;
+    const timer = window.setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      setElapsed((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [timeLeft, roundDone, lives]);
+
+  // انتهى الوقت → خسارة
+  useEffect(() => {
+    if (timeLeft === 0 && timeLimit > 0 && !roundDone && lives > 0) {
+      playSound("wrong");
+      setLives((l) => Math.max(0, l - 1));
+      setStreak(0);
+      setRoundDone(true);
+    }
+  }, [timeLeft, timeLimit, roundDone, lives]);
 
   useEffect(() => {
     const handleCoins = () => setCoins(getCoins());

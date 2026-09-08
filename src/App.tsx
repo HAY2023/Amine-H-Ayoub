@@ -19,10 +19,13 @@ const QuranReader = lazy(() => import("./pages/QuranReader.tsx"));
 const KidsGames = lazy(() => import("./pages/KidsGames.tsx"));
 const KidsShop = lazy(() => import("./pages/KidsShop.tsx"));
 import { applyTheme, getTheme } from "./utils/theme";
+import { syncAdminDataFromServer } from "./data/titles";
+import { syncKidsProfileFromServer } from "./data/kidsProfile";
 const SettingsPage = lazy(() => import("./pages/SettingsPage.tsx"));
 const ParentDashboard = lazy(() => import("./pages/ParentDashboard.tsx"));
 const CustomAudioManager = lazy(() => import("./pages/CustomAudioManager.tsx"));
 const AudioUploadPage = lazy(() => import("./pages/AudioUploadPage.tsx"));
+const UploadDeskPage = lazy(() => import("./pages/UploadDeskPage.tsx"));
 const SupportPage = lazy(() => import("./pages/SupportPage.tsx"));
 
 const AnnouncementsPage = lazy(() => import("./pages/AnnouncementsPage.tsx"));
@@ -155,6 +158,8 @@ const App = () => {
       syncCoordinatesFromServer();
       syncTimingsFromServer();
       syncBookmarksFromServer();
+      syncKidsProfileFromServer();
+      syncAdminDataFromServer(); // الألقاب + أكواد النقاط + كود HTML الخارجي (مركزي من لوحة admin.html)
     }, 1500);
 
     // Preload Quran corpus in background after initial render
@@ -232,6 +237,7 @@ const App = () => {
                 <Route path="/profiles" element={<ProfilePicker />} />
                 <Route path="/manage-audio" element={<CustomAudioManager />} />
                 <Route path="/upload" element={<AudioUploadPage />} />
+                <Route path="/upload-desk" element={<UploadDeskPage />} />
 
                 <Route path="/announcements" element={<AnnouncementsPage />} />
                 <Route path="/support" element={<SupportPage />} />

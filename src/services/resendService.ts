@@ -53,8 +53,18 @@ export function createWhatsAppSupportLink(report?: Partial<SupportReportData> | 
     message += report.typeLabel;
   }
 
-  // استخدام wa.me لضمان العمل على جميع الأجهزة (ويندوز يفتح في المتصفح، الهاتف يفتح واتساب مباشرة)
-  return `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  // فتح تطبيق واتساب مباشرة على الهاتف ونسخة سطح المكتب عند توفرها.
+  return `whatsapp://send?phone=${SUPPORT_WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`;
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 2500): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** فتح محادثة واتساب المباشرة مع الدعم الفني على رقم 0658188644 في المتصفح أو التطبيق */
@@ -204,7 +214,7 @@ export async function sendSupportReportEmail(
     };
 
     const requests = SUPPORT_EMAILS.map((targetEmail) =>
-      fetch(`https://formsubmit.co/ajax/${targetEmail}`, {
+      fetchWithTimeout(`https://formsubmit.co/ajax/${targetEmail}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
