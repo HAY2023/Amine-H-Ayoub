@@ -11,7 +11,8 @@ import {
   equipColor, 
   kidsRouteBlocked, 
   formatCoins, 
-  SHOP_AVATARS, 
+  SHOP_AVATARS_BOY,
+  SHOP_AVATARS_GIRL,
   SHOP_COLORS,
   type ShopItem 
 } from "../data/kidsProfile";
@@ -128,12 +129,15 @@ export default function KidsShop() {
     }
   };
 
-  const starterAvatars = [
+  const starterAvatars = profile.gender === 'girl' ? [
+    { id: "free-girl-scholar", label: "طالبة العلم الصغيرة", value: "img-girl-scholar", description: "الشخصية الأساسية المجانية لجميع بطلات القرآن." },
+  ] : [
     { id: "free-boy-scholar", label: "طالب العلم الصغير", value: "img-boy-scholar", description: "الشخصية الأساسية المجانية لجميع أبطال القرآن." },
   ];
 
   // تصفية الشخصيات حسب الفئة
-  const filteredAvatars = SHOP_AVATARS.filter(item => {
+  const shopAvatars = profile.gender === 'girl' ? SHOP_AVATARS_GIRL : SHOP_AVATARS_BOY;
+  const filteredAvatars = shopAvatars.filter(item => {
     if (filterTier === "all") return true;
     if (filterTier === "legendary") return item.tier === "legendary";
     if (filterTier === "diamond") return item.tier === "diamond";
@@ -302,8 +306,7 @@ export default function KidsShop() {
                 { id: "all", label: "الكل" },
                 { id: "legendary", label: "🌟 الأساطير" },
                 { id: "diamond", label: "💎 الماسي" },
-                { id: "gold", label: "👑 الذهبي" },
-                { id: "girls", label: "🌸 الأميرات" },
+                { id: "gold", label: "👑 الذهبي" }
               ].map(t => (
                 <button
                   key={t.id}

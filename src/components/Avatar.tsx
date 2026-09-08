@@ -12,7 +12,7 @@ type HairStyle = "short" | "spiky" | "curly" | "bob" | "ponytail" | "bald";
 type Acc =
   | "none" | "bow" | "crown" | "tiara" | "bigcrown" | "mask" | "ninja" | "gradcap"
   | "beret" | "detective" | "helmet" | "sunglasses" | "starglasses" | "freckles" | "headband" | "wink"
-  | "turban" | "hijab" | "royalcap" | "crescent";
+  | "turban" | "hijab" | "royalcap" | "crescent" | "purplecap";
 
 interface Cfg { skin: string; hair: HairStyle; hc: string; acc: Acc; }
 
@@ -210,6 +210,18 @@ export function getAvatarSrc(name: string): string {
   const clean = name.startsWith("av-") ? name.replace(/^av-/, "") : name;
   const direct = AVATAR_IMAGE_PATHS[clean] || AVATAR_IMAGE_PATHS[name];
   if (direct) return direct;
+  
+  if (clean.startsWith("img-boy-")) {
+    const num = parseInt(clean.replace("img-boy-", ""));
+    if (num >= 1 && num <= 10) return `/avatars/${clean}.png`;
+    if (num >= 11 && num <= 15) return `/avatars/${clean}.jpg`;
+  }
+  if (clean.startsWith("img-girl-")) {
+    const num = parseInt(clean.replace("img-girl-", ""));
+    if (num >= 1 && num <= 10) return `/avatars/${clean}.png`;
+    if (num >= 11 && num <= 13) return `/avatars/${clean}.jpg`;
+  }
+
   if (clean.startsWith("img-")) return `/avatars/${clean}.jpg`;
   return "/avatars/img-boy-bisht-white.jpg";
 }
@@ -228,7 +240,7 @@ export default function Avatar({ name, className }: { name: string; className?: 
   }
 
   const cleanName = name.startsWith("av-") ? name.replace(/^av-/, "") : name;
-  const imageSrc = AVATAR_IMAGE_PATHS[cleanName] || (cleanName.startsWith("img-") ? `/avatars/${cleanName}.jpg` : undefined);
+  const imageSrc = cleanName.startsWith("img-") ? getAvatarSrc(cleanName) : AVATAR_IMAGE_PATHS[cleanName];
 
   if (!imgFailed && imageSrc) {
     return (

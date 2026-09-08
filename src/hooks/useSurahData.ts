@@ -45,17 +45,9 @@ async function isLocalServerAvailable(): Promise<boolean> {
 }
 
 // دالة تحديد الرابط الصوتي للسورة
+// ملاحظة: getSurahAudioUrl يقوم بالتحويل من ترقيم المصحف إلى ترقيم السيرفر السحابي داخلياً،
+// لذلك لا يجب التحويل هنا مرة أخرى (كان يسبب تشغيل سورة خاطئة أو خطأ)
 function getAudioForSurah(n: number): string {
-  const legacyAmmaMap: Record<number, number> = {
-    78: 38, 79: 37, 80: 36, 81: 35, 82: 34, 83: 33, 84: 32, 85: 31,
-    86: 30, 87: 29, 88: 28, 89: 27, 90: 26, 91: 25, 92: 24, 93: 23,
-    94: 22, 95: 21, 96: 20, 97: 19, 98: 18, 99: 17, 100: 16, 101: 15,
-    102: 14, 103: 13, 104: 12, 105: 11, 106: 10, 107: 9, 108: 8, 109: 7,
-    110: 6, 111: 5, 112: 4, 113: 3, 114: 2
-  };
-  if (legacyAmmaMap[n]) {
-    return getSurahAudioUrl(legacyAmmaMap[n]);
-  }
   return getSurahAudioUrl(n);
 }
 

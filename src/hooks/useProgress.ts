@@ -95,13 +95,11 @@ export function useProgress() {
       const updated = new Set(existing);
       updated.add(ayahNumber);
       return {
-        points: getCoins() + 10,
+        points: getCoins(),
         listenedAyahs: { ...prev.listenedAyahs, [key]: updated },
       };
     });
-    // إضافة 10 نجوم إلى حساب الطفل الموحّد فورياً
-    addCoins(10);
-    return { newPoints: true, newAyah };
+    return { newPoints: false, newAyah };
   }, []);
 
   const getListenedCount = useCallback((surahNumber: number): number => {

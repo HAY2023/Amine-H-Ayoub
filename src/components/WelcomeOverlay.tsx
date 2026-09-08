@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Check, Wrench, User, Baby, Plus, Trash2, Minus, KeyRound, Shield, BookOpen, Headphones, Settings, Star, Gamepad2, Puzzle, Trophy, Sparkles, BookmarkCheck, ArrowLeftRight, Youtube } from "lucide-react";
 
-import { setAppMode, addProfile, setActiveProfile, kidsHidden, setKidsHidden, setPureMode, isPureMode, KID_AVATARS, KID_COLORS, type AppMode } from "../data/kidsProfile";
+import { setAppMode, addProfile, setActiveProfile, kidsHidden, setKidsHidden, setPureMode, isPureMode, KID_AVATARS_BOY, KID_AVATARS_GIRL, KID_COLORS, type AppMode } from "../data/kidsProfile";
 import { setKidsPin, setKidsLocked } from "../data/kidsLock";
 import Avatar from "./Avatar";
 import { openExternalUrl } from "../utils/tauriUtils";
@@ -16,14 +16,14 @@ export const isOnboarded = (): boolean => {
   try { return localStorage.getItem(ONBOARD_KEY) === "1"; } catch { return true; }
 };
 
-interface NewKid { name: string; age: number; avatar: string; color: string; }
+interface NewKid { name: string; age: number; gender: "boy" | "girl"; avatar: string; color: string; }
 
 export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<AppMode | null>(null);
   const [parentStyle, setParentStyle] = useState<"pure" | "flexible">("pure");
-  const [kids, setKids] = useState<NewKid[]>([{ name: "", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0] }]);
+  const [kids, setKids] = useState<NewKid[]>([{ name: "", age: 6, gender: "boy", avatar: KID_AVATARS_BOY[0], color: KID_COLORS[0] }]);
   const [pin, setPin] = useState("");
   const [pin2, setPin2] = useState("");
 
@@ -59,10 +59,10 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
       setKidsLocked(true);
       if (pinValid) setKidsPin(pin);
       const valid = kids.filter(k => k.name.trim());
-      const list = valid.length ? valid : [{ name: "طفلي", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0] }];
+      const list = valid.length ? valid : [{ name: "طفلي", age: 6, gender: "boy" as const, avatar: KID_AVATARS_BOY[0], color: KID_COLORS[0] }];
       let firstId = "";
       list.forEach((k, i) => {
-        const p = addProfile({ name: k.name.trim() || `طفل ${i + 1}`, age: k.age, avatar: k.avatar, color: k.color || KID_COLORS[i % KID_COLORS.length] });
+        const p = addProfile({ name: k.name.trim() || `طفل ${i + 1}`, age: k.age, gender: k.gender, avatar: k.avatar, color: k.color || KID_COLORS[i % KID_COLORS.length] });
         if (i === 0) firstId = p.id;
       });
       if (firstId) setActiveProfile(firstId);
@@ -75,7 +75,7 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
 
 
   const pick = (m: AppMode) => { setMode(m); setStep(2); };
-  const addKid = () => setKids(k => [...k, { name: "", age: 6, avatar: KID_AVATARS[k.length % KID_AVATARS.length], color: KID_COLORS[k.length % KID_COLORS.length] }]);
+  const addKid = () => setKids(k => [...k, { name: "", age: 6, gender: "boy", avatar: KID_AVATARS_BOY[0], color: KID_COLORS[k.length % KID_COLORS.length] }]);
   const delKid = (i: number) => setKids(k => (k.length > 1 ? k.filter((_, j) => j !== i) : k));
   const setKid = (i: number, patch: Partial<NewKid>) => setKids(k => k.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
@@ -233,9 +233,25 @@ export default function WelcomeOverlay({ onDone }: { onDone: () => void }) {
                       </div>
                     </div>
                     <div>
+                      <span className="block text-[11px] text-muted-foreground mb-1 font-bold">جنس الطفل:</span>
+                      <div className="flex gap-2 mb-3">
+                        <button
+                          onClick={() => setKid(i, { gender: "boy", avatar: KID_AVATARS_BOY[0] })}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all border ${k.gender === "boy" ? "bg-accent/20 border-accent text-accent" : "bg-card text-muted-foreground hover:bg-secondary"}`}
+                        >
+                          ولد
+                        </button>
+                        <button
+                          onClick={() => setKid(i, { gender: "girl", avatar: KID_AVATARS_GIRL[0] })}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all border ${k.gender === "girl" ? "bg-pink-500/20 border-pink-500 text-pink-500" : "bg-card text-muted-foreground hover:bg-secondary"}`}
+                        >
+                          بنت
+                        </button>
+                      </div>
+
                       <span className="block text-[11px] text-muted-foreground mb-1">اختر وجهاً</span>
                       <div className="flex flex-wrap gap-1.5">
-                        {KID_AVATARS.map(a => (
+                        {(k.gender === 'girl' ? KID_AVATARS_GIRL : KID_AVATARS_BOY).map(a => (
                           <button key={a} onClick={() => setKid(i, { avatar: a })}
                             className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${k.avatar === a ? "bg-accent/25 ring-2 ring-accent scale-105 text-accent" : "bg-muted text-muted-foreground"}`}><Avatar name={a} className="w-5 h-5" /></button>
                         ))}

@@ -139,6 +139,7 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
   const [coins, setCoins] = useState(getCoins);
   const [placedIndices, setPlacedIndices] = useState<number[]>([]);
   const [mistakeAnim, setMistakeAnim] = useState<number | null>(null);
+  const [mistakes, setMistakes] = useState(0);
 
   useEffect(() => {
     const handleCoins = () => setCoins(getCoins());
@@ -174,13 +175,14 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
       if (newPlaced.length === letters.length) {
         // اكتملت الكلمة القرآنية بنجاح!
         playSound("win");
-        const bonus = 2;
+        const bonus = Math.max(1, 3 - Math.floor(mistakes / 2));
         setScore((s) => s + bonus);
         addCoins(bonus);
       }
     } else {
       // خطأ في الترتيب
       playSound("wrong");
+      setMistakes((m) => m + 1);
       setMistakeAnim(scrambledIndex);
       setTimeout(() => setMistakeAnim(null), 500);
     }
@@ -188,6 +190,7 @@ export default function WordBuilderGame({ def: _def }: WordBuilderGameProps) {
 
   const nextWord = () => {
     setWordIdx((prev) => prev + 1);
+    setMistakes(0);
   };
 
   const isFinished = wordIdx >= shuffledPool.length;

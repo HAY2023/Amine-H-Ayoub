@@ -154,7 +154,7 @@ export default function MemoryGame({ onBack, def, minSurah }: MemoryGameProps) {
 
   const handleWin = () => {
     setWon(true);
-    addCoins(10); // مكافأة الفوز
+    addCoins(2); // مكافأة صارمة
     toast({
       title: "🎉 رائع! طابقت كل السور",
       description: "حصلت على 10 نجوم!",

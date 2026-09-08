@@ -9,14 +9,14 @@ import {
 import { AYAH_COUNTS, getSavedTimings, saveSurahTimings, clearSavedSurahTimings, SurahTimings, AudioSegment } from "../data/ayahTimings";
 import { getPageAyahBoxes, savePageAyahBoxes, getAllPageSources } from "../data/ayahCoordinates";
 import { getCustomPages } from "../data/customPages";
-import { getSurahAudioUrl, hasCloudAudio } from "../data/audioUrls";
+import { getSurahAudioUrl, hasCloudAudio, getFallbackAudioUrl } from "../data/audioUrls";
 import { getSurahName, getSurahAyahCount, getAllSurahs } from "../data/quranData";
 import { toast } from "../hooks/use-toast";
 import { loadProfiles, diarize, decodeAudioFromUrl, type SpeakerProfile } from "../ai/speakerRecognition";
 
 /* ═══════════════════════════════════════════════════════════════════════ */
 
-const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
+const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : getFallbackAudioUrl(n));
 
 // Fallback for backward compatibility
 const SURAH_NAMES: Record<number, string> = getAllSurahs().reduce((acc, s) => {

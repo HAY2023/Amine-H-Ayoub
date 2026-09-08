@@ -2,26 +2,29 @@
  * Lazy load corpus data - load only when needed
  */
 
-import { ensureCorpus } from "./quranText";
+import type { SurahText } from "./quranText";
 
-let corpusPromise: Promise<ReturnType<typeof ensureCorpus>> | null = null;
-let corpusCache: Awaited<ReturnType<typeof ensureCorpus>> | null = null;
+let corpusPromise: Promise<SurahText[]> | null = null;
+let corpusCache: SurahText[] | null = null;
 
 /**
  * Lazy load the Quran text corpus
- * Loads only when first accessed (not on app startup)
+ * ⚡ الأداء: يُحمَّل ملف نص المصحف (حجمه ~5MB) ديناميكياً عند أول حاجة فقط،
+ * ولا يُضمَّن في حزمة الإطلاق الرئيسية إطلاقاً — ما يجعل الفتح الأول سريعاً جداً.
  */
-export async function getLazyCorpus() {
+export async function getLazyCorpus(): Promise<SurahText[]> {
   if (corpusCache) return corpusCache;
-  
+
   if (!corpusPromise) {
-    corpusPromise = ensureCorpus().then(corpus => {
-      corpusCache = corpus;
-      corpusPromise = null;
-      return corpus;
-    });
+    corpusPromise = import("./quranText")
+      .then(m => m.ensureCorpus())
+      .then(corpus => {
+        corpusCache = corpus;
+        corpusPromise = null;
+        return corpus;
+      });
   }
-  
+
   return corpusPromise;
 }
 

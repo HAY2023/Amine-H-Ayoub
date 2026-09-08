@@ -1,12 +1,15 @@
-self.addEventListener('install', (event: ExtendableEvent) => {
-  event.waitUntil(self.skipWaiting());
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _self = self as any;
+
+_self.addEventListener('install', (event: any) => {
+  event.waitUntil(_self.skipWaiting());
 });
 
-self.addEventListener('activate', (event: ExtendableEvent) => {
-  event.waitUntil(self.clients.claim());
+_self.addEventListener('activate', (event: any) => {
+  event.waitUntil(_self.clients.claim());
 });
 
-self.addEventListener('push', (event: PushEvent) => {
+_self.addEventListener('push', (event: any) => {
   let data = {} as Record<string, unknown>;
   try {
     data = event.data?.json() || {};
@@ -15,19 +18,19 @@ self.addEventListener('push', (event: PushEvent) => {
   }
 
   const title = (data.title as string) || 'حاج أيوب أمين';
-  const options: NotificationOptions = {
+  const options = {
     body: (data.body as string) || '',
     icon: (data.icon as string) || '/assets/icons/icon-192.png',
     data: (data.url as string) || '/'
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(_self.registration.showNotification(title, options));
 });
 
-self.addEventListener('notificationclick', (event: NotificationEvent) => {
+_self.addEventListener('notificationclick', (event: any) => {
   event.notification.close();
   const url = event.notification.data || '/';
-  event.waitUntil(self.clients.openWindow(String(url)));
+  event.waitUntil(_self.clients.openWindow(String(url)));
 });
 
  type WorkboxManifestEntry = { url: string; revision?: string };

@@ -159,13 +159,54 @@ export function handleControllerBack(): boolean {
 }
 
 /**
+ * تشغيل/إيقاف الوسائط الحالية (زر تشغيل بالريموت أو أذرع التحكم)
+ */
+function toggleMediaPlayback(): void {
+  const media = Array.from(document.querySelectorAll<HTMLMediaElement>("audio, video"));
+  const playing = media.find(m => !m.paused && !m.ended);
+  if (playing) {
+    playing.pause();
+    return;
+  }
+  media[0]?.play().catch(() => { /* ignore */ });
+}
+
+/**
  * تهيئة مستمعات الريموت كنترول ولوحة المفاتيح
  */
 export function setupRemoteControlListeners(): () => void {
+  // إبراز واضح للعنصر المحدد بالريموت/لوحة المفاتيح (يُفعَّل عند أول استخدام للأسهم)
+  const style = document.createElement("style");
+  style.textContent = `
+    html.tv-nav button:focus, html.tv-nav a:focus, html.tv-nav [tabindex]:focus,
+    html.tv-nav input:focus, html.tv-nav select:focus, html.tv-nav textarea:focus,
+    button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+      outline: 3px solid #f59e0b !important;
+      outline-offset: 2px !important;
+    }
+  `;
+  document.head.appendChild(style);
+
   const handleKeyDown = (e: KeyboardEvent) => {
     // تجاهل الأحداث إذا كان المستخدم يكتب في حقل نصي
     const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
     const isInput = tag === "input" || tag === "textarea" || (e.target as HTMLElement)?.isContentEditable;
+
+    // أزرار الرجوع الخاصة بأجهزة التلفاز (keyCodes مخصصة للعلامات الكبرى)
+    if (e.keyCode === 10009 || e.keyCode === 461 || e.keyCode === 4) {
+      e.preventDefault();
+      handleControllerBack();
+      return;
+    }
+    // Backspace خارج الحقول = رجوع
+    if (e.key === "Backspace" && !isInput) {
+      e.preventDefault();
+      handleControllerBack();
+      return;
+    }
+
+    // الأسهم تُفعّل نمط إبراز التحديد بالريموت
+    if (e.key.startsWith("Arrow")) document.documentElement.classList.add("tv-nav");
 
     switch (e.key) {
       case "ArrowUp":
@@ -216,7 +257,7 @@ export function setupRemoteControlListeners(): () => void {
         break;
       case "MediaPlayPause":
         e.preventDefault();
-        window.dispatchEvent(new CustomEvent("mushaf:toggle-play"));
+        toggleMediaPlayback();
         break;
     }
   };
@@ -282,7 +323,7 @@ export function setupGamepadListener(): () => void {
       // 4. زر X أو Y (تشغيل/إيقاف مؤقت للتلاوة) — Button 2 أو 3
       if (gp.buttons[2]?.pressed || gp.buttons[3]?.pressed) {
         if (canRepeat) {
-          window.dispatchEvent(new CustomEvent("mushaf:toggle-play"));
+          toggleMediaPlayback();
           lastActionTime = now + 200;
         }
       }

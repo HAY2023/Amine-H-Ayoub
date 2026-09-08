@@ -24,6 +24,7 @@ export interface KidsProfile {
   coins: number;         // النقاط (النجوم) المكتسبة من الألعاب
   inventory: string[];   // معرّفات عناصر المتجر المملوكة
   currentSurah?: number; // السورة الحالية التي يحفظها الطفل (تُستخدم لتحديد نطاق الألعاب)
+  gender?: "boy" | "girl"; // جنس الطفل (ولد أو بنت)
 }
 
 export interface ShopItem {
@@ -48,9 +49,9 @@ export interface KidsProgress {
 }
 
 /** الشخصية الأساسية المجانية الوحيدة المتاحة للجميع */
-export const KID_AVATARS = [
-  "img-boy-scholar"
-];
+export const KID_AVATARS_BOY = ["img-boy-scholar"];
+export const KID_AVATARS_GIRL = ["img-girl-scholar"];
+export const KID_AVATARS = [...KID_AVATARS_BOY, ...KID_AVATARS_GIRL];
 export const KID_COLORS = [
   "from-amber-400 to-orange-500",
   "from-sky-400 to-blue-500",
@@ -72,191 +73,46 @@ const LEGACY_HISTORY_KEY = "mushaf:kidsHistory:v1";
 const progKey = (id: string) => `${PROGRESS_BASE}:${id}`;
 const histKey = (id: string) => `${HISTORY_BASE}:${id}`;
 
-const DEFAULT_FIELDS = { goalMinutes: 5, playMinutes: 0, reward: "أحسنت، لقد فتحت الألعاب", lessonTime: "", coins: 0, inventory: [] as string[], currentSurah: 0 };
-const DEFAULT_PROFILE: KidsProfile = { id: "default", name: "", age: 6, avatar: KID_AVATARS[0], color: KID_COLORS[0], ...DEFAULT_FIELDS };
+const DEFAULT_FIELDS = { goalMinutes: 5, playMinutes: 0, reward: "أحسنت، لقد فتحت الألعاب", lessonTime: "", coins: 0, inventory: [] as string[], currentSurah: 0, gender: "boy" as const };
+const DEFAULT_PROFILE: KidsProfile = { id: "default", name: "", age: 6, avatar: KID_AVATARS_BOY[0], color: KID_COLORS[0], ...DEFAULT_FIELDS };
 
 /** متجر المكافآت — شخصيات إسلامية فخمة ثلاثية الأبعاد تُفتح بالنجوم بأسعار عالية متدرجة */
-export const SHOP_AVATARS: ShopItem[] = [
-  // ── المستوى البرونزي: طلاب وحفظة الذكر (15,000 - 25,000 نجمة) ──
-  {
-    id: "av-img-boy-reciter",
-    type: "avatar",
-    label: "القارئ الصغير بالجبة البيضاء",
-    value: "img-boy-reciter",
-    cost: 15000,
-    badge: "مميّز",
-    tier: "bronze",
-    description: "طالب مجتهد يبدأ رحلة ترتيل وتجويد القرآن الكريم بصوت ندي."
-  },
-  {
-    id: "av-img-girl-scholar",
-    type: "avatar",
-    label: "طالبة العلم بالخمار الوردي",
-    value: "img-girl-scholar",
-    cost: 25000,
-    badge: "مميّزة",
-    tier: "bronze",
-    description: "فتاة القرآن المثابرة التي تقضي أوقاتها بين آيات الذكر الحكيم."
-  },
-
-  // ── المستوى الفضي: نجباء القرآن وزهرات الجنان (50,000 - 75,000 نجمة) ──
-  {
-    id: "av-img-boy-taqiyah-gold",
-    type: "avatar",
-    label: "بطل القرآن بالطاقية الذهبية",
-    value: "img-boy-taqiyah-gold",
-    cost: 50000,
-    badge: "نادر",
-    tier: "silver",
-    description: "طالب متفوق تألق في مجالس التسميع وحصل على طاقية الشرف الذهبية."
-  },
-  {
-    id: "av-img-girl-gold",
-    type: "avatar",
-    label: "زهرة الجنان بالرداء المذهب",
-    value: "img-girl-gold",
-    cost: 75000,
-    badge: "نادرة",
-    tier: "silver",
-    description: "أميرة الهدى بالزي الأندلسي المذهب التي تتلألأ بحفظ السور الكريمة."
-  },
-
-  // ── المستوى الذهبي: سفراء النور وبلابل التلاوة (100,000 - 250,000 نجمة) ──
-  {
-    id: "av-img-boy-reciter-green",
-    type: "avatar",
-    label: "القارئ الأخضر الزمردي بنقوش المحراب",
-    value: "img-boy-reciter-green",
-    cost: 100000,
-    badge: "ذهبي",
-    tier: "gold",
-    description: "قارئ نديّ يرتدي الجبة الخضراء الفاخرة المستوحاة من رياض الجنة."
-  },
-  {
-    id: "av-img-boy-royal-blue",
-    type: "avatar",
-    label: "أمير الذكر بالرداء الأزرق الملكي",
-    value: "img-boy-royal-blue",
-    cost: 150000,
-    badge: "ملكي",
-    tier: "gold",
-    description: "صاحب الصوت الشجي برداء المحراب الأزرق الملكي والتطريز الفضي الأنيق."
-  },
-  {
-    id: "av-img-boy-turquoise-vest",
-    type: "avatar",
-    label: "سفير النور بالصدرية الفيروزية المذهبة",
-    value: "img-boy-turquoise-vest",
-    cost: 200000,
-    badge: "ملكي",
-    tier: "gold",
-    description: "بطل الهمم العالية بزي المشرق الفيروزي المطرز بخيوط الذهب."
-  },
-  {
-    id: "av-img-boy-indigo-scarf",
-    type: "avatar",
-    label: "بلبل التلاوة بالشال النيلي الأنيق",
-    value: "img-boy-indigo-scarf",
-    cost: 250000,
-    badge: "VIP",
-    tier: "gold",
-    description: "من أتقن مخارج الحروف وأحكام التجويد بالشال النيلي التراثي الرفيع."
-  },
-
-  // ── المستوى الماسي: فرسان وأميرات الحكمة (350,000 - 500,000 نجمة) ──
-  {
-    id: "av-img-boy-knight-ruby",
-    type: "avatar",
-    label: "فارس القرآن بالدرع المذهب والوشاح",
-    value: "img-boy-knight-ruby",
-    cost: 350000,
-    badge: "فارس VIP",
-    tier: "diamond",
-    description: "فارس شجاع يحمي قلبه بآيات الله ويزدان بالدرع الذهبي والوشاح الأخضر."
-  },
-  {
-    id: "av-img-boy-turban",
-    type: "avatar",
-    label: "أمير الحفاظ بالعمامة النبيلة",
-    value: "img-boy-turban",
-    cost: 400000,
-    badge: "أمير الحفاظ",
-    tier: "diamond",
-    description: "حكيم البراعم بالعمامة البيضاء الوقورة، ينشر السلام والنور أينما حلّ."
-  },
-  {
-    id: "av-img-girl-hijab-emerald",
-    type: "avatar",
-    label: "أميرة الحجاب باللؤلؤ والهلال",
-    value: "img-girl-hijab-emerald",
-    cost: 500000,
-    badge: "أميرة الوقار",
-    tier: "diamond",
-    description: "حافظة متوجة بتاج الهلال الفضي واللؤلؤ، تلبس حجاب العفة البنفسجي المخملي."
-  },
-
-  // ── المستوى الأسطوري الأعلى: سلاطين وحملة كتاب الله (600,000 - 1,000,000 نجمة) ──
-  {
-    id: "av-img-boy-sultan-navy",
-    type: "avatar",
-    label: "سلطان الحكمة بالبشت الكحلي الملكي",
-    value: "img-boy-sultan-navy",
-    cost: 600000,
-    badge: "أسطوري ⭐",
-    tier: "legendary",
-    description: "سلطان أهل القرآن بالبشت الكحلي المذهب المطرز بالذهب الخالص."
-  },
-  {
-    id: "av-img-boy-crimson-master",
-    type: "avatar",
-    label: "شيخ الحفاظ بالجلابة العنابية والعمامة",
-    value: "img-boy-crimson-master",
-    cost: 750000,
-    badge: "أسطوري ⭐",
-    tier: "legendary",
-    description: "رمز الإتقان بالجلابة العنابية الأصيلة والعمامة الملكية البيضاء الفاخرة."
-  },
-  {
-    id: "av-img-boy-crescent-purple",
-    type: "avatar",
-    label: "أمير الهلال بالرداء البنفسجي المذهب",
-    value: "img-boy-crescent-purple",
-    cost: 850000,
-    badge: "أسطوري VIP",
-    tier: "legendary",
-    description: "شخصية ملكية فاخرة برداء مخملي بنفسجي وشارة هلال رمضان المبارك."
-  },
-  {
-    id: "av-img-boy-bisht-white",
-    type: "avatar",
-    label: "القارئ الملكي بالبشت الأسود الفاخر",
-    value: "img-boy-bisht-white",
-    cost: 900000,
-    badge: "فخر الحفاظ",
-    tier: "legendary",
-    description: "أعلى درجات الفخامة: بشت أسود أندلسي فاخر مطرز بخيوط القصب المذهبة."
-  },
-  {
-    id: "av-img-girl-emerald-queen",
-    type: "avatar",
-    label: "ملكة القرآن بالتاج الملكي والقفطان الزمردي",
-    value: "img-girl-emerald-queen",
-    cost: 950000,
-    badge: "تاج الوقار 👑",
-    tier: "legendary",
-    description: "ملكة متوجة بتاج الوقار المرصع، ترتدي قفطاناً زمردياً نسجته أيادي المجد."
-  },
-  {
-    id: "av-img-boy-quran-carrier",
-    type: "avatar",
-    label: "الحافظ المبارك حامل المصحف الشريف",
-    value: "img-boy-quran-carrier",
-    cost: 1000000,
-    badge: "خاتم القرآن 🌟",
-    tier: "legendary",
-    description: "أسمى ألقاب التطبيق: الحافظ الصالح الذي يحمل كتاب الله في صدره وبين يديه في رحاب المحراب المبارك."
-  },
+export const SHOP_AVATARS_BOY: ShopItem[] = [
+  { id: "av-img-boy-1", type: "avatar", label: "براعم الإيمان", value: "img-boy-1", cost: 15000, tier: "bronze" },
+  { id: "av-img-boy-2", type: "avatar", label: "طالب مبتدئ", value: "img-boy-2", cost: 25000, tier: "bronze" },
+  { id: "av-img-boy-3", type: "avatar", label: "طالب مجتهد", value: "img-boy-3", cost: 50000, tier: "silver" },
+  { id: "av-img-boy-4", type: "avatar", label: "قارئ ندي", value: "img-boy-4", cost: 75000, tier: "silver" },
+  { id: "av-img-boy-5", type: "avatar", label: "حافظ الأجزاء", value: "img-boy-5", cost: 100000, tier: "gold" },
+  { id: "av-img-boy-6", type: "avatar", label: "مرتّل متألق", value: "img-boy-6", cost: 150000, tier: "gold" },
+  { id: "av-img-boy-7", type: "avatar", label: "ربيع القلوب", value: "img-boy-7", cost: 200000, tier: "gold" },
+  { id: "av-img-boy-8", type: "avatar", label: "فارس التلاوة", value: "img-boy-8", cost: 250000, tier: "gold" },
+  { id: "av-img-boy-9", type: "avatar", label: "صاحب القرآن", value: "img-boy-9", cost: 350000, tier: "diamond" },
+  { id: "av-img-boy-10", type: "avatar", label: "حافظ متقن", value: "img-boy-10", cost: 400000, tier: "diamond" },
+  { id: "av-img-boy-11", type: "avatar", label: "سفير القرآن", value: "img-boy-11", cost: 500000, tier: "diamond" },
+  { id: "av-img-boy-12", type: "avatar", label: "تاج الوقار", value: "img-boy-12", cost: 600000, tier: "legendary" },
+  { id: "av-img-boy-13", type: "avatar", label: "الماهر بالقرآن", value: "img-boy-13", cost: 750000, tier: "legendary" },
+  { id: "av-img-boy-14", type: "avatar", label: "عريس القرآن", value: "img-boy-14", cost: 900000, tier: "legendary" },
+  { id: "av-img-boy-15", type: "avatar", label: "شيخ القراء", value: "img-boy-15", cost: 1000000, tier: "legendary" },
 ];
+
+export const SHOP_AVATARS_GIRL: ShopItem[] = [
+  { id: "av-img-girl-1", type: "avatar", label: "زهرة الإيمان", value: "img-girl-1", cost: 15000, tier: "bronze" },
+  { id: "av-img-girl-2", type: "avatar", label: "طالبة مبتدئة", value: "img-girl-2", cost: 25000, tier: "bronze" },
+  { id: "av-img-girl-3", type: "avatar", label: "طالبة مجتهدة", value: "img-girl-3", cost: 50000, tier: "silver" },
+  { id: "av-img-girl-4", type: "avatar", label: "قارئة ندية", value: "img-girl-4", cost: 75000, tier: "silver" },
+  { id: "av-img-girl-5", type: "avatar", label: "حافظة الأجزاء", value: "img-girl-5", cost: 100000, tier: "gold" },
+  { id: "av-img-girl-6", type: "avatar", label: "ربيع القلوب", value: "img-girl-6", cost: 150000, tier: "gold" },
+  { id: "av-img-girl-7", type: "avatar", label: "صاحبة القرآن", value: "img-girl-7", cost: 200000, tier: "gold" },
+  { id: "av-img-girl-8", type: "avatar", label: "حافظة متقنة", value: "img-girl-8", cost: 350000, tier: "diamond" },
+  { id: "av-img-girl-9", type: "avatar", label: "سفيرة القرآن", value: "img-girl-9", cost: 400000, tier: "diamond" },
+  { id: "av-img-girl-10", type: "avatar", label: "تاج الوقار", value: "img-girl-10", cost: 500000, tier: "diamond" },
+  { id: "av-img-girl-11", type: "avatar", label: "الماهرة بالقرآن", value: "img-girl-11", cost: 600000, tier: "legendary" },
+  { id: "av-img-girl-12", type: "avatar", label: "عروس القرآن", value: "img-girl-12", cost: 850000, tier: "legendary" },
+  { id: "av-img-girl-13", type: "avatar", label: "درة القراء", value: "img-girl-13", cost: 1000000, tier: "legendary" },
+];
+
+export const SHOP_AVATARS: ShopItem[] = [...SHOP_AVATARS_BOY, ...SHOP_AVATARS_GIRL];
+
 export const SHOP_COLORS: ShopItem[] = [
   { id: "col-sunset", type: "color", label: "شفق الغروب", value: "from-pink-500 to-orange-400", cost: 150 },
   { id: "col-ocean", type: "color", label: "محيط النقاء", value: "from-cyan-400 to-indigo-500", cost: 200 },
@@ -301,8 +157,9 @@ const normalize = (p: Partial<KidsProfile>, i = 0): KidsProfile => ({
   ...DEFAULT_PROFILE,
   ...p,
   id: p.id || newId(),
+  gender: p.gender || "boy",
   // ترقية الوجوه القديمة إلى مفاتيح شخصيات صالحة
-  avatar: (p.avatar && ALL_AVATAR_KEYS.includes(p.avatar)) ? p.avatar : KID_AVATARS[i % KID_AVATARS.length],
+  avatar: (p.avatar && ALL_AVATAR_KEYS.includes(p.avatar)) ? p.avatar : (p.gender === 'girl' ? KID_AVATARS_GIRL[0] : KID_AVATARS_BOY[0]),
   color: p.color || KID_COLORS[i % KID_COLORS.length],
   coins: sanitizeCoins(p.coins),
   inventory: Array.isArray(p.inventory) ? p.inventory : [],

@@ -179,16 +179,47 @@ jobs:
       - name: Initialize Android project
         run: npx tauri android init || true
 
+      # ── توافق التلفاز (Android TV) ──
+      # 1) إضافة LEANBACK_LAUNCHER كي يظهر التطبيق في قائمة التلفاز
+      # 2) إلغاء اشتراط شاشة اللمس كي يعمل على أجهزة التلفاز بجهاز التحكم
+      # 3) دعم معمارية armv7 لأجهزة التلفاز القديمة + aarch64 للأجهزة الحديثة
+      - name: Make app Android TV compatible
+        run: |
+          MANIFEST="src-tauri/gen/android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST" ]; then
+            # إلغاء اشتراط شاشة اللمس وإضافة ميزة leanback (اختيارية)
+            sed -i 's|<application|<uses-feature android:name="android.hardware.touchscreen" android:required="false" /><uses-feature android:name="android.software.leanback" android:required="false" /><application|' "$MANIFEST"
+            # إضافة LEANBACK_LAUNCHER إلى intent-filter النشاط الرئيسي
+            sed -i 's|<category android:name="android.intent.category.LAUNCHER" />|<category android:name="android.intent.category.LAUNCHER" /><category android:name="android.intent.category.LEANBACK_LAUNCHER" />|' "$MANIFEST"
+            echo "--- Patched AndroidManifest.xml ---"
+            cat "$MANIFEST"
+          else
+            echo "::warning::AndroidManifest.xml not found!"
+          fi
+          # التأكد من أن minSdkVersion لا يقل عن 24 (Android 7.0) وأنه متوافق معها
+          GRADLE="src-tauri/gen/android/app/build.gradle.kts"
+          [ -f "$GRADLE" ] || GRADLE="src-tauri/gen/android/app/build.gradle"
+          if [ -f "$GRADLE" ]; then
+            sed -i 's/minSdk = [0-9]*/minSdk = 24/g; s/minSdkVersion [0-9]*/minSdkVersion 24/g' "$GRADLE"
+            echo "--- minSdk in build.gradle ---"
+            grep -n "minSdk" "$GRADLE" || true
+          fi
+
+      - name: Add Android build targets (incl. old TV armv7)
+        run: |
+          rustup target add aarch64-linux-android armv7-linux-androideabi || true
+
       - name: Inject custom app icon into Android project
         run: |
           npx tauri icon src-tauri/icons/app-icon.png
           mkdir -p src-tauri/gen/android/app/src/main/res
           cp -rf src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/ || true
 
-      # بناء نسخة Release لمعمارية aarch64 (APK و AAB)
-      - name: Build release APK & AAB (aarch64)
+      # بناء نسخة Release لمعماريتي aarch64 (الأجهزة الحديثة) و armv7 (التلفازات والهواتف القديمة)
+      - name: Build release APK & AAB (aarch64 + armv7)
         run: |
           npx tauri android build --apk --target aarch64
+          npx tauri android build --apk --target armv7 || true
           npx tauri android build --aab --target aarch64 || true
 
       # توقيع APK بمفتاح الإنتاج

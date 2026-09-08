@@ -578,6 +578,7 @@ export default function DetectiveGame({ def: _def }: DetectiveGameProps) {
   const [showHint, setShowHint] = useState(false);
   const [eliminatedIdxs, setEliminatedIdxs] = useState<number[]>([]);
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIME_LIMIT);
+
   const [isTimedOut, setIsTimedOut] = useState(false);
 
   // خيارات السؤال الحالي مخلوطة
@@ -637,10 +638,10 @@ export default function DetectiveGame({ def: _def }: DetectiveGameProps) {
       playSound("correct");
       const newStreak = streak + 1;
       setStreak(newStreak);
-      // مكافأة سرعة وحسن إجابة
+      const baseWin = 1;
       const speedBonus = timeLeft >= 10 ? 1 : 0;
-      const streakBonus = newStreak >= 3 ? 2 : 1;
-      const totalWin = streakBonus + speedBonus;
+      const streakBonus = newStreak >= 3 ? 1 : 0;
+      const totalWin = baseWin + streakBonus + speedBonus;
       setScore((s) => s + totalWin);
       addCoins(totalWin);
     } else {
@@ -649,6 +650,23 @@ export default function DetectiveGame({ def: _def }: DetectiveGameProps) {
     }
   };
 
+
+
+  const useMueenClue = () => {
+    if (showHint || answered || isTimedOut) return;
+    const coins = getCoins();
+    if (coins < 1) {
+      toast({ title: "لا توجد نجوم كافية!", variant: "destructive" });
+      return;
+    }
+    spendCoins(1);
+    setShowHint(true);
+    const wrongIdxs = shuffledOptions
+      .map((opt, idx) => (!opt.isOdd && !eliminatedIdxs.includes(idx) ? idx : -1))
+      .filter((idx) => idx !== -1);
+    const toEliminate = wrongIdxs.sort(() => 0.5 - Math.random()).slice(0, 2);
+    setEliminatedIdxs((prev) => [...prev, ...toEliminate]);
+  };
 
   const nextQuestion = () => {
     const nextIdx = (qIndex + 1) % questionsPool.length;

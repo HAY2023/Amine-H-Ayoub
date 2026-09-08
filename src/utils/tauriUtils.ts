@@ -179,7 +179,13 @@ export async function openExternalUrl(url: string): Promise<void> {
         await invoke("open_url", { url });
         return;
       } catch {
-        /* fallback to browser open */
+        // محاولة أخيرة داخل بيئة Tauri: window.open يفتح عبر نافذة النظام
+        try {
+          window.open(url, "_blank");
+          return;
+        } catch {
+          /* fallback to browser open */
+        }
       }
     }
   }

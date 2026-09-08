@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, Bell, SplitSquareHorizontal, Volume2, Menu, Eye, EyeOff, List, Lock, Baby, Bookmark as BookmarkIcon, Trash2, Plus, Wrench } from "lucide-react";
-import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Shuffle, Pencil, Check, Settings, Bell, SplitSquareHorizontal, Volume2, VolumeX, Menu, Eye, EyeOff, List, Lock, Baby, Bookmark as BookmarkIcon, Trash2, Plus, Wrench, Headphones, Download, Mic, Repeat } from "lucide-react";
+import { getSurahAudioUrl, hasCloudAudio, getFallbackAudioUrl } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import AppFooter from "@/components/AppFooter";
 import { getSavedTimings, getSurahTimings } from "@/data/ayahTimings";
 import { getCustomPages, getAllPageImages, getPageOrder } from "@/data/customPages";
 import { getPageSurahRegions } from "@/data/surahRegions";
-import { addReadingMinutes, addCoins, kidsEnabled as getKidsEnabled, getProgress, isPureMode } from "@/data/kidsProfile";
+import { addReadingMinutes, addCoins, kidsEnabled as getKidsEnabled, getProgress, isPureMode, setAppMode } from "@/data/kidsProfile";
 import { recordTodayActivity } from "@/data/kidsBadges";
 
 import { getBookmarks, addBookmark, removeBookmark, Bookmark } from "@/data/bookmarks";
@@ -22,7 +22,11 @@ import SplitViewPanel from "@/components/SplitViewPanel";
 import NotificationsModal from "@/components/NotificationsModal";
 import { updateMediaSession, setMediaPlaybackState, isBackgroundAudioEnabled } from "@/utils/backgroundAudio";
 
-const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
+const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : getFallbackAudioUrl(n));
+
+// ألوان تمييز الآيات عند التلاوة
+const previewHighlight = "rgb(255, 200, 0)";
+const previewStroke = "rgb(200, 150, 0)";
 
 // === Page naming from settings ===
 const PAGE_NAMES_KEY = "mushaf:pageNames:v1";
@@ -158,7 +162,7 @@ function UnusedQuranReader() {
         if (mins > 0) {
           const { justUnlocked } = addReadingMinutes(mins);
           // نقاط القراءة (المال): نجومتان لكل دقيقة — قليلة لكنها أكثر من نقاط الألعاب
-          const stars = Math.max(1, Math.round(mins * 2));
+          const stars = Math.max(1, Math.floor(mins / 5));
           addCoins(stars);
           recordTodayActivity();
           if (justUnlocked) {

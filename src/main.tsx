@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { SupportErrorBoundary } from "./components/SupportErrorBoundary";
+// @ts-ignore - virtual module
+// @ts-ignore - virtual:pwa-register is provided by vite-plugin-pwa at build time
 import { registerSW } from "virtual:pwa-register";
 import { initCloudAudioAvailability } from "./data/audioUrls";
 
@@ -31,12 +33,8 @@ if ('serviceWorker' in navigator && !isPreviewHost && !isInIframe) {
 }
 
 async function bootstrap() {
-  // جلب قائمة التلاوات المتوفرة من السيرفر قبل فتح التطبيق (بحد أقصى 2 ثانية)
-  await Promise.race([
-    initCloudAudioAvailability(),
-    new Promise(r => setTimeout(r, 2000))
-  ]);
-
+  // ⚡ الأداء: عرض التطبيق فوراً بدون أي انتظار —
+  // جلب قائمة التلاوات المتوفرة من السيرفر يجري في الخلفية بدون حجب فتح التطبيق
   createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
       <SupportErrorBoundary>
@@ -44,6 +42,9 @@ async function bootstrap() {
       </SupportErrorBoundary>
     </React.StrictMode>
   );
+
+  // في الخلفية بعد فتح التطبيق (لا يعيق الإطلاق)
+  initCloudAudioAvailability().catch(() => { /* ignore */ });
 }
 
 bootstrap();

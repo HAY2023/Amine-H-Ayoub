@@ -150,9 +150,12 @@ const App = () => {
 
   useEffect(() => {
     applyTheme(getTheme());
-    syncCoordinatesFromServer();
-    syncTimingsFromServer();
-    syncBookmarksFromServer();
+    // ⚡ الأداء: المزامنة مع السيرفر تُؤجَّل للخلفية كي لا تبطئ فتح التطبيق
+    const syncTimer = setTimeout(() => {
+      syncCoordinatesFromServer();
+      syncTimingsFromServer();
+      syncBookmarksFromServer();
+    }, 1500);
 
     // Preload Quran corpus in background after initial render
     // This improves performance when user navigates to reading/listening pages
@@ -183,6 +186,16 @@ const App = () => {
     }
 
     // تم إزالة فحص التحديثات التلقائي
+
+    // 🎮 ربط لوحة المفاتيح وريموت التلفاز وأذرع التحكم بالتطبيق بالكامل
+    const cleanupRemote = setupRemoteControlListeners();
+    const cleanupGamepad = setupGamepadListener();
+
+    return () => {
+      clearTimeout(syncTimer);
+      cleanupRemote();
+      cleanupGamepad();
+    };
   }, []);
 
 

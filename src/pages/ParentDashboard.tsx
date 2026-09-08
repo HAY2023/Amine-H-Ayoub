@@ -33,6 +33,7 @@ import {
   Mail,
   Scale,
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { showLocalNotification, requestNotificationPermission, saveReminderSettings } from "../utils/notifications";
 import {
   getProfile,
@@ -49,7 +50,8 @@ import {
   grantMorePlay,
   resetProgress,
   unlockToday,
-  KID_AVATARS,
+  KID_AVATARS_BOY,
+  KID_AVATARS_GIRL,
   KID_COLORS,
   KidsProfile,
   KidsProgress,
@@ -129,7 +131,8 @@ export default function ParentDashboard() {
   const [newKid, setNewKid] = useState({
     name: "",
     age: 7,
-    avatar: KID_AVATARS[0],
+    gender: "boy" as "boy" | "girl",
+    avatar: KID_AVATARS_BOY[0],
     color: KID_COLORS[0],
   });
 
@@ -237,6 +240,7 @@ export default function ParentDashboard() {
     const p = addProfile({
       name,
       age: newKid.age,
+      gender: newKid.gender,
       avatar: newKid.avatar,
       color: newKid.color,
     });
@@ -1080,10 +1084,28 @@ export default function ParentDashboard() {
 
             <div>
               <span className="block text-[11px] text-muted-foreground mb-1.5 font-bold">
-                اختر شخصية الأفاتار:
+                جنس الطفل:
+              </span>
+              <div className="flex gap-2 mb-3">
+                <button
+                  onClick={() => setNewKid({ ...newKid, gender: "boy", avatar: KID_AVATARS_BOY[0] })}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all border ${newKid.gender === "boy" ? "bg-accent/20 border-accent text-accent" : "bg-card text-muted-foreground hover:bg-secondary"}`}
+                >
+                  ولد
+                </button>
+                <button
+                  onClick={() => setNewKid({ ...newKid, gender: "girl", avatar: KID_AVATARS_GIRL[0] })}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all border ${newKid.gender === "girl" ? "bg-pink-500/20 border-pink-500 text-pink-500" : "bg-card text-muted-foreground hover:bg-secondary"}`}
+                >
+                  بنت
+                </button>
+              </div>
+
+              <span className="block text-[11px] text-muted-foreground mb-1.5 font-bold">
+                اختر شخصية الأفاتار المجانية:
               </span>
               <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1 border rounded-xl bg-secondary/40">
-                {KID_AVATARS.map((a) => (
+                {(newKid.gender === 'girl' ? KID_AVATARS_GIRL : KID_AVATARS_BOY).map((a) => (
                   <button
                     key={a}
                     onClick={() => setNewKid({ ...newKid, avatar: a })}

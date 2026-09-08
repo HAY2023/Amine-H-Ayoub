@@ -51,8 +51,10 @@ export function CloudAudioProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // التحقق من توفر الصوت على سيرفر التطبيق (Hugging Face) بالترقيم القياسي مباشرة
   const hasCloudAudio = (number: number) => availableSurahs.has(number);
-  const getAudioPath = (number: number) => hasCloudAudio(number) ? getSurahAudioUrl(number) : `/audio/surahs/${number}.mp3`;
+  // مسار الصوت — دائماً من سيرفر التطبيق (Hugging Face) فقط، لا سيرفرات خارجية
+  const getAudioPath = (number: number) => getSurahAudioUrl(number);
 
   return (
     <CloudAudioContext.Provider value={{ availableSurahs, isLoading, hasCloudAudio, getAudioPath }}>

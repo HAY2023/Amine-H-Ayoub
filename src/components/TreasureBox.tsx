@@ -4,7 +4,7 @@ import { addCoins, getActiveId } from "../data/kidsProfile";
 import { toast } from "../hooks/use-toast";
 
 /** مكافأة صندوق الكنز اليومي (بالنجوم). */
-export const TREASURE_REWARD = 25;
+export const TREASURE_REWARD = 5;
 
 type TreasureState = "ready" | "shaking" | "opening" | "done";
 
@@ -56,7 +56,7 @@ const makeConfetti = (): ConfettiPiece[] =>
 
 /**
  * صندوق الكنز اليومي في متجر الأطفال:
- * يظهر جاهزاً للفتح مرة واحدة يومياً، ويمنح +٢٥ نجمة عبر addCoins
+ * يظهر جاهزاً للفتح مرة واحدة يومياً، ويمنح +٥ نجوم عبر addCoins
  * (الذي يطلق حدث mushaf:coins فيتحدّث عدّاد النجوم تلقائياً).
  */
 export default function TreasureBox() {

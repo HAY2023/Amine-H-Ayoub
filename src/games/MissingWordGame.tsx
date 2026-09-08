@@ -214,7 +214,7 @@ export default function MissingWordGame({ def, minSurah, onBack }: MissingWordGa
 
   const handleWin = () => {
     setWon(true);
-    addCoins(20); // مكافأة عالية لأنها لعبة صعبة
+    addCoins(3); // مكافأة صارمة
     toast({
       title: "🎉 بطل متميز!",
       description: "حصلت على 20 نجمة لتركيزك العالي!",

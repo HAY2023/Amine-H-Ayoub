@@ -2,11 +2,11 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, Maximize2, Minimize2, X, Pencil, Check, Shuffle, Mic, Headphones, Baby } from "lucide-react";
 import { getSavedTimings, getSurahTimings, getAyahStartTime, hasKidsSection } from "@/data/ayahTimings";
-import { getSurahAudioUrl, hasCloudAudio } from "@/data/audioUrls";
+import { getSurahAudioUrl, hasCloudAudio, getFallbackAudioUrl } from "@/data/audioUrls";
 import { getPageAyahBoxes, PAGE_IMAGE_SIZE } from "@/data/ayahCoordinates";
 import { supabase } from "@/lib/supabase";
 
-const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : `/audio/surahs/${n}.mp3`);
+const audioPath = (n: number) => (hasCloudAudio(n) ? getSurahAudioUrl(n) : getFallbackAudioUrl(n));
 
 // === Page naming from settings ===
 const PAGE_NAMES_KEY = "mushaf:pageNames:v1";

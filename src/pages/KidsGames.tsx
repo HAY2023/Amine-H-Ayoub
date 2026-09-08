@@ -108,7 +108,7 @@ function useGame() {
   const correct = () => {
     const ns = streak + 1;
     // نقاط الألعاب قليلة عمداً — القراءة هي المصدر الأساسي للنجوم (المال)
-    const bonus = ns >= 5 ? 3 : ns >= 3 ? 2 : 1;
+    const bonus = Math.max(1, 3 - mistakes);
     addCoins(bonus); setGain(bonus); setEarned(e => e + bonus);
     setScore(s => s + 1); setAnswers(a => a + 1); setStreak(ns); setFlash(f => f + 1);
     window.setTimeout(() => setGain(0), 900);
@@ -391,7 +391,7 @@ function MemoryEngine({ def, minSurah }: { def: GameDef; minSurah: number }) {
         g.correct();
         setMatched(m => [...m, cardA.num]);
         setFlipped([]);
-        addCoins(2);
+        addCoins(1);
       } else {
         g.miss();
         setTimeout(() => setFlipped([]), 850);
@@ -1108,7 +1108,7 @@ function SurahAudioEngine({ def, minSurah }: { def: GameDef; minSurah: number })
       setIsPlaying(false);
     } else {
       source.play().catch(() => {
-        // تجربة الرابط البديل مباشرة من CDN الإسلامي العالمي
+        // إعادة المحاولة من سيرفر التطبيق (Hugging Face) نفسه
         source.src = getFallbackAudioUrl(question.surah.number);
         source.load();
         source.play().catch(() => {
@@ -1868,15 +1868,15 @@ export default function KidsGames() {
   const [showMilestone, setShowMilestone] = useState(false);
   const [milestoneData, setMilestoneData] = useState({ days: 0, title: "", message: "" });
 
-  // الميلستونات: 1، 7، 14، 21، 30 (شهر)، 60 (شهرين)، وبعد 5 أشهر عشوائي
-  const MILESTONES = [1, 7, 14, 21, 30, 60];
+  // الميلستونات: أول يوم، 7 أيام، 28 يوماً، شهر، شهران، 4 أشهر — وبعدها عشوائي
+  const MILESTONES = [1, 7, 28, 30, 60, 120];
   const MILESTONE_NAMES: Record<number, { title: string; message: string }> = {
     1: { title: "بداية رائعة!", message: "بدأت رحلتك مع القرآن — يوم واحد من النور" },
     7: { title: "أسبوع كامل!", message: "7 أيام متتالية — أنت بطل حقيقي!" },
-    14: { title: "أسبوعين من العطاء!", message: "14 يوماً متتالياً — الاستمرارية سر النجاح" },
-    21: { title: "21 يوماً!", message: "عادة راسخة! 21 يوماً من التعلم المتواصل" },
+    28: { title: "أربعة أسابيع!", message: "28 يوماً متتالياً — عادة ذهبية راسخة!" },
     30: { title: "شهر كامل!", message: "30 يوماً — شهر من القرآن والضوء" },
-    60: { title: "شهرين من التميز!", message: "60 يوماً — أنت الآن بطل القرآن الأسطوري" },
+    60: { title: "شهران من التميز!", message: "60 يوماً — أنت الآن بطل القرآن الأسطوري" },
+    120: { title: "أربعة أشهر من العطاء!", message: "120 يوماً — مسيرة استثنائية لا تتوقف" },
   };
 
   // رسالة التشجيع: تظهر مرة في اليوم عند إنجاز وقت الدراسة والدخول للألعاب
@@ -2069,8 +2069,8 @@ export default function KidsGames() {
       // تسجيل الميلستون كمعروض
       localStorage.setItem(shownKey, JSON.stringify([...shown, currentStreak]));
     }
-    // بعد 5 أشهر (150+ يوم): عرض عشوائي كل 30 يوم تقريباً
-    else if (currentStreak >= 150) {
+    // بعد 4 أشهر (120+ يوم): احتفال عشوائي من حين لآخر (احتمال 1/30 يومياً)
+    else if (currentStreak > 120) {
       // عرض عشوائي: احتمال 1/30 لكل يوم بعد 5 أشهر
       const randomChance = Math.random() < (1 / 30);
       if (randomChance) {

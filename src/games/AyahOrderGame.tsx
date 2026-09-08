@@ -146,7 +146,7 @@ export default function AyahOrderGame({ def, minSurah, onBack }: AyahOrderGamePr
 
   const handleWin = () => {
     setWon(true);
-    addCoins(15); 
+    addCoins(3); 
     toast({
       title: "🎉 ترتيب ممتاز!",
       description: "حصلت على 15 نجمة!",

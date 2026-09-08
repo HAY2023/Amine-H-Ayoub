@@ -285,8 +285,7 @@ export default function CatchStarGame({ def: _def }: CatchStarGameProps) {
       setCollected(newCollected);
       const newStreak = streak + 1;
       setStreak(newStreak);
-      const bonus = newStreak >= 3 ? 2 : 1;
-      setScore((s) => s + bonus);
+      const bonus = Math.max(1, Math.floor(score / 10));
       addCoins(bonus);
 
       if (newCollected.length === requiredCount) {
@@ -300,6 +299,18 @@ export default function CatchStarGame({ def: _def }: CatchStarGameProps) {
     }
   };
 
+  const useMueenHint = () => {
+    if (showHint || roundDone || lives <= 0) return;
+    const coins = getCoins();
+    if (coins < 1) {
+      toast({ title: "لا توجد نجوم كافية!", variant: "destructive" });
+      return;
+    }
+    spendCoins(1);
+    setShowHint(true);
+    const available = goodItems.find((i) => !collected.includes(i.id));
+    if (available) setHighlightedId(available.id);
+  };
 
   const nextRound = () => {
     setRoundIdx((r) => r + 1);

@@ -149,6 +149,7 @@ export function calculateStreak(): {
   longestStreak: number;
   thisWeekDays: boolean[]; // 7 days ending with today
   dayNamesArr: string[];
+  monthActiveCount: number;
 } {
   const history: DayLog[] = getHistory();
   const todayProgress = getProgress();
@@ -251,14 +252,23 @@ export function calculateStreak(): {
     if (dStr.startsWith(currentMonthPrefix)) monthActiveCount++;
   });
 
-  return {
+  const result: StreakInfo = {
     currentStreak,
     longestStreak,
     thisWeekDays,
     dayNamesArr,
     monthActiveCount,
   };
+  return result;
 }
+
+export type StreakInfo = {
+  currentStreak: number;
+  longestStreak: number;
+  thisWeekDays: boolean[];
+  dayNamesArr: string[];
+  monthActiveCount: number;
+};
 
 /**
  * جلب قائمة الأوسمة مع حالة الفتح والتقدم

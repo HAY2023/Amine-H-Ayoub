@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { Search, Play, Pause, Volume2, SkipBack, SkipForward, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getAllSurahs } from "../data/quranData";
+import { getFallbackAudioUrl } from "../data/audioUrls";
 
 const QuranViewer = () => {
   const surahs = getAllSurahs();
@@ -22,8 +23,8 @@ const QuranViewer = () => {
   }, [surahs, searchQuery]);
 
   const currentSurah = surahs.find(s => s.number === selectedSurah);
-  // استخدم الـ public path الصحيح
-  const audioUrl = new URL(`/audio/surahs/${selectedSurah}.mp3`, window.location.origin).href;
+  // مسار الصوت — دائماً من سيرفر التطبيق (Hugging Face)
+  const audioUrl = getFallbackAudioUrl(selectedSurah);
 
   // تحديث الصوت عند تغيير السورة
   useEffect(() => {
