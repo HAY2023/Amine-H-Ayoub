@@ -1,5 +1,6 @@
 import { KidsProfile } from "../data/kidsProfile";
 import { SURAHS } from "../data/quranData";
+import { saveImageDataUrl } from "./tauriUtils";
 
 function drawCanvasStar(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, color: string) {
   ctx.save();
@@ -283,21 +284,5 @@ export async function downloadStreakCertificate({
   const filename = `شهادة-حماس-${safeName}-${today.toISOString().split("T")[0]}.png`;
   const dataUrl = canvas.toDataURL("image/png");
 
-  if (typeof window !== "undefined" && (window as unknown as Record<string, unknown>).__TAURI__) {
-    try {
-      const base64Data = dataUrl.split(",")[1];
-      const { invoke } = await import("@tauri-apps/api/core");
-      await invoke("save_base64_image", { base64Data, filename });
-      return;
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  const link = document.createElement("a");
-  link.download = filename;
-  link.href = dataUrl;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  await saveImageDataUrl(dataUrl, filename);
 }

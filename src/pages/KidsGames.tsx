@@ -10,7 +10,7 @@ import { fetchRemoteGames, precacheRemoteGames } from "../data/remoteGames";
 import { ensureCorpus, type SurahText } from "../data/quranText";
 import { syncQuestionsFromServer, getLocalQuizPool, markQuestionAsAnswered, type ServerQuestion } from "../services/quizServer";
 import { isKidsMode, setKidsLocked, hasKidsPin } from "../data/kidsLock";
-import { shouldHideMushaf } from "../utils/tauriUtils";
+import { saveImageDataUrl, shouldHideMushaf } from "../utils/tauriUtils";
 import ParentalGateModal from "../components/ParentalGateModal";
 import AdBanner from "../components/AdBanner";
 import MemoryGame from "../games/MemoryGame";
@@ -2516,22 +2516,7 @@ export default function KidsGames() {
     const filename = `شهادة-${safeName}-${today.toISOString().split("T")[0]}.png`;
     const dataUrl = canvas.toDataURL("image/png");
 
-    if (typeof window !== "undefined" && (window as any).__TAURI__) {
-      try {
-        const base64Data = dataUrl.split(",")[1];
-        const { invoke } = await import("@tauri-apps/api/core");
-        await invoke("save_base64_image", { base64Data, filename });
-      } catch (e) {
-        console.error(e);
-      }
-    } else {
-      const link = document.createElement("a");
-      link.download = filename;
-      link.href = dataUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    await saveImageDataUrl(dataUrl, filename);
 
     setCertificateReady(true);
     toast({ title: "🎉 تم حفظ الشهادة الفاخرة!", description: "تم حفظ الصورة بجودة فائقة في جهازك" });
@@ -2801,24 +2786,7 @@ export default function KidsGames() {
       }
 
       const filename = `ميلستون-${milestoneData.days}يوم-${profile.name || "بطل"}.png`;
-      if (typeof window !== "undefined" && (window as any).__TAURI__) {
-        try {
-          const dataUrl = canvas.toDataURL("image/png");
-          const base64Data = dataUrl.split(",")[1];
-          const { invoke } = await import("@tauri-apps/api/core");
-          await invoke("save_base64_image", { base64Data, filename });
-          toast({ title: "تم حفظ الصورة الفاخرة!", description: "تم الحفظ بنجاح في جهازك" });
-          return;
-        } catch (e) {
-          console.error(e);
-        }
-      }
-
-      const link = document.createElement("a");
-      link.download = filename;
-      link.href = URL.createObjectURL(blob);
-      link.click();
-      URL.revokeObjectURL(link.href);
+      await saveImageDataUrl(canvas.toDataURL("image/png"), filename);
       toast({ title: "تم حفظ الصورة الفاخرة!", description: "ابحث في مجلد التنزيلات بجهازك" });
     }, "image/png");
   };

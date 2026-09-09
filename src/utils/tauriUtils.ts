@@ -172,7 +172,7 @@ export async function openExternalUrl(url: string): Promise<void> {
     }
     
     try {
-      await invoke("plugin:opener|open", { path: url });
+      await invoke("plugin:opener|open_url", { url });
       return;
     } catch {
       try {
@@ -180,12 +180,8 @@ export async function openExternalUrl(url: string): Promise<void> {
         return;
       } catch {
         // محاولة أخيرة داخل بيئة Tauri: window.open يفتح عبر نافذة النظام
-        try {
-          window.open(url, "_blank");
-          return;
-        } catch {
-          /* fallback to browser open */
-        }
+        window.open(url, "_blank", "noopener,noreferrer");
+        return;
       }
     }
   }
@@ -212,4 +208,20 @@ export async function saveBase64Image(base64Data: string, filename: string): Pro
     console.error("Failed to save image via Tauri:", e);
     return null;
   }
+}
+
+/** Saves a generated image natively when available, with a browser download fallback. */
+export async function saveImageDataUrl(dataUrl: string, filename: string): Promise<string | null> {
+  if (isTauri()) {
+    const savedPath = await saveBase64Image(dataUrl.split(",")[1] || "", filename);
+    if (savedPath) return savedPath;
+  }
+
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = dataUrl;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  return null;
 }

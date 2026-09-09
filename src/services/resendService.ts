@@ -20,6 +20,10 @@ export const SUPPORT_WHATSAPP_NUMBER = "213658188644";
 export const SUPPORT_WHATSAPP_DISPLAY = "0658188644";
 export const LOCAL_INBOX_KEY = "mushaf:support_inbox_v1";
 
+function isMobileDevice(): boolean {
+  return typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
+
 /** إنشاء رابط بريد إلكتروني مباشر لفتح تطبيق البريد بنقرة واحدة */
 export function createMailtoSupportLink(report: Partial<SupportReportData>): string {
   const to = SUPPORT_EMAILS.join(",");
@@ -53,8 +57,11 @@ export function createWhatsAppSupportLink(report?: Partial<SupportReportData> | 
     message += report.typeLabel;
   }
 
-  // فتح تطبيق واتساب مباشرة على الهاتف ونسخة سطح المكتب عند توفرها.
-  return `whatsapp://send?phone=${SUPPORT_WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`;
+  const encodedMessage = encodeURIComponent(message);
+  // الهاتف يفتح تطبيق واتساب، والحاسوب يفتح WhatsApp Web/المتصفح.
+  return isMobileDevice()
+    ? `whatsapp://send?phone=${SUPPORT_WHATSAPP_NUMBER}&text=${encodedMessage}`
+    : `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodedMessage}`;
 }
 
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 2500): Promise<Response> {
