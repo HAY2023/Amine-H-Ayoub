@@ -1,0 +1,1 @@
+import{s as u}from"./quran-data-DX9VtRRJ.js";const t=u;function a(n){return t.find(r=>r.number===n)}function o(n){var r;return((r=a(n))==null?void 0:r.ayahCount)||0}function s(){return t}export{t as S,o as a,s as g};
