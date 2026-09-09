@@ -1,4 +1,4 @@
-name: Build Store-Ready Packages (6 Files)
+name: Build EXE MSI APK AAB Packages
 
 # يعمل عند دفع إلى main أو وسم إصدار أو تشغيل يدوي
 on:
@@ -348,12 +348,12 @@ jobs:
           path: dist-tv/*
 
   # ╔═══════════════════════════════════════════════════════════════╗
-  # ║  🚀 النشر: رفع 6 ملفات فقط إلى GitHub Release + HuggingFace ║
+  # ║  🚀 النشر: رفع 6 ملفات إلى GitHub Release عند إنشاء tag    ║
   # ╚═══════════════════════════════════════════════════════════════╝
   publish:
     name: "🚀 Publish 6 Store-Ready Files"
     needs: [windows, android-mobile, android-tv]
-    if: always() && needs.windows.result == 'success' && needs.android-mobile.result == 'success' && needs.android-tv.result == 'success'
+    if: startsWith(github.ref, 'refs/tags/v') && needs.windows.result == 'success' && needs.android-mobile.result == 'success' && needs.android-tv.result == 'success'
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -397,12 +397,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v1.0.0"
+          TAG="${{ github.ref_name }}"
 
           # إنشاء release إذا لم يكن موجوداً
           gh release view "$TAG" > /dev/null 2>&1 || \
             gh release create "$TAG" \
-              --title "Quran-Amine H Ayoub v1.0.0" \
+              --title "Quran-Amine H Ayoub $TAG" \
               --notes "المصحف المرتل برواية ورش — القارئ الشيخ حاج أيوب أمين" \
               --latest
 
@@ -425,7 +425,7 @@ jobs:
 
           # تحديث عنوان الإصدار
           gh release edit "$TAG" \
-            --title "Quran-Amine H Ayoub v1.0.0" \
+            --title "Quran-Amine H Ayoub $TAG" \
             --notes "المصحف المرتل برواية ورش — القارئ الشيخ حاج أيوب أمين
 
           📱 Google Play (هاتف): Quran_1.0.0_Android_Mobile.aab
@@ -437,7 +437,7 @@ jobs:
             --latest
 
           echo ""
-          echo "✅ Release v1.0.0 updated with exactly 6 files!"
+          echo "✅ Release $TAG updated with exactly 6 files!"
 
       # رفع إلى HuggingFace
       - name: Upload 6 files to Hugging Face
