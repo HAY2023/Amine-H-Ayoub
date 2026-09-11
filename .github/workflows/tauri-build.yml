@@ -353,7 +353,7 @@ jobs:
   publish:
     name: "🚀 Publish 6 Store-Ready Files"
     needs: [windows, android-mobile, android-tv]
-    if: startsWith(github.ref, 'refs/tags/v') && needs.windows.result == 'success' && needs.android-mobile.result == 'success' && needs.android-tv.result == 'success'
+    if: needs.windows.result == 'success' && needs.android-mobile.result == 'success' && needs.android-tv.result == 'success'
     runs-on: ubuntu-22.04
     permissions:
       contents: write
