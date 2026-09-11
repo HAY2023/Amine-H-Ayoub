@@ -219,6 +219,7 @@ export default function AppNav({ className = "" }: AppNavProps) {
                 <span>التلاوات</span>
               </button>
 
+
               <button
                 onClick={handleSettingsClick}
                 className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all shrink-0 active:scale-95 ${
@@ -257,6 +258,7 @@ export default function AppNav({ className = "" }: AppNavProps) {
                 <Headphones className="w-4 h-4 shrink-0" />
                 <span>التلاوات</span>
               </button>
+
 
               <button
                 onClick={() => navigate("/games")}
