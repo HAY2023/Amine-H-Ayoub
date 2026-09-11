@@ -272,60 +272,15 @@ jobs:
           mkdir -p src-tauri/gen/android/app/src/main/res
           cp -rf src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/ || true
 
-      - name: Configure Android TV Manifest (Leanback + D-pad Support)
+      - name: Configure Android TV Manifest (Leanback Support)
         run: |
           MANIFEST="src-tauri/gen/android/app/src/main/AndroidManifest.xml"
-          if [ ! -f "$MANIFEST" ]; then
-            echo "::error::AndroidManifest.xml not found!"
-            exit 1
-          fi
-
-          echo "📺 Original manifest:"
-          cat "$MANIFEST"
-          echo ""
-
-          # ═══ إصلاح شامل لدعم أجهزة التلفاز باستخدام Node.js ═══
-          node -e "
-            const fs = require('fs');
-            let content = fs.readFileSync('$MANIFEST', 'utf8');
-            
-            // 1) إضافة uses-feature للتلفاز (leanback) والشاشة اللمسية
-            if (!content.includes('android.software.leanback')) {
-              content = content.replace('<application', 
-                '<uses-feature android:name=\"android.software.leanback\" android:required=\"false\" />\n    <uses-feature android:name=\"android.hardware.touchscreen\" android:required=\"false\" />\n    <application');
-            }
-            
-            // 2) إضافة LEANBACK_LAUNCHER ليظهر التطبيق في شاشة التلفاز الرئيسية
-            if (!content.includes('LEANBACK_LAUNCHER')) {
-              content = content.replace(/<category android:name=\"android\.intent\.category\.LAUNCHER\"[^>]*\/>/g, 
-                '<category android:name=\"android.intent.category.LAUNCHER\" />\n                <category android:name=\"android.intent.category.LEANBACK_LAUNCHER\" />');
-            }
-            
-            // 3) إضافة screenOrientation=landscape للنشاط الرئيسي
-            if (!content.includes('android:screenOrientation=\"landscape\"')) {
-              content = content.replace('android:configChanges=\"', 'android:screenOrientation=\"landscape\" android:configChanges=\"');
-            }
-            
-            fs.writeFileSync('$MANIFEST', content);
-          "
-
-          echo ""
-          echo "✅ Patched manifest for Android TV:"
-          cat "$MANIFEST"
-          echo ""
-
-          # 4) التحقق من وجود التعديلات
-          if grep -q "android.software.leanback" "$MANIFEST"; then
-            echo "✅ Leanback feature present"
-          else
-            echo "::error::Leanback feature NOT found in manifest!"
-            exit 1
-          fi
-          if grep -q "LEANBACK_LAUNCHER" "$MANIFEST"; then
-            echo "✅ LEANBACK_LAUNCHER category present"
-          else
-            echo "::error::LEANBACK_LAUNCHER NOT found in manifest!"
-            exit 1
+          if [ -f "$MANIFEST" ]; then
+            # دعم واجهة التلفاز + لا يتطلب شاشة لمس
+            sed -i '/<manifest/a \    <uses-feature android:name="android.software.leanback" android:required="false" \/>\n    <uses-feature android:name="android.hardware.touchscreen" android:required="false" \/>' "$MANIFEST"
+            # إضافة LEANBACK_LAUNCHER ليظهر في قائمة التلفاز
+            sed -i '/<category android:name="android.intent.category.LAUNCHER" \/>/a \                <category android:name="android.intent.category.LEANBACK_LAUNCHER" \/>' "$MANIFEST"
+            echo "✅ Android TV Manifest configured"
           fi
 
       - name: Build TV APK
@@ -478,8 +433,7 @@ jobs:
           🤖 APK مباشر (هاتف): Quran_1.0.0_Android_Mobile.apk
           📺 APK مباشر (تلفاز): Quran_1.0.0_Android_TV.apk
           💻 ويندوز: Quran-Amine-H-Ayoub_1.0.0_Setup.exe
-          🏪 متجر مايكروسوفت: Quran-Amine-H-Ayoub_1.0.0_Microsoft_Store.msi" \
-            --latest
+          🏪 متجر مايكروسوفت: Quran-Amine-H-Ayoub_1.0.0_Microsoft_Store.msi"
 
           echo ""
           echo "✅ Release $TAG updated with exactly 6 files!"
