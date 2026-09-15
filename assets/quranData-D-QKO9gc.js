@@ -1,0 +1,1 @@
+import{s as u}from"./quran-data-BDU15zjG.js";const t=u;function a(n){return t.find(r=>r.number===n)}function o(n){var r;return((r=a(n))==null?void 0:r.name)||`سورة ${n}`}function s(n){var r;return((r=a(n))==null?void 0:r.ayahCount)||0}function h(){return t}export{t as S,s as a,o as b,h as g};
